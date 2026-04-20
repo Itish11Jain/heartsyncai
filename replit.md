@@ -1,27 +1,59 @@
-# Workspace
+# HeartSync AI
 
-## Overview
+A premium relationship intelligence web app for India. Users describe a first-date scenario and receive a witty Hinglish "Intelligence Report" from a 26-year-old Mumbai wingman AI persona.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Architecture
 
-## Stack
+**Monorepo** managed by pnpm workspaces.
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+### Artifacts
+- `artifacts/heartsync-ai` — React + Vite frontend (served at `/`)
+- `artifacts/api-server` — Express API server (port 8080)
 
-## Key Commands
+### Shared Libraries
+- `lib/api-spec` — OpenAPI spec (`openapi.yaml`) with `POST /report/generate`
+- `lib/api-client-react` — Generated TanStack Query hooks + Zod schemas (orval)
+- `lib/api-zod` — Zod barrel re-export from generated code
+- `lib/integrations-openai-ai-server` — Replit OpenAI integration (server-side)
+- `lib/integrations-openai-ai-react` — Replit OpenAI integration (client helper)
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+## Key Features
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+- **Free first report** — tracked via `localStorage("heartsync_used_free")`
+- **UPI paywall** — ₹99 via UPI ID `8905158970@upi` with QR code; unlocks on any UTR entry
+- **AI persona** — GPT-5.2 model with Mumbai wingman system prompt (Hinglish)
+- **4 report sections** — Opening Gambit, 5 IQ Questions, Aura Check, Conversation Closers
+- **Framer Motion animations** — staggered section reveals, page transitions, loading states
+
+## Frontend Pages
+
+- `/` — Landing page ("Don't guess the vibe. Engineer it.")
+- `/generate` — Date context form (partner name, occasion, details, vibe)
+- `/report` — Intelligence Report display with free/paid gate
+
+## API Endpoint
+
+`POST /api/report/generate`
+Body: `{ partnerName, occasion, knownDetails?, vibe? }`
+Response: `{ partnerName, openingGambit, iqQuestions, auraCheck, conversationClosers }`
+
+## State Management
+
+Module-level `reportStore` in `artifacts/heartsync-ai/src/lib/store.ts` passes report data from `/generate` to `/report`.
+
+## Running the Project
+
+```bash
+# API server
+pnpm --filter @workspace/api-server run dev
+
+# Frontend
+pnpm --filter @workspace/heartsync-ai run dev
+```
+
+## Code Generation
+
+After editing `lib/api-spec/openapi.yaml`:
+```bash
+pnpm --filter @workspace/api-client-react run codegen
+```

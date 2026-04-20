@@ -12,8 +12,6 @@ tags:
     description: Health operations
   - name: report
     description: Intelligence report generation
-  - name: payment
-    description: Razorpay payment operations
 paths:
   /healthz:
     get:
@@ -55,50 +53,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /payment/create-order:
-    post:
-      operationId: createPaymentOrder
-      tags: [payment]
-      summary: Create a Razorpay order for ₹99
-      responses:
-        "200":
-          description: Order created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentOrder"
-        "500":
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /payment/verify:
-    post:
-      operationId: verifyPayment
-      tags: [payment]
-      summary: Verify a Razorpay payment signature
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/VerifyPaymentBody"
-      responses:
-        "200":
-          description: Verification result
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/VerifyPaymentResult"
-        "400":
-          description: Validation error
           content:
             application/json:
               schema:
@@ -167,48 +121,6 @@ components:
         - iqQuestions
         - auraCheck
         - conversationClosers
-
-    PaymentOrder:
-      type: object
-      properties:
-        orderId:
-          type: string
-        amount:
-          type: number
-        currency:
-          type: string
-        keyId:
-          type: string
-      required:
-        - orderId
-        - amount
-        - currency
-        - keyId
-
-    VerifyPaymentBody:
-      type: object
-      properties:
-        razorpayPaymentId:
-          type: string
-        razorpayOrderId:
-          type: string
-        razorpaySignature:
-          type: string
-      required:
-        - razorpayPaymentId
-        - razorpayOrderId
-        - razorpaySignature
-
-    VerifyPaymentResult:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-      required:
-        - success
-        - message
 
     ErrorResponse:
       type: object

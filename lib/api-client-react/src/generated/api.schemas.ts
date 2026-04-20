@@ -34,24 +34,6 @@ export interface IntelligenceReport {
   conversationClosers: ReportSection;
 }
 
-export interface PaymentOrder {
-  orderId: string;
-  amount: number;
-  currency: string;
-  keyId: string;
-}
-
-export interface VerifyPaymentBody {
-  razorpayPaymentId: string;
-  razorpayOrderId: string;
-  razorpaySignature: string;
-}
-
-export interface VerifyPaymentResult {
-  success: boolean;
-  message: string;
-}
-
 export interface ErrorResponse {
   error: string;
   message: string;
