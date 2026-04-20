@@ -115,7 +115,9 @@ function SectionContent({
       {data.items && data.items.length > 0 && (
         <ul className="space-y-2.5">
           {data.items.slice(0, 3).map((item, i) => {
-            const isRecommended = i === data.recommendedIndex;
+            const recIdx = (data.recommendedIndex != null && data.recommendedIndex >= 0 && data.recommendedIndex <= 2)
+              ? data.recommendedIndex : 0;
+            const isRecommended = i === recIdx;
             return (
               <motion.li
                 key={i}
@@ -131,7 +133,7 @@ function SectionContent({
                 <div className="flex items-center gap-1.5 shrink-0">
                   {isRecommended && (
                     <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${meta.activeColor} text-white`}>
-                      <Star className="w-2.5 h-2.5" /> Best
+                      <Star className="w-2.5 h-2.5" /> Recommended
                     </span>
                   )}
                   <CopyButton text={item} />
