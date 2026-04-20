@@ -34,6 +34,30 @@ export interface IntelligenceReport {
   conversationClosers: ReportSection;
 }
 
+export interface SubmitUtrBody {
+  /**
+   * UPI Transaction Reference (UTR) — 12–50 alphanumeric characters
+   * @minLength 12
+   * @maxLength 50
+   */
+  utr: string;
+  /** Unique session ID for the current report */
+  reportSession: string;
+}
+
+export interface SubmitUtrResponse {
+  ok: boolean;
+  /** HMAC token confirming UTR submission was recorded server-side */
+  token: string;
+  reportSession: string;
+}
+
+export interface PaymentStatusResponse {
+  approved: boolean;
+  /** Unix timestamp (ms) when submission was approved */
+  approvedAt?: number;
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;

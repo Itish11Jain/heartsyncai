@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: report
     description: Intelligence report generation
+  - name: payment
+    description: UPI payment submission and status
 paths:
   /healthz:
     get:
@@ -57,6 +59,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /payment/submit-utr:
+    post:
+      operationId: submitUtr
+      tags: [payment]
+      summary: Submit a UPI UTR for payment verification
+      description: Validates UTR format, records the submission server-side, and returns a session token confirming the submission was received.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitUtrBody"
+      responses:
+        "200":
+          description: UTR accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitUtrResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payment/status/{sessionId}:
+    get:
+      operationId: getPaymentStatus
+      tags: [payment]
+      summary: Check payment status for a report session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentStatusResponse"
 
 components:
   schemas:
@@ -121,6 +168,47 @@ components:
         - iqQuestions
         - auraCheck
         - conversationClosers
+
+    SubmitUtrBody:
+      type: object
+      properties:
+        utr:
+          type: string
+          minLength: 12
+          maxLength: 50
+          description: UPI Transaction Reference (UTR) — 12–50 alphanumeric characters
+        reportSession:
+          type: string
+          description: Unique session ID for the current report
+      required:
+        - utr
+        - reportSession
+
+    SubmitUtrResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        token:
+          type: string
+          description: HMAC token confirming UTR submission was recorded server-side
+        reportSession:
+          type: string
+      required:
+        - ok
+        - token
+        - reportSession
+
+    PaymentStatusResponse:
+      type: object
+      properties:
+        approved:
+          type: boolean
+        approvedAt:
+          type: number
+          description: Unix timestamp (ms) when submission was approved
+      required:
+        - approved
 
     ErrorResponse:
       type: object

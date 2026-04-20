@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ChevronLeft, Lock, Sparkles, MessageCircle, Eye, HandHeart, CheckCircle2, Loader2 } from "lucide-react";
 
+import { useSubmitUtr, useGetPaymentStatus, type PaymentStatusResponse } from "@workspace/api-client-react";
+import { type UseQueryOptions } from "@tanstack/react-query";
 import { reportStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,27 +22,27 @@ const itemVars = {
   show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
 };
 
-const UNLOCK_KEY_PREFIX = "heartsync_unlocked_";
-
-function getStoredToken(sessionId: string): string | null {
-  return localStorage.getItem(`${UNLOCK_KEY_PREFIX}${sessionId}`);
-}
-
-function storeToken(sessionId: string, token: string) {
-  localStorage.setItem(`${UNLOCK_KEY_PREFIX}${sessionId}`, token);
-}
-
 export default function Report() {
   const [, setLocation] = useLocation();
   const storeData = reportStore.data;
   const report = storeData?.report ?? null;
   const sessionId = storeData?.sessionId ?? "";
 
-  const [isLocked, setIsLocked] = useState(false);
+  const [isFreeReport, setIsFreeReport] = useState(false);
   const [utr, setUtr] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
   const [utrError, setUtrError] = useState("");
-  const [unlocked, setUnlocked] = useState(false);
+
+  const submitUtr = useSubmitUtr();
+
+  const paymentStatus = useGetPaymentStatus(sessionId, {
+    query: {
+      enabled: !!sessionId && !isFreeReport,
+      refetchInterval: false,
+    } as UseQueryOptions<PaymentStatusResponse>,
+  });
+
+  const isApprovedServerSide = paymentStatus.data?.approved === true;
+  const isLocked = !isFreeReport && !isApprovedServerSide;
 
   useEffect(() => {
     if (!report) {
@@ -51,17 +53,9 @@ export default function Report() {
     const hasUsedFree = localStorage.getItem("heartsync_used_free");
     if (!hasUsedFree) {
       localStorage.setItem("heartsync_used_free", "true");
-      setIsLocked(false);
-    } else {
-      const existingToken = getStoredToken(sessionId);
-      if (existingToken) {
-        setIsLocked(false);
-        setUnlocked(true);
-      } else {
-        setIsLocked(true);
-      }
+      setIsFreeReport(true);
     }
-  }, [report, sessionId, setLocation]);
+  }, [report, setLocation]);
 
   if (!report) return null;
 
@@ -70,34 +64,21 @@ export default function Report() {
     return cleaned.length >= 12 && /^[A-Za-z0-9]+$/.test(cleaned);
   };
 
-  const handleUnlock = async () => {
+  const handleUnlock = () => {
     const trimmed = utr.trim();
     if (!isValidUtrFormat(trimmed)) return;
-
-    setUnlocking(true);
     setUtrError("");
-
-    try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/payment/submit-utr`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ utr: trimmed, reportSession: sessionId }),
-      });
-
-      const data = await res.json() as { ok?: boolean; token?: string; message?: string };
-
-      if (res.ok && data.ok && data.token) {
-        storeToken(sessionId, data.token);
-        setIsLocked(false);
-        setUnlocked(true);
-      } else {
-        setUtrError(data.message ?? "Verification failed. Please try again.");
+    submitUtr.mutate(
+      { data: { utr: trimmed, reportSession: sessionId } },
+      {
+        onSuccess: () => {
+          paymentStatus.refetch();
+        },
+        onError: () => {
+          setUtrError("Verification failed. Please try again.");
+        },
       }
-    } catch {
-      setUtrError("Network error — please check your connection and try again.");
-    } finally {
-      setUnlocking(false);
-    }
+    );
   };
 
   const sections = [
@@ -225,10 +206,10 @@ export default function Report() {
                       )}
                       <Button
                         onClick={handleUnlock}
-                        disabled={!isValidUtrFormat(utr) || unlocking}
+                        disabled={!isValidUtrFormat(utr) || submitUtr.isPending}
                         className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-xl"
                       >
-                        {unlocking ? (
+                        {submitUtr.isPending ? (
                           <span className="flex items-center gap-2">
                             <Loader2 className="w-5 h-5 animate-spin" /> Verifying...
                           </span>

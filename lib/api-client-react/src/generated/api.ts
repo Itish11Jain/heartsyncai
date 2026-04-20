@@ -21,6 +21,9 @@ import type {
   GenerateReportBody,
   HealthStatus,
   IntelligenceReport,
+  PaymentStatusResponse,
+  SubmitUtrBody,
+  SubmitUtrResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -193,3 +196,179 @@ export const useGenerateReport = <
 > => {
   return useMutation(getGenerateReportMutationOptions(options));
 };
+
+/**
+ * Validates UTR format, records the submission server-side, and returns a session token confirming the submission was received.
+ * @summary Submit a UPI UTR for payment verification
+ */
+export const getSubmitUtrUrl = () => {
+  return `/api/payment/submit-utr`;
+};
+
+export const submitUtr = async (
+  submitUtrBody: SubmitUtrBody,
+  options?: RequestInit,
+): Promise<SubmitUtrResponse> => {
+  return customFetch<SubmitUtrResponse>(getSubmitUtrUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitUtrBody),
+  });
+};
+
+export const getSubmitUtrMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitUtr>>,
+    TError,
+    { data: BodyType<SubmitUtrBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitUtr>>,
+  TError,
+  { data: BodyType<SubmitUtrBody> },
+  TContext
+> => {
+  const mutationKey = ["submitUtr"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitUtr>>,
+    { data: BodyType<SubmitUtrBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitUtr(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitUtrMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitUtr>>
+>;
+export type SubmitUtrMutationBody = BodyType<SubmitUtrBody>;
+export type SubmitUtrMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit a UPI UTR for payment verification
+ */
+export const useSubmitUtr = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitUtr>>,
+    TError,
+    { data: BodyType<SubmitUtrBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitUtr>>,
+  TError,
+  { data: BodyType<SubmitUtrBody> },
+  TContext
+> => {
+  return useMutation(getSubmitUtrMutationOptions(options));
+};
+
+/**
+ * @summary Check payment status for a report session
+ */
+export const getGetPaymentStatusUrl = (sessionId: string) => {
+  return `/api/payment/status/${sessionId}`;
+};
+
+export const getPaymentStatus = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<PaymentStatusResponse> => {
+  return customFetch<PaymentStatusResponse>(getGetPaymentStatusUrl(sessionId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPaymentStatusQueryKey = (sessionId: string) => {
+  return [`/api/payment/status/${sessionId}`] as const;
+};
+
+export const getGetPaymentStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPaymentStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPaymentStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPaymentStatusQueryKey(sessionId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPaymentStatus>>
+  > = ({ signal }) =>
+    getPaymentStatus(sessionId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!sessionId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPaymentStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPaymentStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPaymentStatus>>
+>;
+export type GetPaymentStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Check payment status for a report session
+ */
+
+export function useGetPaymentStatus<
+  TData = Awaited<ReturnType<typeof getPaymentStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPaymentStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPaymentStatusQueryOptions(sessionId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

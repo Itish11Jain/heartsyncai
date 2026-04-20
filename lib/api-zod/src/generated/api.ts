@@ -53,3 +53,46 @@ export const GenerateReportResponse = zod.object({
     items: zod.array(zod.string()).optional(),
   }),
 });
+
+/**
+ * Validates UTR format, records the submission server-side, and returns a session token confirming the submission was received.
+ * @summary Submit a UPI UTR for payment verification
+ */
+export const submitUtrBodyUtrMin = 12;
+export const submitUtrBodyUtrMax = 50;
+
+export const SubmitUtrBody = zod.object({
+  utr: zod
+    .string()
+    .min(submitUtrBodyUtrMin)
+    .max(submitUtrBodyUtrMax)
+    .describe(
+      "UPI Transaction Reference (UTR) — 12–50 alphanumeric characters",
+    ),
+  reportSession: zod
+    .string()
+    .describe("Unique session ID for the current report"),
+});
+
+export const SubmitUtrResponse = zod.object({
+  ok: zod.boolean(),
+  token: zod
+    .string()
+    .describe("HMAC token confirming UTR submission was recorded server-side"),
+  reportSession: zod.string(),
+});
+
+/**
+ * @summary Check payment status for a report session
+ */
+export const GetPaymentStatusParams = zod.object({
+  sessionId: zod.coerce.string(),
+});
+
+export const GetPaymentStatusResponse = zod.object({
+  approved: zod.boolean(),
+  approvedAt: zod
+    .number()
+    .optional()
+    .describe("Unix timestamp (ms) when submission was approved"),
+});
