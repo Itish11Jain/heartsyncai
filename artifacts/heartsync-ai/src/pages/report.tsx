@@ -51,9 +51,14 @@ export default function Report() {
 
   if (!report) return null;
 
+  const isValidUtr = (value: string) => {
+    const cleaned = value.trim();
+    return cleaned.length >= 12 && /^[A-Za-z0-9]+$/.test(cleaned);
+  };
+
   const handleUnlock = () => {
-    if (utr.trim().length > 0) {
-      localStorage.setItem(`heartsync_utr_${Date.now()}`, utr);
+    if (isValidUtr(utr)) {
+      localStorage.setItem(`heartsync_utr_${Date.now()}`, utr.trim());
       setIsLocked(false);
       setUnlocked(true);
     }
@@ -158,7 +163,7 @@ export default function Report() {
                       />
                       <Button 
                         onClick={handleUnlock}
-                        disabled={utr.trim().length === 0}
+                        disabled={!isValidUtr(utr)}
                         className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-xl"
                       >
                         Unlock My Report
