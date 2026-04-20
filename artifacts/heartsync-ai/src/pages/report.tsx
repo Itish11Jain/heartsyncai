@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, Lock, Sparkles, MessageCircle, Eye, HandHeart,
-  Loader2, ArrowRight, Gift, Info
+  ChevronLeft, ChevronRight, Lock, Sparkles, MessageCircle, Eye, HandHeart,
+  Loader2, ArrowRight, Gift, Copy, Check, Info
 } from "lucide-react";
 
 import { useSubmitUtr, useGetPaymentStatus, type PaymentStatusResponse } from "@workspace/api-client-react";
@@ -12,22 +12,208 @@ import { reportStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const containerVars = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.12 } }
-};
-
-const itemVars = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 280, damping: 26 } }
-};
-
 const SECTION_META = [
-  { key: "openingGambit",      icon: MessageCircle, num: "01", accent: "from-primary/20 to-primary/5",   border: "border-primary/30",   badge: "bg-primary/15 text-primary",   dot: "bg-primary"    },
-  { key: "iqQuestions",        icon: Sparkles,      num: "02", accent: "from-accent/20 to-accent/5",     border: "border-accent/30",    badge: "bg-accent/15 text-accent",     dot: "bg-accent"     },
-  { key: "auraCheck",          icon: Eye,           num: "03", accent: "from-secondary/20 to-secondary/5", border: "border-secondary/30", badge: "bg-secondary/15 text-secondary", dot: "bg-secondary" },
-  { key: "conversationClosers",icon: HandHeart,     num: "04", accent: "from-rose-500/20 to-rose-500/5", border: "border-rose-500/30",  badge: "bg-rose-500/15 text-rose-400",  dot: "bg-rose-400"   },
+  {
+    key: "openingGambit",
+    icon: MessageCircle,
+    label: "Opening",
+    num: "01",
+    gradient: "from-primary to-pink-500",
+    ring: "ring-primary/40",
+    dot: "bg-primary",
+    itemBg: "bg-primary/10 hover:bg-primary/20 border-primary/20",
+    itemText: "text-primary",
+  },
+  {
+    key: "iqQuestions",
+    icon: Sparkles,
+    label: "IQ Questions",
+    num: "02",
+    gradient: "from-accent to-orange-400",
+    ring: "ring-accent/40",
+    dot: "bg-accent",
+    itemBg: "bg-accent/10 hover:bg-accent/20 border-accent/20",
+    itemText: "text-accent",
+  },
+  {
+    key: "auraCheck",
+    icon: Eye,
+    label: "Aura Check",
+    num: "03",
+    gradient: "from-secondary to-violet-500",
+    ring: "ring-secondary/40",
+    dot: "bg-secondary",
+    itemBg: "bg-secondary/10 hover:bg-secondary/20 border-secondary/20",
+    itemText: "text-secondary",
+  },
+  {
+    key: "conversationClosers",
+    icon: HandHeart,
+    label: "Closers",
+    num: "04",
+    gradient: "from-rose-500 to-red-400",
+    ring: "ring-rose-500/40",
+    dot: "bg-rose-400",
+    itemBg: "bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20",
+    itemText: "text-rose-400",
+  },
 ] as const;
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="shrink-0 p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/10 transition-all"
+      title="Copy"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+function SectionContent({
+  data,
+  meta,
+  direction,
+}: {
+  data: { title: string; content: string; items?: string[] };
+  meta: typeof SECTION_META[number];
+  direction: number;
+}) {
+  const Icon = meta.icon;
+  return (
+    <motion.div
+      key={meta.key}
+      initial={{ opacity: 0, x: direction * 40 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: direction * -40 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="w-full"
+    >
+      {/* Section heading */}
+      <div className="flex items-center gap-3 mb-5">
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-lg`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">{meta.num}</p>
+          <h2 className="text-lg font-bold text-white leading-tight">{data.title}</h2>
+        </div>
+      </div>
+
+      {/* Context line */}
+      <p className="text-sm text-white/50 leading-relaxed mb-5 pl-1">{data.content}</p>
+
+      {/* Interactive items */}
+      {data.items && data.items.length > 0 && (
+        <ul className="space-y-2.5">
+          {data.items.map((item, i) => (
+            <motion.li
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 28 }}
+              className={`flex gap-3 items-start justify-between rounded-xl border px-4 py-3 cursor-default transition-colors ${meta.itemBg}`}
+            >
+              <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
+              <span className="text-sm text-white/85 leading-relaxed flex-1">{item}</span>
+              <CopyButton text={item} />
+            </motion.li>
+          ))}
+        </ul>
+      )}
+    </motion.div>
+  );
+}
+
+function PaywallPanel({
+  sessionId,
+  utr,
+  setUtr,
+  utrError,
+  setUtrError,
+  submitUtr,
+  onUnlocked,
+}: {
+  sessionId: string;
+  utr: string;
+  setUtr: (v: string) => void;
+  utrError: string;
+  setUtrError: (v: string) => void;
+  submitUtr: ReturnType<typeof useSubmitUtr>;
+  onUnlocked: () => void;
+}) {
+  const isValidUtrFormat = (value: string) => value.trim().length >= 12 && /^[A-Za-z0-9]+$/.test(value.trim());
+
+  const handleUnlock = () => {
+    const trimmed = utr.trim();
+    if (!isValidUtrFormat(trimmed)) return;
+    setUtrError("");
+    submitUtr.mutate(
+      { data: { utr: trimmed, reportSession: sessionId } },
+      { onSuccess: onUnlocked, onError: () => setUtrError("Verification failed. Please try again.") }
+    );
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center text-center"
+    >
+      <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mb-4">
+        <Lock className="w-5 h-5 text-primary" />
+      </div>
+      <h3 className="text-lg font-bold text-white mb-1">3 more sections await</h3>
+      <p className="text-sm text-white/45 mb-6 max-w-xs">Pay ₹99 via UPI to unlock IQ Questions, Aura Check and Conversation Closers.</p>
+
+      <div className="flex gap-5 items-center mb-6">
+        <div className="bg-white rounded-xl p-2 shadow-lg shrink-0">
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=99%26cu=INR%26tn=HeartSync+Report"
+            alt="UPI QR Code"
+            className="w-24 h-24 rounded-lg"
+          />
+        </div>
+        <div className="text-left">
+          <p className="text-[10px] text-white/35 uppercase tracking-wide mb-1">UPI ID</p>
+          <p className="font-mono font-bold text-white text-base">8905158970@upi</p>
+          <p className="text-xs text-white/35 mt-2">Amount: ₹99</p>
+          <div className="flex items-center gap-1 mt-1.5">
+            <Info className="w-3 h-3 text-white/25" />
+            <p className="text-[11px] text-white/25">Scan QR or copy UPI ID</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full space-y-2.5">
+        <Input
+          placeholder="Paste UTR / Transaction ID (min 12 chars)"
+          value={utr}
+          onChange={(e) => { setUtr(e.target.value); setUtrError(""); }}
+          className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center"
+        />
+        {utrError && <p className="text-xs text-destructive">{utrError}</p>}
+        <Button
+          onClick={handleUnlock}
+          disabled={!isValidUtrFormat(utr) || submitUtr.isPending}
+          className="w-full h-11 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl"
+        >
+          {submitUtr.isPending
+            ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Verifying...</span>
+            : <span className="flex items-center gap-2">Unlock Full Report <ArrowRight className="w-4 h-4" /></span>
+          }
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function Report() {
   const [, setLocation] = useLocation();
@@ -36,6 +222,8 @@ export default function Report() {
   const sessionId = storeData?.sessionId ?? "";
   const isFreeReport = storeData?.isFreeReport ?? false;
 
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [utr, setUtr] = useState("");
   const [utrError, setUtrError] = useState("");
 
@@ -49,33 +237,18 @@ export default function Report() {
   });
 
   const isApprovedServerSide = paymentStatus.data?.approved === true;
-  const isLocked = !isFreeReport && !isApprovedServerSide;
+  const isUnlocked = isFreeReport || isApprovedServerSide;
+
+  const navigate = useCallback((idx: number) => {
+    setDirection(idx > activeIdx ? 1 : -1);
+    setActiveIdx(idx);
+  }, [activeIdx]);
 
   useEffect(() => {
-    if (!report || !sessionId) {
-      setLocation("/generate");
-    }
+    if (!report || !sessionId) setLocation("/generate");
   }, [report, sessionId, setLocation]);
 
   if (!report) return null;
-
-  const isValidUtrFormat = (value: string) => {
-    const cleaned = value.trim();
-    return cleaned.length >= 12 && /^[A-Za-z0-9]+$/.test(cleaned);
-  };
-
-  const handleUnlock = () => {
-    const trimmed = utr.trim();
-    if (!isValidUtrFormat(trimmed)) return;
-    setUtrError("");
-    submitUtr.mutate(
-      { data: { utr: trimmed, reportSession: sessionId } },
-      {
-        onSuccess: () => { paymentStatus.refetch(); },
-        onError: () => { setUtrError("Verification failed. Please try again."); },
-      }
-    );
-  };
 
   const sectionData: Record<string, typeof report.openingGambit> = {
     openingGambit: report.openingGambit,
@@ -84,169 +257,136 @@ export default function Report() {
     conversationClosers: report.conversationClosers,
   };
 
+  const meta = SECTION_META[activeIdx];
+  const isCurrentLocked = !isUnlocked && activeIdx > 0;
+  const totalSections = SECTION_META.length;
+
   return (
-    <div className="min-h-screen w-full bg-background text-foreground pb-24">
+    <div className="min-h-screen w-full bg-background text-foreground">
       <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-20">
-        <div className="absolute top-[10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-primary/30 blur-[130px]" />
-        <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-accent/30 blur-[130px]" />
+        <div className="absolute top-[5%] left-[-5%] w-[45%] h-[45%] rounded-full bg-primary/30 blur-[130px]" />
+        <div className="absolute bottom-[5%] right-[-5%] w-[40%] h-[40%] rounded-full bg-accent/30 blur-[130px]" />
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto px-5 py-10">
-        <header className="mb-8">
-          <Button asChild variant="ghost" className="pl-0 text-white/50 hover:text-white hover:bg-transparent text-sm">
-            <Link href="/" className="flex items-center gap-1.5">
+      <div className="relative z-10 max-w-lg mx-auto px-5 flex flex-col min-h-screen">
+        {/* Header */}
+        <div className="py-5 flex items-center justify-between">
+          <Button asChild variant="ghost" className="pl-0 text-white/40 hover:text-white hover:bg-transparent text-sm">
+            <Link href="/" className="flex items-center gap-1">
               <ChevronLeft className="w-4 h-4" /> Home
             </Link>
           </Button>
-        </header>
-
-        {/* Title */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary/80 mb-1">Intelligence Report</p>
-          <h1 className="text-3xl font-bold text-white">For your date with {report.partnerName}</h1>
-        </motion.div>
-
-        {/* Free report notice */}
-        <AnimatePresence>
-          {isFreeReport && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex gap-3 items-start bg-gradient-to-r from-primary/15 to-accent/10 border border-primary/20 rounded-2xl p-4 mb-8"
-            >
-              <Gift className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-white">This is your free report</p>
-                <p className="text-xs text-white/55 mt-0.5">
-                  Enjoy the full playbook on us. From your next report, each one is just ₹99.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Section progress indicators */}
-        <div className="flex gap-2 mb-8">
-          {SECTION_META.map((meta, i) => (
-            <div key={meta.key} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`w-full h-1 rounded-full ${isLocked && i > 0 ? "bg-white/10" : meta.dot} opacity-80`} />
-              <span className="text-[10px] text-white/30">{meta.num}</span>
-            </div>
-          ))}
+          <div className="text-right">
+            <p className="text-xs text-white/30">Report for</p>
+            <p className="text-sm font-semibold text-white">{report.partnerName}</p>
+          </div>
         </div>
 
-        {/* Sections */}
-        <motion.div variants={containerVars} initial="hidden" animate="show" className="space-y-4">
-          {SECTION_META.map((meta, idx) => {
-            const data = sectionData[meta.key];
-            const locked = isLocked && idx > 0;
-            const Icon = meta.icon;
+        {/* Free badge */}
+        {isFreeReport && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 mb-4"
+          >
+            <Gift className="w-4 h-4 text-primary shrink-0" />
+            <p className="text-xs text-white/70">
+              <span className="text-white font-semibold">Free report</span> — next one is ₹99
+            </p>
+          </motion.div>
+        )}
 
+        {/* Section tabs */}
+        <div className="flex gap-2 mb-6">
+          {SECTION_META.map((s, i) => {
+            const SIcon = s.icon;
+            const locked = !isUnlocked && i > 0;
+            const isActive = i === activeIdx;
             return (
-              <motion.div key={meta.key} variants={itemVars}>
-                <div className={`rounded-2xl border bg-gradient-to-br ${meta.accent} ${meta.border} backdrop-blur-md transition-all ${locked ? "blur-sm opacity-30 select-none pointer-events-none" : ""}`}>
-                  {/* Section header */}
-                  <div className="flex items-center gap-3 px-5 pt-5 pb-3">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>{meta.num}</span>
-                    <Icon className={`w-4 h-4 ${meta.badge.split(" ")[1]}`} />
-                    <h2 className="text-sm font-semibold text-white/90 tracking-wide uppercase">{data.title}</h2>
-                  </div>
-
-                  {/* Insight line */}
-                  <p className="px-5 pb-4 text-sm text-white/60 leading-relaxed border-b border-white/5">{data.content}</p>
-
-                  {/* Items */}
-                  {data.items && data.items.length > 0 && (
-                    <ul className="px-5 py-4 space-y-2.5">
-                      {data.items.map((item, i) => (
-                        <li key={i} className="flex gap-3 items-start">
-                          <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
-                          <span className="text-sm text-white/80 leading-relaxed">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {/* Paywall gate — shown after section 1 when locked */}
-                {locked && idx === 1 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 rounded-2xl border border-white/10 bg-card/80 backdrop-blur-xl p-6"
-                  >
-                    <div className="flex items-start gap-3 mb-5">
-                      <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-                        <Lock className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white text-sm">3 more sections inside</p>
-                        <p className="text-xs text-white/50 mt-0.5">Pay ₹99 via UPI to unlock IQ Questions, Aura Check, and Conversation Closers.</p>
-                      </div>
-                    </div>
-
-                    {/* UPI */}
-                    <div className="flex gap-4 items-center mb-5">
-                      <div className="bg-white rounded-xl p-2 shrink-0">
-                        <img
-                          src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=99%26cu=INR%26tn=HeartSync+Report"
-                          alt="UPI QR Code"
-                          className="w-20 h-20 rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-xs text-white/40 mb-1">UPI ID</p>
-                        <p className="font-mono font-bold text-white text-sm">8905158970@upi</p>
-                        <p className="text-xs text-white/40 mt-2">Amount: ₹99</p>
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <Info className="w-3 h-3 text-white/30" />
-                          <p className="text-[11px] text-white/30">Scan or copy UPI ID to pay</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* UTR input */}
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Paste your UTR / Transaction ID here"
-                        value={utr}
-                        onChange={(e) => { setUtr(e.target.value); setUtrError(""); }}
-                        className="bg-white/5 border-white/10 h-10 text-sm rounded-xl placeholder:text-white/25"
-                      />
-                      {utrError && <p className="text-xs text-destructive">{utrError}</p>}
-                      <Button
-                        onClick={handleUnlock}
-                        disabled={!isValidUtrFormat(utr) || submitUtr.isPending}
-                        className="w-full h-10 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl"
-                      >
-                        {submitUtr.isPending ? (
-                          <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</span>
-                        ) : (
-                          <span className="flex items-center gap-2">Unlock Full Report <ArrowRight className="w-4 h-4" /></span>
-                        )}
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
+              <button
+                key={s.key}
+                onClick={() => navigate(i)}
+                className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all text-center
+                  ${isActive
+                    ? `bg-gradient-to-b ${s.gradient} border-transparent shadow-lg ring-2 ${s.ring}`
+                    : "bg-white/5 border-white/8 hover:bg-white/10"
+                  }`}
+              >
+                {locked
+                  ? <Lock className="w-4 h-4 text-white/25" />
+                  : <SIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-white/40"}`} />
+                }
+                <span className={`text-[10px] font-semibold leading-none ${isActive ? "text-white" : "text-white/35"}`}>
+                  {s.label}
+                </span>
+              </button>
             );
           })}
-        </motion.div>
+        </div>
 
-        {/* Generate another */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-10 text-center"
-        >
-          <Button asChild variant="ghost" className="text-white/40 hover:text-white text-sm">
-            <Link href="/generate" className="flex items-center gap-1.5">
-              Generate another report <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+        {/* Content card */}
+        <div className="flex-1 bg-card/40 border border-white/6 backdrop-blur-md rounded-3xl p-6 mb-6 overflow-hidden min-h-0">
+          <AnimatePresence mode="wait" initial={false}>
+            {isCurrentLocked ? (
+              <PaywallPanel
+                key="paywall"
+                sessionId={sessionId}
+                utr={utr}
+                setUtr={setUtr}
+                utrError={utrError}
+                setUtrError={setUtrError}
+                submitUtr={submitUtr}
+                onUnlocked={() => paymentStatus.refetch()}
+              />
+            ) : (
+              <SectionContent
+                key={meta.key}
+                data={sectionData[meta.key]}
+                meta={meta}
+                direction={direction}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Nav controls */}
+        <div className="flex items-center justify-between pb-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(Math.max(0, activeIdx - 1))}
+            disabled={activeIdx === 0}
+            className="text-white/40 hover:text-white disabled:opacity-20 hover:bg-white/5 rounded-xl px-4"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" /> Prev
           </Button>
-        </motion.div>
+
+          {/* Dot indicators */}
+          <div className="flex gap-2 items-center">
+            {SECTION_META.map((s, i) => (
+              <button
+                key={s.key}
+                onClick={() => navigate(i)}
+                className={`rounded-full transition-all ${
+                  i === activeIdx ? `w-5 h-2 ${s.dot}` : "w-2 h-2 bg-white/20 hover:bg-white/40"
+                }`}
+              />
+            ))}
+          </div>
+
+          {activeIdx < totalSections - 1 ? (
+            <Button
+              variant="ghost"
+              onClick={() => navigate(activeIdx + 1)}
+              className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl px-4"
+            >
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : (
+            <Button asChild variant="ghost" className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl px-4 text-sm">
+              <Link href="/generate">New report <ArrowRight className="w-4 h-4 ml-1" /></Link>
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
