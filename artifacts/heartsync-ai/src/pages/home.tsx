@@ -35,7 +35,7 @@ export default function Home() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-8">
               <Sparkles className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium text-white/80">Your AI Wingman for First Dates</span>
+              <span className="text-sm font-medium text-white/80">Your AI Wingman for Dates</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-8 text-white">
               Don't guess the vibe. <br />
@@ -66,7 +66,7 @@ export default function Home() {
               },
               {
                 title: "Smart Questions",
-                desc: "Five questions that go beyond small talk and help you genuinely connect.",
+                desc: "Questions that go beyond small talk and help you genuinely connect.",
                 icon: Brain,
                 color: "text-accent"
               },

@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Sparkles, MessageCircle, Brain, HandHeart,
-  ArrowRight, Copy, Check, Star, Zap,
+  ArrowRight, Copy, Check, Zap, Clock,
 } from "lucide-react";
 
 import { reportStore } from "@/lib/store";
@@ -20,7 +20,6 @@ const SECTION_META = [
     ring: "ring-secondary/40",
     dot: "bg-secondary",
     itemBg: "bg-secondary/10 hover:bg-secondary/20 border-secondary/20",
-    recBg: "bg-secondary/20 border-secondary/40",
     iconColor: "text-secondary",
   },
   {
@@ -32,7 +31,6 @@ const SECTION_META = [
     ring: "ring-primary/40",
     dot: "bg-primary",
     itemBg: "bg-primary/10 hover:bg-primary/20 border-primary/20",
-    recBg: "bg-primary/20 border-primary/40",
     iconColor: "text-primary",
   },
   {
@@ -44,7 +42,6 @@ const SECTION_META = [
     ring: "ring-accent/40",
     dot: "bg-accent",
     itemBg: "bg-accent/10 hover:bg-accent/20 border-accent/20",
-    recBg: "bg-accent/20 border-accent/40",
     iconColor: "text-accent",
   },
   {
@@ -56,7 +53,6 @@ const SECTION_META = [
     ring: "ring-rose-500/40",
     dot: "bg-rose-400",
     itemBg: "bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20",
-    recBg: "bg-rose-500/20 border-rose-500/40",
     iconColor: "text-rose-400",
   },
 ] as const;
@@ -84,7 +80,7 @@ function SectionContent({
   meta,
   direction,
 }: {
-  data: { title: string; content: string; items?: string[]; recommendedIndex?: number };
+  data: { title: string; content: string; items?: string[] };
   meta: (typeof SECTION_META)[number];
   direction: number;
 }) {
@@ -112,52 +108,45 @@ function SectionContent({
 
       {data.items && data.items.length > 0 && (
         <ul className="space-y-2.5">
-          {data.items.slice(0, 3).map((item, i) => {
-            const recIdx =
-              data.recommendedIndex != null &&
-              data.recommendedIndex >= 0 &&
-              data.recommendedIndex <= 2
-                ? data.recommendedIndex
-                : 0;
-            const isRecommended = i === recIdx;
-            return (
-              <motion.li
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 28 }}
-                className={`flex gap-3 items-start justify-between rounded-xl border px-4 py-3 transition-colors ${
-                  isRecommended ? meta.recBg : meta.itemBg
-                }`}
-              >
-                <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
-                <span className="text-sm text-white/85 leading-relaxed flex-1">{item}</span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {isRecommended && (
-                    <span
-                      className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${meta.activeColor} text-white`}
-                    >
-                      <Star className="w-2.5 h-2.5" /> Recommended
-                    </span>
-                  )}
-                  <CopyButton text={item} />
-                </div>
-              </motion.li>
-            );
-          })}
+          {data.items.slice(0, 3).map((item, i) => (
+            <motion.li
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 28 }}
+              className={`flex gap-3 items-start justify-between rounded-xl border px-4 py-3 transition-colors ${meta.itemBg}`}
+            >
+              <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
+              <span className="text-sm text-white/85 leading-relaxed flex-1">{item}</span>
+              <CopyButton text={item} />
+            </motion.li>
+          ))}
         </ul>
       )}
     </motion.div>
   );
 }
 
+function formatExpiry(expiresAt: number): string {
+  const diff = expiresAt - Date.now();
+  if (diff <= 0) return "expired";
+  const h = Math.floor(diff / (1000 * 60 * 60));
+  const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (h > 0) return `expires in ${h}h ${m}m`;
+  return `expires in ${m}m`;
+}
+
 export default function Report() {
   const [, setLocation] = useLocation();
   const storeData = reportStore.data;
   const report = storeData?.report ?? null;
+  const expiresAt = reportStore.expiresAt();
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [expiryLabel, setExpiryLabel] = useState(() =>
+    expiresAt ? formatExpiry(expiresAt) : null,
+  );
 
   const navigate = useCallback(
     (idx: number) => {
@@ -168,8 +157,22 @@ export default function Report() {
   );
 
   useEffect(() => {
-    if (!report) setLocation("/generate");
-  }, [report, setLocation]);
+    if (!report) {
+      setLocation("/generate");
+      return;
+    }
+    if (!expiresAt) return;
+    const tick = setInterval(() => {
+      const label = formatExpiry(expiresAt);
+      setExpiryLabel(label);
+      if (label === "expired") {
+        reportStore.data = null;
+        try { localStorage.removeItem("heartsync_report_v6"); } catch { /* ignore */ }
+        setLocation("/generate");
+      }
+    }, 60_000);
+    return () => clearInterval(tick);
+  }, [report, expiresAt, setLocation]);
 
   if (!report) return null;
 
@@ -192,7 +195,6 @@ export default function Report() {
       </div>
 
       <div className="relative z-10 max-w-lg mx-auto px-5 flex flex-col min-h-screen">
-        {/* Header */}
         <div className="py-5 flex items-center justify-between">
           <Button
             asChild
@@ -215,7 +217,15 @@ export default function Report() {
           </div>
         </div>
 
-        {/* Section tabs */}
+        {expiryLabel && expiryLabel !== "expired" && (
+          <div className="flex items-center gap-1.5 mb-4 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
+            <Clock className="w-3 h-3 text-white/30 shrink-0" />
+            <p className="text-[11px] text-white/35">
+              Available for 48 hours &middot; {expiryLabel}
+            </p>
+          </div>
+        )}
+
         <div className="flex gap-2 mb-6">
           {SECTION_META.map((s, i) => {
             const SIcon = s.icon;
@@ -242,7 +252,6 @@ export default function Report() {
           })}
         </div>
 
-        {/* Content card */}
         <div className="flex-1 bg-card/40 border border-white/6 backdrop-blur-md rounded-3xl p-6 mb-6 overflow-hidden min-h-0">
           <AnimatePresence mode="wait" initial={false}>
             <SectionContent
@@ -254,7 +263,6 @@ export default function Report() {
           </AnimatePresence>
         </div>
 
-        {/* Nav controls */}
         <div className="flex items-center justify-between pb-8">
           <Button
             variant="ghost"

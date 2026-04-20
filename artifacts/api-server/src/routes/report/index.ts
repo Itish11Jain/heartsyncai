@@ -28,9 +28,11 @@ Important rules:
 - Each section's "content" should be ONE concise sentence (max 20 words) that frames the advice — keep it tight
 - Each "items" array must have EXACTLY 3 items — no more, no fewer
 - Each item must be a single, specific, actionable line — no long explanations
-- Each section must include a "recommendedIndex" field (0, 1, or 2) — the index of the single strongest item
-- For "innerGame": give mindset and energy tips that work for any first date — not specific to the partner's details
-- For "openingGambit": keep openers casual and conversational — they should feel natural to say, not scripted or hyper-specific
+- All 3 items in every section are equally valuable — do NOT include a "recommendedIndex" field
+- For "innerGame": focus on how to behave and carry yourself during the date — posture, pace, presence, listening cues, when to speak vs. let silence breathe. Practical behaviour, not abstract mindset slogans.
+- For "openingGambit": give one simple, easy question or line that breaks the ice naturally and makes the other person feel at ease immediately. The opener should invite them to talk and feel low-pressure — not clever or scripted.
+- For "iqQuestions": write questions that show genuine curiosity about this specific person's interests, hobbies, and life — questions that nudge them to share and participate. Not trivia. Not showing off. Just warm curiosity that invites a real answer.
+- For "conversationClosers": give natural, warm ways to wrap up the date so both people leave feeling good. Each closer should feel smooth and leave the door open for a potential next meeting — no awkward endings.
 - Be crisp. Quality over quantity. A shorter, sharper insight beats a long vague one every time`;
 
 interface ReportSection {
@@ -71,32 +73,28 @@ router.post("/report/generate", requireAuth, async (req, res) => {
 - Known details about them: ${knownDetails || "Not much — going in with limited information."}
 - Desired vibe: ${vibe || "Relaxed but memorable"}
 
-Return ONLY a valid JSON object with this exact structure (EXACTLY 3 items per section, plus recommendedIndex 0–2):
+Return ONLY a valid JSON object with this exact structure (EXACTLY 3 items per section, no recommendedIndex):
 {
   "partnerName": "${partnerName}",
   "innerGame": {
     "title": "Inner Game",
-    "content": "One sentence on the mindset to carry into this date",
-    "items": ["mindset tip 1", "energy tip 2", "confidence tip 3"],
-    "recommendedIndex": 0
+    "content": "One sentence on how to carry yourself on this date",
+    "items": ["specific behaviour tip 1", "specific behaviour tip 2", "specific behaviour tip 3"]
   },
   "openingGambit": {
     "title": "The Opening Gambit",
-    "content": "One sentence on why a casual, low-pressure open works better than a formal one",
-    "items": ["casual opener 1", "casual opener 2", "casual opener 3"],
-    "recommendedIndex": 1
+    "content": "One sentence on why a simple, easy opener puts them at ease",
+    "items": ["low-pressure opener or question 1", "low-pressure opener or question 2", "low-pressure opener or question 3"]
   },
   "iqQuestions": {
     "title": "IQ Questions",
-    "content": "One sentence on why these questions go beyond small talk",
-    "items": ["question 1", "question 2", "question 3"],
-    "recommendedIndex": 2
+    "content": "One sentence on how these questions show curiosity and invite real conversation",
+    "items": ["interest/hobby question 1", "interest/hobby question 2", "interest/hobby question 3"]
   },
   "conversationClosers": {
     "title": "Conversation Closers",
-    "content": "One sentence on how to close naturally and leave a strong impression",
-    "items": ["closer 1", "closer 2", "closer 3"],
-    "recommendedIndex": 0
+    "content": "One sentence on ending the date warmly and leaving the door open",
+    "items": ["warm closer 1", "warm closer 2", "warm closer 3"]
   }
 }`;
 
