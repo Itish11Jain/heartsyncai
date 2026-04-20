@@ -34,8 +34,8 @@ export default function Report() {
   const storeData = reportStore.data;
   const report = storeData?.report ?? null;
   const sessionId = storeData?.sessionId ?? "";
+  const isFreeReport = storeData?.isFreeReport ?? false;
 
-  const [isFreeReport, setIsFreeReport] = useState(false);
   const [utr, setUtr] = useState("");
   const [utrError, setUtrError] = useState("");
 
@@ -54,14 +54,6 @@ export default function Report() {
   useEffect(() => {
     if (!report || !sessionId) {
       setLocation("/generate");
-      return;
-    }
-    const freeSessionId = localStorage.getItem("heartsync_free_session_id");
-    if (!freeSessionId) {
-      localStorage.setItem("heartsync_free_session_id", sessionId);
-      setIsFreeReport(true);
-    } else if (freeSessionId === sessionId) {
-      setIsFreeReport(true);
     }
   }, [report, sessionId, setLocation]);
 
