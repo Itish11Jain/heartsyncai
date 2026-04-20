@@ -23,10 +23,11 @@ Tone examples:
 
 Important rules:
 - Always respond in JSON format exactly as specified
-- Each section's "content" should be a short, insightful paragraph (2-3 sentences) in the tone above
-- The "items" array should contain specific, actionable bullet points — real openers, real questions, real tips
+- Each section's "content" should be ONE concise sentence (max 20 words) that frames the advice — keep it tight
+- Each item in the "items" array should be a single, specific, actionable line — no long explanations
 - Tailor everything closely to the specific partner, occasion, and vibe provided
-- No generic advice. Every item should feel like it was written specifically for this situation`;
+- No generic advice. Every item should feel written specifically for this situation
+- Be crisp. Quality over quantity. A shorter, sharper insight beats a long vague one every time`;
 
 interface ReportSection {
   title: string;

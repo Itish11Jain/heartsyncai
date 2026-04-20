@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
-import { ChevronLeft, Lock, Sparkles, MessageCircle, Eye, HandHeart, CheckCircle2, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronLeft, Lock, Sparkles, MessageCircle, Eye, HandHeart,
+  Loader2, ArrowRight, Gift, Info
+} from "lucide-react";
 
 import { useSubmitUtr, useGetPaymentStatus, type PaymentStatusResponse } from "@workspace/api-client-react";
 import { type UseQueryOptions } from "@tanstack/react-query";
@@ -11,16 +14,20 @@ import { Input } from "@/components/ui/input";
 
 const containerVars = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15 }
-  }
+  show: { opacity: 1, transition: { staggerChildren: 0.12 } }
 };
 
 const itemVars = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 280, damping: 26 } }
 };
+
+const SECTION_META = [
+  { key: "openingGambit",      icon: MessageCircle, num: "01", accent: "from-primary/20 to-primary/5",   border: "border-primary/30",   badge: "bg-primary/15 text-primary",   dot: "bg-primary"    },
+  { key: "iqQuestions",        icon: Sparkles,      num: "02", accent: "from-accent/20 to-accent/5",     border: "border-accent/30",    badge: "bg-accent/15 text-accent",     dot: "bg-accent"     },
+  { key: "auraCheck",          icon: Eye,           num: "03", accent: "from-secondary/20 to-secondary/5", border: "border-secondary/30", badge: "bg-secondary/15 text-secondary", dot: "bg-secondary" },
+  { key: "conversationClosers",icon: HandHeart,     num: "04", accent: "from-rose-500/20 to-rose-500/5", border: "border-rose-500/30",  badge: "bg-rose-500/15 text-rose-400",  dot: "bg-rose-400"   },
+] as const;
 
 export default function Report() {
   const [, setLocation] = useLocation();
@@ -49,7 +56,6 @@ export default function Report() {
       setLocation("/generate");
       return;
     }
-
     const freeSessionId = localStorage.getItem("heartsync_free_session_id");
     if (!freeSessionId) {
       localStorage.setItem("heartsync_free_session_id", sessionId);
@@ -73,156 +79,181 @@ export default function Report() {
     submitUtr.mutate(
       { data: { utr: trimmed, reportSession: sessionId } },
       {
-        onSuccess: () => {
-          paymentStatus.refetch();
-        },
-        onError: () => {
-          setUtrError("Verification failed. Please try again.");
-        },
+        onSuccess: () => { paymentStatus.refetch(); },
+        onError: () => { setUtrError("Verification failed. Please try again."); },
       }
     );
   };
 
-  const sections = [
-    {
-      id: "openingGambit",
-      data: report.openingGambit,
-      icon: MessageCircle,
-      color: "text-primary",
-      bg: "bg-primary/10",
-      locked: false
-    },
-    {
-      id: "iqQuestions",
-      data: report.iqQuestions,
-      icon: Sparkles,
-      color: "text-accent",
-      bg: "bg-accent/10",
-      locked: isLocked
-    },
-    {
-      id: "auraCheck",
-      data: report.auraCheck,
-      icon: Eye,
-      color: "text-secondary",
-      bg: "bg-secondary/10",
-      locked: isLocked
-    },
-    {
-      id: "conversationClosers",
-      data: report.conversationClosers,
-      icon: HandHeart,
-      color: "text-destructive",
-      bg: "bg-destructive/10",
-      locked: isLocked
-    }
-  ];
+  const sectionData: Record<string, typeof report.openingGambit> = {
+    openingGambit: report.openingGambit,
+    iqQuestions: report.iqQuestions,
+    auraCheck: report.auraCheck,
+    conversationClosers: report.conversationClosers,
+  };
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground pb-24">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-30">
-        <div className="absolute top-[20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[120px]" />
+      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-20">
+        <div className="absolute top-[10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-primary/30 blur-[130px]" />
+        <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-accent/30 blur-[130px]" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-6 py-12">
-        <header className="flex items-center justify-between mb-12">
-          <Button asChild variant="ghost" className="pl-0 text-white/60 hover:text-white hover:bg-transparent">
-            <Link href="/" className="flex items-center gap-2">
-              <ChevronLeft className="w-5 h-5" /> Home
+      <div className="relative z-10 max-w-2xl mx-auto px-5 py-10">
+        <header className="mb-8">
+          <Button asChild variant="ghost" className="pl-0 text-white/50 hover:text-white hover:bg-transparent text-sm">
+            <Link href="/" className="flex items-center gap-1.5">
+              <ChevronLeft className="w-4 h-4" /> Home
             </Link>
           </Button>
         </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-6">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-white/80">Intelligence Report Ready</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">Target: {report.partnerName}</h1>
-          <p className="text-white/50 text-lg">Your personalized playbook for the date.</p>
+        {/* Title */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary/80 mb-1">Intelligence Report</p>
+          <h1 className="text-3xl font-bold text-white">For your date with {report.partnerName}</h1>
         </motion.div>
 
-        <motion.div
-          variants={containerVars}
-          initial="hidden"
-          animate="show"
-          className="space-y-8"
-        >
-          {sections.map((section, idx) => (
-            <motion.div key={section.id} variants={itemVars} className="relative">
-              <div className={`p-6 md:p-8 rounded-3xl bg-card/40 border border-white/5 backdrop-blur-md transition-all ${section.locked ? "blur-md opacity-40 select-none pointer-events-none" : ""}`}>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${section.bg} ${section.color}`}>
-                    <section.icon className="w-6 h-6" />
+        {/* Free report notice */}
+        <AnimatePresence>
+          {isFreeReport && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex gap-3 items-start bg-gradient-to-r from-primary/15 to-accent/10 border border-primary/20 rounded-2xl p-4 mb-8"
+            >
+              <Gift className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-white">This is your free report</p>
+                <p className="text-xs text-white/55 mt-0.5">
+                  Enjoy the full playbook on us. From your next report, each one is just ₹99.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Section progress indicators */}
+        <div className="flex gap-2 mb-8">
+          {SECTION_META.map((meta, i) => (
+            <div key={meta.key} className="flex-1 flex flex-col items-center gap-1">
+              <div className={`w-full h-1 rounded-full ${isLocked && i > 0 ? "bg-white/10" : meta.dot} opacity-80`} />
+              <span className="text-[10px] text-white/30">{meta.num}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Sections */}
+        <motion.div variants={containerVars} initial="hidden" animate="show" className="space-y-4">
+          {SECTION_META.map((meta, idx) => {
+            const data = sectionData[meta.key];
+            const locked = isLocked && idx > 0;
+            const Icon = meta.icon;
+
+            return (
+              <motion.div key={meta.key} variants={itemVars}>
+                <div className={`rounded-2xl border bg-gradient-to-br ${meta.accent} ${meta.border} backdrop-blur-md transition-all ${locked ? "blur-sm opacity-30 select-none pointer-events-none" : ""}`}>
+                  {/* Section header */}
+                  <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${meta.badge}`}>{meta.num}</span>
+                    <Icon className={`w-4 h-4 ${meta.badge.split(" ")[1]}`} />
+                    <h2 className="text-sm font-semibold text-white/90 tracking-wide uppercase">{data.title}</h2>
                   </div>
-                  <h2 className="text-2xl font-bold text-white/90">{section.data.title}</h2>
-                </div>
 
-                <div className="space-y-6">
-                  <p className="text-white/70 text-lg leading-relaxed">{section.data.content}</p>
+                  {/* Insight line */}
+                  <p className="px-5 pb-4 text-sm text-white/60 leading-relaxed border-b border-white/5">{data.content}</p>
 
-                  {section.data.items && section.data.items.length > 0 && (
-                    <ul className="space-y-3">
-                      {section.data.items.map((item, i) => (
-                        <li key={i} className="flex gap-3 text-white/80 items-start">
-                          <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${section.color}`} />
-                          <span className="leading-relaxed">{item}</span>
+                  {/* Items */}
+                  {data.items && data.items.length > 0 && (
+                    <ul className="px-5 py-4 space-y-2.5">
+                      {data.items.map((item, i) => (
+                        <li key={i} className="flex gap-3 items-start">
+                          <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
+                          <span className="text-sm text-white/80 leading-relaxed">{item}</span>
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
-              </div>
 
-              {section.locked && idx === 1 && (
-                <div className="mt-8 flex justify-center">
-                  <div className="bg-card/95 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl w-full max-w-md text-center">
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 text-primary">
-                      <Lock className="w-8 h-8" />
+                {/* Paywall gate — shown after section 1 when locked */}
+                {locked && idx === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 rounded-2xl border border-white/10 bg-card/80 backdrop-blur-xl p-6"
+                  >
+                    <div className="flex items-start gap-3 mb-5">
+                      <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                        <Lock className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white text-sm">3 more sections inside</p>
+                        <p className="text-xs text-white/50 mt-0.5">Pay ₹99 via UPI to unlock IQ Questions, Aura Check, and Conversation Closers.</p>
+                      </div>
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Want the full report?</h3>
-                    <p className="text-white/60 mb-6">Unlock the complete intelligence playbook for just ₹99.</p>
 
-                    <div className="bg-white p-4 rounded-xl inline-block mb-4 shadow-inner">
-                      <img
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=99%26cu=INR%26tn=HeartSync+Report"
-                        alt="UPI QR Code"
-                        className="w-40 h-40 mx-auto rounded-lg"
-                      />
+                    {/* UPI */}
+                    <div className="flex gap-4 items-center mb-5">
+                      <div className="bg-white rounded-xl p-2 shrink-0">
+                        <img
+                          src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=99%26cu=INR%26tn=HeartSync+Report"
+                          alt="UPI QR Code"
+                          className="w-20 h-20 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-white/40 mb-1">UPI ID</p>
+                        <p className="font-mono font-bold text-white text-sm">8905158970@upi</p>
+                        <p className="text-xs text-white/40 mt-2">Amount: ₹99</p>
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <Info className="w-3 h-3 text-white/30" />
+                          <p className="text-[11px] text-white/30">Scan or copy UPI ID to pay</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xl font-mono font-bold text-white mb-6">8905158970@upi</p>
 
-                    <div className="space-y-3">
+                    {/* UTR input */}
+                    <div className="space-y-2">
                       <Input
-                        placeholder="Enter UTR / Transaction ID (min 12 chars)"
+                        placeholder="Paste your UTR / Transaction ID here"
                         value={utr}
                         onChange={(e) => { setUtr(e.target.value); setUtrError(""); }}
-                        className="bg-white/5 border-white/10 text-center h-12 text-lg rounded-xl"
+                        className="bg-white/5 border-white/10 h-10 text-sm rounded-xl placeholder:text-white/25"
                       />
-                      {utrError && (
-                        <p className="text-sm text-destructive">{utrError}</p>
-                      )}
+                      {utrError && <p className="text-xs text-destructive">{utrError}</p>}
                       <Button
                         onClick={handleUnlock}
                         disabled={!isValidUtrFormat(utr) || submitUtr.isPending}
-                        className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 text-white rounded-xl"
+                        className="w-full h-10 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl"
                       >
                         {submitUtr.isPending ? (
-                          <span className="flex items-center gap-2">
-                            <Loader2 className="w-5 h-5 animate-spin" /> Verifying...
-                          </span>
-                        ) : "Unlock My Report"}
+                          <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</span>
+                        ) : (
+                          <span className="flex items-center gap-2">Unlock Full Report <ArrowRight className="w-4 h-4" /></span>
+                        )}
                       </Button>
                     </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          ))}
+                  </motion.div>
+                )}
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        {/* Generate another */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="mt-10 text-center"
+        >
+          <Button asChild variant="ghost" className="text-white/40 hover:text-white text-sm">
+            <Link href="/generate" className="flex items-center gap-1.5">
+              Generate another report <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Button>
         </motion.div>
       </div>
     </div>
