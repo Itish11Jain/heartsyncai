@@ -2,15 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight, Lock, Sparkles, MessageCircle, Brain, HandHeart,
-  Loader2, ArrowRight, Gift, Copy, Check, Info, Star
+  ChevronLeft, ChevronRight, Sparkles, MessageCircle, Brain, HandHeart,
+  ArrowRight, Copy, Check, Star, Zap,
 } from "lucide-react";
 
-import { useSubmitUtr, useGetPaymentStatus, type PaymentStatusResponse } from "@workspace/api-client-react";
-import { type UseQueryOptions } from "@tanstack/react-query";
 import { reportStore } from "@/lib/store";
+import { authStore } from "@/lib/auth-store";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const SECTION_META = [
   {
@@ -87,7 +85,7 @@ function SectionContent({
   direction,
 }: {
   data: { title: string; content: string; items?: string[]; recommendedIndex?: number };
-  meta: typeof SECTION_META[number];
+  meta: (typeof SECTION_META)[number];
   direction: number;
 }) {
   const Icon = meta.icon;
@@ -115,8 +113,12 @@ function SectionContent({
       {data.items && data.items.length > 0 && (
         <ul className="space-y-2.5">
           {data.items.slice(0, 3).map((item, i) => {
-            const recIdx = (data.recommendedIndex != null && data.recommendedIndex >= 0 && data.recommendedIndex <= 2)
-              ? data.recommendedIndex : 0;
+            const recIdx =
+              data.recommendedIndex != null &&
+              data.recommendedIndex >= 0 &&
+              data.recommendedIndex <= 2
+                ? data.recommendedIndex
+                : 0;
             const isRecommended = i === recIdx;
             return (
               <motion.li
@@ -132,7 +134,9 @@ function SectionContent({
                 <span className="text-sm text-white/85 leading-relaxed flex-1">{item}</span>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {isRecommended && (
-                    <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${meta.activeColor} text-white`}>
+                    <span
+                      className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${meta.activeColor} text-white`}
+                    >
                       <Star className="w-2.5 h-2.5" /> Recommended
                     </span>
                   )}
@@ -147,121 +151,25 @@ function SectionContent({
   );
 }
 
-function PaywallPanel({
-  sessionId,
-  utr,
-  setUtr,
-  utrError,
-  setUtrError,
-  submitUtr,
-  onUnlocked,
-}: {
-  sessionId: string;
-  utr: string;
-  setUtr: (v: string) => void;
-  utrError: string;
-  setUtrError: (v: string) => void;
-  submitUtr: ReturnType<typeof useSubmitUtr>;
-  onUnlocked: () => void;
-}) {
-  const isValidUtrFormat = (value: string) => value.trim().length >= 12 && /^[A-Za-z0-9]+$/.test(value.trim());
-
-  const handleUnlock = () => {
-    const trimmed = utr.trim();
-    if (!isValidUtrFormat(trimmed)) return;
-    setUtrError("");
-    submitUtr.mutate(
-      { data: { utr: trimmed, reportSession: sessionId } },
-      { onSuccess: onUnlocked, onError: () => setUtrError("Verification failed. Please try again.") }
-    );
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center text-center"
-    >
-      <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mb-4">
-        <Lock className="w-5 h-5 text-primary" />
-      </div>
-      <h3 className="text-lg font-bold text-white mb-1">3 more sections await</h3>
-      <p className="text-sm text-white/45 mb-6 max-w-xs">Pay ₹99 via UPI to unlock Opening Gambit, IQ Questions and Conversation Closers.</p>
-
-      <div className="flex gap-5 items-center mb-6">
-        <div className="bg-white rounded-xl p-2 shadow-lg shrink-0">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=99%26cu=INR%26tn=HeartSync+Report"
-            alt="UPI QR Code"
-            className="w-24 h-24 rounded-lg"
-          />
-        </div>
-        <div className="text-left">
-          <p className="text-[10px] text-white/35 uppercase tracking-wide mb-1">UPI ID</p>
-          <p className="font-mono font-bold text-white text-base">8905158970@upi</p>
-          <p className="text-xs text-white/35 mt-2">Amount: ₹99</p>
-          <div className="flex items-center gap-1 mt-1.5">
-            <Info className="w-3 h-3 text-white/25" />
-            <p className="text-[11px] text-white/25">Scan QR or copy UPI ID</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full space-y-2.5">
-        <Input
-          placeholder="Paste UTR / Transaction ID (min 12 chars)"
-          value={utr}
-          onChange={(e) => { setUtr(e.target.value); setUtrError(""); }}
-          className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center"
-        />
-        {utrError && <p className="text-xs text-destructive">{utrError}</p>}
-        <Button
-          onClick={handleUnlock}
-          disabled={!isValidUtrFormat(utr) || submitUtr.isPending}
-          className="w-full h-11 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl"
-        >
-          {submitUtr.isPending
-            ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Verifying...</span>
-            : <span className="flex items-center gap-2">Unlock Full Report <ArrowRight className="w-4 h-4" /></span>
-          }
-        </Button>
-      </div>
-    </motion.div>
-  );
-}
-
 export default function Report() {
   const [, setLocation] = useLocation();
   const storeData = reportStore.data;
   const report = storeData?.report ?? null;
-  const sessionId = storeData?.sessionId ?? "";
-  const isFreeReport = storeData?.isFreeReport ?? false;
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [direction, setDirection] = useState(1);
-  const [utr, setUtr] = useState("");
-  const [utrError, setUtrError] = useState("");
 
-  const submitUtr = useSubmitUtr();
-
-  const paymentStatus = useGetPaymentStatus(sessionId, {
-    query: {
-      enabled: !!sessionId && !isFreeReport,
-      refetchInterval: false,
-    } as UseQueryOptions<PaymentStatusResponse>,
-  });
-
-  const isApprovedServerSide = paymentStatus.data?.approved === true;
-  const isUnlocked = isFreeReport || isApprovedServerSide;
-
-  const navigate = useCallback((idx: number) => {
-    setDirection(idx > activeIdx ? 1 : -1);
-    setActiveIdx(idx);
-  }, [activeIdx]);
+  const navigate = useCallback(
+    (idx: number) => {
+      setDirection(idx > activeIdx ? 1 : -1);
+      setActiveIdx(idx);
+    },
+    [activeIdx],
+  );
 
   useEffect(() => {
-    if (!report || !sessionId) setLocation("/generate");
-  }, [report, sessionId, setLocation]);
+    if (!report) setLocation("/generate");
+  }, [report, setLocation]);
 
   if (!report) return null;
 
@@ -273,8 +181,8 @@ export default function Report() {
   };
 
   const meta = SECTION_META[activeIdx];
-  const isCurrentLocked = !isUnlocked && activeIdx > 0;
   const totalSections = SECTION_META.length;
+  const credits = authStore.credits;
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground">
@@ -286,52 +194,47 @@ export default function Report() {
       <div className="relative z-10 max-w-lg mx-auto px-5 flex flex-col min-h-screen">
         {/* Header */}
         <div className="py-5 flex items-center justify-between">
-          <Button asChild variant="ghost" className="pl-0 text-white/40 hover:text-white hover:bg-transparent text-sm">
+          <Button
+            asChild
+            variant="ghost"
+            className="pl-0 text-white/40 hover:text-white hover:bg-transparent text-sm"
+          >
             <Link href="/" className="flex items-center gap-1">
               <ChevronLeft className="w-4 h-4" /> Home
             </Link>
           </Button>
-          <div className="text-right">
-            <p className="text-xs text-white/30">Report for</p>
-            <p className="text-sm font-semibold text-white">{report.partnerName}</p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+              <Zap className="w-3 h-3 text-primary" />
+              <span className="text-[11px] font-semibold text-white">{credits} left</span>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-white/30">Report for</p>
+              <p className="text-sm font-semibold text-white">{report.partnerName}</p>
+            </div>
           </div>
         </div>
-
-        {/* Free badge */}
-        {isFreeReport && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 mb-4"
-          >
-            <Gift className="w-4 h-4 text-primary shrink-0" />
-            <p className="text-xs text-white/70">
-              <span className="text-white font-semibold">Free report</span> — next one is ₹99
-            </p>
-          </motion.div>
-        )}
 
         {/* Section tabs */}
         <div className="flex gap-2 mb-6">
           {SECTION_META.map((s, i) => {
             const SIcon = s.icon;
-            const locked = !isUnlocked && i > 0;
             const isActive = i === activeIdx;
             return (
               <button
                 key={s.key}
                 onClick={() => navigate(i)}
                 className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all
-                  ${isActive
-                    ? `${s.activeColor} border-transparent shadow-lg ring-2 ${s.ring}`
-                    : "bg-white/5 border-white/8 hover:bg-white/10"
+                  ${
+                    isActive
+                      ? `${s.activeColor} border-transparent shadow-lg ring-2 ${s.ring}`
+                      : "bg-white/5 border-white/8 hover:bg-white/10"
                   }`}
               >
-                {locked
-                  ? <Lock className="w-4 h-4 text-white/25" />
-                  : <SIcon className={`w-4 h-4 ${isActive ? "text-white" : s.iconColor} opacity-80`} />
-                }
-                <span className={`text-[10px] font-semibold leading-none ${isActive ? "text-white" : "text-white/35"}`}>
+                <SIcon className={`w-4 h-4 ${isActive ? "text-white" : s.iconColor} opacity-80`} />
+                <span
+                  className={`text-[10px] font-semibold leading-none ${isActive ? "text-white" : "text-white/35"}`}
+                >
                   {s.label}
                 </span>
               </button>
@@ -342,25 +245,12 @@ export default function Report() {
         {/* Content card */}
         <div className="flex-1 bg-card/40 border border-white/6 backdrop-blur-md rounded-3xl p-6 mb-6 overflow-hidden min-h-0">
           <AnimatePresence mode="wait" initial={false}>
-            {isCurrentLocked ? (
-              <PaywallPanel
-                key="paywall"
-                sessionId={sessionId}
-                utr={utr}
-                setUtr={setUtr}
-                utrError={utrError}
-                setUtrError={setUtrError}
-                submitUtr={submitUtr}
-                onUnlocked={() => paymentStatus.refetch()}
-              />
-            ) : (
-              <SectionContent
-                key={meta.key}
-                data={sectionData[meta.key as keyof typeof sectionData]}
-                meta={meta}
-                direction={direction}
-              />
-            )}
+            <SectionContent
+              key={meta.key}
+              data={sectionData[meta.key as keyof typeof sectionData]}
+              meta={meta}
+              direction={direction}
+            />
           </AnimatePresence>
         </div>
 
@@ -396,8 +286,14 @@ export default function Report() {
               Next <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button asChild variant="ghost" className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl px-4 text-sm">
-              <Link href="/generate">New report <ArrowRight className="w-4 h-4 ml-1" /></Link>
+            <Button
+              asChild
+              variant="ghost"
+              className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl px-4 text-sm"
+            >
+              <Link href="/generate">
+                New report <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
             </Button>
           )}
         </div>

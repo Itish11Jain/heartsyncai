@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { GenerateReportBody } from "@workspace/api-zod";
+import { requireAuth } from "../../middleware/requireAuth.js";
+import { pool } from "../../lib/db.js";
 
 const router = Router();
 
@@ -46,7 +48,15 @@ interface IntelligenceReport {
   conversationClosers: ReportSection;
 }
 
-router.post("/report/generate", async (req, res) => {
+router.post("/report/generate", requireAuth, async (req, res) => {
+  if (req.user!.credits <= 0) {
+    res.status(403).json({
+      error: "no_credits",
+      message: "No reports left. Buy a pack to continue.",
+    });
+    return;
+  }
+
   const parseResult = GenerateReportBody.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ error: "validation_error", message: "Invalid request body" });
@@ -103,15 +113,35 @@ Return ONLY a valid JSON object with this exact structure (EXACTLY 3 items per s
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
-      res.status(500).json({ error: "generation_failed", message: "Something went wrong generating your report. Please try again." });
+      res.status(500).json({
+        error: "generation_failed",
+        message: "Something went wrong generating your report. Please try again.",
+      });
       return;
     }
 
     const report = JSON.parse(content) as IntelligenceReport;
-    res.json(report);
+
+    const updated = await pool.query<{ credits: number }>(
+      "UPDATE hs_users SET credits = credits - 1 WHERE id = $1 RETURNING credits",
+      [req.user!.userId],
+    );
+    await pool.query(
+      "INSERT INTO hs_credit_logs (user_id, delta, reason) VALUES ($1, $2, $3)",
+      [req.user!.userId, -1, "report_generated"],
+    );
+
+    const creditsRemaining = updated.rows[0]?.credits ?? 0;
+
+    req.log.info({ userId: req.user!.userId, creditsRemaining }, "Report generated");
+
+    res.json({ ...report, creditsRemaining });
   } catch (err) {
     req.log.error({ err }, "Report generation failed");
-    res.status(500).json({ error: "server_error", message: "Something went wrong on our end. Please try again in a moment." });
+    res.status(500).json({
+      error: "server_error",
+      message: "Something went wrong on our end. Please try again in a moment.",
+    });
   }
 });
 

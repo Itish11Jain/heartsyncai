@@ -16,6 +16,25 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Verify Firebase ID token and create/find user
+ */
+export const VerifyAuthBody = zod.object({
+  idToken: zod
+    .string()
+    .describe("Firebase ID token from client-side authentication"),
+});
+
+export const VerifyAuthResponse = zod.object({
+  sessionToken: zod
+    .string()
+    .describe("JWT session token for subsequent API calls"),
+  credits: zod.number().describe("Current credit balance"),
+  displayName: zod
+    .string()
+    .describe("User display name (email or masked phone)"),
+});
+
+/**
  * @summary Generate a date intelligence report
  */
 export const GenerateReportBody = zod.object({
@@ -30,48 +49,64 @@ export const GenerateReportBody = zod.object({
   vibe: zod.string().optional().describe("The vibe or mood you want to set"),
 });
 
-export const GenerateReportResponse = zod.object({
-  partnerName: zod.string(),
-  innerGame: zod.object({
-    title: zod.string(),
-    content: zod.string(),
-    items: zod.array(zod.string()).optional(),
-    recommendedIndex: zod
-      .number()
-      .optional()
-      .describe("Index (0-based) of the single strongest item in this section"),
-  }),
-  openingGambit: zod.object({
-    title: zod.string(),
-    content: zod.string(),
-    items: zod.array(zod.string()).optional(),
-    recommendedIndex: zod
-      .number()
-      .optional()
-      .describe("Index (0-based) of the single strongest item in this section"),
-  }),
-  iqQuestions: zod.object({
-    title: zod.string(),
-    content: zod.string(),
-    items: zod.array(zod.string()).optional(),
-    recommendedIndex: zod
-      .number()
-      .optional()
-      .describe("Index (0-based) of the single strongest item in this section"),
-  }),
-  conversationClosers: zod.object({
-    title: zod.string(),
-    content: zod.string(),
-    items: zod.array(zod.string()).optional(),
-    recommendedIndex: zod
-      .number()
-      .optional()
-      .describe("Index (0-based) of the single strongest item in this section"),
-  }),
-});
+export const GenerateReportResponse = zod
+  .object({
+    partnerName: zod.string(),
+    innerGame: zod.object({
+      title: zod.string(),
+      content: zod.string(),
+      items: zod.array(zod.string()).optional(),
+      recommendedIndex: zod
+        .number()
+        .optional()
+        .describe(
+          "Index (0-based) of the single strongest item in this section",
+        ),
+    }),
+    openingGambit: zod.object({
+      title: zod.string(),
+      content: zod.string(),
+      items: zod.array(zod.string()).optional(),
+      recommendedIndex: zod
+        .number()
+        .optional()
+        .describe(
+          "Index (0-based) of the single strongest item in this section",
+        ),
+    }),
+    iqQuestions: zod.object({
+      title: zod.string(),
+      content: zod.string(),
+      items: zod.array(zod.string()).optional(),
+      recommendedIndex: zod
+        .number()
+        .optional()
+        .describe(
+          "Index (0-based) of the single strongest item in this section",
+        ),
+    }),
+    conversationClosers: zod.object({
+      title: zod.string(),
+      content: zod.string(),
+      items: zod.array(zod.string()).optional(),
+      recommendedIndex: zod
+        .number()
+        .optional()
+        .describe(
+          "Index (0-based) of the single strongest item in this section",
+        ),
+    }),
+  })
+  .and(
+    zod.object({
+      creditsRemaining: zod
+        .number()
+        .describe("Credits left after this report was generated"),
+    }),
+  );
 
 /**
- * Validates UTR format, records the submission server-side, and returns a session token confirming the submission was received.
+ * Validates UTR format, records the submission server-side, credits 5 reports to the user, and returns a session token.
  * @summary Submit a UPI UTR for payment verification
  */
 export const submitUtrBodyUtrMin = 12;
@@ -96,6 +131,7 @@ export const SubmitUtrResponse = zod.object({
     .string()
     .describe("HMAC token confirming UTR submission was recorded server-side"),
   reportSession: zod.string(),
+  creditsRemaining: zod.number().describe("Credit balance after the top-up"),
 });
 
 /**

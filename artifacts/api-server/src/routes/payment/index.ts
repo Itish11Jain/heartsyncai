@@ -1,10 +1,12 @@
 import { Router } from "express";
 import crypto from "node:crypto";
+import { requireAuth } from "../../middleware/requireAuth.js";
+import { pool } from "../../lib/db.js";
 
 const router = Router();
 
-const UTR_SECRET = process.env.UTR_SIGNING_SECRET;
-if (!UTR_SECRET && process.env.NODE_ENV === "production") {
+const UTR_SECRET = process.env["UTR_SIGNING_SECRET"];
+if (!UTR_SECRET && process.env["NODE_ENV"] === "production") {
   throw new Error("UTR_SIGNING_SECRET environment variable is required in production");
 }
 const signingSecret = UTR_SECRET ?? "heartsync-utr-dev-secret";
@@ -20,7 +22,7 @@ function validateUtr(value: unknown): value is string {
   );
 }
 
-router.post("/payment/submit-utr", (req, res) => {
+router.post("/payment/submit-utr", requireAuth, async (req, res) => {
   const { utr, reportSession } = req.body as { utr?: unknown; reportSession?: unknown };
 
   if (!validateUtr(utr)) {
@@ -50,9 +52,23 @@ router.post("/payment/submit-utr", (req, res) => {
     .update(`${cleanUtr}:${cleanSession}`)
     .digest("hex");
 
-  req.log.info({ utrMasked, reportSession: cleanSession }, "UTR submission recorded");
+  const updated = await pool.query<{ credits: number }>(
+    "UPDATE hs_users SET credits = credits + 5 WHERE id = $1 RETURNING credits",
+    [req.user!.userId],
+  );
+  await pool.query(
+    "INSERT INTO hs_credit_logs (user_id, delta, reason) VALUES ($1, $2, $3)",
+    [req.user!.userId, 5, "utr_payment"],
+  );
 
-  res.json({ ok: true, token, reportSession: cleanSession });
+  const creditsRemaining = updated.rows[0]?.credits ?? 5;
+
+  req.log.info(
+    { utrMasked, reportSession: cleanSession, userId: req.user!.userId, creditsRemaining },
+    "UTR submission recorded, credits added",
+  );
+
+  res.json({ ok: true, token, reportSession: cleanSession, creditsRemaining });
 });
 
 router.get("/payment/status/:sessionId", (req, res) => {

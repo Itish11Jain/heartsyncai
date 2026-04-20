@@ -1,18 +1,20 @@
 import type { IntelligenceReport } from "@workspace/api-client-react";
 
-const STORAGE_KEY = "heartsync_report_v4";
+const STORAGE_KEY = "heartsync_report_v5";
 
-// Clean up stale keys from earlier implementations
 try {
-  ["heartsync_free_session_id", "heartsync_free_claimed_v2", "heartsync_last_report_v2", "heartsync_report_v3"].forEach(k =>
-    localStorage.removeItem(k)
-  );
+  [
+    "heartsync_free_session_id",
+    "heartsync_free_claimed_v2",
+    "heartsync_last_report_v2",
+    "heartsync_report_v3",
+    "heartsync_report_v4",
+  ].forEach((k) => localStorage.removeItem(k));
 } catch { /* ignore */ }
 
 interface ReportStoreData {
   report: IntelligenceReport;
   sessionId: string;
-  isFreeReport: boolean;
 }
 
 function loadFromStorage(): ReportStoreData | null {
@@ -25,20 +27,13 @@ function loadFromStorage(): ReportStoreData | null {
   }
 }
 
-// Loaded once at module init — presence here means the user has already had a report
-const initialData = loadFromStorage();
-
 export const reportStore = {
-  data: initialData,
+  data: loadFromStorage(),
 
-  set(report: IntelligenceReport) {
-    // First report = no prior entry existed when the module loaded
-    const isFreeReport = initialData === null;
-
+  set(report: IntelligenceReport): void {
     const entry: ReportStoreData = {
       report,
       sessionId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      isFreeReport,
     };
     this.data = entry;
     try {

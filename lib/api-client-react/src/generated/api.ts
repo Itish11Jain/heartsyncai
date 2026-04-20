@@ -17,10 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AuthVerifyBody,
+  AuthVerifyResponse,
   ErrorResponse,
   GenerateReportBody,
+  GenerateReportResponse,
   HealthStatus,
-  IntelligenceReport,
   PaymentStatusResponse,
   SubmitUtrBody,
   SubmitUtrResponse,
@@ -112,6 +114,92 @@ export function useHealthCheck<
 }
 
 /**
+ * @summary Verify Firebase ID token and create/find user
+ */
+export const getVerifyAuthUrl = () => {
+  return `/api/auth/verify`;
+};
+
+export const verifyAuth = async (
+  authVerifyBody: AuthVerifyBody,
+  options?: RequestInit,
+): Promise<AuthVerifyResponse> => {
+  return customFetch<AuthVerifyResponse>(getVerifyAuthUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(authVerifyBody),
+  });
+};
+
+export const getVerifyAuthMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyAuth>>,
+    TError,
+    { data: BodyType<AuthVerifyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyAuth>>,
+  TError,
+  { data: BodyType<AuthVerifyBody> },
+  TContext
+> => {
+  const mutationKey = ["verifyAuth"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyAuth>>,
+    { data: BodyType<AuthVerifyBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyAuth(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyAuthMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyAuth>>
+>;
+export type VerifyAuthMutationBody = BodyType<AuthVerifyBody>;
+export type VerifyAuthMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Verify Firebase ID token and create/find user
+ */
+export const useVerifyAuth = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyAuth>>,
+    TError,
+    { data: BodyType<AuthVerifyBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof verifyAuth>>,
+  TError,
+  { data: BodyType<AuthVerifyBody> },
+  TContext
+> => {
+  return useMutation(getVerifyAuthMutationOptions(options));
+};
+
+/**
  * @summary Generate a date intelligence report
  */
 export const getGenerateReportUrl = () => {
@@ -121,8 +209,8 @@ export const getGenerateReportUrl = () => {
 export const generateReport = async (
   generateReportBody: GenerateReportBody,
   options?: RequestInit,
-): Promise<IntelligenceReport> => {
-  return customFetch<IntelligenceReport>(getGenerateReportUrl(), {
+): Promise<GenerateReportResponse> => {
+  return customFetch<GenerateReportResponse>(getGenerateReportUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -198,7 +286,7 @@ export const useGenerateReport = <
 };
 
 /**
- * Validates UTR format, records the submission server-side, and returns a session token confirming the submission was received.
+ * Validates UTR format, records the submission server-side, credits 5 reports to the user, and returns a session token.
  * @summary Submit a UPI UTR for payment verification
  */
 export const getSubmitUtrUrl = () => {

@@ -9,6 +9,20 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface AuthVerifyBody {
+  /** Firebase ID token from client-side authentication */
+  idToken: string;
+}
+
+export interface AuthVerifyResponse {
+  /** JWT session token for subsequent API calls */
+  sessionToken: string;
+  /** Current credit balance */
+  credits: number;
+  /** User display name (email or masked phone) */
+  displayName: string;
+}
+
 export interface GenerateReportBody {
   /** Name of the date partner */
   partnerName: string;
@@ -36,6 +50,11 @@ export interface IntelligenceReport {
   conversationClosers: ReportSection;
 }
 
+export type GenerateReportResponse = IntelligenceReport & {
+  /** Credits left after this report was generated */
+  creditsRemaining: number;
+};
+
 export interface SubmitUtrBody {
   /**
    * UPI Transaction Reference (UTR) — 12–50 alphanumeric characters
@@ -52,6 +71,8 @@ export interface SubmitUtrResponse {
   /** HMAC token confirming UTR submission was recorded server-side */
   token: string;
   reportSession: string;
+  /** Credit balance after the top-up */
+  creditsRemaining: number;
 }
 
 export interface PaymentStatusResponse {

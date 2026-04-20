@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Firebase auth verification
   - name: report
     description: Intelligence report generation
   - name: payment
@@ -29,6 +31,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /auth/verify:
+    post:
+      operationId: verifyAuth
+      tags: [auth]
+      summary: Verify Firebase ID token and create/find user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthVerifyBody"
+      responses:
+        "200":
+          description: Auth verified, session token returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthVerifyResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Auth failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /report/generate:
     post:
       operationId: generateReport
@@ -46,9 +79,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/IntelligenceReport"
+                $ref: "#/components/schemas/GenerateReportResponse"
         "400":
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: No credits remaining
           content:
             application/json:
               schema:
@@ -65,7 +110,7 @@ paths:
       operationId: submitUtr
       tags: [payment]
       summary: Submit a UPI UTR for payment verification
-      description: Validates UTR format, records the submission server-side, and returns a session token confirming the submission was received.
+      description: Validates UTR format, records the submission server-side, credits 5 reports to the user, and returns a session token.
       requestBody:
         required: true
         content:
@@ -81,6 +126,12 @@ paths:
                 $ref: "#/components/schemas/SubmitUtrResponse"
         "400":
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
           content:
             application/json:
               schema:
@@ -114,6 +165,32 @@ components:
           type: string
       required:
         - status
+
+    AuthVerifyBody:
+      type: object
+      properties:
+        idToken:
+          type: string
+          description: Firebase ID token from client-side authentication
+      required:
+        - idToken
+
+    AuthVerifyResponse:
+      type: object
+      properties:
+        sessionToken:
+          type: string
+          description: JWT session token for subsequent API calls
+        credits:
+          type: integer
+          description: Current credit balance
+        displayName:
+          type: string
+          description: User display name (email or masked phone)
+      required:
+        - sessionToken
+        - credits
+        - displayName
 
     GenerateReportBody:
       type: object
@@ -172,6 +249,17 @@ components:
         - iqQuestions
         - conversationClosers
 
+    GenerateReportResponse:
+      allOf:
+        - $ref: "#/components/schemas/IntelligenceReport"
+        - type: object
+          properties:
+            creditsRemaining:
+              type: integer
+              description: Credits left after this report was generated
+          required:
+            - creditsRemaining
+
     SubmitUtrBody:
       type: object
       properties:
@@ -197,10 +285,14 @@ components:
           description: HMAC token confirming UTR submission was recorded server-side
         reportSession:
           type: string
+        creditsRemaining:
+          type: integer
+          description: Credit balance after the top-up
       required:
         - ok
         - token
         - reportSession
+        - creditsRemaining
 
     PaymentStatusResponse:
       type: object
