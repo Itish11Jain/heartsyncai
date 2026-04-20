@@ -45,17 +45,19 @@ export default function Report() {
   const isLocked = !isFreeReport && !isApprovedServerSide;
 
   useEffect(() => {
-    if (!report) {
+    if (!report || !sessionId) {
       setLocation("/generate");
       return;
     }
 
-    const hasUsedFree = localStorage.getItem("heartsync_used_free");
-    if (!hasUsedFree) {
-      localStorage.setItem("heartsync_used_free", "true");
+    const freeSessionId = localStorage.getItem("heartsync_free_session_id");
+    if (!freeSessionId) {
+      localStorage.setItem("heartsync_free_session_id", sessionId);
+      setIsFreeReport(true);
+    } else if (freeSessionId === sessionId) {
       setIsFreeReport(true);
     }
-  }, [report, setLocation]);
+  }, [report, sessionId, setLocation]);
 
   if (!report) return null;
 
@@ -182,8 +184,8 @@ export default function Report() {
                     <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 text-primary">
                       <Lock className="w-8 h-8" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Aage ka report chahiye?</h3>
-                    <p className="text-white/60 mb-6">Unlock the full intelligence playbook for just ₹99.</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Want the full report?</h3>
+                    <p className="text-white/60 mb-6">Unlock the complete intelligence playbook for just ₹99.</p>
 
                     <div className="bg-white p-4 rounded-xl inline-block mb-4 shadow-inner">
                       <img
