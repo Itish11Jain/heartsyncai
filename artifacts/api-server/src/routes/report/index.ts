@@ -24,22 +24,25 @@ Tone examples:
 Important rules:
 - Always respond in JSON format exactly as specified
 - Each section's "content" should be ONE concise sentence (max 20 words) that frames the advice — keep it tight
-- Each item in the "items" array should be a single, specific, actionable line — no long explanations
-- Tailor everything closely to the specific partner, occasion, and vibe provided
-- No generic advice. Every item should feel written specifically for this situation
+- Each "items" array must have EXACTLY 3 items — no more, no fewer
+- Each item must be a single, specific, actionable line — no long explanations
+- Each section must include a "recommendedIndex" field (0, 1, or 2) — the index of the single strongest item
+- For "innerGame": give mindset and energy tips that work for any first date — not specific to the partner's details
+- For "openingGambit": keep openers casual and conversational — they should feel natural to say, not scripted or hyper-specific
 - Be crisp. Quality over quantity. A shorter, sharper insight beats a long vague one every time`;
 
 interface ReportSection {
   title: string;
   content: string;
   items: string[];
+  recommendedIndex?: number;
 }
 
 interface IntelligenceReport {
   partnerName: string;
+  innerGame: ReportSection;
   openingGambit: ReportSection;
   iqQuestions: ReportSection;
-  auraCheck: ReportSection;
   conversationClosers: ReportSection;
 }
 
@@ -58,35 +61,39 @@ router.post("/report/generate", async (req, res) => {
 - Known details about them: ${knownDetails || "Not much — going in with limited information."}
 - Desired vibe: ${vibe || "Relaxed but memorable"}
 
-Return ONLY a valid JSON object with this exact structure:
+Return ONLY a valid JSON object with this exact structure (EXACTLY 3 items per section, plus recommendedIndex 0–2):
 {
   "partnerName": "${partnerName}",
+  "innerGame": {
+    "title": "Inner Game",
+    "content": "One sentence on the mindset to carry into this date",
+    "items": ["mindset tip 1", "energy tip 2", "confidence tip 3"],
+    "recommendedIndex": 0
+  },
   "openingGambit": {
     "title": "The Opening Gambit",
-    "content": "A short, smart comment on why this opening strategy works for this specific situation",
-    "items": ["opener line 1", "opener line 2", "opener line 3"]
+    "content": "One sentence on why a casual, low-pressure open works better than a formal one",
+    "items": ["casual opener 1", "casual opener 2", "casual opener 3"],
+    "recommendedIndex": 1
   },
   "iqQuestions": {
-    "title": "5 IQ Questions",
-    "content": "A brief note on why these questions go beyond small talk and create real connection",
-    "items": ["question 1", "question 2", "question 3", "question 4", "question 5"]
-  },
-  "auraCheck": {
-    "title": "Aura Check",
-    "content": "A grounded read on the energy and presence to bring to this specific date",
-    "items": ["tip 1", "tip 2", "tip 3", "tip 4"]
+    "title": "IQ Questions",
+    "content": "One sentence on why these questions go beyond small talk",
+    "items": ["question 1", "question 2", "question 3"],
+    "recommendedIndex": 2
   },
   "conversationClosers": {
     "title": "Conversation Closers",
-    "content": "A short note on how to close the date in a way that feels natural and leaves a good impression",
-    "items": ["closer 1", "closer 2", "closer 3"]
+    "content": "One sentence on how to close naturally and leave a strong impression",
+    "items": ["closer 1", "closer 2", "closer 3"],
+    "recommendedIndex": 0
   }
 }`;
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
-      max_completion_tokens: 1500,
+      max_completion_tokens: 1200,
       messages: [
         { role: "system", content: WINGMAN_SYSTEM_PROMPT },
         { role: "user", content: userPrompt },

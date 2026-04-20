@@ -145,6 +145,9 @@ components:
           type: array
           items:
             type: string
+        recommendedIndex:
+          type: integer
+          description: Index (0-based) of the single strongest item in this section
       required:
         - title
         - content
@@ -154,19 +157,19 @@ components:
       properties:
         partnerName:
           type: string
+        innerGame:
+          $ref: "#/components/schemas/ReportSection"
         openingGambit:
           $ref: "#/components/schemas/ReportSection"
         iqQuestions:
-          $ref: "#/components/schemas/ReportSection"
-        auraCheck:
           $ref: "#/components/schemas/ReportSection"
         conversationClosers:
           $ref: "#/components/schemas/ReportSection"
       required:
         - partnerName
+        - innerGame
         - openingGambit
         - iqQuestions
-        - auraCheck
         - conversationClosers
 
     SubmitUtrBody:

@@ -32,25 +32,41 @@ export const GenerateReportBody = zod.object({
 
 export const GenerateReportResponse = zod.object({
   partnerName: zod.string(),
+  innerGame: zod.object({
+    title: zod.string(),
+    content: zod.string(),
+    items: zod.array(zod.string()).optional(),
+    recommendedIndex: zod
+      .number()
+      .optional()
+      .describe("Index (0-based) of the single strongest item in this section"),
+  }),
   openingGambit: zod.object({
     title: zod.string(),
     content: zod.string(),
     items: zod.array(zod.string()).optional(),
+    recommendedIndex: zod
+      .number()
+      .optional()
+      .describe("Index (0-based) of the single strongest item in this section"),
   }),
   iqQuestions: zod.object({
     title: zod.string(),
     content: zod.string(),
     items: zod.array(zod.string()).optional(),
-  }),
-  auraCheck: zod.object({
-    title: zod.string(),
-    content: zod.string(),
-    items: zod.array(zod.string()).optional(),
+    recommendedIndex: zod
+      .number()
+      .optional()
+      .describe("Index (0-based) of the single strongest item in this section"),
   }),
   conversationClosers: zod.object({
     title: zod.string(),
     content: zod.string(),
     items: zod.array(zod.string()).optional(),
+    recommendedIndex: zod
+      .number()
+      .optional()
+      .describe("Index (0-based) of the single strongest item in this section"),
   }),
 });
 

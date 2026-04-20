@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight, Lock, Sparkles, MessageCircle, Eye, HandHeart,
-  Loader2, ArrowRight, Gift, Copy, Check, Info
+  ChevronLeft, ChevronRight, Lock, Sparkles, MessageCircle, Brain, HandHeart,
+  Loader2, ArrowRight, Gift, Copy, Check, Info, Star
 } from "lucide-react";
 
 import { useSubmitUtr, useGetPaymentStatus, type PaymentStatusResponse } from "@workspace/api-client-react";
@@ -14,48 +14,52 @@ import { Input } from "@/components/ui/input";
 
 const SECTION_META = [
   {
+    key: "innerGame",
+    icon: Brain,
+    label: "Inner Game",
+    num: "01",
+    activeColor: "bg-secondary",
+    ring: "ring-secondary/40",
+    dot: "bg-secondary",
+    itemBg: "bg-secondary/10 hover:bg-secondary/20 border-secondary/20",
+    recBg: "bg-secondary/20 border-secondary/40",
+    iconColor: "text-secondary",
+  },
+  {
     key: "openingGambit",
     icon: MessageCircle,
     label: "Opening",
-    num: "01",
-    gradient: "from-primary to-pink-500",
+    num: "02",
+    activeColor: "bg-primary",
     ring: "ring-primary/40",
     dot: "bg-primary",
     itemBg: "bg-primary/10 hover:bg-primary/20 border-primary/20",
-    itemText: "text-primary",
+    recBg: "bg-primary/20 border-primary/40",
+    iconColor: "text-primary",
   },
   {
     key: "iqQuestions",
     icon: Sparkles,
     label: "IQ Questions",
-    num: "02",
-    gradient: "from-accent to-orange-400",
+    num: "03",
+    activeColor: "bg-accent",
     ring: "ring-accent/40",
     dot: "bg-accent",
     itemBg: "bg-accent/10 hover:bg-accent/20 border-accent/20",
-    itemText: "text-accent",
-  },
-  {
-    key: "auraCheck",
-    icon: Eye,
-    label: "Aura Check",
-    num: "03",
-    gradient: "from-secondary to-violet-500",
-    ring: "ring-secondary/40",
-    dot: "bg-secondary",
-    itemBg: "bg-secondary/10 hover:bg-secondary/20 border-secondary/20",
-    itemText: "text-secondary",
+    recBg: "bg-accent/20 border-accent/40",
+    iconColor: "text-accent",
   },
   {
     key: "conversationClosers",
     icon: HandHeart,
     label: "Closers",
     num: "04",
-    gradient: "from-rose-500 to-red-400",
+    activeColor: "bg-rose-500",
     ring: "ring-rose-500/40",
     dot: "bg-rose-400",
     itemBg: "bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20",
-    itemText: "text-rose-400",
+    recBg: "bg-rose-500/20 border-rose-500/40",
+    iconColor: "text-rose-400",
   },
 ] as const;
 
@@ -82,7 +86,7 @@ function SectionContent({
   meta,
   direction,
 }: {
-  data: { title: string; content: string; items?: string[] };
+  data: { title: string; content: string; items?: string[]; recommendedIndex?: number };
   meta: typeof SECTION_META[number];
   direction: number;
 }) {
@@ -96,9 +100,8 @@ function SectionContent({
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="w-full"
     >
-      {/* Section heading */}
       <div className="flex items-center gap-3 mb-5">
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center shadow-lg`}>
+        <div className={`w-10 h-10 rounded-xl ${meta.activeColor} flex items-center justify-center shadow-lg`}>
           <Icon className="w-5 h-5 text-white" />
         </div>
         <div>
@@ -107,25 +110,35 @@ function SectionContent({
         </div>
       </div>
 
-      {/* Context line */}
       <p className="text-sm text-white/50 leading-relaxed mb-5 pl-1">{data.content}</p>
 
-      {/* Interactive items */}
       {data.items && data.items.length > 0 && (
         <ul className="space-y-2.5">
-          {data.items.map((item, i) => (
-            <motion.li
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 28 }}
-              className={`flex gap-3 items-start justify-between rounded-xl border px-4 py-3 cursor-default transition-colors ${meta.itemBg}`}
-            >
-              <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
-              <span className="text-sm text-white/85 leading-relaxed flex-1">{item}</span>
-              <CopyButton text={item} />
-            </motion.li>
-          ))}
+          {data.items.slice(0, 3).map((item, i) => {
+            const isRecommended = i === data.recommendedIndex;
+            return (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, type: "spring", stiffness: 300, damping: 28 }}
+                className={`flex gap-3 items-start justify-between rounded-xl border px-4 py-3 transition-colors ${
+                  isRecommended ? meta.recBg : meta.itemBg
+                }`}
+              >
+                <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${meta.dot}`} />
+                <span className="text-sm text-white/85 leading-relaxed flex-1">{item}</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {isRecommended && (
+                    <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${meta.activeColor} text-white`}>
+                      <Star className="w-2.5 h-2.5" /> Best
+                    </span>
+                  )}
+                  <CopyButton text={item} />
+                </div>
+              </motion.li>
+            );
+          })}
         </ul>
       )}
     </motion.div>
@@ -171,7 +184,7 @@ function PaywallPanel({
         <Lock className="w-5 h-5 text-primary" />
       </div>
       <h3 className="text-lg font-bold text-white mb-1">3 more sections await</h3>
-      <p className="text-sm text-white/45 mb-6 max-w-xs">Pay ₹99 via UPI to unlock IQ Questions, Aura Check and Conversation Closers.</p>
+      <p className="text-sm text-white/45 mb-6 max-w-xs">Pay ₹99 via UPI to unlock Opening Gambit, IQ Questions and Conversation Closers.</p>
 
       <div className="flex gap-5 items-center mb-6">
         <div className="bg-white rounded-xl p-2 shadow-lg shrink-0">
@@ -250,10 +263,10 @@ export default function Report() {
 
   if (!report) return null;
 
-  const sectionData: Record<string, typeof report.openingGambit> = {
+  const sectionData = {
+    innerGame: report.innerGame,
     openingGambit: report.openingGambit,
     iqQuestions: report.iqQuestions,
-    auraCheck: report.auraCheck,
     conversationClosers: report.conversationClosers,
   };
 
@@ -306,15 +319,15 @@ export default function Report() {
               <button
                 key={s.key}
                 onClick={() => navigate(i)}
-                className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all text-center
+                className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 rounded-xl border transition-all
                   ${isActive
-                    ? `bg-gradient-to-b ${s.gradient} border-transparent shadow-lg ring-2 ${s.ring}`
+                    ? `${s.activeColor} border-transparent shadow-lg ring-2 ${s.ring}`
                     : "bg-white/5 border-white/8 hover:bg-white/10"
                   }`}
               >
                 {locked
                   ? <Lock className="w-4 h-4 text-white/25" />
-                  : <SIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-white/40"}`} />
+                  : <SIcon className={`w-4 h-4 ${isActive ? "text-white" : s.iconColor} opacity-80`} />
                 }
                 <span className={`text-[10px] font-semibold leading-none ${isActive ? "text-white" : "text-white/35"}`}>
                   {s.label}
@@ -341,7 +354,7 @@ export default function Report() {
             ) : (
               <SectionContent
                 key={meta.key}
-                data={sectionData[meta.key]}
+                data={sectionData[meta.key as keyof typeof sectionData]}
                 meta={meta}
                 direction={direction}
               />
@@ -360,7 +373,6 @@ export default function Report() {
             <ChevronLeft className="w-4 h-4 mr-1" /> Prev
           </Button>
 
-          {/* Dot indicators */}
           <div className="flex gap-2 items-center">
             {SECTION_META.map((s, i) => (
               <button

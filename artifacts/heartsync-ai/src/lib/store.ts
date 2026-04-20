@@ -1,10 +1,10 @@
 import type { IntelligenceReport } from "@workspace/api-client-react";
 
-const STORAGE_KEY = "heartsync_report_v3";
+const STORAGE_KEY = "heartsync_report_v4";
 
-// Clean up any stale keys from earlier implementations
+// Clean up stale keys from earlier implementations
 try {
-  ["heartsync_free_session_id", "heartsync_free_claimed_v2", "heartsync_last_report_v2"].forEach(k =>
+  ["heartsync_free_session_id", "heartsync_free_claimed_v2", "heartsync_last_report_v2", "heartsync_report_v3"].forEach(k =>
     localStorage.removeItem(k)
   );
 } catch { /* ignore */ }

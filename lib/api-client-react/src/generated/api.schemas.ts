@@ -24,13 +24,15 @@ export interface ReportSection {
   title: string;
   content: string;
   items?: string[];
+  /** Index (0-based) of the single strongest item in this section */
+  recommendedIndex?: number;
 }
 
 export interface IntelligenceReport {
   partnerName: string;
+  innerGame: ReportSection;
   openingGambit: ReportSection;
   iqQuestions: ReportSection;
-  auraCheck: ReportSection;
   conversationClosers: ReportSection;
 }
 
