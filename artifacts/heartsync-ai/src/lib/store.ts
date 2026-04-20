@@ -53,4 +53,9 @@ export const reportStore = {
   expiresAt(): number | null {
     return this.data?.generatedAt ? this.data.generatedAt + EXPIRY_MS : null;
   },
+
+  clear(): void {
+    this.data = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  },
 };

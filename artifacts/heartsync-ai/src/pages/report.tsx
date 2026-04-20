@@ -166,8 +166,7 @@ export default function Report() {
       const label = formatExpiry(expiresAt);
       setExpiryLabel(label);
       if (label === "expired") {
-        reportStore.data = null;
-        try { localStorage.removeItem("heartsync_report_v6"); } catch { /* ignore */ }
+        reportStore.clear();
         setLocation("/generate");
       }
     }, 60_000);
