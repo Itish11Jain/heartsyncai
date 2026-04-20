@@ -8,3 +8,51 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface GenerateReportBody {
+  /** Name of the date partner */
+  partnerName: string;
+  /** Type of date occasion (e.g., coffee, dinner, movie) */
+  occasion: string;
+  /** Any known details about the partner */
+  knownDetails?: string;
+  /** The vibe or mood you want to set */
+  vibe?: string;
+}
+
+export interface ReportSection {
+  title: string;
+  content: string;
+  items?: string[];
+}
+
+export interface IntelligenceReport {
+  partnerName: string;
+  openingGambit: ReportSection;
+  iqQuestions: ReportSection;
+  auraCheck: ReportSection;
+  conversationClosers: ReportSection;
+}
+
+export interface PaymentOrder {
+  orderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+}
+
+export interface VerifyPaymentBody {
+  razorpayPaymentId: string;
+  razorpayOrderId: string;
+  razorpaySignature: string;
+}
+
+export interface VerifyPaymentResult {
+  success: boolean;
+  message: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+  message: string;
+}

@@ -14,3 +14,66 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Generate a date intelligence report
+ */
+export const GenerateReportBody = zod.object({
+  partnerName: zod.string().describe("Name of the date partner"),
+  occasion: zod
+    .string()
+    .describe("Type of date occasion (e.g., coffee, dinner, movie)"),
+  knownDetails: zod
+    .string()
+    .optional()
+    .describe("Any known details about the partner"),
+  vibe: zod.string().optional().describe("The vibe or mood you want to set"),
+});
+
+export const GenerateReportResponse = zod.object({
+  partnerName: zod.string(),
+  openingGambit: zod.object({
+    title: zod.string(),
+    content: zod.string(),
+    items: zod.array(zod.string()).optional(),
+  }),
+  iqQuestions: zod.object({
+    title: zod.string(),
+    content: zod.string(),
+    items: zod.array(zod.string()).optional(),
+  }),
+  auraCheck: zod.object({
+    title: zod.string(),
+    content: zod.string(),
+    items: zod.array(zod.string()).optional(),
+  }),
+  conversationClosers: zod.object({
+    title: zod.string(),
+    content: zod.string(),
+    items: zod.array(zod.string()).optional(),
+  }),
+});
+
+/**
+ * @summary Create a Razorpay order for ₹99
+ */
+export const CreatePaymentOrderResponse = zod.object({
+  orderId: zod.string(),
+  amount: zod.number(),
+  currency: zod.string(),
+  keyId: zod.string(),
+});
+
+/**
+ * @summary Verify a Razorpay payment signature
+ */
+export const VerifyPaymentBody = zod.object({
+  razorpayPaymentId: zod.string(),
+  razorpayOrderId: zod.string(),
+  razorpaySignature: zod.string(),
+});
+
+export const VerifyPaymentResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});

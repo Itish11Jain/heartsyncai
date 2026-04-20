@@ -5,18 +5,29 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  ErrorResponse,
+  GenerateReportBody,
+  HealthStatus,
+  IntelligenceReport,
+  PaymentOrder,
+  VerifyPaymentBody,
+  VerifyPaymentResult,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +110,256 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Generate a date intelligence report
+ */
+export const getGenerateReportUrl = () => {
+  return `/api/report/generate`;
+};
+
+export const generateReport = async (
+  generateReportBody: GenerateReportBody,
+  options?: RequestInit,
+): Promise<IntelligenceReport> => {
+  return customFetch<IntelligenceReport>(getGenerateReportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateReportBody),
+  });
+};
+
+export const getGenerateReportMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateReport>>,
+    TError,
+    { data: BodyType<GenerateReportBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateReport>>,
+  TError,
+  { data: BodyType<GenerateReportBody> },
+  TContext
+> => {
+  const mutationKey = ["generateReport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateReport>>,
+    { data: BodyType<GenerateReportBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateReport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateReportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateReport>>
+>;
+export type GenerateReportMutationBody = BodyType<GenerateReportBody>;
+export type GenerateReportMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a date intelligence report
+ */
+export const useGenerateReport = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateReport>>,
+    TError,
+    { data: BodyType<GenerateReportBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateReport>>,
+  TError,
+  { data: BodyType<GenerateReportBody> },
+  TContext
+> => {
+  return useMutation(getGenerateReportMutationOptions(options));
+};
+
+/**
+ * @summary Create a Razorpay order for ₹99
+ */
+export const getCreatePaymentOrderUrl = () => {
+  return `/api/payment/create-order`;
+};
+
+export const createPaymentOrder = async (
+  options?: RequestInit,
+): Promise<PaymentOrder> => {
+  return customFetch<PaymentOrder>(getCreatePaymentOrderUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreatePaymentOrderMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPaymentOrder>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPaymentOrder>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["createPaymentOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPaymentOrder>>,
+    void
+  > = () => {
+    return createPaymentOrder(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePaymentOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPaymentOrder>>
+>;
+
+export type CreatePaymentOrderMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a Razorpay order for ₹99
+ */
+export const useCreatePaymentOrder = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPaymentOrder>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPaymentOrder>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getCreatePaymentOrderMutationOptions(options));
+};
+
+/**
+ * @summary Verify a Razorpay payment signature
+ */
+export const getVerifyPaymentUrl = () => {
+  return `/api/payment/verify`;
+};
+
+export const verifyPayment = async (
+  verifyPaymentBody: VerifyPaymentBody,
+  options?: RequestInit,
+): Promise<VerifyPaymentResult> => {
+  return customFetch<VerifyPaymentResult>(getVerifyPaymentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(verifyPaymentBody),
+  });
+};
+
+export const getVerifyPaymentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyPayment>>,
+    TError,
+    { data: BodyType<VerifyPaymentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyPayment>>,
+  TError,
+  { data: BodyType<VerifyPaymentBody> },
+  TContext
+> => {
+  const mutationKey = ["verifyPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyPayment>>,
+    { data: BodyType<VerifyPaymentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyPayment(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyPaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyPayment>>
+>;
+export type VerifyPaymentMutationBody = BodyType<VerifyPaymentBody>;
+export type VerifyPaymentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Verify a Razorpay payment signature
+ */
+export const useVerifyPayment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyPayment>>,
+    TError,
+    { data: BodyType<VerifyPaymentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof verifyPayment>>,
+  TError,
+  { data: BodyType<VerifyPaymentBody> },
+  TContext
+> => {
+  return useMutation(getVerifyPaymentMutationOptions(options));
+};
