@@ -28,18 +28,18 @@ import {
 } from "@/components/ui/select";
 
 const formSchema = z.object({
-  partnerName: z.string().min(1, "Name toh batao bhai!"),
-  occasion: z.string().min(1, "Select an occasion"),
+  partnerName: z.string().min(1, "Please enter their name."),
+  occasion: z.string().min(1, "Please select an occasion."),
   knownDetails: z.string().optional(),
   vibe: z.string().optional(),
 });
 
 const LOADING_MESSAGES = [
-  "Analyzing aura...",
-  "Checking vibe meter...",
-  "Mumbai intel gathering...",
-  "Report banao ho rahi hai...",
-  "Adding some Bandra flair...",
+  "Analyzing the situation...",
+  "Crafting your playbook...",
+  "Reading between the lines...",
+  "Putting it all together...",
+  "Almost ready...",
 ];
 
 export default function Generate() {
@@ -149,7 +149,7 @@ export default function Generate() {
                       <FormLabel className="text-white/80">Any intel? (Optional)</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Unhe coffee pasand hai, engineering mein hai, dog lover..." 
+                          placeholder="They love coffee, work in engineering, have a dog..." 
                           className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none min-h-[100px] rounded-xl" 
                           {...field} 
                         />
@@ -172,10 +172,10 @@ export default function Generate() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-card border-white/10 text-white">
-                          <SelectItem value="Chill vibes">Chill vibes</SelectItem>
-                          <SelectItem value="Impress karna hai">Impress karna hai</SelectItem>
-                          <SelectItem value="Funny rehna chahta hoon">Funny rehna chahta hoon</SelectItem>
-                          <SelectItem value="Serious connection">Serious connection</SelectItem>
+                          <SelectItem value="Relaxed and easy-going">Relaxed and easy-going</SelectItem>
+                          <SelectItem value="I want to impress them">I want to impress them</SelectItem>
+                          <SelectItem value="Keep it fun and light">Keep it fun and light</SelectItem>
+                          <SelectItem value="Build a real connection">Build a real connection</SelectItem>
                           <SelectItem value="Just wing it">Just wing it</SelectItem>
                         </SelectContent>
                       </Select>

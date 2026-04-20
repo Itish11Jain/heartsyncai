@@ -1,12 +1,11 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, HeartPulse, Zap } from "lucide-react";
+import { Sparkles, ArrowRight, HeartPulse, Zap, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
-      {/* Abstract Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[120px]" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-secondary/20 blur-[150px]" />
@@ -14,7 +13,6 @@ export default function Home() {
       </div>
 
       <div className="relative z-10 container mx-auto px-6 pt-12 pb-24 md:pt-24">
-        {/* Header */}
         <header className="flex justify-between items-center mb-24">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl">
@@ -29,7 +27,6 @@ export default function Home() {
           </Button>
         </header>
 
-        {/* Hero Section */}
         <main className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -38,7 +35,7 @@ export default function Home() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-8">
               <Sparkles className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium text-white/80">Your Mumbai Wingman for First Dates</span>
+              <span className="text-sm font-medium text-white/80">Your AI Wingman for First Dates</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-8 text-white">
               Don't guess the vibe. <br />
@@ -47,7 +44,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-white/60 mb-12 max-w-2xl mx-auto leading-relaxed">
-              Drop the basic small talk. Get an AI-powered Intelligence Report with opening gambits, aura checks, and conversation closers tailored for your exact date context.
+              Describe your date, and get a personalised Intelligence Report — smart openers, conversation questions, energy tips, and closers tailored to your exact situation.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -59,24 +56,23 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Features */}
           <div className="grid md:grid-cols-3 gap-6 mt-32 text-left">
             {[
               {
                 title: "Opening Gambits",
-                desc: "No more 'hey how are you'. Get lines that actually hook attention.",
+                desc: "Move past 'hey, how are you'. Get openers that actually start a real conversation.",
                 icon: Zap,
                 color: "text-primary"
               },
               {
-                title: "Aura Check",
-                desc: "Read the room. Know exactly what vibe to project and what to avoid.",
-                icon: Sparkles,
+                title: "Smart Questions",
+                desc: "Five questions that go beyond small talk and help you genuinely connect.",
+                icon: Brain,
                 color: "text-accent"
               },
               {
-                title: "Hinglish Native",
-                desc: "Bandra energy encoded. Sounds like your smartest friend, not a robot.",
+                title: "Aura Check",
+                desc: "Know exactly what energy to bring — and what to leave at home.",
                 icon: HeartPulse,
                 color: "text-secondary"
               }
