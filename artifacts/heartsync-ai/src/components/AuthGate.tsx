@@ -345,18 +345,18 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        <p className="text-[10px] text-white/20 text-center mt-4 px-2">
-          By continuing, you agree to our{" "}
-          <Link href="/terms" className="underline underline-offset-2 hover:text-white/40 transition-colors">
-            Terms &amp; Refund Policy
-          </Link>
-          {" · "}
-          <Link href="/contact" className="underline underline-offset-2 hover:text-white/40 transition-colors">
-            Contact Us
-          </Link>
-        </p>
+          <p className="text-[10px] text-white/20 text-center mt-5 px-1">
+            By continuing, you agree to our{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-white/40 transition-colors">
+              Terms &amp; Refund Policy
+            </Link>
+            {" · "}
+            <Link href="/contact" className="underline underline-offset-2 hover:text-white/40 transition-colors">
+              Contact Us
+            </Link>
+          </p>
+        </div>
       </motion.div>
     </div>
   );
