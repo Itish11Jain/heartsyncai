@@ -75,6 +75,32 @@ export default function Generate() {
     return () => clearInterval(interval);
   }, [generateReport.isPending]);
 
+  async function refreshCredits() {
+    const token = authStore.sessionToken;
+    if (!token) return;
+    try {
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const res = await fetch(`${base}/api/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { credits: number };
+        authStore.setCredits(data.credits);
+        setCredits(data.credits);
+      }
+    } catch {
+      /* silent — stale value shown is fine */
+    }
+  }
+
+  useEffect(() => {
+    refreshCredits();
+    const onFocus = () => refreshCredits();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function handleAuthSuccess() {
     setIsLoggedIn(true);
     setCredits(authStore.credits);

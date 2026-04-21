@@ -50,4 +50,33 @@ router.post("/auth/verify", async (req, res) => {
   }
 });
 
+router.get("/me", async (req, res) => {
+  const authHeader = req.headers["authorization"] ?? "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (!token) {
+    res.status(401).json({ error: "unauthorized", message: "No session token." });
+    return;
+  }
+
+  try {
+    const { verifySession } = await import("../../lib/session.js");
+    const { userId } = verifySession(token);
+
+    const result = await pool.query<{ credits: number }>(
+      "SELECT credits FROM hs_users WHERE id = $1",
+      [userId],
+    );
+
+    if ((result.rowCount ?? 0) === 0) {
+      res.status(404).json({ error: "not_found", message: "User not found." });
+      return;
+    }
+
+    res.json({ credits: result.rows[0]!.credits });
+  } catch {
+    res.status(401).json({ error: "unauthorized", message: "Invalid session token." });
+  }
+});
+
 export default router;
