@@ -7,6 +7,7 @@ import {
   RecaptchaVerifier,
   type ConfirmationResult,
 } from "firebase/auth";
+import { Link } from "wouter";
 import { Loader2, Mail, Phone, Heart } from "lucide-react";
 
 import { auth } from "@/lib/firebase";
@@ -345,6 +346,17 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
             )}
           </AnimatePresence>
         </div>
+
+        <p className="text-[10px] text-white/20 text-center mt-4 px-2">
+          By continuing, you agree to our{" "}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-white/40 transition-colors">
+            Terms &amp; Refund Policy
+          </Link>
+          {" · "}
+          <Link href="/contact" className="underline underline-offset-2 hover:text-white/40 transition-colors">
+            Contact Us
+          </Link>
+        </p>
       </motion.div>
     </div>
   );
