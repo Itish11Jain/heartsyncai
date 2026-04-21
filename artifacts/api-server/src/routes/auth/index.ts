@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { verifyFirebaseToken } from "../../lib/firebase-admin.js";
 import { pool } from "../../lib/db.js";
-import { signSession } from "../../lib/session.js";
+import { signSession, verifySession } from "../../lib/session.js";
 
 const router = Router();
 
@@ -60,7 +60,6 @@ router.get("/me", async (req, res) => {
   }
 
   try {
-    const { verifySession } = await import("../../lib/session.js");
     const { userId } = verifySession(token);
 
     const result = await pool.query<{ credits: number }>(
