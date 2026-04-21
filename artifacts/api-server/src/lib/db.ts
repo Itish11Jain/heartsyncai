@@ -25,5 +25,11 @@ export async function initDb(): Promise<void> {
       reason TEXT NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS hs_utr_submissions (
+      id SERIAL PRIMARY KEY,
+      utr TEXT UNIQUE NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES hs_users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }

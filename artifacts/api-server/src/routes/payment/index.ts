@@ -11,12 +11,11 @@ const signingSecret =
 const approvedSessions = new Map<string, { utrMasked: string; approvedAt: number }>();
 
 function validateUtr(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.trim().length >= 12 &&
-    value.trim().length <= 50 &&
-    /^[A-Za-z0-9]+$/.test(value.trim())
-  );
+  if (typeof value !== "string") return false;
+  const v = value.trim();
+  const isUpiRef = /^\d{12}$/.test(v);
+  const isBankUtr = /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
+  return isUpiRef || isBankUtr;
 }
 
 router.post("/payment/submit-utr", requireAuth, async (req, res) => {
@@ -25,7 +24,8 @@ router.post("/payment/submit-utr", requireAuth, async (req, res) => {
   if (!validateUtr(utr)) {
     res.status(400).json({
       error: "validation_error",
-      message: "UTR must be 12–50 alphanumeric characters.",
+      message:
+        "Invalid UTR format. Enter the 12-digit UPI reference or bank transaction ID (e.g. HDFC0123456789012).",
     });
     return;
   }
@@ -38,9 +38,27 @@ router.post("/payment/submit-utr", requireAuth, async (req, res) => {
     return;
   }
 
-  const cleanUtr = utr!.trim();
+  const cleanUtr = utr!.trim().toUpperCase();
   const cleanSession = reportSession.trim();
   const utrMasked = `${cleanUtr.slice(0, 4)}${"*".repeat(Math.max(0, cleanUtr.length - 8))}${cleanUtr.slice(-4)}`;
+
+  const existing = await pool.query(
+    "SELECT id FROM hs_utr_submissions WHERE utr = $1",
+    [cleanUtr],
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    res.status(409).json({
+      error: "duplicate_utr",
+      message:
+        "This transaction ID has already been used. Please contact support if you think this is a mistake.",
+    });
+    return;
+  }
+
+  await pool.query(
+    "INSERT INTO hs_utr_submissions (utr, user_id) VALUES ($1, $2)",
+    [cleanUtr, req.user!.userId],
+  );
 
   approvedSessions.set(cleanSession, { utrMasked, approvedAt: Date.now() });
 
@@ -55,7 +73,7 @@ router.post("/payment/submit-utr", requireAuth, async (req, res) => {
   );
   await pool.query(
     "INSERT INTO hs_credit_logs (user_id, delta, reason) VALUES ($1, $2, $3)",
-    [req.user!.userId, 5, "utr_payment"],
+    [req.user!.userId, 5, `utr_payment:${cleanUtr}`],
   );
 
   const creditsRemaining = updated.rows[0]?.credits ?? 5;
