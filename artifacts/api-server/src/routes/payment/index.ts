@@ -5,11 +5,8 @@ import { pool } from "../../lib/db.js";
 
 const router = Router();
 
-const UTR_SECRET = process.env["UTR_SIGNING_SECRET"];
-if (!UTR_SECRET && process.env["NODE_ENV"] === "production") {
-  throw new Error("UTR_SIGNING_SECRET environment variable is required in production");
-}
-const signingSecret = UTR_SECRET ?? "heartsync-utr-dev-secret";
+const signingSecret =
+  process.env["UTR_SIGNING_SECRET"] ?? crypto.randomBytes(32).toString("hex");
 
 const approvedSessions = new Map<string, { utrMasked: string; approvedAt: number }>();
 
