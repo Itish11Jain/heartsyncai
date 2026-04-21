@@ -310,7 +310,7 @@ export default function Generate() {
                           <FormLabel className="text-white/80">Any intel? (Optional)</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="What do you know about her? Share her bio, interests, hobbies, where she works, what she loves — anything helps..."
+                              placeholder="What do you know about them? Share their bio, interests, hobbies, where they work, what they love — anything helps..."
                               className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none min-h-[100px] rounded-xl"
                               {...field}
                             />
