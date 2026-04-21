@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Sparkles, MessageCircle, Brain, HandHeart,
-  ArrowRight, Copy, Check, Zap, Clock,
+  ArrowRight, Copy, Check, Zap, Clock, ClipboardList,
 } from "lucide-react";
 
 import { reportStore } from "@/lib/store";
@@ -195,15 +195,24 @@ export default function Report() {
 
       <div className="relative z-10 max-w-lg mx-auto px-5 flex flex-col min-h-screen">
         <div className="py-5 flex items-center justify-between">
-          <Button
-            asChild
-            variant="ghost"
-            className="pl-0 text-white/40 hover:text-white hover:bg-transparent text-sm"
-          >
-            <Link href="/" className="flex items-center gap-1">
-              <ChevronLeft className="w-4 h-4" /> Home
+          <div className="flex items-center gap-1">
+            <Button
+              asChild
+              variant="ghost"
+              className="pl-0 text-white/40 hover:text-white hover:bg-transparent text-sm"
+            >
+              <Link href="/" className="flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" /> Home
+              </Link>
+            </Button>
+            <Link
+              href="/history"
+              className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
+              title="My Reports"
+            >
+              <ClipboardList className="w-4 h-4" />
             </Link>
-          </Button>
+          </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
               <Zap className="w-3 h-3 text-primary" />

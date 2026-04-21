@@ -8,6 +8,7 @@ import Generate from "@/pages/generate";
 import Report from "@/pages/report";
 import Contact from "@/pages/contact";
 import Terms from "@/pages/terms";
+import History from "@/pages/history";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/report" component={Report} />
       <Route path="/contact" component={Contact} />
       <Route path="/terms" component={Terms} />
+      <Route path="/history" component={History} />
       <Route component={NotFound} />
     </Switch>
   );

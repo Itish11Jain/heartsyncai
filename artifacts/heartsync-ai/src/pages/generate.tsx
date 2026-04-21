@@ -5,11 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  ChevronLeft, Loader2, Sparkles, LogOut, Zap, Lock, Info, ArrowRight,
+  ChevronLeft, Loader2, Sparkles, LogOut, Zap, Lock, Info, ArrowRight, ClipboardList,
 } from "lucide-react";
 
 import { useGenerateReport, useSubmitUtr } from "@workspace/api-client-react";
 import { reportStore } from "@/lib/store";
+import { historyStore } from "@/lib/history-store";
 import { authStore } from "@/lib/auth-store";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -40,7 +41,8 @@ const LOADING_MESSAGES = [
 ];
 
 function isValidUtr(value: string) {
-  return value.trim().length >= 12 && /^[A-Za-z0-9]+$/.test(value.trim());
+  const v = value.trim();
+  return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
 }
 
 export default function Generate() {
@@ -111,6 +113,7 @@ export default function Generate() {
         onSuccess: (data) => {
           const { creditsRemaining, ...report } = data;
           reportStore.set(report);
+          historyStore.add(report, values.occasion);
           authStore.setCredits(creditsRemaining);
           setLocation("/report");
         },
@@ -146,6 +149,13 @@ export default function Generate() {
               <p className="text-[11px] text-white/30 leading-none">Signed in as</p>
               <p className="text-xs text-white/60 leading-none mt-0.5 max-w-[140px] truncate">{displayName}</p>
             </div>
+            <Link
+              href="/history"
+              className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
+              title="My Reports"
+            >
+              <ClipboardList className="w-4 h-4" />
+            </Link>
             <button
               onClick={handleSignOut}
               className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
@@ -198,7 +208,7 @@ export default function Generate() {
 
                   <div className="w-full space-y-3">
                     <Input
-                      placeholder="Paste UTR / Transaction ID (min 12 chars)"
+                      placeholder="Paste UTR / Transaction ID"
                       value={utr}
                       onChange={(e) => { setUtr(e.target.value); setUtrError(""); }}
                       className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center"
@@ -300,7 +310,7 @@ export default function Generate() {
                           <FormLabel className="text-white/80">Any intel? (Optional)</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="They love coffee, work in engineering, have a dog..."
+                              placeholder="What do you know about her? Share her bio, interests, hobbies, where she works, what she loves — anything helps..."
                               className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none min-h-[100px] rounded-xl"
                               {...field}
                             />
