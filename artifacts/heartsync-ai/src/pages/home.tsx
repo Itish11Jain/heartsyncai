@@ -12,8 +12,8 @@ export default function Home() {
         <div className="absolute top-[40%] right-[10%] w-[30%] h-[30%] rounded-full bg-accent/20 blur-[100px]" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-6 pt-6 pb-12 md:pt-10">
-        <header className="flex justify-between items-center mb-8">
+      <div className="relative z-10 container mx-auto px-6 pt-6 pb-16 md:pt-12">
+        <header className="flex justify-between items-center mb-14">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl">
               <HeartPulse className="w-6 h-6 text-white" />
@@ -33,17 +33,17 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-6">
               <Sparkles className="w-4 h-4 text-secondary" />
               <span className="text-sm font-medium text-white/80">Your AI Wingman for Dates</span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-4 text-white">
+            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6 text-white">
               Don't guess the vibe. <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary">
                 Engineer it.
               </span>
             </h1>
-            <p className="text-base md:text-lg text-white/60 mb-8 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg text-white/60 mb-10 max-w-2xl mx-auto leading-relaxed">
               Describe your date, and get a personalised Intelligence Report — smart openers, conversation questions, energy tips, and closers tailored to your exact situation.
             </p>
 
@@ -56,7 +56,7 @@ export default function Home() {
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-6 mt-10 text-left">
+          <div className="grid md:grid-cols-3 gap-6 mt-14 text-left">
             {[
               {
                 title: "Opening Gambits",

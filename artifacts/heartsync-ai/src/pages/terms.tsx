@@ -78,7 +78,7 @@ export default function Terms() {
               </p>
               <p>
                 Reports are personalised based on the scenario you describe and are generated fresh
-                each time. Reports expire 48 hours after generation.
+                each time. Reports expire 24 hours after generation.
               </p>
             </Section>
 

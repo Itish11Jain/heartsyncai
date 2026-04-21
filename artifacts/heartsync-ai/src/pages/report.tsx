@@ -229,7 +229,7 @@ export default function Report() {
           <div className="flex items-center gap-1.5 mb-4 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
             <Clock className="w-3 h-3 text-white/30 shrink-0" />
             <p className="text-[11px] text-white/35">
-              Available for 48 hours &middot; {expiryLabel}
+              Available for 24 hours &middot; {expiryLabel}
             </p>
           </div>
         )}

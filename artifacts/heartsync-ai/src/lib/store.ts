@@ -1,7 +1,7 @@
 import type { IntelligenceReport } from "@workspace/api-client-react";
 
 const STORAGE_KEY = "heartsync_report_v6";
-const EXPIRY_MS = 48 * 60 * 60 * 1000;
+const EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 try {
   [
