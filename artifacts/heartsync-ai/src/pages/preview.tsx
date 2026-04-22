@@ -115,9 +115,19 @@ export default function Preview() {
     return () => clearInterval(interval);
   }, [isGeneratingFull]);
 
+  function loadSavedForm(): Partial<FormValues> {
+    try {
+      const raw = localStorage.getItem(PREVIEW_FORM_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) as Partial<FormValues>;
+    } catch {
+      return {};
+    }
+  }
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { partnerName: "", occasion: "", knownDetails: "", vibe: "" },
+    defaultValues: { partnerName: "", occasion: "", knownDetails: "", vibe: "", ...loadSavedForm() },
   });
 
   async function onFormSubmit(values: FormValues) {
