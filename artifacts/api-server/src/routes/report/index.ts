@@ -50,6 +50,73 @@ interface IntelligenceReport {
   conversationClosers: ReportSection;
 }
 
+const previewRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+router.post("/report/preview", async (req, res) => {
+  const ip = (req.headers["x-forwarded-for"] as string ?? req.socket.remoteAddress ?? "unknown").split(",")[0]!.trim();
+  const now = Date.now();
+  const window = 60 * 60 * 1000;
+  const entry = previewRateLimit.get(ip);
+
+  if (entry && entry.resetAt > now) {
+    if (entry.count >= 5) {
+      res.status(429).json({ error: "rate_limited", message: "Too many previews. Please try again later." });
+      return;
+    }
+    entry.count += 1;
+  } else {
+    previewRateLimit.set(ip, { count: 1, resetAt: now + window });
+  }
+
+  const parseResult = GenerateReportBody.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "validation_error", message: "Invalid request body." });
+    return;
+  }
+
+  const { partnerName, occasion, knownDetails, vibe } = parseResult.data;
+
+  const previewPrompt = `Generate ONLY the innerGame section of a date advice report for:
+- Partner's name: ${partnerName}
+- Occasion/Date type: ${occasion}
+- Known details: ${knownDetails || "Not much — going in with limited information."}
+- Desired vibe: ${vibe || "Relaxed but memorable"}
+
+Return ONLY this JSON (EXACTLY 3 items, no extra fields):
+{
+  "innerGame": {
+    "title": "How to Carry Yourself",
+    "content": "One sentence on how to carry yourself on this date",
+    "items": ["specific behaviour tip 1", "specific behaviour tip 2", "specific behaviour tip 3"]
+  }
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 400,
+      messages: [
+        { role: "system", content: WINGMAN_SYSTEM_PROMPT },
+        { role: "user", content: previewPrompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      res.status(500).json({ error: "generation_failed", message: "Something went wrong. Please try again." });
+      return;
+    }
+
+    const data = JSON.parse(content) as { innerGame: { title: string; content: string; items: string[] } };
+    req.log.info({ ip }, "Preview generated");
+    res.json({ innerGame: data.innerGame });
+  } catch (err) {
+    req.log.error({ err }, "Preview generation failed");
+    res.status(500).json({ error: "server_error", message: "Something went wrong on our end. Please try again." });
+  }
+});
+
 router.post("/report/generate", requireAuth, async (req, res) => {
   if (req.user!.credits <= 0) {
     res.status(403).json({

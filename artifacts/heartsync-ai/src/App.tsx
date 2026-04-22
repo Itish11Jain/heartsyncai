@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import Preview from "@/pages/preview";
 import Generate from "@/pages/generate";
 import Report from "@/pages/report";
 import Contact from "@/pages/contact";
@@ -16,6 +17,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/preview" component={Preview} />
       <Route path="/generate" component={Generate} />
       <Route path="/report" component={Report} />
       <Route path="/contact" component={Contact} />

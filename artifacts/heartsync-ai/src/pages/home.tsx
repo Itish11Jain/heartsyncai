@@ -97,7 +97,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="rounded-full h-14 px-8 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 shadow-[0_0_40px_-10px_rgba(236,72,153,0.5)] transition-all">
-                <Link href="/generate" className="flex items-center gap-2">
+                <Link href="/preview" className="flex items-center gap-2">
                   Try It Free <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
