@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight, HeartPulse, MessageCircle, HelpCircle, Star } from "lucide-react";
@@ -54,11 +54,7 @@ const TESTIMONIALS = [
 ];
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(authStore.isLoggedIn);
-  }, []);
+  const [isLoggedIn] = useState(() => authStore.isLoggedIn);
 
   const ctaHref = isLoggedIn ? "/generate" : "/preview";
 
