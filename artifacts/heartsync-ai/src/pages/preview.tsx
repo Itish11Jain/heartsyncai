@@ -26,6 +26,12 @@ import {
 
 const PREVIEW_FORM_KEY = "heartsync_preview_form_v1";
 
+function trackEvent(name: string, params?: Record<string, string>) {
+  try {
+    (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag?.("event", name, params ?? {});
+  } catch { /* ignore */ }
+}
+
 const formSchema = z.object({
   partnerName: z.string().min(1, "Please enter their name."),
   occasion: z.string().min(1, "Please select an occasion."),
@@ -134,6 +140,7 @@ export default function Preview() {
     setFormValues(values);
     setIsPreviewLoading(true);
     setPreviewError(null);
+    trackEvent("preview_form_submitted", { occasion: values.occasion });
     try {
       const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
       const res = await fetch(`${base}/api/report/preview`, {
@@ -147,6 +154,7 @@ export default function Preview() {
       try { localStorage.setItem(PREVIEW_FORM_KEY, JSON.stringify(values)); } catch { /* ignore */ }
       setInnerGame(data.innerGame);
       setStep("preview");
+      trackEvent("preview_shown", { occasion: values.occasion });
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -158,6 +166,7 @@ export default function Preview() {
     setShowAuth(false);
     if (!formValues) return;
     setIsGeneratingFull(true);
+    trackEvent("preview_signup_completed", { occasion: formValues.occasion });
     generateReport.mutate(
       { data: formValues },
       {
@@ -438,7 +447,7 @@ export default function Preview() {
                   Create a free account to unlock your full report — no payment needed.
                 </p>
                 <Button
-                  onClick={() => setShowAuth(true)}
+                  onClick={() => { trackEvent("unlock_cta_clicked"); setShowAuth(true); }}
                   className="w-full h-13 rounded-xl text-base font-bold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_25px_-5px_rgba(236,72,153,0.6)] transition-all"
                 >
                   <span className="flex items-center justify-center gap-2">

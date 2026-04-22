@@ -1,7 +1,9 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight, HeartPulse, MessageCircle, HelpCircle, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { authStore } from "@/lib/auth-store";
 
 const FEATURES = [
   {
@@ -52,6 +54,14 @@ const TESTIMONIALS = [
 ];
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(authStore.isLoggedIn);
+  }, []);
+
+  const ctaHref = isLoggedIn ? "/generate" : "/preview";
+
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -71,7 +81,7 @@ export default function Home() {
             </span>
           </div>
           <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10">
-            <Link href="/generate">Get Started</Link>
+            <Link href={ctaHref}>Get Started</Link>
           </Button>
         </header>
 
@@ -97,8 +107,8 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="rounded-full h-14 px-8 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 shadow-[0_0_40px_-10px_rgba(236,72,153,0.5)] transition-all">
-                <Link href="/preview" className="flex items-center gap-2">
-                  Try It Free <ArrowRight className="w-5 h-5" />
+                <Link href={ctaHref} className="flex items-center gap-2">
+                  {isLoggedIn ? "Generate a Report" : "Try It Free"} <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
             </div>
