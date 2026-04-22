@@ -162,11 +162,11 @@ export default function Preview() {
     }
   }
 
-  function handleAuthSuccess() {
+  function handleAuthSuccess(isNewUser: boolean) {
     setShowAuth(false);
     if (!formValues) return;
     setIsGeneratingFull(true);
-    trackEvent("preview_signup_completed", { occasion: formValues.occasion });
+    if (isNewUser) trackEvent("preview_signup_completed", { occasion: formValues.occasion });
     generateReport.mutate(
       { data: formValues },
       {

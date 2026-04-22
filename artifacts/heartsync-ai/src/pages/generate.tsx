@@ -101,7 +101,7 @@ export default function Generate() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function handleAuthSuccess() {
+  function handleAuthSuccess(_isNewUser: boolean) {
     setIsLoggedIn(true);
     setCredits(authStore.credits);
     setDisplayName(authStore.displayName ?? "");

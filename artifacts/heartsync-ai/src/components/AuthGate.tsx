@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPhoneNumber,
+  getAdditionalUserInfo,
   RecaptchaVerifier,
   type ConfirmationResult,
 } from "firebase/auth";
@@ -25,7 +26,7 @@ type Tab = "email" | "phone";
 type Step = "form" | "otp";
 
 interface AuthGateProps {
-  onSuccess: () => void;
+  onSuccess: (isNewUser: boolean) => void;
 }
 
 function getFirebaseErrorMessage(code: string): string {
@@ -64,7 +65,7 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
     };
   }, []);
 
-  async function finishAuth(idToken: string) {
+  async function finishAuth(idToken: string, isNewUser: boolean) {
     const result = await new Promise<{ sessionToken: string; credits: number; displayName: string }>(
       (resolve, reject) => {
         verifyAuth.mutate(
@@ -77,7 +78,7 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
       },
     );
     authStore.login(result.sessionToken, result.displayName, result.credits);
-    onSuccess();
+    onSuccess(isNewUser);
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -87,18 +88,20 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
     setIsLoading(true);
     try {
       let cred;
+      let isNewUser = false;
       try {
         cred = await signInWithEmailAndPassword(auth, email, password);
       } catch (err: unknown) {
         const code = (err as { code?: string }).code ?? "";
         if (code === "auth/user-not-found" || code === "auth/invalid-credential") {
           cred = await createUserWithEmailAndPassword(auth, email, password);
+          isNewUser = true;
         } else {
           throw err;
         }
       }
       const idToken = await cred.user.getIdToken();
-      await finishAuth(idToken);
+      await finishAuth(idToken, isNewUser);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
@@ -137,8 +140,9 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
     setIsLoading(true);
     try {
       const cred = await confirmationRef.current.confirm(value);
+      const isNewUser = getAdditionalUserInfo(cred)?.isNewUser ?? false;
       const idToken = await cred.user.getIdToken();
-      await finishAuth(idToken);
+      await finishAuth(idToken, isNewUser);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
