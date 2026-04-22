@@ -180,7 +180,7 @@ export default function Preview() {
         },
         onError: () => {
           setIsGeneratingFull(false);
-          setPreviewError("Could not generate your full report. Please try again.");
+          setPreviewError("Could not generate your full guide. Please try again.");
         },
       },
     );
@@ -358,10 +358,10 @@ export default function Preview() {
                   <span className="text-xs font-semibold text-secondary">Free Preview</span>
                 </div>
                 <h1 className="text-3xl font-bold text-white mb-1">
-                  Your report for <span className="text-primary">{formValues?.partnerName}</span>
+                  Your guide for <span className="text-primary">{formValues?.partnerName}</span>
                 </h1>
                 <p className="text-white/50 text-sm">
-                  Here's a taste. Create a free account to unlock the full report instantly.
+                  Here's a taste. Create a free account to unlock the full guide instantly.
                 </p>
               </div>
 
@@ -444,14 +444,14 @@ export default function Preview() {
               >
                 <p className="text-white font-semibold mb-1">Like what you see?</p>
                 <p className="text-white/45 text-sm mb-5">
-                  Create a free account to unlock your full report — no payment needed.
+                  Create a free account to unlock your full guide — no payment needed.
                 </p>
                 <Button
                   onClick={() => { trackEvent("unlock_cta_clicked"); setShowAuth(true); }}
                   className="w-full h-13 rounded-xl text-base font-bold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_25px_-5px_rgba(236,72,153,0.6)] transition-all"
                 >
                   <span className="flex items-center justify-center gap-2">
-                    Unlock Full Report — It's Free <ArrowRight className="w-5 h-5" />
+                    Get your free guide <ArrowRight className="w-5 h-5" />
                   </span>
                 </Button>
                 <button

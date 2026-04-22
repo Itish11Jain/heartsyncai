@@ -178,7 +178,7 @@ export default function Generate() {
             <Link
               href="/history"
               className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
-              title="My Reports"
+              title="My Guides"
             >
               <ClipboardList className="w-4 h-4" />
             </Link>
@@ -200,7 +200,7 @@ export default function Generate() {
           {credits === 0 && !utrDone ? (
             /* Paywall */
             <div>
-              <h1 className="text-4xl font-bold mb-2 text-white">Get More Reports</h1>
+              <h1 className="text-4xl font-bold mb-2 text-white">Get More Guides</h1>
               <p className="text-white/60 mb-8">Top up to keep the winning streak going.</p>
 
               <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
@@ -208,7 +208,7 @@ export default function Generate() {
                   <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mb-4">
                     <Lock className="w-5 h-5 text-primary" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-1">5 Reports for ₹99</h3>
+                  <h3 className="text-xl font-bold text-white mb-1">5 Guides for ₹99</h3>
                   <p className="text-sm text-white/45 mb-8 max-w-xs">
                     Pay via UPI, submit your UTR, and credits are added instantly.
                   </p>
@@ -251,7 +251,7 @@ export default function Generate() {
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Unlock 5 Reports <ArrowRight className="w-4 h-4" />
+                          Unlock 5 Guides <ArrowRight className="w-4 h-4" />
                         </span>
                       )}
                     </Button>
@@ -267,12 +267,12 @@ export default function Generate() {
               className="text-center"
             >
               <h1 className="text-4xl font-bold mb-2 text-white">You're all set!</h1>
-              <p className="text-white/60 mb-8">5 reports have been added to your account.</p>
+              <p className="text-white/60 mb-8">5 guides have been added to your account.</p>
               <Button
                 onClick={() => setUtrDone(false)}
                 className="h-12 px-8 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold"
               >
-                <Sparkles className="w-4 h-4 mr-2" /> Generate a Report
+                <Sparkles className="w-4 h-4 mr-2" /> Generate a Guide
               </Button>
             </motion.div>
           ) : (
@@ -397,7 +397,7 @@ export default function Generate() {
                               exit={{ opacity: 0 }}
                               className="flex items-center gap-2"
                             >
-                              <Sparkles className="w-5 h-5" /> Generate My Report
+                              <Sparkles className="w-5 h-5" /> Generate My Guide
                             </motion.div>
                           )}
                         </AnimatePresence>

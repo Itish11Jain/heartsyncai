@@ -208,7 +208,7 @@ export default function Report() {
             <Link
               href="/history"
               className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
-              title="My Reports"
+              title="My Guides"
             >
               <ClipboardList className="w-4 h-4" />
             </Link>
@@ -219,7 +219,7 @@ export default function Report() {
               <span className="text-[11px] font-semibold text-white">{credits} left</span>
             </div>
             <div className="text-right">
-              <p className="text-xs text-white/30">Report for</p>
+              <p className="text-xs text-white/30">Guide for</p>
               <p className="text-sm font-semibold text-white">{report.partnerName}</p>
             </div>
           </div>
@@ -308,7 +308,7 @@ export default function Report() {
               className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl px-4 text-sm"
             >
               <Link href="/generate">
-                New report <ArrowRight className="w-4 h-4 ml-1" />
+                New guide <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
             </Button>
           )}

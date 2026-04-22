@@ -126,17 +126,17 @@ export default function History() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <h1 className="text-3xl font-bold text-white mb-1">My Reports</h1>
-          <p className="text-white/45 text-sm mb-8">Reports are viewable for 24 hours after generation.</p>
+          <h1 className="text-3xl font-bold text-white mb-1">My Guides</h1>
+          <p className="text-white/45 text-sm mb-8">Guides are viewable for 24 hours after generation.</p>
 
           {entries.length === 0 ? (
             <div className="text-center py-20">
               <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-7 h-7 text-white/20" />
               </div>
-              <p className="text-white/40 mb-6">No reports yet. Generate your first one!</p>
+              <p className="text-white/40 mb-6">No guides yet. Generate your first one!</p>
               <Button asChild className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold">
-                <Link href="/generate">Generate a Report</Link>
+                <Link href="/generate">Generate a Guide</Link>
               </Button>
             </div>
           ) : (

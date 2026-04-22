@@ -89,7 +89,7 @@ export default function Home() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm mb-6">
               <Sparkles className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium text-white/80">First report is free</span>
+              <span className="text-sm font-medium text-white/80">First guide is free</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6 text-white">
               Feel confident <br />
