@@ -48,29 +48,12 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const countResult = await pool.query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM hs_moments
-     WHERE user_id = $1 AND created_at >= $2`,
-    [userId, monthStart],
-  );
-
-  const momentsUsed = parseInt(countResult.rows[0]?.count ?? "0", 10);
-
-  if (momentsUsed >= MOMENTS_LIMIT) {
-    res.status(403).json({
-      error: "MOMENT_LIMIT_REACHED",
-      message: `You've used all ${MOMENTS_LIMIT} free moments for this month. Come back next month!`,
-      momentsUsed,
-      momentsLimit: MOMENTS_LIMIT,
-    });
-    return;
-  }
-
   const userPrompt = `Write a card message for:
 - Recipient's name: ${recipientName}
 - Purpose: ${PURPOSE_TONE[purpose]}
 - Relationship: ${RELATION_REGISTER[relation]}`;
 
+  let generatedMessage: string;
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -94,24 +77,61 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
       return;
     }
 
-    await pool.query(
-      `INSERT INTO hs_moments (user_id, purpose, relation, recipient, message)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, purpose, relation, recipientName, data.message],
+    generatedMessage = data.message;
+  } catch (err) {
+    req.log.error({ err }, "Moment generation failed");
+    res.status(500).json({ error: "server_error", message: "Something went wrong on our end. Please try again." });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      "SELECT id FROM hs_users WHERE id = $1 FOR UPDATE",
+      [userId],
     );
 
-    const newMomentsUsed = momentsUsed + 1;
+    const countResult = await client.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM hs_moments
+       WHERE user_id = $1 AND created_at >= $2`,
+      [userId, monthStart],
+    );
+    const momentsUsed = parseInt(countResult.rows[0]?.count ?? "0", 10);
+
+    if (momentsUsed >= MOMENTS_LIMIT) {
+      await client.query("ROLLBACK");
+      res.status(403).json({
+        error: "MOMENT_LIMIT_REACHED",
+        message: `You've used all ${MOMENTS_LIMIT} free moments for this month. Come back next month!`,
+        momentsUsed,
+        momentsLimit: MOMENTS_LIMIT,
+      });
+      return;
+    }
+
+    await client.query(
+      `INSERT INTO hs_moments (user_id, purpose, relation, recipient, message)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, purpose, relation, recipientName, generatedMessage],
+    );
+
+    await client.query("COMMIT");
 
     req.log.info({ userId, purpose, relation }, "Moment generated");
 
     res.json({
-      message: data.message,
-      momentsUsed: newMomentsUsed,
+      message: generatedMessage,
+      momentsUsed: momentsUsed + 1,
       momentsLimit: MOMENTS_LIMIT,
     });
   } catch (err) {
-    req.log.error({ err }, "Moment generation failed");
+    await client.query("ROLLBACK");
+    req.log.error({ err }, "Moment insert failed");
     res.status(500).json({ error: "server_error", message: "Something went wrong on our end. Please try again." });
+  } finally {
+    client.release();
   }
 });
 
