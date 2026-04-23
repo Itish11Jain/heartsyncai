@@ -627,6 +627,7 @@ export interface VinylTrack {
 
 export interface VinylTemplate {
   album_title: string;
+  title_prefix: string;
   side_label: string;
   tracks: VinylTrack[];
   final_message: string;
@@ -636,6 +637,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
   thank_you: {
     friend: {
       album_title: "Thank You, Legend",
+      title_prefix: "To the absolute legend",
       side_label: "Side A — For My Absolute Favourite",
       tracks: [
         { emoji: "🎮", title: "Always There", text: "Always got my back when it counts." },
@@ -647,6 +649,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     partner: {
       album_title: "For My Favourite Person",
+      title_prefix: "To my favourite person",
       side_label: "Side A — A Mixtape of Gratitude",
       tracks: [
         { emoji: "💖", title: "Better Every Day", text: "You make every single day better." },
@@ -658,6 +661,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     spouse: {
       album_title: "To My Everything",
+      title_prefix: "To my everything",
       side_label: "Side A — A Love Mixtape",
       tracks: [
         { emoji: "💍", title: "Greatest Adventure", text: "You are my greatest adventure." },
@@ -669,6 +673,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     date: {
       album_title: "Something Special",
+      title_prefix: "To someone special",
       side_label: "Side A — For Someone Unforgettable",
       tracks: [
         { emoji: "😊", title: "That Smile", text: "You made me smile like I forgot how." },
@@ -682,6 +687,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
   birthday: {
     friend: {
       album_title: "Happy Birthday, Legend",
+      title_prefix: "Another trip around the sun",
       side_label: "Side A — Birthday Bangers",
       tracks: [
         { emoji: "🎂", title: "Eat the Cake", text: "Time to eat all the cake — zero guilt." },
@@ -693,6 +699,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     partner: {
       album_title: "Happy Birthday, My Love",
+      title_prefix: "Happy birthday, my love",
       side_label: "Side A — For the Centre of My World",
       tracks: [
         { emoji: "🎈", title: "Every Year a Gift", text: "Every year with you is a gift." },
@@ -704,6 +711,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     spouse: {
       album_title: "To My Partner in Everything",
+      title_prefix: "To my partner in everything",
       side_label: "Side A — A Birthday Mixtape",
       tracks: [
         { emoji: "🎂", title: "Another Year of Love", text: "Another year of loving you." },
@@ -715,6 +723,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     date: {
       album_title: "Celebrating You Today",
+      title_prefix: "Celebrating you today",
       side_label: "Side A — For Someone Wonderful",
       tracks: [
         { emoji: "🎉", title: "World Is Better", text: "The world is better because you're in it." },
@@ -728,6 +737,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
   sorry: {
     partner: {
       album_title: "Let Me Make It Right",
+      title_prefix: "To my everything",
       side_label: "Side A — From the Heart",
       tracks: [
         { emoji: "💔", title: "Hate Fighting", text: "I hate fighting with you." },
@@ -739,6 +749,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     friend: {
       album_title: "I'm Sorry, Truly",
+      title_prefix: "To someone I value deeply",
       side_label: "Side A — Because You Matter",
       tracks: [
         { emoji: "🙁", title: "I Was Wrong", text: "I handled that all wrong." },
@@ -750,6 +761,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     spouse: {
       album_title: "To My Heart",
+      title_prefix: "To my heart",
       side_label: "Side A — A Heartfelt Apology",
       tracks: [
         { emoji: "💔", title: "Never Want to Hurt You", text: "I never want to hurt you." },
@@ -761,6 +773,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     date: {
       album_title: "An Honest Apology",
+      title_prefix: "To someone I care about",
       side_label: "Side A — Because You Deserve Better",
       tracks: [
         { emoji: "😞", title: "Didn't Mean It", text: "I didn't mean to make you feel that way." },
@@ -774,6 +787,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
   feel_good: {
     friend: {
       album_title: "A Reminder, Just for You",
+      title_prefix: "Hey you — yes, YOU",
       side_label: "Side A — Hey You — Yes, YOU",
       tracks: [
         { emoji: "🌟", title: "One of a Kind", text: "You are genuinely one of a kind." },
@@ -785,6 +799,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     partner: {
       album_title: "To My Sunshine",
+      title_prefix: "To my sunshine",
       side_label: "Side A — You Are Doing Great",
       tracks: [
         { emoji: "🌈", title: "Grey Days Brighter", text: "You brighten even the grey days." },
@@ -796,6 +811,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     spouse: {
       album_title: "To My Person",
+      title_prefix: "To my person",
       side_label: "Side A — A Love Note",
       tracks: [
         { emoji: "🏡", title: "Home Reset", text: "Coming home to you resets everything." },
@@ -807,6 +823,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     date: {
       album_title: "A Little Something",
+      title_prefix: "For someone special",
       side_label: "Side A — For Someone Special",
       tracks: [
         { emoji: "😊", title: "That Smile", text: "You have the best smile." },
@@ -820,6 +837,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
   congratulations: {
     friend: {
       album_title: "Look at You Go!",
+      title_prefix: "Look at you go",
       side_label: "Side A — Absolute Champion",
       tracks: [
         { emoji: "🏆", title: "You Crushed It", text: "You absolutely crushed it." },
@@ -831,6 +849,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     partner: {
       album_title: "My Most Capable Person",
+      title_prefix: "To the most capable person I know",
       side_label: "Side A — So Proud of You",
       tracks: [
         { emoji: "🌟", title: "Always Knew", text: "I always knew you'd make it here." },
@@ -842,6 +861,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     spouse: {
       album_title: "My Person — What a Star!",
+      title_prefix: "My person — what a star",
       side_label: "Side A — Your Biggest Fan",
       tracks: [
         { emoji: "🏆", title: "Made It Look Easy", text: "You made it look easy — it wasn't." },
@@ -853,6 +873,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
     },
     date: {
       album_title: "Celebrating You!",
+      title_prefix: "Celebrating you",
       side_label: "Side A — Big News Energy",
       tracks: [
         { emoji: "🎊", title: "Big News", text: "This is such big news!" },
@@ -874,6 +895,7 @@ export function getVinylFallback(occasion: string): VinylTemplate {
   if (oc) return Object.values(oc)[0];
   return {
     album_title: "A Mixtape for You",
+    title_prefix: "This one's for you",
     side_label: "Side A — From the Heart",
     tracks: [
       { emoji: "💖", title: "You Are Amazing", text: "You are amazing." },

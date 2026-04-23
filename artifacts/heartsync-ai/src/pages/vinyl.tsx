@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import {
   getVinylTemplate, getVinylFallback,
-  getCosmicTemplate, getCosmicFallback,
 } from "@/lib/card-templates";
 
 /* ─────────────────────────── types ──────────────────────────── */
@@ -25,7 +24,7 @@ const NOTE_CHARS = ["♪", "♫", "🎵", "♬"];
 
 /* ─────────────────────────── VinylRecord ────────────────────── */
 
-function VinylRecord({ spinning, size = 220 }: { spinning: boolean; size?: number }) {
+function VinylRecord({ spinning, hyperSpin = false, size = 220 }: { spinning: boolean; hyperSpin?: boolean; size?: number }) {
   return (
     <div style={{ width: size, height: size, position: "relative", flexShrink: 0 }}>
       <div style={{
@@ -36,7 +35,7 @@ function VinylRecord({ spinning, size = 220 }: { spinning: boolean; size?: numbe
       <motion.div
         animate={{ rotate: spinning ? 360 : 0 }}
         transition={spinning
-          ? { duration: 2.8, repeat: Infinity, ease: "linear" }
+          ? { duration: hyperSpin ? 0.3 : 2.8, repeat: Infinity, ease: "linear" }
           : { duration: 0.6, ease: "easeOut" }}
         style={{
           width: size, height: size, borderRadius: "50%",
@@ -128,8 +127,7 @@ export default function VinylCard() {
   const isPreview = params.get("preview") === "1";
 
   const tpl = getVinylTemplate(occasion, relation) ?? getVinylFallback(occasion);
-  const cosmicTpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
-  const titlePrefix = cosmicTpl.title_prefix;
+  const titlePrefix = tpl.title_prefix;
   const finalMessage = customMsg ?? tpl.final_message;
 
   const senderShareUrl = (() => {
@@ -142,6 +140,7 @@ export default function VinylCard() {
   /* ── state ── */
   const [phase, setPhase] = useState<VinylPhase>(isPreview ? "sleeve" : "hook");
   const [spinning, setSpinning] = useState(false);
+  const [hyperSpin, setHyperSpin] = useState(false);
   const [tonearmDown, setTonearmDown] = useState(false);
   const [tappedNotes, setTappedNotes] = useState<number[]>([]);
   const [tooltip, setTooltip] = useState<{ emoji: string; text: string } | null>(null);
@@ -326,14 +325,18 @@ export default function VinylCard() {
 
   /* ── sleeve finale ── */
   function triggerSleeve() {
-    setSpinning(false);
-    setTonearmDown(false);
-    setPlayerExiting(true);
+    setHyperSpin(true);
     setTimeout(() => {
-      canvasModeRef.current = "golden";
-      setPhase("sleeve");
-      setTimeout(() => setSleeveVisible(true), 300);
-    }, 800);
+      setHyperSpin(false);
+      setSpinning(false);
+      setTonearmDown(false);
+      setPlayerExiting(true);
+      setTimeout(() => {
+        canvasModeRef.current = "golden";
+        setPhase("sleeve");
+        setTimeout(() => setSleeveVisible(true), 300);
+      }, 800);
+    }, 500);
   }
 
   /* ── share ── */
@@ -426,7 +429,7 @@ export default function VinylCard() {
                   boxShadow: "inset 0 4px 16px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <VinylRecord spinning={spinning} size={Math.min(window.innerWidth * 0.52, 200)} />
+                  <VinylRecord spinning={spinning} hyperSpin={hyperSpin} size={Math.min(window.innerWidth * 0.52, 200)} />
                 </div>
                 <Tonearm down={tonearmDown} />
               </div>
@@ -533,7 +536,7 @@ export default function VinylCard() {
                     boxShadow: "inset 0 4px 16px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <VinylRecord spinning={spinning} size={Math.min(window.innerWidth * 0.44, 170)} />
+                    <VinylRecord spinning={spinning} hyperSpin={hyperSpin} size={Math.min(window.innerWidth * 0.44, 170)} />
                   </div>
                   <Tonearm down={tonearmDown} />
                 </div>
