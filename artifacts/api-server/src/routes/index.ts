@@ -5,6 +5,7 @@ import paymentRouter from "./payment";
 import authRouter from "./auth";
 import adminRouter from "./admin";
 import momentRouter from "./moment";
+import usageRouter from "./usage";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(reportRouter);
 router.use(paymentRouter);
 router.use(adminRouter);
 router.use(momentRouter);
+router.use(usageRouter);
 
 export default router;

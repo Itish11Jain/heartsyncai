@@ -21,8 +21,18 @@ A premium relationship intelligence web app for India. Users describe a first-da
 - **Firebase Auth** — Email/Password (primary, free) + Phone OTP (secondary, limited)
   - Sessions last 90 days via JWT signed with SESSION_SECRET
   - Firebase persistence set to browserLocalPersistence (survives browser restarts)
-- **Credit system** — 1 free credit on signup; ₹99 via UPI buys 5 more credits
-  - Credits tracked server-side in PostgreSQL (`hs_users` table)
+- **Clerk Auth (new)** — Google OAuth for card freemium flow
+  - `ClerkProvider` wraps entire app in `App.tsx`
+  - `/sign-in` and `/sign-up` routes serve branded Clerk widgets
+  - Used only for card credit gating (separate from Firebase auth for Date Guide)
+- **Card Freemium System (new)** — layered gating for card creation:
+  - Anonymous: 2 free cards (Envelope + Cosmic only). Tracked server-side by browser fingerprint (`hs_card_usage` table, resists incognito)
+  - After 2 anon cards: sign-in gate overlay → "Continue with Google" → Clerk Google OAuth
+  - Signed-in: 2 more free cards (Vinyl first, then random). Tracked in `hs_clerk_users.cards_used`
+  - After 4 total free cards: ₹50 paywall overlay → `/generate`
+  - Template gating: anon = Envelope/Cosmic only; first post-signup = Vinyl; subsequent = random
+- **Credit system (Date Guide)** — 1 free credit on signup; ₹99 via UPI buys 5 more credits
+  - Credits tracked server-side in PostgreSQL (`hs_users` table, Firebase-based)
   - All 4 report sections are always fully visible (no per-section locking)
 - **UPI paywall** — on the generate page when credits = 0; UTR submission adds 5 credits instantly
 - **AI persona** — GPT-5.2 with HeartSync AI system prompt (English, Indian context)
@@ -50,13 +60,37 @@ A premium relationship intelligence web app for India. Users describe a first-da
 ## Database Schema
 
 ```sql
+-- Legacy Firebase users (Date Guide credits)
 CREATE TABLE hs_users (
   id SERIAL PRIMARY KEY,
   firebase_uid TEXT UNIQUE NOT NULL,
-  display_name TEXT NOT NULL,  -- email or masked phone
+  display_name TEXT NOT NULL,
   credits INTEGER NOT NULL DEFAULT 1,
+  moments_credits INTEGER NOT NULL DEFAULT 2,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Clerk users (card credits)
+CREATE TABLE hs_clerk_users (
+  id SERIAL PRIMARY KEY,
+  clerk_user_id TEXT UNIQUE NOT NULL,
+  display_name TEXT NOT NULL DEFAULT '',
+  email TEXT,
+  cards_used INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Anonymous fingerprint tracking (resist incognito abuse)
+CREATE TABLE hs_card_usage (
+  id SERIAL PRIMARY KEY,
+  fingerprint TEXT NOT NULL,  -- browser fingerprint hash
+  ip TEXT,
+  cards_used INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX hs_card_usage_fp ON hs_card_usage(fingerprint);
+
 CREATE TABLE hs_credit_logs (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES hs_users(id),

@@ -19,6 +19,27 @@ export async function initDb(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     ALTER TABLE hs_users ADD COLUMN IF NOT EXISTS moments_credits INTEGER NOT NULL DEFAULT 2;
+
+    -- Clerk-based users (separate from legacy Firebase users)
+    CREATE TABLE IF NOT EXISTS hs_clerk_users (
+      id SERIAL PRIMARY KEY,
+      clerk_user_id TEXT UNIQUE NOT NULL,
+      display_name TEXT NOT NULL DEFAULT '',
+      email TEXT,
+      cards_used INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- Anonymous fingerprint usage tracking (resists incognito via server-side counter)
+    CREATE TABLE IF NOT EXISTS hs_card_usage (
+      id SERIAL PRIMARY KEY,
+      fingerprint TEXT NOT NULL,
+      ip TEXT,
+      cards_used INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS hs_card_usage_fp ON hs_card_usage(fingerprint);
     CREATE TABLE IF NOT EXISTS hs_credit_logs (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES hs_users(id),
