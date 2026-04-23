@@ -400,23 +400,28 @@ export default function CosmicCard() {
             exit={{ opacity: 0, transition: { duration: 0.5 } }}
             style={{ position: "fixed", inset: 0, zIndex: 10 }}
           >
-            {/* Progress prompt — fixed at top-centre, safe from browser chrome */}
+            {/* Progress prompt — spans full width so it can never overflow */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               style={{
                 position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))",
-                left: "50%", transform: "translateX(-50%)",
-                maxWidth: "calc(100vw - 48px)", width: "max-content",
-                fontSize: 13, color: "rgba(220,200,255,0.9)", letterSpacing: "0.08em", fontWeight: 600,
+                left: 0, right: 0,
+                display: "flex", justifyContent: "center", padding: "0 20px",
+                zIndex: 15, pointerEvents: "none",
+              }}
+            >
+              <span style={{
+                display: "inline-block",
+                fontSize: 13, color: "rgba(220,200,255,0.9)", letterSpacing: "0.06em", fontWeight: 600,
                 background: "rgba(40,20,80,0.75)", borderRadius: 999, padding: "8px 20px",
                 border: "1px solid rgba(180,150,255,0.25)",
                 backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-                zIndex: 15, textAlign: "center",
-              }}
-            >
-              Discover the stars ({clickedIds.length} / {totalStars})
+                whiteSpace: "nowrap",
+              }}>
+                Discover the stars ({clickedIds.length} / {totalStars})
+              </span>
             </motion.div>
 
             {/* Stars */}
@@ -486,8 +491,7 @@ export default function CosmicCard() {
                   style={{
                     position: "fixed",
                     bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
-                    left: "50%", transform: "translateX(-50%)",
-                    width: "min(320px, calc(100vw - 40px))",
+                    left: 16, right: 16,
                     zIndex: 20, pointerEvents: "none",
                     background: "rgba(14,6,30,0.55)",
                     borderRadius: 18,
