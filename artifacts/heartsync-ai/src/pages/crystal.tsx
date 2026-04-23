@@ -695,7 +695,8 @@ export default function CrystalCard() {
                   style={{
                     position: "absolute",
                     left: `${zone.cx}%`, top: `${zone.cy}%`,
-                    transform: "translate(-50%,-50%)",
+                    /* x/y as Framer Motion props so scale doesn't override centering */
+                    x: "-50%", y: "-50%",
                     width: ORB_SIZE, height: ORB_SIZE,
                     borderRadius: "50%",
                     background: tapped
@@ -725,33 +726,40 @@ export default function CrystalCard() {
             {/* Glassmorphism tooltip — centered */}
             <AnimatePresence>
               {tooltip && (
-                <motion.div
+                /* Outer div owns the position+centering so Framer Motion's
+                   scale/y don't override the CSS transform */
+                <div
                   key={tooltip.text}
-                  initial={{ opacity: 0, scale: 0.88, y: 18 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.88, y: -12 }}
-                  transition={{ duration: 0.28 }}
                   style={{
                     position: "fixed",
                     top: "50%", left: "50%",
                     transform: "translate(-50%, -50%)",
                     zIndex: 50, pointerEvents: "none",
-                    width: "min(310px, 88vw)",
-                    background: "rgba(12,4,30,0.82)",
-                    backdropFilter: "blur(18px)",
-                    border: "1px solid rgba(180,120,255,0.4)",
-                    borderRadius: 18, padding: "28px 36px", textAlign: "center",
-                    boxShadow: "0 4px 40px rgba(80,30,160,0.45)",
                   }}
                 >
-                  <div style={{ fontSize: 52, marginBottom: 14 }}>{tooltip.emoji}</div>
-                  <p style={{
-                    fontSize: "min(15px, 3.8vw)", color: "rgba(210,185,255,0.94)",
-                    fontWeight: 500, fontStyle: "italic", lineHeight: 1.6, margin: 0,
-                  }}>
-                    {tooltip.text}
-                  </p>
-                </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.88, y: 18 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.88, y: -12 }}
+                    transition={{ duration: 0.28 }}
+                    style={{
+                      width: "min(310px, 88vw)",
+                      background: "rgba(12,4,30,0.82)",
+                      backdropFilter: "blur(18px)",
+                      border: "1px solid rgba(180,120,255,0.4)",
+                      borderRadius: 18, padding: "28px 36px", textAlign: "center",
+                      boxShadow: "0 4px 40px rgba(80,30,160,0.45)",
+                    }}
+                  >
+                    <div style={{ fontSize: 52, marginBottom: 14 }}>{tooltip.emoji}</div>
+                    <p style={{
+                      fontSize: "min(15px, 3.8vw)", color: "rgba(210,185,255,0.94)",
+                      fontWeight: 500, fontStyle: "italic", lineHeight: 1.6, margin: 0,
+                    }}>
+                      {tooltip.text}
+                    </p>
+                  </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </motion.div>
@@ -767,8 +775,14 @@ export default function CrystalCard() {
             style={{
               position: "fixed", inset: 0, zIndex: 30,
               display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              padding: "0 20px", overflowY: "auto",
+              alignItems: "center",
+              /* flex-start + paddingTop keeps content reachable when it overflows —
+                 justifyContent:center clips the top on short phones */
+              justifyContent: "flex-start",
+              paddingTop: "max(48px, 6vh)",
+              paddingBottom: "max(40px, env(safe-area-inset-bottom, 24px))",
+              paddingLeft: 20, paddingRight: 20,
+              overflowY: "auto",
             }}
           >
             <motion.div
