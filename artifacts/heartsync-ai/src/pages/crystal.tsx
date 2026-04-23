@@ -505,6 +505,7 @@ export default function CrystalCard() {
               zIndex: ballInBackground ? 2 : 5,
               display: "flex", flexDirection: "column",
               alignItems: "center",
+              width: "min(92vw, 360px)",
               pointerEvents: ballInBackground ? "none" : "auto",
             }}
           >
@@ -515,11 +516,12 @@ export default function CrystalCard() {
                 animate={{ opacity: phase === "clearing" ? 0 : 1, y: 0 }}
                 transition={{ duration: 0.55 }}
                 style={{
-                  fontSize: "min(18px, 4.5vw)", color: "rgba(210,185,255,0.9)",
-                  fontWeight: 700, letterSpacing: "0.07em",
+                  fontSize: "clamp(15px, 4.2vw, 18px)", color: "rgba(210,185,255,0.9)",
+                  fontWeight: 700, letterSpacing: "0.06em",
                   textAlign: "center", marginBottom: 32,
                   textShadow: "0 0 20px rgba(160,100,255,0.6)",
-                  whiteSpace: "nowrap",
+                  whiteSpace: "normal", lineHeight: 1.35,
+                  maxWidth: "min(280px, 80vw)",
                 }}
               >
                 {tpl.hook_title}
@@ -548,23 +550,43 @@ export default function CrystalCard() {
               <div style={{
                 width: "100%", height: "100%", borderRadius: "50%",
                 background: phase === "clearing"
-                  ? "radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95) 0%, rgba(230,210,255,0.8) 20%, rgba(180,140,255,0.5) 55%, rgba(80,30,160,0.6) 85%, rgba(20,5,50,0.7) 100%)"
-                  : `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.75) 0%, rgba(210,190,255,${0.5 - clearDisplay * 0.15}) 18%, rgba(140,90,220,0.35) 50%, rgba(60,20,110,0.6) 80%, rgba(20,5,50,0.8) 100%)`,
-                boxShadow: `0 0 60px rgba(140,80,255,0.4), 0 0 120px rgba(100,50,200,0.2), inset 0 0 ${40 + clearDisplay * 60}px rgba(180,130,255,${0.15 + clearDisplay * 0.4})`,
+                  ? "radial-gradient(circle at 32% 28%, rgba(255,255,255,0.98) 0%, rgba(240,225,255,0.88) 14%, rgba(200,165,255,0.62) 38%, rgba(110,55,200,0.55) 68%, rgba(18,4,45,0.78) 100%)"
+                  : `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.92) 0%, rgba(240,225,255,${0.72 - clearDisplay * 0.18}) 11%, rgba(195,160,255,${0.48 - clearDisplay * 0.12}) 28%, rgba(130,80,225,0.42) 50%, rgba(60,18,115,0.68) 76%, rgba(10,3,35,0.88) 100%)`,
+                boxShadow: `0 0 70px rgba(150,90,255,0.5), 0 0 140px rgba(110,55,210,0.25), 0 8px 32px rgba(0,0,0,0.5), inset 0 0 ${48 + clearDisplay * 70}px rgba(190,145,255,${0.18 + clearDisplay * 0.45})`,
                 position: "relative", overflow: "hidden",
                 transition: "background 0.3s, box-shadow 0.15s",
               }}>
-                {/* Glass highlight */}
+                {/* Primary specular highlight */}
                 <div style={{
-                  position: "absolute", top: "8%", left: "12%", width: "38%", height: "30%",
+                  position: "absolute", top: "7%", left: "11%", width: "40%", height: "32%",
                   borderRadius: "50%",
-                  background: "radial-gradient(ellipse at 38% 25%, rgba(255,255,255,0.55) 0%, transparent 55%)",
-                  transform: "rotate(-15deg)", pointerEvents: "none",
+                  background: "radial-gradient(ellipse at 38% 30%, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.28) 38%, transparent 68%)",
+                  transform: "rotate(-18deg)", pointerEvents: "none",
+                }} />
+                {/* Secondary catch-light (bottom-right) */}
+                <div style={{
+                  position: "absolute", bottom: "16%", right: "15%", width: "18%", height: "13%",
+                  borderRadius: "50%",
+                  background: "radial-gradient(ellipse, rgba(220,195,255,0.38) 0%, transparent 70%)",
+                  pointerEvents: "none",
+                }} />
+                {/* Iridescent inner rim */}
+                <div style={{
+                  position: "absolute", inset: "3%", borderRadius: "50%",
+                  background: "transparent",
+                  boxShadow: "inset 0 0 28px rgba(180,145,255,0.18), inset 0 2px 0 rgba(255,255,255,0.22)",
+                  pointerEvents: "none",
+                }} />
+                {/* Depth inner shadow */}
+                <div style={{
+                  position: "absolute", inset: 0, borderRadius: "50%",
+                  background: "radial-gradient(circle at 62% 70%, rgba(10,3,40,0.35) 0%, transparent 65%)",
+                  pointerEvents: "none",
                 }} />
                 {/* Mist veil */}
                 <div style={{
                   position: "absolute", inset: 0, borderRadius: "50%",
-                  background: "radial-gradient(circle at 50% 55%, rgba(130,90,210,0.20) 0%, rgba(55,15,120,0.16) 60%, transparent 100%)",
+                  background: "radial-gradient(circle at 50% 55%, rgba(130,90,210,0.22) 0%, rgba(55,15,120,0.18) 60%, transparent 100%)",
                   opacity: Math.max(0, 1 - clearDisplay * 1.3), transition: "opacity 0.12s",
                   pointerEvents: "none",
                 }} />
@@ -603,9 +625,11 @@ export default function CrystalCard() {
                 animate={{ opacity: [0, 0.85, 0.85, 0.55] }}
                 transition={{ duration: 2.2, times: [0, 0.2, 0.7, 1], repeat: Infinity, delay: 0.6 }}
                 style={{
-                  marginTop: 28, fontSize: "min(14px, 3.6vw)",
-                  color: "rgba(200,170,255,0.72)", letterSpacing: "0.1em",
-                  textAlign: "center", pointerEvents: "none", whiteSpace: "nowrap",
+                  marginTop: 28, fontSize: "clamp(12px, 3.4vw, 14px)",
+                  color: "rgba(200,170,255,0.72)", letterSpacing: "0.08em",
+                  textAlign: "center", pointerEvents: "none",
+                  whiteSpace: "normal", lineHeight: 1.4,
+                  maxWidth: "min(240px, 72vw)",
                 }}
               >
                 Rub the crystal ball to reveal your vision
