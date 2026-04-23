@@ -376,7 +376,7 @@ export default function Moments() {
                             />
                           </motion.div>
                         </div>
-                        <div style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", top: 0, left: 0, overflow: "hidden", width: 0, height: 0 }}>
+                        <div style={{ position: "fixed", left: "-9999px", top: "-9999px", pointerEvents: "none", zIndex: -1 }}>
                           <CardTemplate
                             ref={staticCardRef}
                             templateId={selectedTemplate}
