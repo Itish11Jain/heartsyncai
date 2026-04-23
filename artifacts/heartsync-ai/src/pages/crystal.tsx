@@ -57,6 +57,13 @@ export default function CrystalCard() {
   })();
   const likesChips = likesParam ? likesParam.split(",").map(s => s.trim()).filter(Boolean) : [];
 
+  /* ── Clear native splash screen ── */
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).__clearHsSplash) {
+      (window as any).__clearHsSplash();
+    }
+  }, []);
+
   /* ── Phase ── */
   const [phase, setPhase]   = useState<CrystalPhase>(isPreview ? "visions" : "hook");
   const phaseRef            = useRef<CrystalPhase>(isPreview ? "visions" : "hook");
