@@ -802,6 +802,7 @@ export default function Card() {
   const [tooltipKeyCounter, setTooltipKeyCounter] = useState(0);
   const [orbRadius, setOrbRadius] = useState(130);
   const [showSplash, setShowSplash] = useState(isRecipient);
+  const [splashEmojiIdx, setSplashEmojiIdx] = useState(0);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
 
@@ -819,12 +820,29 @@ export default function Card() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  /* Remove native pre-React splash once React has mounted */
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).__clearHsSplash) {
+      (window as any).__clearHsSplash();
+    }
+  }, []);
+
   /* Auto-hide recipient splash after 2.2s */
   useEffect(() => {
     if (!showSplash) return;
     const t = setTimeout(() => setShowSplash(false), 2200);
     return () => clearTimeout(t);
   }, []);
+
+  /* Cycle splash emoji one at a time */
+  const SPLASH_EMOJIS = ["🎁", "✨", "💌", "🎀", "💛", "🌟", "🥰", "🎊", "💖"];
+  useEffect(() => {
+    if (!showSplash) return;
+    const iv = setInterval(() => {
+      setSplashEmojiIdx(i => (i + 1) % SPLASH_EMOJIS.length);
+    }, 650);
+    return () => clearInterval(iv);
+  }, [showSplash]);
 
   function shareSenderWhatsApp() {
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
@@ -979,49 +997,34 @@ export default function Card() {
           <motion.div
             key="recipient-splash"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.7, ease: "easeInOut" } }}
+            exit={{ opacity: 0, transition: { duration: 0.6, ease: "easeInOut" } }}
             style={{
               position: "fixed", inset: 0, zIndex: 60,
               background: "radial-gradient(ellipse at 50% 40%, #1a0a2e 0%, #0d0618 55%, #050210 100%)",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20,
             }}
           >
-            {/* Floating emoji ring */}
-            {["🎁", "✨", "💌", "🎀", "💛"].map((emoji, i) => (
+            {/* Single cycling emoji — one at a time */}
+            <AnimatePresence mode="wait">
               <motion.div
-                key={i}
-                style={{ position: "absolute", fontSize: 32, top: `${20 + i * 14}%`, left: `${10 + i * 18}%` }}
-                animate={{ y: [0, -12, 0], opacity: [0.4, 0.8, 0.4], rotate: [-5, 5, -5] }}
-                transition={{ duration: 2.2 + i * 0.3, repeat: Infinity, ease: "easeInOut", delay: i * 0.25 }}
+                key={splashEmojiIdx}
+                initial={{ opacity: 0, scale: 0.65, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.65, y: -12 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                style={{ fontSize: 76 }}
               >
-                {emoji}
+                {["🎁", "✨", "💌", "🎀", "💛", "🌟", "🥰", "🎊", "💖"][splashEmojiIdx]}
               </motion.div>
-            ))}
-            {["🌟", "🥰", "🎊", "💖"].map((emoji, i) => (
-              <motion.div
-                key={"r" + i}
-                style={{ position: "absolute", fontSize: 28, bottom: `${15 + i * 16}%`, right: `${8 + i * 22}%` }}
-                animate={{ y: [0, -10, 0], opacity: [0.3, 0.7, 0.3], rotate: [5, -5, 5] }}
-                transition={{ duration: 1.8 + i * 0.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
-              >
-                {emoji}
-              </motion.div>
-            ))}
-            <motion.div
-              animate={{ scale: [1, 1.08, 1], opacity: [0.9, 1, 0.9] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-              style={{ fontSize: 72, marginBottom: 8 }}
-            >
-              🎁
-            </motion.div>
+            </AnimatePresence>
             <motion.p
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 1.4, repeat: Infinity }}
-              style={{ fontSize: 20, fontWeight: 700, color: "#FFD700", letterSpacing: "0.04em", textAlign: "center" }}
+              style={{ fontSize: 20, fontWeight: 700, color: "#FFD700", letterSpacing: "0.04em", textAlign: "center", margin: 0 }}
             >
               Your surprise is loading…
             </motion.p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center", margin: 0 }}>
               Something special was made just for you ✨
             </p>
           </motion.div>
@@ -1241,7 +1244,7 @@ export default function Card() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.01, duration: 0.5 }}
+                transition={{ delay: 1.5, duration: 0.5 }}
                 style={{ width: "min(300px, calc(100vw - 32px))", textAlign: "center", paddingBottom: 8 }}
               >
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 10, letterSpacing: "0.03em" }}>

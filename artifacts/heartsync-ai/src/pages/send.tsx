@@ -5,6 +5,8 @@ import { ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
 
+const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
+
 function useSearchParams() {
   if (typeof window === "undefined") return new URLSearchParams();
   return new URLSearchParams(window.location.search);
@@ -20,6 +22,8 @@ export default function Send() {
   const [recipientName, setRecipientName] = useState("");
   const [likes, setLikes] = useState("");
   const [customMsg, setCustomMsg] = useState("");
+  const [showGenerating, setShowGenerating] = useState(false);
+  const [genEmojiIdx, setGenEmojiIdx] = useState(0);
 
   const defaultMsg = (() => {
     if (!occasion || !relation) return "";
@@ -55,10 +59,20 @@ export default function Send() {
     return `${base}/card?${p.toString()}`;
   }
 
+  /* Cycle generating emoji one at a time */
+  useEffect(() => {
+    if (!showGenerating) return;
+    const iv = setInterval(() => {
+      setGenEmojiIdx(i => (i + 1) % GEN_EMOJIS.length);
+    }, 650);
+    return () => clearInterval(iv);
+  }, [showGenerating]);
+
   function handleFinish() {
     if (!recipientName.trim()) return;
-    /* Navigate directly to the card as sender — share CTAs are on that screen */
-    window.location.href = buildCardUrl(recipientName.trim(), customMsg, true);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true);
+    setShowGenerating(true);
+    setTimeout(() => { window.location.href = url; }, 1800);
   }
 
   const stepVariants = {
@@ -277,6 +291,47 @@ export default function Send() {
 
         </AnimatePresence>
       </div>
+
+      {/* ════ GENERATING SPLASH ════ */}
+      <AnimatePresence>
+        {showGenerating && (
+          <motion.div
+            key="generating-splash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 80,
+              background: "radial-gradient(ellipse at 50% 40%, #1a0a2e 0%, #0d0618 55%, #050210 100%)",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20,
+            }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={genEmojiIdx}
+                initial={{ opacity: 0, scale: 0.65, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.65, y: -12 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                style={{ fontSize: 76 }}
+              >
+                {GEN_EMOJIS[genEmojiIdx]}
+              </motion.div>
+            </AnimatePresence>
+            <motion.p
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 1.4, repeat: Infinity }}
+              style={{ fontSize: 20, fontWeight: 700, color: "#FFD700", letterSpacing: "0.04em", textAlign: "center", margin: 0, fontFamily: "'Segoe UI', system-ui, sans-serif" }}
+            >
+              Creating your card…
+            </motion.p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center", margin: 0, fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+              Sprinkling the magic ✨
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
