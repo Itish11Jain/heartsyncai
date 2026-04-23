@@ -48,6 +48,22 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  const preCheck = await pool.query<{ count: string }>(
+    `SELECT COUNT(*) AS count FROM hs_moments
+     WHERE user_id = $1 AND created_at >= $2`,
+    [userId, monthStart],
+  );
+  const preUsed = parseInt(preCheck.rows[0]?.count ?? "0", 10);
+  if (preUsed >= MOMENTS_LIMIT) {
+    res.status(403).json({
+      error: "MOMENT_LIMIT_REACHED",
+      message: `You've used all ${MOMENTS_LIMIT} free moments for this month. Come back next month!`,
+      momentsUsed: preUsed,
+      momentsLimit: MOMENTS_LIMIT,
+    });
+    return;
+  }
+
   const userPrompt = `Write a card message for:
 - Recipient's name: ${recipientName}
 - Purpose: ${PURPOSE_TONE[purpose]}
