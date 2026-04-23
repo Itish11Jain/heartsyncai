@@ -108,24 +108,6 @@ function _musicTick() {
       osc.stop(t0 + dur);
     }
 
-    /* Bass / harmony note */
-    if ((step.bass ?? 0) > 0) {
-      const bg   = step.bassGain ?? 0.065;
-      const bdur = step.bassDur  ?? dur;
-      const bosc  = ac.createOscillator();
-      const bgNode = ac.createGain();
-      bosc.type = "triangle";
-      bosc.frequency.setValueAtTime(step.bass!, t0);
-      bgNode.gain.setValueAtTime(0.001, t0);
-      bgNode.gain.linearRampToValueAtTime(bg, t0 + 0.030);
-      bgNode.gain.setValueAtTime(bg * 0.80, t0 + bdur * 0.50);
-      bgNode.gain.linearRampToValueAtTime(0.001, t0 + bdur * 0.88);
-      bosc.connect(bgNode);
-      bgNode.connect(_music.masterGain);
-      bosc.start(t0);
-      bosc.stop(t0 + bdur);
-    }
-
     _music.nextTime += dur;
     _music.idx++;
   }
