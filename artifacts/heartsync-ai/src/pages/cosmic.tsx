@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
 import { cosmic, music } from "@/lib/audio";
+import { trackEvent } from "@/lib/trackEvent";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -129,6 +130,11 @@ export default function CosmicCard() {
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── background music ── */
+  useEffect(() => {
+    if (isRecipient) trackEvent({ event: "card_viewed", occasion, template: "cosmic" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     music.start("cosmic");
     return () => { music.stop(); };
@@ -299,15 +305,18 @@ export default function CosmicCard() {
   /* ── sender share ── */
   function shareSenderWhatsApp() {
     cosmic.copy();
+    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "cosmic" });
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
   async function copySenderLinkForInstagram() {
     cosmic.copy();
+    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "cosmic" });
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch {}
   }
   async function copySenderLink() {
     cosmic.copy();
+    trackEvent({ event: "card_shared", channel: "link", occasion, template: "cosmic" });
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch {}
   }
 
@@ -655,7 +664,7 @@ export default function CosmicCard() {
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
                   Feeling the love? Send one back ✨
                 </p>
-                <Link href="/send">
+                <Link href="/send?ref=card">
                   <button style={{
                     width: "100%", padding: "14px", borderRadius: 14,
                     background: "rgba(120,60,200,0.16)", border: "1.5px solid rgba(180,140,255,0.32)",
@@ -671,7 +680,7 @@ export default function CosmicCard() {
       </AnimatePresence>
 
       {/* Back link */}
-      <Link href="/send">
+      <Link href="/send?ref=card">
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
           style={{

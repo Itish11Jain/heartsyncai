@@ -5,6 +5,7 @@ import {
   getVinylTemplate, getVinylFallback,
 } from "@/lib/card-templates";
 import { vinyl, music } from "@/lib/audio";
+import { trackEvent } from "@/lib/trackEvent";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -166,6 +167,11 @@ export default function VinylCard() {
   const eqRingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── background music ── */
+  useEffect(() => {
+    if (!isSender && !isPreview) trackEvent({ event: "card_viewed", occasion, template: "vinyl" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     music.start("vinyl");
     return () => { music.stop(); };
@@ -355,15 +361,18 @@ export default function VinylCard() {
   /* ── share ── */
   function shareWhatsApp() {
     vinyl.copy();
+    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "vinyl" });
     const text = `💌 Hey ${recipientName}, I made you a special vinyl card!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
   async function copyForInstagram() {
     vinyl.copy();
+    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "vinyl" });
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch { /* ignore */ }
   }
   async function copySenderLink() {
     vinyl.copy();
+    trackEvent({ event: "card_shared", channel: "link", occasion, template: "vinyl" });
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch { /* ignore */ }
   }
   async function copyRecipLink() {
@@ -887,7 +896,7 @@ export default function VinylCard() {
                   >
                     {recipCopied ? "✓ Link Saved!" : "🔗 Save this card"}
                   </motion.button>
-                  <Link href="/">
+                  <Link href="/send?ref=card">
                     <button style={{
                       width: "100%", padding: "11px", borderRadius: 14,
                       background: "linear-gradient(135deg, #C8832E, #B8762A)",

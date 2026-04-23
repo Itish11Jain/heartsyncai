@@ -2,6 +2,8 @@ import { Router } from "express";
 import { pool } from "../lib/db";
 import { getAuth } from "@clerk/express";
 
+const SUPERUSER_EMAILS = ["jainitisha93@gmail.com"];
+
 function validateUtr(value: unknown): value is string {
   if (typeof value !== "string") return false;
   const v = value.trim();
@@ -11,8 +13,9 @@ function validateUtr(value: unknown): value is string {
 const router = Router();
 
 /**
- * GET /api/usage/check?fingerprint=xxx
+ * GET /api/usage/check?fingerprint=xxx&email=xxx
  * Returns how many cards this fingerprint/user has used.
+ * Optionally stores email in hs_clerk_users if provided + authed.
  */
 router.get("/usage/check", async (req, res) => {
   const fingerprint = (req.query["fingerprint"] as string | undefined)?.trim();
@@ -20,8 +23,10 @@ router.get("/usage/check", async (req, res) => {
     return res.status(400).json({ error: "fingerprint required" });
   }
 
+  const emailParam = (req.query["email"] as string | undefined)?.trim() ?? null;
   const auth = getAuth(req);
   const clerkUserId = auth?.userId ?? null;
+  const isSuperUser = !!emailParam && SUPERUSER_EMAILS.includes(emailParam);
 
   let anonUsed = 0;
   let signedInUsed = 0;
@@ -35,7 +40,7 @@ router.get("/usage/check", async (req, res) => {
     anonUsed = anonRow.rows[0].cards_used as number;
   }
 
-  // If signed in, check their user-level usage
+  // If signed in, check their user-level usage and optionally store email
   if (clerkUserId) {
     const userRow = await pool.query(
       "SELECT cards_used FROM hs_clerk_users WHERE clerk_user_id = $1",
@@ -44,40 +49,66 @@ router.get("/usage/check", async (req, res) => {
     if (userRow.rows.length > 0) {
       signedInUsed = userRow.rows[0].cards_used as number;
     }
-    // Ensure user row exists
-    await pool.query(
-      `INSERT INTO hs_clerk_users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING`,
-      [clerkUserId]
-    );
+    // Ensure user row exists and update email if provided
+    if (emailParam) {
+      await pool.query(
+        `INSERT INTO hs_clerk_users (clerk_user_id, email)
+         VALUES ($1, $2)
+         ON CONFLICT (clerk_user_id) DO UPDATE SET email = EXCLUDED.email`,
+        [clerkUserId, emailParam]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO hs_clerk_users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING`,
+        [clerkUserId]
+      );
+    }
   }
 
   return res.json({
     anon_used: anonUsed,
     signed_in_used: signedInUsed,
     is_signed_in: !!clerkUserId,
+    is_superuser: isSuperUser,
   });
 });
 
 /**
  * POST /api/usage/increment
- * Body: { fingerprint: string }
- * Increments usage counter for anon fingerprint or signed-in user.
+ * Body: { fingerprint: string, email?: string }
+ * Increments usage counter. Skips increment for superuser emails.
  */
 router.post("/usage/increment", async (req, res) => {
-  const { fingerprint } = req.body as { fingerprint?: string };
+  const { fingerprint, email: emailBody } = req.body as { fingerprint?: string; email?: string };
   if (!fingerprint) {
     return res.status(400).json({ error: "fingerprint required" });
   }
 
+  const emailParam = emailBody?.trim() ?? null;
+  const isSuperUser = !!emailParam && SUPERUSER_EMAILS.includes(emailParam);
+
   const auth = getAuth(req);
   const clerkUserId = auth?.userId ?? null;
 
-  // Always increment anonymous fingerprint
+  // Skip all incrementing for superusers
+  if (isSuperUser) {
+    if (clerkUserId && emailParam) {
+      await pool.query(
+        `INSERT INTO hs_clerk_users (clerk_user_id, email)
+         VALUES ($1, $2)
+         ON CONFLICT (clerk_user_id) DO UPDATE SET email = EXCLUDED.email`,
+        [clerkUserId, emailParam]
+      );
+    }
+    return res.json({ success: true, superuser: true });
+  }
+
   const ip =
     ((req.headers["x-forwarded-for"] as string) ?? "")
       .split(",")[0]
       .trim() || req.socket?.remoteAddress || "";
 
+  // Always increment anonymous fingerprint
   await pool.query(
     `INSERT INTO hs_card_usage (fingerprint, ip, cards_used)
      VALUES ($1, $2, 1)
@@ -88,13 +119,23 @@ router.post("/usage/increment", async (req, res) => {
 
   // If signed in, also increment their user counter
   if (clerkUserId) {
-    await pool.query(
-      `INSERT INTO hs_clerk_users (clerk_user_id, cards_used)
-       VALUES ($1, 1)
-       ON CONFLICT (clerk_user_id)
-       DO UPDATE SET cards_used = hs_clerk_users.cards_used + 1`,
-      [clerkUserId]
-    );
+    if (emailParam) {
+      await pool.query(
+        `INSERT INTO hs_clerk_users (clerk_user_id, email, cards_used)
+         VALUES ($1, $2, 1)
+         ON CONFLICT (clerk_user_id)
+         DO UPDATE SET cards_used = hs_clerk_users.cards_used + 1, email = EXCLUDED.email`,
+        [clerkUserId, emailParam]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO hs_clerk_users (clerk_user_id, cards_used)
+         VALUES ($1, 1)
+         ON CONFLICT (clerk_user_id)
+         DO UPDATE SET cards_used = hs_clerk_users.cards_used + 1`,
+        [clerkUserId]
+      );
+    }
   }
 
   return res.json({ success: true });

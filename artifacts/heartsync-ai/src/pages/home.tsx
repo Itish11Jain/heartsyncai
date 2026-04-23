@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { home } from "@/lib/audio";
+import { trackEvent } from "@/lib/trackEvent";
 
 const STEPS = [
   { num: "01", title: "Pick who it's for", desc: "Your partner, friend, date, or spouse. Tell us the relationship." },
@@ -634,6 +635,14 @@ function CardCarousel() {
 
 export default function Home() {
   const guideCta = "/date-guide";
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref === "card") {
+      try { localStorage.setItem("hs_from_card", "1"); } catch { /* ignore */ }
+      trackEvent({ event: "website_visited_from_card" });
+    }
+  }, []);
 
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">

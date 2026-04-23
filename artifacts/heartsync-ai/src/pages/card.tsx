@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
 import { envelope, music } from "@/lib/audio";
+import { trackEvent } from "@/lib/trackEvent";
 import CosmicCard from "@/pages/cosmic";
 import VinylCard from "@/pages/vinyl";
 
@@ -822,6 +823,11 @@ export default function Card() {
 
   /* ── background music ── */
   useEffect(() => {
+    if (isRecipient) trackEvent({ event: "card_viewed", occasion, template: "envelope" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     music.start("envelope");
     return () => { music.stop(); };
   }, []);
@@ -861,12 +867,14 @@ export default function Card() {
 
   function shareSenderWhatsApp() {
     envelope.copy();
+    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "envelope" });
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   async function copySenderLinkForInstagram() {
     envelope.copy();
+    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope" });
     try {
       await navigator.clipboard.writeText(senderShareUrl);
       setSenderIgCopied(true);
@@ -876,6 +884,7 @@ export default function Card() {
 
   async function copySenderLink() {
     envelope.copy();
+    trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope" });
     try {
       await navigator.clipboard.writeText(senderShareUrl);
       setSenderCopied(true);
@@ -1257,6 +1266,7 @@ export default function Card() {
                     </span>
                   </Link>
                 </div>
+
               </motion.div>
             )}
 
@@ -1271,7 +1281,7 @@ export default function Card() {
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
                   Feeling the love? Send one back ✨
                 </p>
-                <Link href="/send">
+                <Link href="/send?ref=card">
                   <button
                     style={{
                       width: "100%", padding: "14px",
@@ -1298,7 +1308,7 @@ export default function Card() {
       />
 
       {/* Back link */}
-      <Link href="/send">
+      <Link href="/send?ref=card">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

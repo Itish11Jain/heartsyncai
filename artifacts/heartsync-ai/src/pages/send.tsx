@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth, useClerk } from "@clerk/react";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
 import { useCardUsage, gateNeeded } from "@/lib/usage";
+import { trackEvent } from "@/lib/trackEvent";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
 
@@ -20,7 +21,7 @@ export default function Send() {
   const clerk = useClerk();
   const [, navigate] = useLocation();
 
-  const { usage, loading: usageLoading, incrementUsage } = useCardUsage();
+  const { usage, loading: usageLoading, incrementUsage, fingerprint, userEmail } = useCardUsage();
 
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState(1);
@@ -135,6 +136,7 @@ export default function Send() {
         setCardUtrError(data.message ?? "Submission failed. Please try again.");
       } else {
         setCardUtrDone(true);
+        trackEvent({ event: "paywall_paid", fingerprint, email: userEmail ?? undefined, occasion });
       }
     } catch {
       setCardUtrError("Submission failed. Please try again.");
@@ -151,10 +153,12 @@ export default function Send() {
       const gate = gateNeeded(usage);
       if (gate === "signin") {
         setShowSignInGate(true);
+        trackEvent({ event: "signup_wall_shown", fingerprint, occasion });
         return;
       }
       if (gate === "paywall") {
         setShowPaywall(true);
+        trackEvent({ event: "paywall_shown", fingerprint, clerk_user_id: isSignedIn ? undefined : undefined, email: userEmail ?? undefined, occasion });
         return;
       }
     }
@@ -163,6 +167,21 @@ export default function Send() {
     await incrementUsage();
 
     const template = pickTemplate();
+    const isFree = !usage || usage.is_superuser || (!usage.is_signed_in ? usage.anon_used < 2 : usage.signed_in_used < 2);
+    const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
+
+    trackEvent({
+      event: "card_created",
+      fingerprint,
+      email: userEmail ?? undefined,
+      occasion,
+      template,
+      has_likes: likes.trim().length > 0,
+      used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
+      is_free: isFree,
+      from_card_ref: fromCardRef,
+    });
+
     const url = buildCardUrl(recipientName.trim(), customMsg, true, template);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
