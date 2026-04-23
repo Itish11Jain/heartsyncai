@@ -498,10 +498,11 @@ export default function CrystalCard() {
             }
             style={{
               position: "fixed",
-              /* Center-top when in visions background */
               top: ballInBackground ? "38%" : "50%",
               left: "50%",
-              transform: "translate(-50%, -50%)",
+              /* Use Framer Motion's x/y so they compose with scale correctly */
+              x: "-50%",
+              y: "-50%",
               zIndex: ballInBackground ? 2 : 5,
               display: "flex", flexDirection: "column",
               alignItems: "center",
