@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export type TemplateId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -310,8 +310,7 @@ function useConfettiParticles(count: number, isStatic: boolean) {
         duration: 0.9 + Math.random() * 0.5,
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count]);
+  }, [count, isStatic]);
 }
 
 function CherryPopDecor({ isStatic }: { isStatic: boolean }) {
