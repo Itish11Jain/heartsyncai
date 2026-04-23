@@ -73,8 +73,8 @@ function CardIllustration() {
     <div className="relative w-72 h-96 select-none">
       {/* Ambient glow */}
       <div
-        className="absolute inset-0 rounded-3xl blur-3xl scale-105"
-        style={{ background: "radial-gradient(ellipse, rgba(255,215,0,0.22) 0%, rgba(255,120,0,0.1) 50%, transparent 75%)" }}
+        className="absolute inset-0 rounded-3xl blur-3xl scale-110"
+        style={{ background: "radial-gradient(ellipse, rgba(255,215,0,0.48) 0%, rgba(255,120,0,0.22) 50%, transparent 75%)" }}
       />
 
       {/* Card container */}
@@ -82,8 +82,8 @@ function CardIllustration() {
         className="relative w-full h-full rounded-3xl overflow-hidden"
         style={{
           background: "radial-gradient(ellipse at 50% 20%, #1a0a2e 0%, #0d0618 70%, #060310 100%)",
-          border: "1px solid rgba(255,215,0,0.15)",
-          boxShadow: "0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,215,0,0.08)",
+          border: "1.5px solid rgba(255,215,0,0.50)",
+          boxShadow: "0 24px 56px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,215,0,0.22), 0 0 48px rgba(200,80,255,0.14)",
         }}
       >
         {/* Twinkling mini stars */}
@@ -381,8 +381,8 @@ function CosmicCardIllustration() {
     <div className="relative w-72 h-96 select-none">
       {/* Ambient glow — deep purple */}
       <div
-        className="absolute inset-0 rounded-3xl blur-3xl scale-105"
-        style={{ background: "radial-gradient(ellipse, rgba(120,60,240,0.28) 0%, rgba(60,0,180,0.12) 50%, transparent 75%)" }}
+        className="absolute inset-0 rounded-3xl blur-3xl scale-110"
+        style={{ background: "radial-gradient(ellipse, rgba(160,80,255,0.52) 0%, rgba(80,0,220,0.24) 50%, transparent 75%)" }}
       />
 
       {/* Card shell */}
@@ -390,8 +390,8 @@ function CosmicCardIllustration() {
         className="relative w-full h-full rounded-3xl overflow-hidden"
         style={{
           background: "radial-gradient(ellipse at 50% 35%, #120728 0%, #080414 60%, #040208 100%)",
-          border: "1px solid rgba(140,80,255,0.2)",
-          boxShadow: "0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(100,40,200,0.08)",
+          border: "1.5px solid rgba(160,80,255,0.52)",
+          boxShadow: "0 24px 56px rgba(0,0,0,0.80), 0 0 0 1px rgba(120,60,200,0.25), 0 0 48px rgba(120,40,255,0.18)",
         }}
       >
         {/* Background nebula */}
@@ -686,13 +686,13 @@ export default function Home() {
             </div>
 
             {/* 2. Scaled-down carousel */}
-            <div style={{ transform: "scale(0.65)", transformOrigin: "top center", marginBottom: -144 }}>
+            <div style={{ transform: "scale(0.65)", transformOrigin: "top center", marginBottom: -100 }}>
               <CardCarousel />
             </div>
 
             {/* 3. Subtitle + CTA + social proof */}
             <div className="w-full px-1">
-              <p className="text-xs font-semibold mb-4 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
+              <p className="text-xs font-semibold mb-5 mt-2 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
                 Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
               </p>
 

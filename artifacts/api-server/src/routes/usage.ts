@@ -2,6 +2,12 @@ import { Router } from "express";
 import { pool } from "../lib/db";
 import { getAuth } from "@clerk/express";
 
+function validateUtr(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const v = value.trim();
+  return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
+}
+
 const router = Router();
 
 /**
@@ -92,6 +98,81 @@ router.post("/usage/increment", async (req, res) => {
   }
 
   return res.json({ success: true });
+});
+
+/**
+ * POST /api/usage/card-pack-utr
+ * Body: { utr: string }
+ * Requires Clerk auth. Validates UTR, grants 10 card credits.
+ */
+router.post("/usage/card-pack-utr", async (req, res) => {
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+  if (!clerkUserId) {
+    return res.status(401).json({ error: "unauthorized", message: "Sign in to purchase a card pack." });
+  }
+
+  const { utr } = req.body as { utr?: unknown };
+  if (!validateUtr(utr)) {
+    return res.status(400).json({
+      error: "validation_error",
+      message: "Invalid UTR format. Enter the 12-digit UPI reference or bank UTR (e.g. HDFC0123456789012).",
+    });
+  }
+
+  const cleanUtr = (utr as string).trim().toUpperCase();
+
+  // Ensure table exists
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS hs_card_utr_submissions (
+      id SERIAL PRIMARY KEY,
+      utr TEXT UNIQUE NOT NULL,
+      clerk_user_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // Check duplicate UTR (across both date guide and card pack)
+  const dupCard = await pool.query(
+    "SELECT id FROM hs_card_utr_submissions WHERE utr = $1",
+    [cleanUtr],
+  );
+  if ((dupCard.rowCount ?? 0) > 0) {
+    return res.status(409).json({
+      error: "duplicate_utr",
+      message: "This transaction ID has already been used. Contact support if you think this is a mistake.",
+    });
+  }
+
+  // Also check against the date guide UTR submissions to prevent cross-reuse
+  try {
+    const dupDg = await pool.query("SELECT id FROM hs_utr_submissions WHERE utr = $1", [cleanUtr]);
+    if ((dupDg.rowCount ?? 0) > 0) {
+      return res.status(409).json({
+        error: "duplicate_utr",
+        message: "This transaction ID has already been used. Contact support if you think this is a mistake.",
+      });
+    }
+  } catch {
+    /* Table may not exist in all environments — skip check */
+  }
+
+  // Record the card UTR
+  await pool.query(
+    "INSERT INTO hs_card_utr_submissions (utr, clerk_user_id) VALUES ($1, $2)",
+    [cleanUtr, clerkUserId],
+  );
+
+  // Grant 10 more cards by reducing cards_used by 10 (min 0)
+  await pool.query(
+    `INSERT INTO hs_clerk_users (clerk_user_id, cards_used)
+     VALUES ($1, 0)
+     ON CONFLICT (clerk_user_id)
+     DO UPDATE SET cards_used = GREATEST(0, hs_clerk_users.cards_used - 10)`,
+    [clerkUserId],
+  );
+
+  return res.json({ ok: true, message: "10 cards added to your account." });
 });
 
 export default router;

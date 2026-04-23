@@ -1,11 +1,12 @@
 /**
  * HeartSync AI — Sound effects + haptics
  *
- * All sounds are synthesized from filtered noise — no musical tones, no
- * oscillator beeps, nothing "video-gamey". Every sound mimics a real physical
- * sensation (crackle, rustle, whoosh, pop). Haptics carry most of the
- * interaction feedback. Sounds are kept very subtle and gracefully degrade
- * on unsupported browsers (iOS AudioContext, no Vibration API, etc.)
+ * All template sounds use real musical tones (oscillators) for a happy,
+ * warm, medium-paced feel. Each template has a distinct character:
+ *   VINYL  — warm music-box, nostalgic
+ *   COSMIC — crystal chimes, ethereal
+ *   ENVELOPE — marimba / soft bells, romantic
+ * Haptics carry most of the tactile feedback. Sounds degrade gracefully.
  */
 
 let _ctx: AudioContext | null = null;
@@ -31,227 +32,257 @@ export const haptic = {
   celebrate: () => { try { navigator.vibrate?.([10, 20, 10, 30, 60]); } catch { /* */ } },
 };
 
-/* ── Core helper: filtered noise burst ───────────────────────── */
+/* ── Core helper: musical tone ────────────────────────────────── */
 
-function noiseBurst(
+function playNote(
   ac: AudioContext,
-  duration: number,
+  freq: number,
   gain: number,
-  filterType: BiquadFilterType,
-  freqStart: number,
+  dur: number,
+  delay = 0,
+  wave: OscillatorType = "sine",
   freqEnd?: number,
-  delayStart = 0,
 ): void {
-  const bufLen = Math.floor(ac.sampleRate * duration);
-  const buf    = ac.createBuffer(1, bufLen, ac.sampleRate);
-  const data   = buf.getChannelData(0);
-  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+  const osc = ac.createOscillator();
+  const g   = ac.createGain();
+  const t0  = ac.currentTime + delay;
 
-  const src  = ac.createBufferSource();
-  src.buffer = buf;
+  osc.type = wave;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (freqEnd !== undefined) {
+    osc.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur * 0.8);
+  }
 
-  const filt = ac.createBiquadFilter();
-  filt.type  = filterType;
-  const t0   = ac.currentTime + delayStart;
-  filt.frequency.setValueAtTime(freqStart, t0);
-  if (freqEnd) filt.frequency.exponentialRampToValueAtTime(freqEnd, t0 + duration);
+  g.gain.setValueAtTime(0.001, t0);
+  g.gain.linearRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.setValueAtTime(gain * 0.8, t0 + dur * 0.25);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
 
-  const g = ac.createGain();
-  g.gain.setValueAtTime(gain, t0);
-  g.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
-
-  src.connect(filt);
-  filt.connect(g);
+  osc.connect(g);
   g.connect(ac.destination);
-  src.start(t0);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.02);
 }
+
+/* Musical notes — C major pentatonic */
+const N = {
+  C3: 130.81, G3: 196.00,
+  C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.00, A4: 440.00,
+  C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00,
+  B5: 987.77,
+  C6: 1046.50, D6: 1174.66, E6: 1318.51, G6: 1567.98,
+};
 
 /* ════════════════════════════════════════════════════════════════
    HOME  — soft, welcoming
    ════════════════════════════════════════════════════════════════ */
 
 export const home = {
-  /** Main CTA tap — warm air-whoosh + celebrate haptic */
   cta() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.22, 0.10, "lowpass",  1400, 400);
-      noiseBurst(ac, 0.10, 0.05, "highpass", 4000);
+      playNote(ac, N.C5, 0.12, 0.35, 0,    "sine");
+      playNote(ac, N.E5, 0.10, 0.30, 0.09, "sine");
+      playNote(ac, N.G5, 0.09, 0.28, 0.18, "sine");
       haptic.medium();
     } catch { /* */ }
   },
 
-  /** Nav / secondary link tap */
   navTap() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.04, 0.05, "bandpass", 2800);
+      playNote(ac, N.G5, 0.07, 0.18, 0, "sine");
       haptic.click();
     } catch { /* */ }
   },
 };
 
 /* ════════════════════════════════════════════════════════════════
-   VINYL  — warm, analogue, tactile
+   VINYL  — warm music-box, nostalgic, joyful
    ════════════════════════════════════════════════════════════════ */
 
+const VINYL_PENTA = [N.C5, N.D5, N.E5, N.G5, N.A5];
+
 export const vinyl = {
-  /** PRESS TO PLAY — needle-drop crackle */
+  /** PRESS TO PLAY — warm ascending arpeggio */
   pressToPlay() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.35, 0.18, "bandpass", 3800);
-      noiseBurst(ac, 0.20, 0.08, "lowpass",  200);
+      [N.C4, N.E4, N.G4, N.C5].forEach((freq, i) =>
+        playNote(ac, freq, 0.14, 0.50, i * 0.09, "triangle"),
+      );
       haptic.medium();
     } catch { /* */ }
   },
 
-  /** Note orb tap — soft organic thump */
-  noteTap(_idx: number) {
+  /** Note orb tap — bright pentatonic note per idx */
+  noteTap(idx: number) {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.06, 0.10, "bandpass", 1800);
+      const freq = VINYL_PENTA[idx % 5]!;
+      playNote(ac, freq, 0.13, 0.38, 0, "triangle");
       haptic.light();
     } catch { /* */ }
   },
 
-  /** Hyper-spin → sleeve — rising air-whoosh */
+  /** Hyper-spin → sleeve — rising strum */
   spinUp() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.45, 0.14, "bandpass", 400, 8000);
-      noiseBurst(ac, 0.20, 0.06, "highpass", 6000, undefined, 0.25);
+      [N.C4, N.E4, N.G4, N.C5, N.E5, N.G5, N.C6].forEach((freq, i) =>
+        playNote(ac, freq, 0.10 + i * 0.015, 0.40, i * 0.065, "triangle"),
+      );
       haptic.strong();
     } catch { /* */ }
   },
 
-  /** Sleeve reveal — warm breath-whoosh + confetti pops */
+  /** Sleeve reveal — joyful fanfare + shimmer */
   sleeveReveal() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.55, 0.12, "lowpass",  2200, 600);
-      [0, 0.07, 0.16, 0.27, 0.40].forEach(d =>
-        noiseBurst(ac, 0.06, 0.08 - d * 0.1, "bandpass", 2000 + d * 1800, undefined, d),
+      /* Chord swell */
+      [N.C5, N.E5, N.G5].forEach(freq =>
+        playNote(ac, freq, 0.12, 0.65, 0, "sine"),
+      );
+      /* Bright top note + sparkle cascade */
+      playNote(ac, N.C6, 0.14, 0.55, 0.15, "sine");
+      [N.G5, N.A5, N.C6, N.D6, N.E6].forEach((freq, i) =>
+        playNote(ac, freq, 0.10 - i * 0.012, 0.22, 0.30 + i * 0.08, "triangle"),
       );
       haptic.celebrate();
     } catch { /* */ }
   },
 
-  /** Share / copy tap — micro-click */
+  /** Share / copy — double ping */
   copy() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.03, 0.06, "bandpass", 3500);
+      playNote(ac, N.C6, 0.10, 0.15, 0,    "sine");
+      playNote(ac, N.E6, 0.08, 0.12, 0.08, "sine");
       haptic.click();
     } catch { /* */ }
   },
 };
 
 /* ════════════════════════════════════════════════════════════════
-   COSMIC  — ethereal, space-like
+   COSMIC  — crystal chimes, ethereal, magical
    ════════════════════════════════════════════════════════════════ */
 
+const COSMIC_STARS = [N.E5, N.G5, N.A5, N.B5, N.D6];
+
 export const cosmic = {
-  /** Hold-start — subtle low rumble */
+  /** Hold-start — gentle low hum */
   holdPulse() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.25, 0.06, "lowpass", 180);
+      playNote(ac, N.G3, 0.04, 0.45, 0, "sine");
       haptic.light();
     } catch { /* */ }
   },
 
-  /** Stars scatter — deep space whoosh */
+  /** Stars scatter — ascending shimmer */
   launch() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.50, 0.14, "bandpass", 200, 6000);
-      noiseBurst(ac, 0.20, 0.05, "highpass", 7000, undefined, 0.15);
+      /* Ascending sweep */
+      playNote(ac, N.A4, 0.09, 0.45, 0,    "sine", N.A5);
+      /* Quick chime burst */
+      [N.C6, N.E6, N.G6].forEach((freq, i) =>
+        playNote(ac, freq, 0.11 - i * 0.02, 0.28, 0.18 + i * 0.07, "triangle"),
+      );
       haptic.strong();
     } catch { /* */ }
   },
 
-  /** Star tap — short sparkle fizz */
-  starClick(_nth: number) {
+  /** Star tap — unique sparkle note per star */
+  starClick(nth: number) {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.07, 0.08, "highpass", 5500);
+      const freq = COSMIC_STARS[nth % 5]!;
+      playNote(ac, freq, 0.11, 0.42, 0, "triangle");
       haptic.light();
     } catch { /* */ }
   },
 
-  /** All stars — supernova explosion (big low boom + shimmer) */
+  /** All stars — cascading bell supernova */
   supernova() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.55, 0.22, "lowpass",  300);
-      noiseBurst(ac, 0.30, 0.10, "bandpass", 800, 4000, 0.05);
-      [0, 0.08, 0.18, 0.30, 0.44].forEach(d =>
-        noiseBurst(ac, 0.06, 0.09 - d * 0.12, "highpass", 4500, undefined, d),
+      [N.C5, N.D5, N.E5, N.G5, N.A5, N.B5, N.D6, N.G6].forEach((freq, i) =>
+        playNote(ac, freq, 0.13 - i * 0.01, 0.38, i * 0.07, "triangle"),
       );
       haptic.celebrate();
     } catch { /* */ }
   },
 
-  /** Share / copy tap */
+  /** Share / copy — crystal ping */
   copy() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.03, 0.05, "highpass", 5000);
+      playNote(ac, N.G5, 0.09, 0.18, 0,    "triangle");
+      playNote(ac, N.B5, 0.07, 0.14, 0.07, "triangle");
       haptic.click();
     } catch { /* */ }
   },
 };
 
 /* ════════════════════════════════════════════════════════════════
-   ENVELOPE  — warm, papery, romantic
+   ENVELOPE  — marimba / warm bells, romantic, sweet
    ════════════════════════════════════════════════════════════════ */
 
+const ENV_PENTA = [N.C5, N.E5, N.G5, N.A5, N.C6];
+let _envOrbIdx = 0;
+
 export const envelope = {
-  /** Slider grab — paper rustle */
+  /** Slider grab — gentle rising note */
   slideStart() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.18, 0.09, "highpass", 2800);
+      playNote(ac, N.G4, 0.09, 0.32, 0, "sine", N.B5);
       haptic.light();
     } catch { /* */ }
   },
 
-  /** Slider unlock — rising paper zip */
+  /** Slider unlock — warm chord swell */
   open() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.22, 0.16, "bandpass", 700, 5500);
+      playNote(ac, N.C4, 0.10, 0.65, 0,    "triangle");
+      playNote(ac, N.E4, 0.09, 0.60, 0.04, "triangle");
+      playNote(ac, N.G4, 0.08, 0.55, 0.08, "triangle");
+      playNote(ac, N.C5, 0.10, 0.50, 0.15, "sine");
       haptic.medium();
     } catch { /* */ }
   },
 
-  /** Orb tap — soft fabric puff */
+  /** Orb tap — rotating soft pluck */
   orbTap() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.07, 0.09, "bandpass", 1200);
+      const freq = ENV_PENTA[_envOrbIdx % 5]!;
+      _envOrbIdx++;
+      playNote(ac, freq, 0.12, 0.36, 0, "triangle");
       haptic.light();
     } catch { /* */ }
   },
 
-  /** All orbs clicked — confetti burst cascade */
+  /** All orbs — happy melody burst */
   finale() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.50, 0.14, "lowpass",  2500, 500);
-      [0, 0.06, 0.14, 0.24, 0.36].forEach(d =>
-        noiseBurst(ac, 0.06, 0.10 - d * 0.12, "bandpass", 1500 + d * 2200, undefined, d),
+      [N.C5, N.D5, N.E5, N.G5, N.A5, N.C6].forEach((freq, i) =>
+        playNote(ac, freq, 0.12 + i * 0.008, 0.36, i * 0.082, "triangle"),
       );
       haptic.celebrate();
     } catch { /* */ }
   },
 
-  /** Share / copy tap */
+  /** Share / copy — soft double ping */
   copy() {
     try {
       const ac = getCtx();
-      noiseBurst(ac, 0.03, 0.06, "bandpass", 3000);
+      playNote(ac, N.G5, 0.09, 0.18, 0,    "triangle");
+      playNote(ac, N.C6, 0.07, 0.14, 0.09, "sine");
       haptic.click();
     } catch { /* */ }
   },

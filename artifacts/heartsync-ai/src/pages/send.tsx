@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Lock, Info, ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, useClerk } from "@clerk/react";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
@@ -16,7 +16,7 @@ function useSearchParams() {
 
 export default function Send() {
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, getToken } = useAuth();
   const clerk = useClerk();
   const [, navigate] = useLocation();
 
@@ -33,6 +33,10 @@ export default function Send() {
   const [genEmojiIdx, setGenEmojiIdx] = useState(0);
   const [showSignInGate, setShowSignInGate] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [cardUtr, setCardUtr] = useState("");
+  const [cardUtrError, setCardUtrError] = useState("");
+  const [cardUtrDone, setCardUtrDone] = useState(false);
+  const [cardUtrLoading, setCardUtrLoading] = useState(false);
 
   // Track when user transitions from signed-out → signed-in while gate was shown
   const prevSignedIn = useRef<boolean | null>(null);
@@ -104,6 +108,40 @@ export default function Send() {
     }, 650);
     return () => clearInterval(iv);
   }, [showGenerating]);
+
+  function isValidUtr(v: string) {
+    const t = v.trim();
+    return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
+  }
+
+  async function handleCardUtrSubmit() {
+    const trimmed = cardUtr.trim();
+    if (!isValidUtr(trimmed)) return;
+    setCardUtrError("");
+    setCardUtrLoading(true);
+    try {
+      const token = await getToken();
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/usage/card-pack-utr`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ utr: trimmed }),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string; message?: string };
+      if (!res.ok) {
+        setCardUtrError(data.message ?? "Submission failed. Please try again.");
+      } else {
+        setCardUtrDone(true);
+      }
+    } catch {
+      setCardUtrError("Submission failed. Please try again.");
+    } finally {
+      setCardUtrLoading(false);
+    }
+  }
 
   async function handleFinish() {
     if (!recipientName.trim()) return;
@@ -521,96 +559,92 @@ export default function Send() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.35 }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 90,
-              background: "radial-gradient(ellipse at 50% 30%, #1a0030 0%, #080112 55%, #020008 100%)",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: "24px", fontFamily: "'Segoe UI', system-ui, sans-serif",
-            }}
+            className="fixed inset-0 z-[90] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center px-6"
           >
-            <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", delay: 0.1 }}
-                style={{ fontSize: 72, marginBottom: 16 }}
-              >
-                🎉
-              </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="w-full max-w-sm"
+            >
+              {cardUtrDone ? (
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="text-2xl font-bold text-white mb-2">You're all set!</h2>
+                  <p className="text-white/60 mb-8 text-sm">10 cards have been added to your account.</p>
+                  <button
+                    onClick={() => { setShowPaywall(false); setCardUtrDone(false); setCardUtr(""); }}
+                    className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-sm"
+                  >
+                    ✨ Continue Sending Cards
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold mb-1 text-white">Get More Cards</h1>
+                  <p className="text-white/60 mb-6 text-sm">Pay via UPI, submit your UTR, and cards are added instantly.</p>
 
-              <motion.h2
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 8, lineHeight: 1.3 }}
-              >
-                You've sent 4 magical cards!
-              </motion.h2>
+                  <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mb-3">
+                        <Lock className="w-5 h-5 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-1">10 Cards for ₹50</h3>
+                      <p className="text-sm text-white/45 mb-6 max-w-xs">
+                        That's ₹5 per card — less than a samosa 🫶
+                      </p>
 
-              <motion.p
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", marginBottom: 6, lineHeight: 1.6 }}
-              >
-                Get <span style={{ color: "#FFD700", fontWeight: 700 }}>10 more cards</span> for just
-              </motion.p>
+                      <div className="flex gap-4 items-center mb-6 w-full">
+                        <div className="bg-white rounded-xl p-2 shadow-lg shrink-0">
+                          <img
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=50%26cu=INR%26tn=HeartSync+Cards"
+                            alt="UPI QR Code"
+                            className="w-24 h-24 rounded-lg"
+                          />
+                        </div>
+                        <div className="text-left flex-1">
+                          <p className="text-[10px] text-white/35 uppercase tracking-wide mb-1">UPI ID</p>
+                          <p className="font-mono font-bold text-white text-sm">8905158970@upi</p>
+                          <p className="text-xs text-white/35 mt-1.5">Amount: ₹50</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Info className="w-3 h-3 text-white/25" />
+                            <p className="text-[10px] text-white/25">Scan QR or copy UPI ID</p>
+                          </div>
+                        </div>
+                      </div>
 
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.35, type: "spring" }}
-                style={{ marginBottom: 20 }}
-              >
-                <span style={{ fontSize: 42, fontWeight: 900, color: "#FFD700", letterSpacing: "-0.02em" }}>₹50</span>
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", marginLeft: 8 }}>one-time</span>
-              </motion.div>
+                      <div className="w-full space-y-3">
+                        <Input
+                          placeholder="Paste UTR / Transaction ID"
+                          value={cardUtr}
+                          onChange={(e) => { setCardUtr(e.target.value); setCardUtrError(""); }}
+                          className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
+                        />
+                        {cardUtrError && <p className="text-xs text-destructive text-center">{cardUtrError}</p>}
+                        <button
+                          onClick={handleCardUtrSubmit}
+                          disabled={!isValidUtr(cardUtr) || cardUtrLoading}
+                          className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                        >
+                          {cardUtrLoading ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
+                          ) : (
+                            <>Unlock 10 Cards <ArrowRight className="w-4 h-4" /></>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginBottom: 24 }}
-              >
-                That's ₹5 per card — less than a samosa 🫶
-              </motion.p>
-
-              <motion.button
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.45 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => navigate("/generate")}
-                style={{
-                  width: "100%",
-                  padding: "16px",
-                  borderRadius: 14,
-                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                  color: "#000",
-                  fontWeight: 800,
-                  fontSize: 17,
-                  border: "none",
-                  cursor: "pointer",
-                  marginBottom: 14,
-                  boxShadow: "0 4px 24px rgba(255,165,0,0.35)",
-                }}
-              >
-                Pay ₹50 — Get 10 Cards 💳
-              </motion.button>
-
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.55 }}
-                onClick={() => setShowPaywall(false)}
-                style={{
-                  background: "none", border: "none", color: "rgba(255,255,255,0.3)",
-                  fontSize: 13, cursor: "pointer", textDecoration: "underline",
-                }}
-              >
-                Go back
-              </motion.button>
-            </div>
+                  <button
+                    onClick={() => setShowPaywall(false)}
+                    className="w-full text-center text-xs text-white/30 hover:text-white/50 transition-colors mt-4"
+                  >
+                    Go back
+                  </button>
+                </>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
