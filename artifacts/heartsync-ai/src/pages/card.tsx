@@ -443,16 +443,15 @@ function GoldenEnvelope({
             borderRadius: "50%",
             border: "1px solid rgba(255,160,160,0.14)",
           }} />
-          {/* Monogram */}
-          <span style={{
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            fontWeight: 700,
-            fontSize: "min(17px, 4.2vw)",
-            color: "rgba(255,210,210,0.65)",
-            lineHeight: 1,
+          {/* Subtle highlight dot instead of monogram */}
+          <div style={{
+            position: "absolute",
+            width: "28%", height: "28%",
+            top: "22%", left: "28%",
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,200,200,0.28), transparent 70%)",
             zIndex: 2,
-            letterSpacing: "-0.02em",
-          }}>H</span>
+          }} />
         </motion.div>
       </div>
 
@@ -1244,10 +1243,10 @@ export default function Card() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.5, duration: 0.5 }}
+                transition={{ delay: 2, duration: 0.5 }}
                 style={{ width: "min(300px, calc(100vw - 32px))", textAlign: "center", paddingBottom: 8 }}
               >
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 10, letterSpacing: "0.03em" }}>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
                   Feeling the love? Send one back ✨
                 </p>
                 <Link href="/send">
