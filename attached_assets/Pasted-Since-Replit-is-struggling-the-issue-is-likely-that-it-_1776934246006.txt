@@ -1,0 +1,46 @@
+Since Replit is struggling, the issue is likely that it's trying to "hard-code" every frame rather than using a Motion Graphic Engine. In 2026, the industry standard for high-end web animations is using React-based motion graphics or SVG animations.
+
+I have built two "VibeSend" reference prototypes for you below. You can copy-paste these descriptions or the logic into Replit to get a premium result immediately.
+
+Option 1: The "Floating Glow" (Premium/Minimalist)
+This design uses "Dynamic View" logic, which is perfect for Tier 2 cities because it looks expensive but loads quickly on a basic phone.
+
+The Look: A soft, breathing background of "Vibrant Lavender" and "Deep Indigo."
+
+The Animation:
+
+Phase 1: The recipient’s name slowly fades in, floating like it's in water.
+
+Phase 2: A "Thank You" message appears letter-by-letter as if being typed by an invisible hand.
+
+Phase 3: Sparkling gold particles (Star-dust) slowly drift from the bottom to the top.
+
+The Replit Hack: Tell Replit: "Build a React animation using Framer Motion. Use a linear-gradient background that animates between three colors over 10 seconds. Use a staggerChildren transition for the text so it feels intentional and high-end."
+
+Option 2: The "Gift Unbox" (Fun/Relatable)
+This is a "Cinematic Dolly-In" style that feels like a mini-movie. It’s great for "Sorry" or "I Love You" cards for the 18–35 age group.
+
+The Look: A high-quality 3D-looking envelope sitting on a wooden table (visualized via CSS or SVG).
+
+The Animation:
+
+Phase 1: The camera "zooms in" toward the envelope.
+
+Phase 2: The envelope flap flips open with a bouncy "spring" motion.
+
+Phase 3: A personalized card with the user’s photo slides out of the envelope and takes over the screen.
+
+The Replit Hack: Tell Replit: "Use the App Tab and set build type to Animation. Create a 3D perspective flip effect for an <Envelope /> component. When the card slides out, use a spring transition with damping: 10 to make it feel premium and tactile."
+
+How to use this with Replit (The 2026 Way)
+Instead of asking Replit to "draw a card," use their new "Vibe Coding" features:
+
+Switch to "Animation" Mode: On the Replit homepage, select the App Tab and then choose Animation from the dropdown.
+
+Use a "Scene-by-Scene" Prompt: Don't just give one sentence. Paste my "Phases" from above directly into the chat.
+
+Enhance the Prompt: Use the built-in Prompt Optimizer in Replit to turn my description into a technical roadmap for the AI Agent.
+
+Export as MP4: Once it looks "masterpiece" quality, click the Export button to download a 1080p/60fps video that is ready for WhatsApp.
+
+Which one should I build a technical code structure for first? (The soft glow or the 3D envelope?)
