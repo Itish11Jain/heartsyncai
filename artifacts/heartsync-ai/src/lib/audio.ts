@@ -208,29 +208,29 @@ const ENVELOPE_SEQ: MStep[] = [
 ];
 
 /* CRYSTAL — ethereal A-minor pentatonic bell tones (88 BPM, ~10.2 s loop)
-   Triangle wave for a soft, glass-bell timbre. Bass: A2→E4→A3.
+   Sine wave ("sine") for a pure, glass-bell timbre. Bass: A2→E4→A3.
    Phrase A: A4·C5·E5·A5·· | Phrase B: G5·E5·C5·A4·· | Phrase C: E5·A4·B4·C5·· | Phrase D: A4·E4·A3·· */
 const Qk = 0.682, Ek = 0.341, Hk = 1.364;
 const CRYSTAL_SEQ: MStep[] = [
   // Phrase A — ascent
-  { freq: N.A4, dur: Ek, wave: "triangle", gain: 0.09, bass: N.A2, bassDur: Hk * 0.85 },
-  { freq: N.C5, dur: Ek, wave: "triangle", gain: 0.09 },
-  { freq: N.E5, dur: Qk, wave: "triangle", gain: 0.09 },
-  { freq: N.A5, dur: Hk, wave: "triangle", gain: 0.07 },
+  { freq: N.A4, dur: Ek, gain: 0.09, bass: N.A2, bassDur: Hk * 0.85 },
+  { freq: N.C5, dur: Ek, gain: 0.09 },
+  { freq: N.E5, dur: Qk, gain: 0.09 },
+  { freq: N.A5, dur: Hk, gain: 0.07 },
   // Phrase B — descent
-  { freq: N.G5, dur: Ek, wave: "triangle", gain: 0.08, bass: N.A3, bassDur: Hk * 0.85 },
-  { freq: N.E5, dur: Ek, wave: "triangle", gain: 0.08 },
-  { freq: N.C5, dur: Qk, wave: "triangle", gain: 0.09 },
-  { freq: N.A4, dur: Hk, wave: "triangle", gain: 0.09 },
+  { freq: N.G5, dur: Ek, gain: 0.08, bass: N.A3, bassDur: Hk * 0.85 },
+  { freq: N.E5, dur: Ek, gain: 0.08 },
+  { freq: N.C5, dur: Qk, gain: 0.09 },
+  { freq: N.A4, dur: Hk, gain: 0.09 },
   // Phrase C — inner turn
-  { freq: N.E5, dur: Ek, wave: "triangle", gain: 0.09, bass: N.A2, bassDur: Hk * 0.85 },
-  { freq: N.A4, dur: Ek, wave: "triangle", gain: 0.09 },
-  { freq: N.B4, dur: Ek, wave: "triangle", gain: 0.08 },
-  { freq: N.C5, dur: Hk, wave: "triangle", gain: 0.09 },
+  { freq: N.E5, dur: Ek, gain: 0.09, bass: N.A2, bassDur: Hk * 0.85 },
+  { freq: N.A4, dur: Ek, gain: 0.09 },
+  { freq: N.B4, dur: Ek, gain: 0.08 },
+  { freq: N.C5, dur: Hk, gain: 0.09 },
   // Phrase D — resolve home
-  { freq: N.A4, dur: Ek, wave: "triangle", gain: 0.09, bass: N.A3, bassDur: Hk * 0.85 },
-  { freq: N.E4, dur: Ek, wave: "triangle", gain: 0.07 },
-  { freq: N.A3, dur: Hk, wave: "triangle", gain: 0.06 },
+  { freq: N.A4, dur: Ek, gain: 0.09, bass: N.A3, bassDur: Hk * 0.85 },
+  { freq: N.E4, dur: Ek, gain: 0.07 },
+  { freq: N.A3, dur: Hk, gain: 0.06 },
 ];
 
 export const music = {
