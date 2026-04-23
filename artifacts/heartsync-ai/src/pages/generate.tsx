@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  ChevronLeft, Loader2, Sparkles, LogOut, Zap, Lock, Info, ArrowRight, ClipboardList,
+  ChevronLeft, Loader2, Sparkles, LogOut, Zap, Lock, Info, ArrowRight, ClipboardList, Heart,
 } from "lucide-react";
 
 import { useGenerateReport, useSubmitUtr } from "@workspace/api-client-react";
@@ -175,6 +175,13 @@ export default function Generate() {
               <p className="text-[11px] text-white/30 leading-none">Signed in as</p>
               <p className="text-xs text-white/60 leading-none mt-0.5 max-w-[140px] truncate">{displayName}</p>
             </div>
+            <Link
+              href="/moments"
+              className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
+              title="Send a Moment"
+            >
+              <Heart className="w-4 h-4" />
+            </Link>
             <Link
               href="/history"
               className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"

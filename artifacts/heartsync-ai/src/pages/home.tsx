@@ -107,6 +107,11 @@ export default function Home() {
                   Try It Free <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
+              <Button asChild size="lg" variant="outline" className="rounded-full h-14 px-8 text-lg font-semibold border-white/15 bg-white/5 backdrop-blur-md hover:bg-white/10 text-white/80 hover:text-white transition-all">
+                <Link href="/moments" className="flex items-center gap-2">
+                  Send a Moment <ArrowRight className="w-5 h-5" />
+                </Link>
+              </Button>
             </div>
           </motion.div>
 

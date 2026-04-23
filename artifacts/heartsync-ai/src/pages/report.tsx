@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Sparkles, MessageCircle, Brain, HandHeart,
-  ArrowRight, Copy, Check, Zap, Clock, ClipboardList,
+  ArrowRight, Copy, Check, Zap, Clock, ClipboardList, Heart,
 } from "lucide-react";
 
 import { reportStore } from "@/lib/store";
@@ -205,6 +205,13 @@ export default function Report() {
                 <ChevronLeft className="w-4 h-4" /> Home
               </Link>
             </Button>
+            <Link
+              href="/moments"
+              className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
+              title="Send a Moment"
+            >
+              <Heart className="w-4 h-4" />
+            </Link>
             <Link
               href="/history"
               className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"

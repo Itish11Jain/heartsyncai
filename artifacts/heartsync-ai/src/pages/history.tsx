@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ChevronLeft, Clock, HeartPulse, ArrowRight, Sparkles } from "lucide-react";
+import { ChevronLeft, Clock, HeartPulse, ArrowRight, Sparkles, Heart } from "lucide-react";
 import { historyStore, VIEWABLE_MS, type HistoryEntry } from "@/lib/history-store";
 import { reportStore } from "@/lib/store";
 import { authStore } from "@/lib/auth-store";
@@ -113,11 +113,20 @@ export default function History() {
               <ChevronLeft className="w-5 h-5" /> Back
             </Link>
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-tr from-primary to-secondary p-1.5 rounded-lg">
-              <HeartPulse className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/moments"
+              className="p-2 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/5 transition-all"
+              title="Send a Moment"
+            >
+              <Heart className="w-4 h-4" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="bg-gradient-to-tr from-primary to-secondary p-1.5 rounded-lg">
+                <HeartPulse className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-white">HeartSync AI</span>
             </div>
-            <span className="text-sm font-bold text-white">HeartSync AI</span>
           </div>
         </div>
 

@@ -10,6 +10,7 @@ import Report from "@/pages/report";
 import Contact from "@/pages/contact";
 import Terms from "@/pages/terms";
 import History from "@/pages/history";
+import Moments from "@/pages/moments";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/terms" component={Terms} />
       <Route path="/history" component={History} />
+      <Route path="/moments" component={Moments} />
       <Route component={NotFound} />
     </Switch>
   );
