@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
+import { cosmic } from "@/lib/audio";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -220,6 +221,7 @@ export default function CosmicCard() {
   function startHold(e: React.PointerEvent) {
     e.preventDefault();
     if (phase !== "hook") return;
+    cosmic.holdPulse();
     holdStartRef.current = Date.now();
     holdTimerRef.current = setInterval(() => {
       const p = Math.min((Date.now() - holdStartRef.current) / 1500, 1);
@@ -234,6 +236,7 @@ export default function CosmicCard() {
   }
 
   function launchStarMap() {
+    cosmic.launch();
     const placed = plotStars(tpl.stars);
     setStars(placed);
     setPhase("spawning");
@@ -243,6 +246,7 @@ export default function CosmicCard() {
   /* ── star click ── */
   function handleStarClick(star: PlottedStar) {
     if (phase !== "tapping" || clickedIds.includes(star.id)) return;
+    cosmic.starClick(clickedIds.length);
 
     /* burst particles from star position */
     const burst: BurstDot[] = Array.from({ length: 28 }, () => {
@@ -280,6 +284,7 @@ export default function CosmicCard() {
 
   /* ── supernova sequence ── */
   function triggerSupernova() {
+    cosmic.supernova();
     setShowFlash(true);
     setTimeout(() => { canvasModeRef.current = "golden"; setPhase("supernova"); }, 500);
     setTimeout(() => { setShowFlash(false); setPhase("final"); }, 1100);
@@ -287,13 +292,16 @@ export default function CosmicCard() {
 
   /* ── sender share ── */
   function shareSenderWhatsApp() {
+    cosmic.copy();
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
   async function copySenderLinkForInstagram() {
+    cosmic.copy();
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch {}
   }
   async function copySenderLink() {
+    cosmic.copy();
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch {}
   }
 

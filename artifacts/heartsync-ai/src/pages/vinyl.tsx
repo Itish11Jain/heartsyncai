@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import {
   getVinylTemplate, getVinylFallback,
 } from "@/lib/card-templates";
+import { vinyl } from "@/lib/audio";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -280,6 +281,7 @@ export default function VinylCard() {
   /* ── press to play ── */
   function dropNeedle() {
     if (phase !== "hook") return;
+    vinyl.pressToPlay();
     setPhase("dropping");
     setTonearmDown(true);
     setTimeout(() => {
@@ -292,6 +294,7 @@ export default function VinylCard() {
   function handleNoteTap(idx: number, e: React.PointerEvent) {
     if (phase !== "playing" || tappedNotes.includes(idx)) return;
     e.stopPropagation();
+    vinyl.noteTap(idx);
 
     /* burst from tap point */
     const bx = e.clientX, by = e.clientY;
@@ -325,6 +328,7 @@ export default function VinylCard() {
 
   /* ── sleeve finale ── */
   function triggerSleeve() {
+    vinyl.spinUp();
     setHyperSpin(true);
     setTimeout(() => {
       setHyperSpin(false);
@@ -334,23 +338,30 @@ export default function VinylCard() {
       setTimeout(() => {
         canvasModeRef.current = "golden";
         setPhase("sleeve");
-        setTimeout(() => setSleeveVisible(true), 300);
+        setTimeout(() => {
+          setSleeveVisible(true);
+          vinyl.sleeveReveal();
+        }, 300);
       }, 800);
     }, 500);
   }
 
   /* ── share ── */
   function shareWhatsApp() {
+    vinyl.copy();
     const text = `💌 Hey ${recipientName}, I made you a special vinyl card!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
   async function copyForInstagram() {
+    vinyl.copy();
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch { /* ignore */ }
   }
   async function copySenderLink() {
+    vinyl.copy();
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch { /* ignore */ }
   }
   async function copyRecipLink() {
+    vinyl.copy();
     try { await navigator.clipboard.writeText(senderShareUrl); setRecipCopied(true); setTimeout(() => setRecipCopied(false), 2500); } catch { /* ignore */ }
   }
 

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
+import { envelope } from "@/lib/audio";
 import CosmicCard from "@/pages/cosmic";
 import VinylCard from "@/pages/vinyl";
 
@@ -198,6 +199,7 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (unlocked) return;
+    envelope.slideStart();
     setDragging(true);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -852,11 +854,13 @@ export default function Card() {
   }, [showSplash]);
 
   function shareSenderWhatsApp() {
+    envelope.copy();
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   async function copySenderLinkForInstagram() {
+    envelope.copy();
     try {
       await navigator.clipboard.writeText(senderShareUrl);
       setSenderIgCopied(true);
@@ -865,6 +869,7 @@ export default function Card() {
   }
 
   async function copySenderLink() {
+    envelope.copy();
     try {
       await navigator.clipboard.writeText(senderShareUrl);
       setSenderCopied(true);
@@ -948,6 +953,7 @@ export default function Card() {
   }, []);
 
   function handleUnlock() {
+    envelope.open();
     setPhase("opening");
     setTimeout(() => { setPhase("orbs"); }, 1200);
   }
@@ -957,6 +963,7 @@ export default function Card() {
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
 
+    envelope.orbTap();
     fireEmojiParticles(cx, cy, orb.emoji);
 
     const newKey = tooltipKeyCounter + 1;
@@ -968,6 +975,7 @@ export default function Card() {
 
     if (newClicked.size === orbs.length) {
       setTimeout(() => {
+        envelope.finale();
         setPhase("finale");
         setTimeout(fireConfetti, 800);
       }, 1500);
