@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authStore } from "@/lib/auth-store";
@@ -42,77 +42,272 @@ function StarRow({ count }: { count: number }) {
   );
 }
 
+/* Mini orb positions for the home preview (4 orbs in a circle, radius ~65px) */
+const PREVIEW_ORBS = ["💖", "✨", "🎉", "🌸"];
+const PREVIEW_ORB_POSITIONS = PREVIEW_ORBS.map((_, i) => {
+  const angle = (i / 4) * 2 * Math.PI - Math.PI / 2;
+  return { x: Math.cos(angle) * 65, y: Math.sin(angle) * 65 };
+});
+
 function CardIllustration() {
+  /* seq: 0 = envelope, 1 = opening, 2 = orbs, 3 = finale */
+  const [seq, setSeq] = useState(0);
+  const [loopCount, setLoopCount] = useState(0);
+
+  useEffect(() => {
+    setSeq(0);
+    const t1 = setTimeout(() => setSeq(1), 2800);
+    const t2 = setTimeout(() => setSeq(2), 4200);
+    const t3 = setTimeout(() => setSeq(3), 7400);
+    const t4 = setTimeout(() => setLoopCount(c => c + 1), 10800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, [loopCount]);
+
   return (
-    <div className="relative w-72 h-96">
-      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-pink-500/40 to-rose-600/25 blur-3xl scale-105" />
-      <motion.div
-        animate={{ y: [-6, 6, -6] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="relative w-full h-full"
+    <div className="relative w-72 h-96 select-none">
+      {/* Ambient glow */}
+      <div
+        className="absolute inset-0 rounded-3xl blur-3xl scale-105"
+        style={{ background: "radial-gradient(ellipse, rgba(255,215,0,0.22) 0%, rgba(255,120,0,0.1) 50%, transparent 75%)" }}
+      />
+
+      {/* Card container */}
+      <div
+        className="relative w-full h-full rounded-3xl overflow-hidden"
+        style={{
+          background: "radial-gradient(ellipse at 50% 20%, #1a0a2e 0%, #0d0618 70%, #060310 100%)",
+          border: "1px solid rgba(255,215,0,0.15)",
+          boxShadow: "0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,215,0,0.08)",
+        }}
       >
-        <div
-          className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl"
-          style={{
-            background: "linear-gradient(145deg, #1e0510 0%, #0d0208 100%)",
-            border: "1px solid rgba(236,72,153,0.2)",
-          }}
-        >
-          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% -10%, rgba(236,72,153,0.35) 0%, transparent 65%)" }} />
-          <div className="absolute bottom-0 left-0 right-0 h-1/2" style={{ background: "linear-gradient(to top, rgba(236,72,153,0.06), transparent)" }} />
-          <div className="relative p-7 h-full flex flex-col">
-            <div className="flex justify-between items-start mb-5">
-              <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #f472b6, #f43f5e)" }}>
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z" />
-                </svg>
+        {/* Twinkling mini stars */}
+        {[
+          { t: "18%", l: "12%", d: 0.4 }, { t: "8%", l: "65%", d: 1.2 },
+          { t: "72%", l: "82%", d: 0.8 }, { t: "85%", l: "22%", d: 1.8 },
+          { t: "42%", l: "90%", d: 0.2 }, { t: "55%", l: "5%", d: 2.5 },
+        ].map((s, i) => (
+          <motion.div
+            key={i}
+            animate={{ opacity: [0.1, 0.6, 0.1] }}
+            transition={{ duration: 2.2 + i * 0.4, delay: s.d, repeat: Infinity, ease: "easeInOut" }}
+            style={{ position: "absolute", top: s.t, left: s.l, width: 2, height: 2, borderRadius: "50%", background: "white" }}
+          />
+        ))}
+
+        {/* ── PHASE 0/1: Golden Envelope ── */}
+        <AnimatePresence>
+          {(seq === 0 || seq === 1) && (
+            <motion.div
+              key="env"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, y: 120, transition: { duration: 0.45, ease: "easeIn" } }}
+              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}
+            >
+              {/* Pulsating headline */}
+              <motion.p
+                animate={{ opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: "0.06em", textAlign: "center" }}
+              >
+                ✨ A Surprise For You! ✨
+              </motion.p>
+
+              {/* Mini envelope */}
+              <div style={{ position: "relative", width: 180, height: 112, filter: "drop-shadow(0 12px 24px rgba(255,165,0,0.4))" }}>
+                {/* Body */}
+                <div style={{
+                  position: "absolute", inset: 0, borderRadius: 7,
+                  background: "linear-gradient(145deg, #F5C518 0%, #FFD700 28%, #FFBC00 55%, #E8AA00 80%, #D4960A 100%)",
+                  boxShadow: "inset 0 1px 4px rgba(255,255,255,0.3)",
+                  overflow: "hidden",
+                }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, #C49000, transparent 42%)", clipPath: "polygon(0 100%, 44% 52%, 0 4%)", opacity: 0.55 }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to left, #C49000, transparent 42%)", clipPath: "polygon(100% 100%, 56% 52%, 100% 4%)", opacity: 0.55 }} />
+                  <div style={{ position: "absolute", inset: 0, background: "#B8870A", clipPath: "polygon(0 100%, 44% 52%, 56% 52%, 100% 100%)", opacity: 0.6 }} />
+                  {/* To: label centered */}
+                  <div style={{ position: "absolute", bottom: "10%", left: "50%", transform: "translateX(-50%)", fontFamily: "Georgia,serif", fontSize: 8, color: "rgba(80,40,0,0.7)", fontStyle: "italic", whiteSpace: "nowrap" }}>
+                    To: <span style={{ fontWeight: 800, color: "rgba(45,18,0,0.9)" }}>Priya</span>
+                  </div>
+                </div>
+                {/* Flap */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "56%", perspective: 400, perspectiveOrigin: "50% 0%", zIndex: 10 }}>
+                  <motion.div
+                    animate={seq === 1 ? { rotateX: -175 } : { rotateX: 0 }}
+                    transition={{ type: "spring", damping: 10, stiffness: 100 }}
+                    style={{ width: "100%", height: "100%", transformOrigin: "50% 0%", transformStyle: "preserve-3d", position: "relative" }}
+                  >
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(172deg, #E8B800 0%, #D4A000 45%, #C49000 100%)", clipPath: "polygon(0 0, 100% 0, 50% 88%)", borderRadius: "7px 7px 0 0", backfaceVisibility: "hidden" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, #FFE566 0%, #FFCC00 100%)", clipPath: "polygon(0 0, 100% 0, 50% 88%)", transform: "rotateX(180deg)", backfaceVisibility: "hidden" }} />
+                  </motion.div>
+                </div>
+                {/* Flower seal */}
+                <motion.div
+                  animate={seq === 1 ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: "radial-gradient(circle at 35% 35%, #FF8FAB, #C2185B)",
+                    boxShadow: "0 2px 8px rgba(194,24,91,0.5)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, zIndex: 5,
+                  }}
+                >
+                  🌸
+                </motion.div>
               </div>
-              <div className="text-right">
-                <p className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: "rgba(244,114,182,0.5)" }}>HeartSync</p>
-                <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>HeartSync</p>
+
+              {/* Slider hint */}
+              <div style={{
+                width: 160, height: 28, borderRadius: 999,
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,215,0,0.2)",
+                display: "flex", alignItems: "center",
+                paddingLeft: 32, fontSize: 9,
+                color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em",
+                position: "relative",
+              }}>
+                <div style={{ position: "absolute", left: 4, top: 4, width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg, #FFD700, #FFA500)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>→</div>
+                Slide to unlock →
               </div>
-            </div>
-            <div className="flex-1 flex flex-col justify-center">
-              <p className="text-sm font-medium mb-2" style={{ color: "rgba(251,207,232,0.6)" }}>For Priya,</p>
-              <p className="text-[13px] leading-[1.7] italic" style={{ color: "rgba(255,255,255,0.8)" }}>
-                "Every moment with you feels like home. You make ordinary days feel extraordinary, and I'm so lucky you're mine."
-              </p>
-            </div>
-            <div className="flex justify-between items-center">
-              <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>With love 💕</p>
-              <div className="w-16 h-px rounded-full" style={{ background: "linear-gradient(to right, rgba(244,114,182,0.4), transparent)" }} />
-            </div>
-          </div>
-          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, transparent, rgba(244,114,182,0.5), transparent)" }} />
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── PHASE 2: Orbs ── */}
+        <AnimatePresence>
+          {(seq === 2 || seq === 3) && (
+            <motion.div
+              key="orbs"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ position: "absolute", inset: 0 }}
+            >
+              {/* Counter */}
+              {seq === 2 && (
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{ position: "absolute", top: 20, left: 0, right: 0, textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em" }}
+                >
+                  Tap the orbs! ✨
+                </motion.p>
+              )}
+              {/* Orbs */}
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {PREVIEW_ORBS.map((emoji, i) => {
+                  const pos = PREVIEW_ORB_POSITIONS[i];
+                  const exploding = seq === 3;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+                      animate={exploding
+                        ? { x: pos.x * 5, y: pos.y * 5, scale: 0, opacity: 0 }
+                        : { x: pos.x, y: pos.y, scale: 1, opacity: 1 }
+                      }
+                      transition={exploding
+                        ? { duration: 0.5, ease: "easeIn", delay: i * 0.06 }
+                        : { type: "spring", damping: 16, stiffness: 200, delay: i * 0.08 }
+                      }
+                      style={{
+                        position: "absolute", width: 42, height: 42,
+                        borderRadius: "50%",
+                        background: "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.1))",
+                        border: "1.5px solid rgba(255,215,0,0.4)",
+                        backdropFilter: "blur(6px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 20,
+                        marginLeft: -21, marginTop: -21,
+                      }}
+                    >
+                      <motion.span
+                        animate={{ y: [-2, 2, -2] }}
+                        transition={{ duration: 2 + i * 0.3, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        {emoji}
+                      </motion.span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── PHASE 3: Final mini card ── */}
+        <AnimatePresence>
+          {seq === 3 && (
+            <motion.div
+              key="finale"
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", damping: 14, stiffness: 160, delay: 0.5 }}
+              style={{
+                position: "absolute", inset: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 20,
+              }}
+            >
+              <div style={{
+                width: 200, padding: "20px 18px",
+                borderRadius: 18,
+                background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,215,0,0.06))",
+                border: "1.5px solid rgba(255,215,0,0.35)",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0 16px 40px rgba(0,0,0,0.5), 0 0 40px rgba(255,215,0,0.1)",
+                textAlign: "center",
+                position: "relative",
+              }}>
+                <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1.5, background: "linear-gradient(90deg, transparent, #FFD700, transparent)", borderRadius: 99 }} />
+                <p style={{ fontSize: 9, color: "rgba(255,215,0,0.6)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Happy Birthday</p>
+                <p style={{ fontSize: 22, marginBottom: 6 }}>🎉</p>
+                <p style={{ fontSize: 18, fontWeight: 800, color: "white", fontFamily: "Georgia,serif", marginBottom: 8 }}>Priya</p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontStyle: "italic", fontFamily: "Georgia,serif", lineHeight: 1.6 }}>
+                  "Wishing you all the happiness in the world."
+                </p>
+                {/* Confetti dots */}
+                {["#FFD700","#FF69B4","#C0C0C0","#FFD700","#FF69B4"].map((c, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ y: -20, x: (i - 2) * 30, opacity: 0 }}
+                    animate={{ y: 60 + i * 10, opacity: [0, 1, 0] }}
+                    transition={{ duration: 1.2, delay: 0.6 + i * 0.12, repeat: Infinity, repeatDelay: 2 }}
+                    style={{ position: "absolute", top: 0, left: "50%", width: 5, height: 10, borderRadius: 2, background: c, marginLeft: (i - 2) * 22 }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom label */}
         <motion.div
-          animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-3 -right-3"
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(255,215,0,0.4)", letterSpacing: "0.1em" }}
         >
-          <svg className="w-6 h-6 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z" />
-          </svg>
+          ✦ HeartSync AI
         </motion.div>
+      </div>
+
+      {/* Floating sparkles around the card */}
+      {[
+        { top: "-6%", right: "-6%", size: 22, delay: 0 },
+        { top: "35%", right: "-12%", size: 14, delay: 1.2 },
+        { bottom: "-4%", left: "-8%", size: 18, delay: 0.7 },
+      ].map((s, i) => (
         <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.7, 0.3] }}
-          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute -bottom-2 -left-4"
+          key={i}
+          animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 2.5 + i * 0.8, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
+          style={{ position: "absolute", ...s, fontSize: s.size }}
         >
-          <svg className="w-5 h-5 text-rose-400" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z" />
-          </svg>
+          ✦
         </motion.div>
-        <motion.div
-          animate={{ scale: [1, 1.4, 1], opacity: [0.2, 0.6, 0.2] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-1/3 -right-5"
-        >
-          <svg className="w-3 h-3 text-pink-300" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z" />
-          </svg>
-        </motion.div>
-      </motion.div>
+      ))}
     </div>
   );
 }
