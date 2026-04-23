@@ -57,6 +57,18 @@ export default function CrystalCard() {
   })();
   const likesChips = likesParam ? likesParam.split(",").map(s => s.trim()).filter(Boolean) : [];
 
+  /* Inject the first like into the final orb so it feels personally crafted */
+  const orbNodes = (() => {
+    if (!likesChips.length) return tpl.nodes;
+    const like = likesChips[0];
+    const nodes = [...tpl.nodes];
+    nodes[nodes.length - 1] = {
+      emoji: "✨",
+      text: `Your love for ${like} shines bright — the crystal sees the joy it brings you.`,
+    };
+    return nodes;
+  })();
+
   /* ── Clear native splash screen ── */
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).__clearHsSplash) {
@@ -411,7 +423,7 @@ export default function CrystalCard() {
 
     /* Tooltip */
     if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
-    setTooltip({ emoji: tpl.nodes[idx].emoji, text: tpl.nodes[idx].text });
+    setTooltip({ emoji: orbNodes[idx].emoji, text: orbNodes[idx].text });
     tooltipTimer.current = setTimeout(() => setTooltip(null), 2200);
 
     setTappedOrbs(prev => {
@@ -419,7 +431,7 @@ export default function CrystalCard() {
       next.add(idx);
       tappedOrbsRef.current = next;
 
-      if (next.size === tpl.nodes.length && !orbsDoneRef.current) {
+      if (next.size === orbNodes.length && !orbsDoneRef.current) {
         orbsDoneRef.current = true;
         setTimeout(() => {
           crystalHaptics.shatter();
@@ -430,7 +442,7 @@ export default function CrystalCard() {
       }
       return next;
     });
-  }, [tpl.nodes]);
+  }, [orbNodes]);
 
   /* ── Share helpers ── */
   function cardUrl() {
@@ -674,7 +686,7 @@ export default function CrystalCard() {
             </motion.p>
 
             {/* Orbs */}
-            {tpl.nodes.map((node, idx) => {
+            {orbNodes.map((node, idx) => {
               const zone  = SAFE_ZONES[idx];
               const tapped = tappedOrbs.has(idx);
               return (
@@ -859,25 +871,6 @@ export default function CrystalCard() {
                 >
                   {finalMessage}
                 </motion.p>
-
-                {likesChips.length > 0 && (
-                  <div style={{ width: "60%", height: 1, background: "rgba(160,100,255,0.25)", margin: "18px auto 14px" }} />
-                )}
-
-                {likesChips.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }}
-                    style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", position: "relative", zIndex: 1 }}
-                  >
-                    {likesChips.map((chip, i) => (
-                      <span key={i} style={{
-                        fontSize: "min(12px, 3vw)", color: "rgba(200,170,255,0.88)",
-                        background: "rgba(140,80,255,0.2)", border: "1px solid rgba(180,120,255,0.3)",
-                        borderRadius: 999, padding: "4px 12px",
-                      }}>{chip}</span>
-                    ))}
-                  </motion.div>
-                )}
 
                 <motion.div
                   animate={{ opacity: [0.28, 0.72, 0.28] }} transition={{ duration: 3, repeat: Infinity }}
