@@ -4,5 +4,6 @@ export const modules: ModuleMap = {
   "./components/mockups/greeting-cards/Cinematic.tsx": () => import("../components/mockups/greeting-cards/Cinematic.tsx"),
   "./components/mockups/greeting-cards/LottieHearts.tsx": () => import("../components/mockups/greeting-cards/LottieHearts.tsx"),
   "./components/mockups/greeting-cards/UnboxCard.tsx": () => import("../components/mockups/greeting-cards/UnboxCard.tsx"),
-  "./components/mockups/greeting-cards/Warm.tsx": () => import("../components/mockups/greeting-cards/Warm.tsx")
+  "./components/mockups/greeting-cards/Warm.tsx": () => import("../components/mockups/greeting-cards/Warm.tsx"),
+  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx")
 };
