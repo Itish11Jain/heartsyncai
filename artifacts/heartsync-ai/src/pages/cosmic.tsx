@@ -136,7 +136,7 @@ export default function CosmicCard() {
   }, []);
 
   useEffect(() => {
-    music.start("cosmic");
+    music.start("cosmic", occasion);
     return () => { music.stop(); };
   }, []);
 

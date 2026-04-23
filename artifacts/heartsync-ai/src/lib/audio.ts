@@ -44,9 +44,10 @@ export const haptic = {
 const N = {
   G2: 98.00,  A2: 110.00, C3: 130.81, G3: 196.00,
   A3: 220.00,
-  C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.00, A4: 440.00,
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00,
+  Bb4: 466.16, B4: 493.88,
   C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00,
-  B4: 493.88,  B5: 987.77,
+  B5: 987.77,
   C6: 1046.50, D6: 1174.66, E6: 1318.51,
 };
 
@@ -233,8 +234,102 @@ const CRYSTAL_SEQ: MStep[] = [
   { freq: N.A3, dur: Hk, gain: 0.06 },
 ];
 
+/* ── Happy Birthday melodies (3 variations, randomly selected) ───
+   All use the traditional "Happy Birthday to You" melody in F major
+   (C4 D4 E4 F4 G4 A4 Bb4 C5) at different tempos.
+─────────────────────────────────────────────────────────────────── */
+
+/* Variation 1 — Gentle waltz (90 BPM) */
+const BIRTHDAY_1_SEQ: MStep[] = [
+  { freq: N.C4, dur: 1.00, gain: 0.12, bass: N.C3, bassDur: 1.80, bassGain: 0.07 },
+  { freq: N.C4, dur: 0.33, gain: 0.10 },
+  { freq: N.D4, dur: 0.67, gain: 0.11 },
+  { freq: N.C4, dur: 0.67, gain: 0.11 },
+  { freq: N.F4, dur: 0.67, gain: 0.11 },
+  { freq: N.E4, dur: 1.33, gain: 0.10 },
+  { freq: N.C4, dur: 1.00, gain: 0.12, bass: N.G2, bassDur: 1.80, bassGain: 0.07 },
+  { freq: N.C4, dur: 0.33, gain: 0.10 },
+  { freq: N.D4, dur: 0.67, gain: 0.11 },
+  { freq: N.C4, dur: 0.67, gain: 0.11 },
+  { freq: N.G4, dur: 0.67, gain: 0.11 },
+  { freq: N.F4, dur: 1.33, gain: 0.10 },
+  { freq: N.C4, dur: 1.00, gain: 0.12, bass: N.C3, bassDur: 1.80, bassGain: 0.07 },
+  { freq: N.C4, dur: 0.33, gain: 0.10 },
+  { freq: N.C5, dur: 0.67, gain: 0.10 },
+  { freq: N.A4, dur: 0.67, gain: 0.11 },
+  { freq: N.F4, dur: 0.67, gain: 0.11 },
+  { freq: N.E4, dur: 0.67, gain: 0.11 },
+  { freq: N.D4, dur: 1.33, gain: 0.10 },
+  { freq: N.Bb4, dur: 1.00, gain: 0.12, bass: N.G2, bassDur: 1.80, bassGain: 0.07 },
+  { freq: N.Bb4, dur: 0.33, gain: 0.10 },
+  { freq: N.A4, dur: 0.67, gain: 0.11 },
+  { freq: N.F4, dur: 0.67, gain: 0.11 },
+  { freq: N.G4, dur: 0.67, gain: 0.11 },
+  { freq: N.F4, dur: 2.00, gain: 0.09 },
+];
+
+/* Variation 2 — Bright & upbeat (108 BPM) */
+const BIRTHDAY_2_SEQ: MStep[] = [
+  { freq: N.C4, dur: 0.83, gain: 0.13, bass: N.C3, bassDur: 1.50, bassGain: 0.07 },
+  { freq: N.C4, dur: 0.28, gain: 0.11 },
+  { freq: N.D4, dur: 0.56, gain: 0.12 },
+  { freq: N.C4, dur: 0.56, gain: 0.12 },
+  { freq: N.F4, dur: 0.56, gain: 0.12 },
+  { freq: N.E4, dur: 1.11, gain: 0.11 },
+  { freq: N.C4, dur: 0.83, gain: 0.13, bass: N.G2, bassDur: 1.50, bassGain: 0.07 },
+  { freq: N.C4, dur: 0.28, gain: 0.11 },
+  { freq: N.D4, dur: 0.56, gain: 0.12 },
+  { freq: N.C4, dur: 0.56, gain: 0.12 },
+  { freq: N.G4, dur: 0.56, gain: 0.12 },
+  { freq: N.F4, dur: 1.11, gain: 0.11 },
+  { freq: N.C4, dur: 0.83, gain: 0.13, bass: N.C3, bassDur: 1.50, bassGain: 0.07 },
+  { freq: N.C4, dur: 0.28, gain: 0.11 },
+  { freq: N.C5, dur: 0.56, gain: 0.11 },
+  { freq: N.A4, dur: 0.56, gain: 0.12 },
+  { freq: N.F4, dur: 0.56, gain: 0.12 },
+  { freq: N.E4, dur: 0.56, gain: 0.12 },
+  { freq: N.D4, dur: 1.11, gain: 0.11 },
+  { freq: N.Bb4, dur: 0.83, gain: 0.13, bass: N.G2, bassDur: 1.50, bassGain: 0.07 },
+  { freq: N.Bb4, dur: 0.28, gain: 0.11 },
+  { freq: N.A4, dur: 0.56, gain: 0.12 },
+  { freq: N.F4, dur: 0.56, gain: 0.12 },
+  { freq: N.G4, dur: 0.56, gain: 0.12 },
+  { freq: N.F4, dur: 1.67, gain: 0.10 },
+];
+
+/* Variation 3 — Slow & warm (76 BPM) */
+const BIRTHDAY_3_SEQ: MStep[] = [
+  { freq: N.C4, dur: 1.18, gain: 0.11, bass: N.C3, bassDur: 2.10, bassGain: 0.06 },
+  { freq: N.C4, dur: 0.39, gain: 0.09 },
+  { freq: N.D4, dur: 0.79, gain: 0.10 },
+  { freq: N.C4, dur: 0.79, gain: 0.10 },
+  { freq: N.F4, dur: 0.79, gain: 0.10 },
+  { freq: N.E4, dur: 1.58, gain: 0.09 },
+  { freq: N.C4, dur: 1.18, gain: 0.11, bass: N.G2, bassDur: 2.10, bassGain: 0.06 },
+  { freq: N.C4, dur: 0.39, gain: 0.09 },
+  { freq: N.D4, dur: 0.79, gain: 0.10 },
+  { freq: N.C4, dur: 0.79, gain: 0.10 },
+  { freq: N.G4, dur: 0.79, gain: 0.10 },
+  { freq: N.F4, dur: 1.58, gain: 0.09 },
+  { freq: N.C4, dur: 1.18, gain: 0.11, bass: N.C3, bassDur: 2.10, bassGain: 0.06 },
+  { freq: N.C4, dur: 0.39, gain: 0.09 },
+  { freq: N.C5, dur: 0.79, gain: 0.09 },
+  { freq: N.A4, dur: 0.79, gain: 0.10 },
+  { freq: N.F4, dur: 0.79, gain: 0.10 },
+  { freq: N.E4, dur: 0.79, gain: 0.10 },
+  { freq: N.D4, dur: 1.58, gain: 0.09 },
+  { freq: N.Bb4, dur: 1.18, gain: 0.11, bass: N.G2, bassDur: 2.10, bassGain: 0.06 },
+  { freq: N.Bb4, dur: 0.39, gain: 0.09 },
+  { freq: N.A4, dur: 0.79, gain: 0.10 },
+  { freq: N.F4, dur: 0.79, gain: 0.10 },
+  { freq: N.G4, dur: 0.79, gain: 0.10 },
+  { freq: N.F4, dur: 2.37, gain: 0.08 },
+];
+
+const BIRTHDAY_SEQS = [BIRTHDAY_1_SEQ, BIRTHDAY_2_SEQ, BIRTHDAY_3_SEQ];
+
 export const music = {
-  start(template: "vinyl" | "cosmic" | "envelope" | "crystal"): void {
+  start(template: "vinyl" | "cosmic" | "envelope" | "crystal", occasion?: string): void {
     music.stop();
     try {
       const ac = getCtx();
@@ -244,11 +339,13 @@ export const music = {
       master.gain.linearRampToValueAtTime(1.0, ac.currentTime + 1.8);
       master.connect(ac.destination);
 
-      const seq =
-        template === "vinyl"    ? VINYL_SEQ    :
-        template === "cosmic"   ? COSMIC_SEQ   :
-        template === "crystal"  ? CRYSTAL_SEQ  :
-                                  ENVELOPE_SEQ;
+      /* Birthday occasion always gets a Happy Birthday melody regardless of template */
+      const seq = occasion === "birthday"
+        ? BIRTHDAY_SEQS[Math.floor(Math.random() * BIRTHDAY_SEQS.length)]!
+        : template === "vinyl"   ? VINYL_SEQ   :
+          template === "cosmic"  ? COSMIC_SEQ  :
+          template === "crystal" ? CRYSTAL_SEQ :
+                                   ENVELOPE_SEQ;
 
       _music = {
         seq,

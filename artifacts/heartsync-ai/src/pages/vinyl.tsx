@@ -173,7 +173,7 @@ export default function VinylCard() {
   }, []);
 
   useEffect(() => {
-    music.start("vinyl");
+    music.start("vinyl", occasion);
     return () => { music.stop(); };
   }, []);
 

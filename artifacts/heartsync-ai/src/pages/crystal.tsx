@@ -121,7 +121,7 @@ export default function CrystalCard() {
 
   /* ── Music + analytics ── */
   useEffect(() => {
-    music.start("crystal");
+    music.start("crystal", occasion);
     if (isRecipient && !isPreview) {
       trackEvent({ event: "card_viewed", occasion, template: "crystal" });
     }
@@ -738,35 +738,36 @@ export default function CrystalCard() {
             {/* Glassmorphism tooltip — centered */}
             <AnimatePresence>
               {tooltip && (
-                /* Outer div owns the position+centering so Framer Motion's
-                   scale/y don't override the CSS transform */
+                /* Outer div owns position+centering; anchored at 44% (midpoint
+                   between top orbs at 22% and bottom orbs at 68%) so the
+                   tooltip never covers either orb row */
                 <div
                   key={tooltip.text}
                   style={{
                     position: "fixed",
-                    top: "50%", left: "50%",
+                    top: "44%", left: "50%",
                     transform: "translate(-50%, -50%)",
                     zIndex: 50, pointerEvents: "none",
                   }}
                 >
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.88, y: 18 }}
+                    initial={{ opacity: 0, scale: 0.88, y: 14 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.88, y: -12 }}
+                    exit={{ opacity: 0, scale: 0.88, y: -10 }}
                     transition={{ duration: 0.28 }}
                     style={{
-                      width: "min(310px, 88vw)",
-                      background: "rgba(12,4,30,0.82)",
+                      width: "min(290px, 84vw)",
+                      background: "rgba(12,4,30,0.85)",
                       backdropFilter: "blur(18px)",
                       border: "1px solid rgba(180,120,255,0.4)",
-                      borderRadius: 18, padding: "28px 36px", textAlign: "center",
+                      borderRadius: 18, padding: "18px 24px", textAlign: "center",
                       boxShadow: "0 4px 40px rgba(80,30,160,0.45)",
                     }}
                   >
-                    <div style={{ fontSize: 52, marginBottom: 14 }}>{tooltip.emoji}</div>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>{tooltip.emoji}</div>
                     <p style={{
-                      fontSize: "min(15px, 3.8vw)", color: "rgba(210,185,255,0.94)",
-                      fontWeight: 500, fontStyle: "italic", lineHeight: 1.6, margin: 0,
+                      fontSize: "min(14px, 3.6vw)", color: "rgba(210,185,255,0.94)",
+                      fontWeight: 500, fontStyle: "italic", lineHeight: 1.55, margin: 0,
                     }}>
                       {tooltip.text}
                     </p>

@@ -831,7 +831,7 @@ export default function Card() {
   }, []);
 
   useEffect(() => {
-    music.start("envelope");
+    music.start("envelope", occasion);
     return () => { music.stop(); };
   }, []);
 
