@@ -76,7 +76,7 @@ export default function Send() {
   function pickTemplate(): string {
     // Anonymous users only get Envelope or Cosmic
     if (!isSignedIn) {
-      const anonTemplates = ["envelope", "cosmic"];
+      const anonTemplates = ["envelope", "cosmic", "crystal"];
       return anonTemplates[Math.floor(Math.random() * anonTemplates.length)];
     }
     // First signed-in card: always Vinyl (the premium reveal)
@@ -85,8 +85,8 @@ export default function Send() {
       localStorage.setItem("hs_vinyl_used", "1");
       return "vinyl";
     }
-    // Subsequent: rotate all 3
-    const ALL = ["envelope", "cosmic", "vinyl"];
+    // Subsequent: rotate all 4
+    const ALL = ["envelope", "cosmic", "vinyl", "crystal"];
     return ALL[Math.floor(Math.random() * ALL.length)];
   }
 

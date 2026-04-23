@@ -886,6 +886,319 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
   },
 };
 
+/* ═══════════════════════════ CRYSTAL TEMPLATES ═══════════════════════════ */
+
+export interface CrystalNode {
+  emoji: string;
+  text: string;
+}
+
+export interface CrystalTemplate {
+  hook_title: string;
+  title_prefix: string;
+  nodes: CrystalNode[];
+  final_message: string;
+}
+
+const CRYSTAL: Record<string, Record<string, CrystalTemplate>> = {
+  thank_you: {
+    friend: {
+      hook_title: "✦ The Crystal Speaks of Gratitude ✦",
+      title_prefix: "To my absolute legend",
+      nodes: [
+        { emoji: "🎮", text: "The visions say: you always show up when it matters." },
+        { emoji: "🍕", text: "The mist reveals: the best late-night energy." },
+        { emoji: "💡", text: "The crystal sees: brilliant ideas and top-tier advice." },
+        { emoji: "🔥", text: "The stars agree: you light up every room you enter." },
+      ],
+      final_message: "Thank you for being an amazing friend. The universe sees how much you mean to me.",
+    },
+    partner: {
+      hook_title: "✦ The Ball Sees Only You ✦",
+      title_prefix: "To my favourite person",
+      nodes: [
+        { emoji: "💖", text: "The crystal whispers: you make every day brighter." },
+        { emoji: "☕", text: "The mist reveals: the calm in every storm." },
+        { emoji: "🫂", text: "The visions say: my ultimate safe space." },
+        { emoji: "✨", text: "The stars confirm: you are literal magic." },
+      ],
+      final_message: "Thank you for everything you are. The crystal ball has always known — I'm so lucky to have you.",
+    },
+    spouse: {
+      hook_title: "✦ A Vision of Pure Love ✦",
+      title_prefix: "To my everything",
+      nodes: [
+        { emoji: "💍", text: "The crystal sees: my greatest adventure." },
+        { emoji: "🌙", text: "The mist whispers: every night is complete with you." },
+        { emoji: "🏡", text: "The visions reveal: home is wherever you are." },
+        { emoji: "💫", text: "The ball knows: you make life extraordinary." },
+      ],
+      final_message: "The crystal ball has always known what I feel. Thank you for choosing me every single day. I love you deeply.",
+    },
+    date: {
+      hook_title: "✦ The Mist Reveals Something Special ✦",
+      title_prefix: "To someone unforgettable",
+      nodes: [
+        { emoji: "😊", text: "The crystal sees: you made me smile like I forgot how." },
+        { emoji: "🌟", text: "The visions confirm: genuinely one of a kind." },
+        { emoji: "🦋", text: "The mist reveals: the most wonderful butterflies." },
+        { emoji: "🎯", text: "The ball knew: our paths were meant to cross." },
+      ],
+      final_message: "The crystal ball saw this coming. Thank you for a genuinely amazing time — I can't stop smiling.",
+    },
+  },
+  birthday: {
+    friend: {
+      hook_title: "✦ A Birthday Vision Awaits ✦",
+      title_prefix: "Another trip around the sun",
+      nodes: [
+        { emoji: "🎂", text: "The crystal commands: eat all the cake — zero guilt." },
+        { emoji: "🥳", text: "The visions say: the universe is ready to celebrate you." },
+        { emoji: "🎁", text: "The mist reveals: you deserve the absolute best." },
+        { emoji: "🥂", text: "The ball decrees: cheers to another incredible year!" },
+      ],
+      final_message: "The crystal ball has spoken — this year belongs to you! Happy Birthday!",
+    },
+    partner: {
+      hook_title: "✦ The Crystal Glows for You ✦",
+      title_prefix: "To the centre of my world",
+      nodes: [
+        { emoji: "🎈", text: "The crystal whispers: every year with you is a gift." },
+        { emoji: "💝", text: "The visions confirm: you deserve every celebration." },
+        { emoji: "🌹", text: "The mist reveals: my heart is yours, always." },
+        { emoji: "🎊", text: "The ball declares: this year will be your most magical yet." },
+      ],
+      final_message: "Happy Birthday, my love! The crystal ball already knew — every year with you is my favourite one yet.",
+    },
+    spouse: {
+      hook_title: "✦ Your Future Shines Bright ✦",
+      title_prefix: "To my partner in everything",
+      nodes: [
+        { emoji: "🎂", text: "The crystal sees: another year of loving you." },
+        { emoji: "💑", text: "The visions reveal: life is most beautiful because of you." },
+        { emoji: "🥳", text: "The mist confirms: today is entirely, completely yours." },
+        { emoji: "✨", text: "The ball knows: you light up every room you walk into." },
+      ],
+      final_message: "Happy Birthday! The crystal ball predicted it — I fall more in love with you every single day.",
+    },
+    date: {
+      hook_title: "✦ The Stars Align for You Today ✦",
+      title_prefix: "Celebrating you today",
+      nodes: [
+        { emoji: "🎉", text: "The crystal sees: the world is better because you're in it." },
+        { emoji: "🌟", text: "The visions say: you deserve to feel amazing today." },
+        { emoji: "🎂", text: "The mist reveals: make a wish — you've absolutely earned it." },
+        { emoji: "😊", text: "The ball whispers: wishing you all the good things." },
+      ],
+      final_message: "Happy Birthday! The crystal ball agrees — today should be as wonderful as you are.",
+    },
+  },
+  sorry: {
+    friend: {
+      hook_title: "✦ The Crystal Sees Your Worth ✦",
+      title_prefix: "To someone I value deeply",
+      nodes: [
+        { emoji: "🙁", text: "The mist reveals: I handled that completely wrong." },
+        { emoji: "🤝", text: "The crystal confirms: our friendship means everything to me." },
+        { emoji: "💙", text: "The visions say: I genuinely care about you." },
+        { emoji: "🌱", text: "The ball sees: let's grow past this together." },
+      ],
+      final_message: "The crystal ball sees the truth — I'm truly sorry. You deserve better from me, and I'll do better.",
+    },
+    partner: {
+      hook_title: "✦ The Ball Knows My Heart ✦",
+      title_prefix: "To my everything",
+      nodes: [
+        { emoji: "💔", text: "The crystal whispers: I hate that I hurt you." },
+        { emoji: "😔", text: "The visions confirm: I was wrong, and I own that." },
+        { emoji: "❤️‍🩹", text: "The mist reveals: you mean the world to me." },
+        { emoji: "🌹", text: "The ball knows: let me make it up to you." },
+      ],
+      final_message: "The crystal ball has always known how much I love you. I am so deeply sorry. I promise to do better.",
+    },
+    spouse: {
+      hook_title: "✦ Love Beyond Words ✦",
+      title_prefix: "To my heart",
+      nodes: [
+        { emoji: "💔", text: "The crystal aches: I never want to hurt you." },
+        { emoji: "🕊️", text: "The visions are clear: I choose us, always." },
+        { emoji: "❤️", text: "The mist confirms: my love for you is unconditional." },
+        { emoji: "🙏", text: "The ball pleads: please forgive me." },
+      ],
+      final_message: "The crystal ball has always seen our love. I'm so sorry. You are everything to me, and I'll never stop trying.",
+    },
+    date: {
+      hook_title: "✦ A Vision of Honesty ✦",
+      title_prefix: "To someone I care about",
+      nodes: [
+        { emoji: "😞", text: "The crystal reveals: I didn't mean to make you feel that way." },
+        { emoji: "💫", text: "The visions confirm: you deserve kindness and care." },
+        { emoji: "🌸", text: "The mist whispers: I hope we can move forward." },
+        { emoji: "🙏", text: "The ball knows: I am genuinely sorry." },
+      ],
+      final_message: "The crystal ball sees your worth. I'm sorry — I hope you'll give me a chance to make it right.",
+    },
+  },
+  anniversary: {
+    friend: {
+      hook_title: "✦ The Ball Sees Years of Magic ✦",
+      title_prefix: "To my ride-or-die",
+      nodes: [
+        { emoji: "🌱", text: "The crystal reveals: look how far we've come together." },
+        { emoji: "🤝", text: "The visions confirm: still the most dependable person I know." },
+        { emoji: "🎉", text: "The mist shows: years of memories and counting." },
+        { emoji: "💛", text: "The ball decrees: here's to many more adventures." },
+      ],
+      final_message: "The crystal ball always knew our friendship would stand the test of time. Happy Anniversary — so grateful for you!",
+    },
+    partner: {
+      hook_title: "✦ A Vision of Forever ✦",
+      title_prefix: "To the love of my life",
+      nodes: [
+        { emoji: "💖", text: "The crystal whispers: every day with you is a gift." },
+        { emoji: "🌙", text: "The visions reveal: home is my favourite feeling — and you're it." },
+        { emoji: "🎉", text: "The mist confirms: celebrating us, always." },
+        { emoji: "🚀", text: "The ball sees: so many more adventures still ahead of us." },
+      ],
+      final_message: "The crystal ball always knew we were written in the stars. Happy Anniversary, my love — today, tomorrow, and always.",
+    },
+    spouse: {
+      hook_title: "✦ The Crystal Sees Our Story ✦",
+      title_prefix: "To my forever person",
+      nodes: [
+        { emoji: "💍", text: "The crystal glows: the best yes I ever said." },
+        { emoji: "🌹", text: "The visions show: more in love with you every single day." },
+        { emoji: "🏡", text: "The mist reveals: every home is paradise with you." },
+        { emoji: "🌌", text: "The ball knows: you are my whole universe." },
+      ],
+      final_message: "The crystal ball has seen our whole story — and it's the most beautiful one it's ever shown. Happy Anniversary.",
+    },
+    date: {
+      hook_title: "✦ The Mist Shows Something Beautiful ✦",
+      title_prefix: "Here's to you and me",
+      nodes: [
+        { emoji: "🦋", text: "The crystal sees: still getting butterflies with you." },
+        { emoji: "😊", text: "The visions confirm: you make everything more fun." },
+        { emoji: "✨", text: "The mist reveals: something magical about what we have." },
+        { emoji: "🥂", text: "The ball whispers: cheers to whatever this beautiful thing is." },
+      ],
+      final_message: "The crystal ball saw us coming. Here's to us — I'm so happy we found each other.",
+    },
+  },
+  feel_good: {
+    friend: {
+      hook_title: "✦ The Crystal Sees a Star ✦",
+      title_prefix: "Hey you — yes, YOU",
+      nodes: [
+        { emoji: "🌟", text: "The crystal confirms: you are genuinely one of a kind." },
+        { emoji: "💪", text: "The visions reveal: tougher and stronger than you know." },
+        { emoji: "🌻", text: "The mist is clear: the world is better with you in it." },
+        { emoji: "✨", text: "The ball sends: all the good vibes, straight to you." },
+      ],
+      final_message: "The crystal ball has spoken — you're incredible. Keep going. You've absolutely got this!",
+    },
+    partner: {
+      hook_title: "✦ A Vision of You ✦",
+      title_prefix: "To my sunshine",
+      nodes: [
+        { emoji: "🌈", text: "The crystal sees: you brighten even the greyest days." },
+        { emoji: "💖", text: "The visions confirm: I see how hard you work, every day." },
+        { emoji: "🫂", text: "The mist reveals: I'm here for you — always." },
+        { emoji: "🌟", text: "The ball decrees: you deserve all the good things." },
+      ],
+      final_message: "The crystal ball already knew — you're doing amazingly. I'm so proud of you.",
+    },
+    spouse: {
+      hook_title: "✦ The Ball Reveals Pure Magic ✦",
+      title_prefix: "To my person",
+      nodes: [
+        { emoji: "🏡", text: "The crystal whispers: coming home to you resets everything." },
+        { emoji: "💛", text: "The visions confirm: you make even hard days beautiful." },
+        { emoji: "🌙", text: "The mist shows: I love who we are together." },
+        { emoji: "✨", text: "The ball declares: you are extraordinary." },
+      ],
+      final_message: "The crystal ball has always seen your worth. Just a reminder — you matter more than words can say. I love you.",
+    },
+    date: {
+      hook_title: "✦ The Crystal Glows for Someone Special ✦",
+      title_prefix: "For someone I think about",
+      nodes: [
+        { emoji: "😊", text: "The crystal sees: you have the most amazing smile." },
+        { emoji: "🦋", text: "The visions reveal: you make everything feel lighter." },
+        { emoji: "🌸", text: "The mist confirms: just a little something to make you smile." },
+        { emoji: "💫", text: "The ball knows: you deserve every good thing coming your way." },
+      ],
+      final_message: "The crystal ball agrees — you deserve to feel amazing today. Sending all the good vibes your way!",
+    },
+  },
+  congratulations: {
+    friend: {
+      hook_title: "✦ The Ball Predicted Your Success ✦",
+      title_prefix: "Look at you go!",
+      nodes: [
+        { emoji: "🏆", text: "The crystal saw it: you absolutely crushed it." },
+        { emoji: "🎊", text: "The visions confirm: I always knew you had it in you." },
+        { emoji: "🥂", text: "The mist declares: time to celebrate — big time." },
+        { emoji: "🔥", text: "The ball whispers: honestly? Not even surprised." },
+      ],
+      final_message: "The crystal ball predicted this all along. Congratulations — I'm SO proud of you! You worked hard and deserve every bit of it!",
+    },
+    partner: {
+      hook_title: "✦ The Crystal Knew All Along ✦",
+      title_prefix: "To the most capable person I know",
+      nodes: [
+        { emoji: "🌟", text: "The crystal always knew: you'd make it here." },
+        { emoji: "💪", text: "The visions confirm: your hard work is finally paying off." },
+        { emoji: "🎊", text: "The mist reveals: this is only the beginning." },
+        { emoji: "💖", text: "The ball glows: so incredibly proud of you." },
+      ],
+      final_message: "The crystal ball has always seen your potential. Congratulations, love! Watching you achieve your dreams is the most beautiful thing.",
+    },
+    spouse: {
+      hook_title: "✦ A Vision of Triumph ✦",
+      title_prefix: "My person — what a star!",
+      nodes: [
+        { emoji: "🏆", text: "The crystal confirms: you made it look easy — it wasn't." },
+        { emoji: "💫", text: "The visions reveal: I've watched you work so hard for this." },
+        { emoji: "🎉", text: "The mist declares: today is entirely YOUR day." },
+        { emoji: "❤️", text: "The ball knows: I'm your biggest fan, always and forever." },
+      ],
+      final_message: "The crystal ball always saw this moment coming. Congratulations! I've never been more proud to be by your side.",
+    },
+    date: {
+      hook_title: "✦ The Stars Saw This Coming ✦",
+      title_prefix: "Celebrating you!",
+      nodes: [
+        { emoji: "🎊", text: "The crystal announces: this is such incredible news!" },
+        { emoji: "🌟", text: "The visions confirm: you should feel really, really good about this." },
+        { emoji: "🥂", text: "The mist declares: a proper celebration is absolutely in order." },
+        { emoji: "✨", text: "The ball glows: genuinely so happy for you." },
+      ],
+      final_message: "The crystal ball saw this achievement in your stars. Congratulations — you should be so proud of yourself!",
+    },
+  },
+};
+
+export function getCrystalTemplate(occasion: string, relation: string): CrystalTemplate | null {
+  return CRYSTAL[occasion]?.[relation] ?? CRYSTAL[occasion]?.["friend"] ?? null;
+}
+
+export function getCrystalFallback(occasion: string): CrystalTemplate {
+  const oc = CRYSTAL[occasion];
+  if (oc) return Object.values(oc)[0];
+  return {
+    hook_title: "✦ The Crystal Ball Speaks ✦",
+    title_prefix: "A vision just for you",
+    nodes: [
+      { emoji: "🌟", text: "The crystal sees: you light up the world." },
+      { emoji: "💖", text: "The visions confirm: truly one of a kind." },
+      { emoji: "✨", text: "The mist reveals: the universe conspired to make you." },
+      { emoji: "🔮", text: "The ball whispers: limitless — always." },
+    ],
+    final_message: "The crystal ball has always seen your magic. Wishing you all the happiness in the universe.",
+  };
+}
+
 export function getVinylTemplate(occasion: string, relation: string): VinylTemplate | null {
   return VINYL[occasion]?.[relation] ?? VINYL[occasion]?.["friend"] ?? null;
 }

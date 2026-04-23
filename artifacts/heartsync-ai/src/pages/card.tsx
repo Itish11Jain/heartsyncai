@@ -6,6 +6,7 @@ import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import CosmicCard from "@/pages/cosmic";
 import VinylCard from "@/pages/vinyl";
+import CrystalCard from "@/pages/crystal";
 
 /* ─────────────────────────── helpers ──────────────────────────── */
 
@@ -776,6 +777,8 @@ export default function Card() {
   if (params.get("template") === "cosmic") return <CosmicCard />;
   /* Route to Vinyl template if requested */
   if (params.get("template") === "vinyl") return <VinylCard />;
+  /* Route to Crystal Ball template if requested */
+  if (params.get("template") === "crystal") return <CrystalCard />;
 
   const recipientName = params.get("to") || "Friend";
   const occasion = params.get("occasion") || "thank_you";

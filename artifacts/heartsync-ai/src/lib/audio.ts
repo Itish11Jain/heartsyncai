@@ -5,10 +5,11 @@
  * a setInterval tick fires every 150 ms and schedules oscillator notes
  * up to 0.40 s ahead, producing seamless looping melodies with no gaps.
  *
- * Three distinct melodies:
+ * Four distinct melodies:
  *   vinyl    — bright, skippy C-major at 116 BPM  (~8.3 s loop)
  *   cosmic   — sparkling pentatonic at 104 BPM    (~7.4 s loop)
  *   envelope — joyful waltz at 112 BPM            (~12.9 s loop)
+ *   crystal  — ethereal A-minor bell tones at 88 BPM (~10.2 s loop)
  *
  * Interaction sounds have been intentionally removed — haptics only.
  */
@@ -42,9 +43,10 @@ export const haptic = {
 
 const N = {
   G2: 98.00,  A2: 110.00, C3: 130.81, G3: 196.00,
+  A3: 220.00,
   C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.00, A4: 440.00,
   C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00,
-  B5: 987.77,
+  B4: 493.88,  B5: 987.77,
   C6: 1046.50, D6: 1174.66, E6: 1318.51,
 };
 
@@ -118,6 +120,7 @@ function _musicTick() {
    VINYL  : 116 BPM  — Q=0.517s  E=0.259s  H=1.034s
    COSMIC : 104 BPM  — Q=0.577s  E=0.288s  H=1.154s
    ENVELOPE: 112 BPM waltz — Q=0.536s  H=1.071s
+   CRYSTAL : 88 BPM  — Q=0.682s  E=0.341s  H=1.364s
 ─────────────────────────────────────────────────────────────── */
 
 /* VINYL — warm, skippy major melody (116 BPM, ~8.3 s loop)
@@ -204,8 +207,34 @@ const ENVELOPE_SEQ: MStep[] = [
   { freq: N.C4, dur: He },
 ];
 
+/* CRYSTAL — ethereal A-minor pentatonic bell tones (88 BPM, ~10.2 s loop)
+   Triangle wave for a soft, glass-bell timbre. Bass: A2→E4→A3.
+   Phrase A: A4·C5·E5·A5·· | Phrase B: G5·E5·C5·A4·· | Phrase C: E5·A4·B4·C5·· | Phrase D: A4·E4·A3·· */
+const Qk = 0.682, Ek = 0.341, Hk = 1.364;
+const CRYSTAL_SEQ: MStep[] = [
+  // Phrase A — ascent
+  { freq: N.A4, dur: Ek, wave: "triangle", gain: 0.09, bass: N.A2, bassDur: Hk * 0.85 },
+  { freq: N.C5, dur: Ek, wave: "triangle", gain: 0.09 },
+  { freq: N.E5, dur: Qk, wave: "triangle", gain: 0.09 },
+  { freq: N.A5, dur: Hk, wave: "triangle", gain: 0.07 },
+  // Phrase B — descent
+  { freq: N.G5, dur: Ek, wave: "triangle", gain: 0.08, bass: N.A3, bassDur: Hk * 0.85 },
+  { freq: N.E5, dur: Ek, wave: "triangle", gain: 0.08 },
+  { freq: N.C5, dur: Qk, wave: "triangle", gain: 0.09 },
+  { freq: N.A4, dur: Hk, wave: "triangle", gain: 0.09 },
+  // Phrase C — inner turn
+  { freq: N.E5, dur: Ek, wave: "triangle", gain: 0.09, bass: N.A2, bassDur: Hk * 0.85 },
+  { freq: N.A4, dur: Ek, wave: "triangle", gain: 0.09 },
+  { freq: N.B4, dur: Ek, wave: "triangle", gain: 0.08 },
+  { freq: N.C5, dur: Hk, wave: "triangle", gain: 0.09 },
+  // Phrase D — resolve home
+  { freq: N.A4, dur: Ek, wave: "triangle", gain: 0.09, bass: N.A3, bassDur: Hk * 0.85 },
+  { freq: N.E4, dur: Ek, wave: "triangle", gain: 0.07 },
+  { freq: N.A3, dur: Hk, wave: "triangle", gain: 0.06 },
+];
+
 export const music = {
-  start(template: "vinyl" | "cosmic" | "envelope"): void {
+  start(template: "vinyl" | "cosmic" | "envelope" | "crystal"): void {
     music.stop();
     try {
       const ac = getCtx();
@@ -218,6 +247,7 @@ export const music = {
       const seq =
         template === "vinyl"    ? VINYL_SEQ    :
         template === "cosmic"   ? COSMIC_SEQ   :
+        template === "crystal"  ? CRYSTAL_SEQ  :
                                   ENVELOPE_SEQ;
 
       _music = {
@@ -290,5 +320,17 @@ export const envelope = {
   open()       { haptic.medium();    },
   orbTap()     { haptic.light();     },
   finale()     { haptic.celebrate(); },
+  copy()       { haptic.click();     },
+};
+
+/* ══════════════════════════════════════════════════════════════
+   CRYSTAL  — haptics only
+   ══════════════════════════════════════════════════════════════ */
+
+export const crystal = {
+  rubPulse()   { haptic.light();     },
+  reveal()     { haptic.strong();    },
+  visionTap()  { haptic.light();     },
+  shatter()    { haptic.celebrate(); },
   copy()       { haptic.click();     },
 };
