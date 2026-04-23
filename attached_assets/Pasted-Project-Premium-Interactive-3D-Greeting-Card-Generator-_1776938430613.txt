@@ -1,0 +1,125 @@
+Project: Premium Interactive 3D Greeting Card Generator
+
+1. Project Overview
+
+We are building a premium, interactive web-based greeting card application. It features a physics-based 3D unboxing sequence, circular interactive UI elements, particle explosion effects, and a cinematic final message reveal.
+
+The app must have two sides:
+
+The Configurator: A simple form where a user selects an Occasion, a Relationship, inputs a Name, and optionally edits the final message. It generates a unique link.
+
+The Experience: The final interactive card that the recipient views.
+
+2. The Recipient Experience (Animation Sequence)
+
+The core experience is divided into four distinct phases.
+
+Phase 1: The Sealed Envelope
+
+Visual: A dark, luxurious 3D CSS envelope sits in the center of the screen.
+
+Interaction: A "Slide to Open" drag-slider sits at the bottom.
+
+Action: The user must physically drag the slider to the right to break the seal.
+
+Phase 2: The Core Reveal & The Circle
+
+Action: Upon unlocking, the envelope flap rotates open (3D X-axis). The central card slides up and scales up.
+
+The Circle Math: 4 to 6 "Hobby/Trait Orbs" spawn and animate into a perfect circle around the central card.
+
+Implementation Note: Use trigonometry (x = centerX + radius * cos(angle), y = centerY + radius * sin(angle)) to dynamically position the orbs based on screen size.
+
+Phase 3: The Interaction
+
+Action: The recipient clicks the orbs in the circle.
+
+Effect: Clicking an orb reveals a stylized tooltip containing a generic or personalized compliment.
+
+Particle Effect: A mini-burst of the orb's specific emoji explodes from the exact X/Y coordinate of the clicked orb.
+
+State Tracking: The system tracks how many unique orbs have been clicked.
+
+Phase 4: The Grand Finale
+
+Trigger: Once all orbs have been clicked (or a "Reveal Message" button appears and is clicked).
+
+The Blow Up: The circular orbs dramatically explode outward off the screen using a stagger animation.
+
+The Final Message: The central card flips 180 degrees (or fades into a glowing state), and the "Final Message" typographically animates onto the screen with a premium, glowing gold-foil effect, accompanied by a massive screen-wide confetti burst.
+
+3. Templatization & Data Architecture
+
+The application must fall back on "Generic Statements" if the sender doesn't provide custom ones. Here is the JSON schema structure the app should use to populate the orbs and messages.
+
+{
+  "templates": {
+    "thank_you": {
+      "friend": {
+        "title_prefix": "To the absolute legend",
+        "orbs": [
+          {"emoji": "🎮", "text": "Always got my back when it counts."},
+          {"emoji": "🍕", "text": "The absolute best late-night vibes."},
+          {"emoji": "💡", "text": "Top-tier advice and brilliant ideas."},
+          {"emoji": "🔥", "text": "Bringing the best energy to the room."}
+        ],
+        "final_message": "Thank you for being an amazing friend. I truly appreciate you!"
+      },
+      "partner": {
+        "title_prefix": "To my favorite person",
+        "orbs": [
+          {"emoji": "💖", "text": "You make every single day better."},
+          {"emoji": "☕", "text": "Thanks for keeping me sane and caffeinated."},
+          {"emoji": "🫂", "text": "My ultimate safe space."},
+          {"emoji": "✨", "text": "You are literal magic."}
+        ],
+        "final_message": "Thank you for everything you do. I'm so lucky to have you."
+      }
+    },
+    "sorry": {
+      "friend": {
+        "title_prefix": "I messed up",
+        "orbs": [
+          {"emoji": "🌧️", "text": "I feel terrible about what happened."},
+          {"emoji": "🥺", "text": "I value our friendship too much to lose it."},
+          {"emoji": "🤝", "text": "I want to make things right."},
+          {"emoji": "⏳", "text": "Take your time, but know I'm sorry."}
+        ],
+        "final_message": "I am truly sorry. Let's move past this when you're ready."
+      },
+      "partner": {
+        "title_prefix": "To my everything",
+        "orbs": [
+          {"emoji": "💔", "text": "I hate fighting with you."},
+          {"emoji": "😔", "text": "I was wrong, and I own that."},
+          {"emoji": "❤️‍🩹", "text": "You mean the world to me."},
+          {"emoji": "🌹", "text": "Let me make it up to you."}
+        ],
+        "final_message": "I am so deeply sorry. I love you and I promise to do better."
+      }
+    },
+    "feel_good": {
+      "generic": {
+        "title_prefix": "Just a reminder",
+        "orbs": [
+          {"emoji": "🌟", "text": "You are a literal star."},
+          {"emoji": "👑", "text": "Don't let your crown slip."},
+          {"emoji": "💪", "text": "You are stronger than you know."},
+          {"emoji": "🚀", "text": "You are destined for great things."}
+        ],
+        "final_message": "Never forget how incredibly awesome you are. Keep shining!"
+      }
+    }
+  }
+}
+
+
+4. Technical Stack Requirements
+
+Framework: React (Next.js recommended for handling dynamic routing/shareable links, e.g., /?to=Rahul&template=thank_you_friend).
+
+Styling: Tailwind CSS.
+
+Animations: Framer Motion or GSAP (Crucial for the circular math, stagger effects, and the final explosion sequence).
+
+Canvas: HTML5 Canvas for the high-performance particle engine (confetti and emoji bursts).
