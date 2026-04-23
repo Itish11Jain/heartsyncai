@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
-import { envelope } from "@/lib/audio";
+import { envelope, music } from "@/lib/audio";
 import CosmicCard from "@/pages/cosmic";
 import VinylCard from "@/pages/vinyl";
 
@@ -819,6 +819,12 @@ export default function Card() {
   const particlesRef = useRef<Particle[]>([]);
   const confettiRef = useRef<Particle[]>([]);
   const rafRef = useRef<number>(0);
+
+  /* ── background music ── */
+  useEffect(() => {
+    music.start("envelope");
+    return () => { music.stop(); };
+  }, []);
 
   useEffect(() => {
     const update = () => {

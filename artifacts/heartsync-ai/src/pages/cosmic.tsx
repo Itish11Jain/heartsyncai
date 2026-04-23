@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
-import { cosmic } from "@/lib/audio";
+import { cosmic, music } from "@/lib/audio";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -127,6 +127,12 @@ export default function CosmicCard() {
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStartRef = useRef<number>(0);
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── background music ── */
+  useEffect(() => {
+    music.start("cosmic");
+    return () => { music.stop(); };
+  }, []);
 
   /* ── canvas setup ── */
   useEffect(() => {

@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   getVinylTemplate, getVinylFallback,
 } from "@/lib/card-templates";
-import { vinyl } from "@/lib/audio";
+import { vinyl, music } from "@/lib/audio";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -164,6 +164,12 @@ export default function VinylCard() {
   const eqIntensityRef = useRef(1);
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eqRingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /* ── background music ── */
+  useEffect(() => {
+    music.start("vinyl");
+    return () => { music.stop(); };
+  }, []);
 
   /* ── sync refs ── */
   useEffect(() => { phaseRef.current = phase; }, [phase]);
