@@ -65,6 +65,7 @@ export default function Moments() {
   const [momentsLimit, setMomentsLimit] = useState(3);
 
   const cardRef = useRef<HTMLDivElement>(null);
+  const staticCardRef = useRef<HTMLDivElement>(null);
 
   function goTo(next: 1 | 2 | 3 | 4, direction: number) {
     setDir(direction);
@@ -114,10 +115,11 @@ export default function Moments() {
   }
 
   const handleDownload = useCallback(async () => {
-    if (!cardRef.current) return;
+    const target = staticCardRef.current ?? cardRef.current;
+    if (!target) return;
     setIsDownloading(true);
     try {
-      const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
+      const dataUrl = await toPng(target, { cacheBust: true, pixelRatio: 2 });
       const link = document.createElement("a");
       link.download = `heartsync-moment-${recipientName.toLowerCase().replace(/\s+/g, "-")}.png`;
       link.href = dataUrl;
@@ -359,19 +361,30 @@ export default function Moments() {
 
                     {selectedTemplate && (
                       <div className="flex justify-center mb-6">
-                        <motion.div
-                          key={selectedTemplate}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        >
+                        <div style={{ perspective: "900px" }}>
+                          <motion.div
+                            key={selectedTemplate}
+                            initial={{ rotateY: 90, opacity: 0 }}
+                            animate={{ rotateY: 0, opacity: 1 }}
+                            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+                          >
+                            <CardTemplate
+                              ref={cardRef}
+                              templateId={selectedTemplate}
+                              recipientName={recipientName}
+                              message={generatedMessage}
+                            />
+                          </motion.div>
+                        </div>
+                        <div style={{ position: "absolute", visibility: "hidden", pointerEvents: "none", top: 0, left: 0, overflow: "hidden", width: 0, height: 0 }}>
                           <CardTemplate
-                            ref={cardRef}
+                            ref={staticCardRef}
                             templateId={selectedTemplate}
                             recipientName={recipientName}
                             message={generatedMessage}
+                            static
                           />
-                        </motion.div>
+                        </div>
                       </div>
                     )}
 
