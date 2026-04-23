@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 const STEPS = [
   { num: "01", title: "Pick who it's for", desc: "Your partner, friend, date, or spouse. Tell us the relationship." },
   { num: "02", title: "Choose an occasion", desc: "I love you, sorry, thank you, or just to make them smile." },
-  { num: "03", title: "Your card is ready", desc: "AI writes a heartfelt message. Pick a style. Send or download." },
+  { num: "03", title: "Your card is ready", desc: "We craft a heartfelt message for you. Pick a style. Send or download." },
 ];
 
 const TESTIMONIALS = [
@@ -138,12 +138,12 @@ export default function HomeRedesign() {
               Send love in<br />a card.{" "}
               <span style={{ WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
                 backgroundImage: "linear-gradient(135deg, #f472b6 0%, #fb7185 50%, #e879f9 100%)" }}>
-                Written by AI.
+                Made for them.
               </span>
             </h1>
 
             <p className="text-base text-white/50 mb-10 leading-relaxed max-w-md">
-              Create a heartfelt, personalised greeting card for your partner, friend, or date. AI writes the perfect message. You pick the style. Done in 60 seconds.
+              Create a heartfelt, personalised greeting card for your partner, friend, or date. We write the perfect message. You pick the style. Done in 60 seconds.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-10">
@@ -224,7 +224,7 @@ export default function HomeRedesign() {
         >
           <p className="text-white/25 text-sm mb-3">Also from HeartSync</p>
           <p className="text-white/45 text-sm mb-5 max-w-md mx-auto">
-            Going on a date? Get an AI-written guide — conversation starters, deep questions, and confidence tips. First guide free.
+            Going on a date? We put together a personalised guide for you — conversation starters, the right questions, and confidence tips. First guide free.
           </p>
           <button className="inline-flex items-center gap-2 text-sm font-medium rounded-full px-5 py-2.5 border border-white/10 bg-white/5 text-white/55 hover:text-white hover:bg-white/10 transition-all">
             Try the Date Guide

@@ -8,7 +8,7 @@ import { authStore } from "@/lib/auth-store";
 const STEPS = [
   { num: "01", title: "Pick who it's for", desc: "Your partner, friend, date, or spouse. Tell us the relationship." },
   { num: "02", title: "Choose an occasion", desc: "I love you, sorry, thank you, or just to make them smile." },
-  { num: "03", title: "Your card is ready", desc: "AI writes a heartfelt message. Pick a style. Send or download." },
+  { num: "03", title: "Your card is ready", desc: "We craft a heartfelt message for you. Pick a style. Send or download." },
 ];
 
 const TESTIMONIALS = [
@@ -69,7 +69,7 @@ function CardIllustration() {
               </div>
               <div className="text-right">
                 <p className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: "rgba(244,114,182,0.5)" }}>HeartSync</p>
-                <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>AI Card</p>
+                <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>HeartSync</p>
               </div>
             </div>
             <div className="flex-1 flex flex-col justify-center">
@@ -119,7 +119,7 @@ function CardIllustration() {
 
 export default function Home() {
   const [isLoggedIn] = useState(() => authStore.isLoggedIn);
-  const guideCta = isLoggedIn ? "/generate" : "/preview";
+  const guideCta = "/date-guide";
 
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
@@ -168,12 +168,12 @@ export default function Home() {
             <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-5 text-white">
               Send love in<br />a card.{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-pink-400 to-secondary">
-                Written by AI.
+                Made for them.
               </span>
             </h1>
 
             <p className="text-base text-white/50 mb-10 leading-relaxed max-w-md">
-              Create a heartfelt, personalised greeting card for your partner, friend, or date. AI writes the perfect message. You pick the style. Done in 60 seconds.
+              Create a heartfelt, personalised greeting card for your partner, friend, or date. We write the perfect message. You pick the style. Done in 60 seconds.
             </p>
 
             <div className="mb-10">
@@ -268,7 +268,7 @@ export default function Home() {
         >
           <p className="text-white/25 text-sm mb-2">Also from HeartSync</p>
           <p className="text-white/40 text-sm mb-5 max-w-md mx-auto leading-relaxed">
-            Going on a date? Get an AI guide — conversation starters, the right questions, and confidence tips. First guide free.
+            Going on a date? We put together a personalised guide for you — conversation starters, the right questions, and confidence tips. First guide free.
           </p>
           <Button asChild variant="ghost" className="rounded-full border border-white/10 bg-white/5 text-white/50 hover:text-white hover:bg-white/10 text-sm px-5 h-10">
             <Link href={guideCta} className="flex items-center gap-2">
