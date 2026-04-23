@@ -34,6 +34,9 @@ A premium relationship intelligence web app for India. Users describe a first-da
 - `/` — Landing page
 - `/generate` — Auth gate → credit check → date context form (or paywall if credits = 0)
 - `/report` — Interactive tabbed report (all 4 sections fully unlocked)
+- `/moments` — AI greeting card generator (freemium: 2 free, then ₹50/10 pack)
+- `/send` — 3D Card Builder: 3-step wizard (occasion → relation → name) → generates shareable link
+- `/card?to=&occasion=&relation=&msg=` — Premium 3D Card Recipient Experience (4-phase animation)
 
 ## Auth Flow
 

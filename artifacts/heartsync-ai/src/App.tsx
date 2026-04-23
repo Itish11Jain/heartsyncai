@@ -12,6 +12,8 @@ import Terms from "@/pages/terms";
 import History from "@/pages/history";
 import Moments from "@/pages/moments";
 import DateGuide from "@/pages/date-guide";
+import Send from "@/pages/send";
+import CardExperience from "@/pages/card";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/history" component={History} />
       <Route path="/moments" component={Moments} />
+      <Route path="/send" component={Send} />
+      <Route path="/card" component={CardExperience} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,0 +1,121 @@
+Product Requirements Document (PRD)
+
+Project: Premium Interactive 3D Greeting Card Generator
+
+1. Project Overview
+
+We are building a premium, mobile-responsive, interactive web-based greeting card application. It features a physics-based 3D unboxing sequence, circular interactive UI elements, high-performance particle explosion effects, and a cinematic final message reveal.
+
+The app must have two primary sides:
+
+The Configurator: A simple form where a user selects an Occasion, a Relationship, inputs a Name, and optionally edits the final message. It generates a unique shareable link (e.g., /?to=Rahul&template=thank_you_friend).
+
+The Experience: The final interactive card that the recipient views.
+
+2. The Recipient Experience (Animation Sequence)
+
+The core experience is strictly divided into four distinct phases. Note: Smooth transitions between these phases are critical.
+
+Phase 1: The Hook & The Envelope
+
+Visuals: * A pulsating, golden "✨ A Surprise For You! ✨" text sits at the top of the screen to build anticipation.
+
+A luxurious, 3D CSS Golden envelope sits in the center of the screen against a dark, ambient radial-gradient background.
+
+Interaction: A "Slide to unlock" drag-slider sits at the bottom. The user must physically drag the slider to the right to break the seal.
+
+Phase 2: The Unboxing & The Orbs (No Central Card)
+
+Action: Upon unlocking, the slider and "Surprise" text fade out. The envelope's wax seal disappears, the flap rotates open (3D X-axis), and the entire envelope drops down off-screen and fades out.
+
+The Circle Math: Simultaneously, 4 to 6 "Hobby/Trait Orbs" (containing emojis) spawn and animate into a tight, perfect circle in the center of the screen.
+
+Implementation Note: Use trigonometry (x = centerX + radius * cos(angle)) to dynamically position the orbs based on screen size.
+
+Progress UI: A simple text prompt appears at the bottom: "Tap the orbs! (0 / X)".
+
+Phase 3: The Interaction
+
+Action: The recipient clicks the floating orbs.
+
+Effects on Click: 1. The clicked orb gets marked (e.g., grayscaled/lowered opacity) and stops floating.
+2. Particle Burst: A mini-burst of that orb's specific emoji explodes from the exact X/Y coordinate of the clicked orb using HTML5 Canvas.
+3. Centered Tooltip: A stylized tooltip containing a personalized compliment pops up in the exact center of the screen.
+4. Z-Index Layering: The tooltip must have a lower z-index than the orbs, so the floating orbs frame the edges of the message card without being cut off.
+
+Phase 4: The Grand Finale
+
+Trigger: Once all orbs have been clicked, wait ~1.5 seconds.
+
+The Blow Up: The circular orbs dramatically explode outward, flying completely off the screen radially.
+
+The Final Card: A beautiful, glassmorphism "Final Card" scales and fades into the center of the screen. It displays a title prefix, the Recipient's Name, a bouncy "🎉" emoji, and the final personalized message. (Do not include cheesy "Grand Reveal" headers).
+
+Confetti: A massive screen-wide gold, silver, and white confetti burst fires from the center and rains down from the top.
+
+3. Technical Specifications
+
+Framework: React (Next.js highly recommended for URL parameter parsing and SEO).
+
+Styling: Tailwind CSS.
+
+Responsiveness: Must be 100% mobile-friendly. Use CSS min() functions (e.g., width: min(320px, 85vw)) to ensure the envelope, cards, and slider scale perfectly on small screens like iPhone SE without overflowing.
+
+Animations: Framer Motion (or GSAP). Crucial for handling the trigonometry of placing orbs in a circle, stagger effects, and the final explosion sequence.
+
+Canvas Engine: Native HTML5 Canvas for the high-performance particle engine (handling both elongated metallic confetti and emoji bursts).
+
+4. Data Architecture (Templatization)
+
+The app dynamically populates based on this JSON structure. If the sender doesn't provide custom orb text, it falls back to these defaults.
+
+{
+  "templates": {
+    "thank_you": {
+      "friend": {
+        "title_prefix": "To the absolute legend",
+        "orbs": [
+          {"emoji": "🎮", "text": "Always got my back when it counts."},
+          {"emoji": "🍕", "text": "The absolute best late-night vibes."},
+          {"emoji": "💡", "text": "Top-tier advice and brilliant ideas."},
+          {"emoji": "🔥", "text": "Bringing the best energy to the room."}
+        ],
+        "final_message": "Thank you for being an amazing friend. I truly appreciate you!"
+      },
+      "partner": {
+        "title_prefix": "To my favorite person",
+        "orbs": [
+          {"emoji": "💖", "text": "You make every single day better."},
+          {"emoji": "☕", "text": "Thanks for keeping me sane and caffeinated."},
+          {"emoji": "🫂", "text": "My ultimate safe space."},
+          {"emoji": "✨", "text": "You are literal magic."}
+        ],
+        "final_message": "Thank you for everything you do. I'm so lucky to have you."
+      }
+    },
+    "birthday": {
+      "friend": {
+        "title_prefix": "Another trip around the sun",
+        "orbs": [
+          {"emoji": "🎂", "text": "Time to eat all the cake."},
+          {"emoji": "🥳", "text": "Ready to celebrate you."},
+          {"emoji": "🎁", "text": "You deserve the absolute best."},
+          {"emoji": "🥂", "text": "Cheers to another amazing year!"}
+        ],
+        "final_message": "Happy Birthday! Wishing you the most incredible year ahead!"
+      }
+    },
+    "sorry": {
+      "partner": {
+        "title_prefix": "To my everything",
+        "orbs": [
+          {"emoji": "💔", "text": "I hate fighting with you."},
+          {"emoji": "😔", "text": "I was wrong, and I own that."},
+          {"emoji": "❤️‍🩹", "text": "You mean the world to me."},
+          {"emoji": "🌹", "text": "Let me make it up to you."}
+        ],
+        "final_message": "I am so deeply sorry. I love you and I promise to do better."
+      }
+    }
+  }
+}

@@ -683,6 +683,23 @@ export default function Moments() {
                       </Button>
                     </div>
 
+                    {/* Share as 3D Card */}
+                    {purpose && relation && (
+                      <Link
+                        href={`/send?occasion=${purpose === "i_love_you" || purpose === "feel_good" ? "thank_you" : purpose}&relation=${relation}`}
+                      >
+                        <button className="w-full flex items-center justify-center gap-2 py-3 mb-1 rounded-xl text-sm font-semibold transition-all"
+                          style={{
+                            background: "linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.07))",
+                            border: "1.5px solid rgba(255,215,0,0.3)",
+                            color: "rgba(255,215,0,0.85)",
+                          }}
+                        >
+                          ✨ Share as 3D Card
+                        </button>
+                      </Link>
+                    )}
+
                     <button
                       onClick={handleMakeAnother}
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white/40 hover:text-white/70 text-sm transition-colors"
