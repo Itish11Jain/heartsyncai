@@ -51,8 +51,13 @@ export default function Send() {
   function pickTemplate(): string {
     const TEMPLATES = ["envelope", "cosmic", "vinyl"];
     const last = localStorage.getItem("hs_last_template");
-    const lastIdx = last ? TEMPLATES.indexOf(last) : -1;
-    const next = TEMPLATES[(lastIdx + 1) % TEMPLATES.length];
+    let next: string;
+    if (!last || !TEMPLATES.includes(last)) {
+      next = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+    } else {
+      const lastIdx = TEMPLATES.indexOf(last);
+      next = TEMPLATES[(lastIdx + 1) % TEMPLATES.length];
+    }
     localStorage.setItem("hs_last_template", next);
     return next;
   }

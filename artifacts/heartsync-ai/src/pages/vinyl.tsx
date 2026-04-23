@@ -1,109 +1,77 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { getVinylTemplate, getVinylFallback, type VinylTrack } from "@/lib/card-templates";
+import {
+  getVinylTemplate, getVinylFallback,
+  getCosmicTemplate, getCosmicFallback,
+} from "@/lib/card-templates";
 
-/* ─────────────────────────── types ───────────────────────────────────── */
+/* ─────────────────────────── types ──────────────────────────── */
 
 type VinylPhase = "hook" | "dropping" | "playing" | "sleeve";
 
-interface Note {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  opacity: number;
-  size: number;
-  char: string;
-  rotation: number;
-  spin: number;
-}
+interface EQRing { r: number; opacity: number; intensity: number; }
+interface BurstDot { x: number; y: number; vx: number; vy: number; r: number; opacity: number; decay: number; hue: number; }
+interface DustDot { x: number; y: number; vx: number; vy: number; r: number; opacity: number; hue: number; }
 
-interface Dust {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  opacity: number;
-  hue: number;
-}
-
-/* ─────────────────────────── helpers ─────────────────────────────────── */
+/* ─────────────────────────── helpers ────────────────────────── */
 
 function useQueryParams() {
   if (typeof window === "undefined") return new URLSearchParams();
   return new URLSearchParams(window.location.search);
 }
 
-const NOTES = ["♪", "♫", "♩", "♬", "𝄞"];
-let noteId = 0;
+const NOTE_CHARS = ["♪", "♫", "🎵", "♬"];
 
-/* ─────────────────────────── VinylRecord ────────────────────────────── */
+/* ─────────────────────────── VinylRecord ────────────────────── */
 
 function VinylRecord({ spinning, size = 220 }: { spinning: boolean; size?: number }) {
-  const s = size;
   return (
-    <div style={{ width: s, height: s, position: "relative", flexShrink: 0 }}>
-      {/* Outer glow */}
+    <div style={{ width: size, height: size, position: "relative", flexShrink: 0 }}>
       <div style={{
-        position: "absolute", inset: -8,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(184,118,42,0.18) 0%, transparent 70%)",
+        position: "absolute", inset: -8, borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(184,118,42,0.15) 0%, transparent 70%)",
         pointerEvents: "none",
       }} />
-      {/* Spinning record */}
       <motion.div
         animate={{ rotate: spinning ? 360 : 0 }}
         transition={spinning
           ? { duration: 2.8, repeat: Infinity, ease: "linear" }
-          : { duration: 0.6, ease: "easeOut" }
-        }
+          : { duration: 0.6, ease: "easeOut" }}
         style={{
-          width: s, height: s,
-          borderRadius: "50%",
+          width: size, height: size, borderRadius: "50%",
           background: "radial-gradient(circle at 50% 50%, #2A2018 0%, #1A1410 35%, #120E0A 55%, #0D0A07 75%, #1A1410 88%, #2A2018 100%)",
           position: "relative",
           boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.04)",
           overflow: "hidden",
         }}
       >
-        {/* Groove rings */}
-        {[0.32, 0.42, 0.52, 0.62, 0.72, 0.82, 0.90].map((r, i) => (
+        {[0.32, 0.44, 0.56, 0.68, 0.78, 0.88].map((r, i) => (
           <div key={i} style={{
             position: "absolute",
             top: `${50 - r * 50}%`, left: `${50 - r * 50}%`,
             right: `${50 - r * 50}%`, bottom: `${50 - r * 50}%`,
-            borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.04)",
+            borderRadius: "50%", border: "1px solid rgba(255,255,255,0.04)",
             pointerEvents: "none",
           }} />
         ))}
-        {/* Shine */}
         <div style={{
-          position: "absolute", top: "8%", left: "18%",
-          width: "28%", height: "14%",
-          borderRadius: "50%",
+          position: "absolute", top: "9%", left: "20%",
+          width: "26%", height: "12%", borderRadius: "50%",
           background: "radial-gradient(ellipse, rgba(255,255,255,0.07) 0%, transparent 100%)",
-          transform: "rotate(-30deg)",
-          pointerEvents: "none",
+          transform: "rotate(-30deg)", pointerEvents: "none",
         }} />
-        {/* Center label */}
         <div style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%,-50%)",
-          width: s * 0.28, height: s * 0.28,
-          borderRadius: "50%",
+          width: size * 0.27, height: size * 0.27, borderRadius: "50%",
           background: "radial-gradient(circle at 38% 32%, #D4924A 0%, #B8762A 45%, #8A5515 80%, #6B3F0D 100%)",
-          boxShadow: "inset 0 1px 4px rgba(255,200,100,0.25), inset 0 -1px 3px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.5)",
+          boxShadow: "inset 0 1px 4px rgba(255,200,100,0.22), inset 0 -1px 3px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.5)",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <div style={{
-            width: s * 0.06, height: s * 0.06,
-            borderRadius: "50%",
-            background: "#1A1410",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.8)",
+            width: size * 0.06, height: size * 0.06, borderRadius: "50%",
+            background: "#1A1410", boxShadow: "0 1px 3px rgba(0,0,0,0.8)",
           }} />
         </div>
       </motion.div>
@@ -111,32 +79,27 @@ function VinylRecord({ spinning, size = 220 }: { spinning: boolean; size?: numbe
   );
 }
 
-/* ─────────────────────────── Tonearm ────────────────────────────────── */
+/* ─────────────────────────── Tonearm ────────────────────────── */
 
 function Tonearm({ down }: { down: boolean }) {
   return (
     <motion.svg
       width={90} height={110}
       viewBox="0 0 90 110"
-      style={{ position: "absolute", top: -18, right: -12, zIndex: 4 }}
+      style={{
+        position: "absolute", top: -18, right: -12, zIndex: 4,
+        transformOrigin: "72px 18px",
+      }}
       animate={{ rotate: down ? 22 : 0 }}
-      transition={{ duration: 0.7, ease: "easeInOut" }}
-      transformOrigin="72px 18px"
+      transition={{ duration: 0.75, ease: "easeInOut" }}
     >
-      {/* Pivot base */}
       <circle cx={72} cy={18} r={7} fill="#C8832E" stroke="#A06010" strokeWidth={1.5} />
       <circle cx={72} cy={18} r={3.5} fill="#8A5515" />
-      {/* Arm */}
       <path
         d="M 70 22 Q 52 55, 28 90 L 22 98 L 18 94 L 24 86 Q 48 51 66 18"
-        fill="none"
-        stroke="url(#armGrad)"
-        strokeWidth={4}
-        strokeLinecap="round"
+        fill="none" stroke="url(#armGrad)" strokeWidth={4} strokeLinecap="round"
       />
-      {/* Headshell */}
       <rect x={14} y={90} width={16} height={7} rx={2} fill="#B8762A" stroke="#8A5515" strokeWidth={1} />
-      {/* Stylus needle */}
       <line x1={20} y1={97} x2={20} y2={104} stroke="#4A3C31" strokeWidth={1.5} strokeLinecap="round" />
       <defs>
         <linearGradient id="armGrad" x1="0" y1="0" x2="1" y2="0">
@@ -149,135 +112,7 @@ function Tonearm({ down }: { down: boolean }) {
   );
 }
 
-/* ─────────────────────────── EQBars ─────────────────────────────────── */
-
-function EQBars({ active }: { active: boolean }) {
-  const barCount = 7;
-  const heights = [0.45, 0.75, 0.55, 0.9, 0.65, 0.8, 0.5];
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 32 }}>
-      {Array.from({ length: barCount }, (_, i) => (
-        <motion.div
-          key={i}
-          animate={active ? {
-            height: [
-              `${heights[i] * 32}px`,
-              `${(0.2 + Math.random() * 0.8) * 32}px`,
-              `${heights[(i + 2) % barCount] * 32}px`,
-              `${heights[i] * 32}px`,
-            ],
-          } : { height: "4px" }}
-          transition={active ? {
-            duration: 0.5 + i * 0.07,
-            repeat: Infinity,
-            ease: "easeInOut",
-          } : { duration: 0.4 }}
-          style={{
-            width: 5,
-            borderRadius: 3,
-            background: active
-              ? `linear-gradient(to top, #B8762A, #D4A050, #E8C070)`
-              : "rgba(184,118,42,0.25)",
-            minHeight: 4,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ─────────────────────────── TrackRow ───────────────────────────────── */
-
-function TrackRow({
-  track, index, played, active, onPlay,
-}: {
-  track: VinylTrack;
-  index: number;
-  played: boolean;
-  active: boolean;
-  onPlay: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -16 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
-      onClick={onPlay}
-      style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "12px 16px",
-        borderRadius: 14,
-        background: active
-          ? "rgba(184,118,42,0.18)"
-          : played
-          ? "rgba(184,118,42,0.08)"
-          : "rgba(74,60,49,0.08)",
-        border: `1.5px solid ${active ? "rgba(184,118,42,0.5)" : played ? "rgba(184,118,42,0.25)" : "rgba(74,60,49,0.12)"}`,
-        cursor: "pointer",
-        transition: "all 0.25s",
-        userSelect: "none",
-      }}
-    >
-      {/* Track number */}
-      <div style={{
-        width: 28, height: 28, borderRadius: "50%",
-        background: played ? "rgba(184,118,42,0.25)" : "rgba(74,60,49,0.1)",
-        border: `1.5px solid ${played ? "rgba(184,118,42,0.5)" : "rgba(74,60,49,0.2)"}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, fontSize: 13, fontWeight: 700,
-        color: played ? "#B8762A" : "#8A7060",
-        fontFamily: "Georgia, serif",
-      }}>
-        {played ? (active ? "▶" : "✓") : String(index + 1).padStart(2, "0")}
-      </div>
-
-      {/* Title + text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 14, fontWeight: 700,
-          color: played ? "#4A3C31" : "#8A7060",
-          fontFamily: "Georgia, serif",
-          letterSpacing: "0.01em",
-        }}>
-          {track.title}
-        </div>
-        <AnimatePresence>
-          {active && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.35 }}
-              style={{ overflow: "hidden" }}
-            >
-              <div style={{
-                marginTop: 4,
-                fontSize: 13,
-                color: "#6B5040",
-                fontFamily: "'Segoe UI', system-ui, sans-serif",
-                lineHeight: 1.5,
-                fontStyle: "italic",
-              }}>
-                {track.text}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Emoji badge */}
-      <div style={{
-        fontSize: 20, flexShrink: 0,
-        opacity: played ? 1 : 0.35,
-        transition: "opacity 0.3s",
-      }}>
-        {track.emoji}
-      </div>
-    </motion.div>
-  );
-}
-
-/* ─────────────────────────── VinylCard (main) ───────────────────────── */
+/* ─────────────────────────── VinylCard ─────────────────────── */
 
 export default function VinylCard() {
   const params = useQueryParams();
@@ -293,6 +128,8 @@ export default function VinylCard() {
   const isPreview = params.get("preview") === "1";
 
   const tpl = getVinylTemplate(occasion, relation) ?? getVinylFallback(occasion);
+  const cosmicTpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
+  const titlePrefix = cosmicTpl.title_prefix;
   const finalMessage = customMsg ?? tpl.final_message;
 
   const senderShareUrl = (() => {
@@ -306,9 +143,11 @@ export default function VinylCard() {
   const [phase, setPhase] = useState<VinylPhase>(isPreview ? "sleeve" : "hook");
   const [spinning, setSpinning] = useState(false);
   const [tonearmDown, setTonearmDown] = useState(false);
-  const [playedTracks, setPlayedTracks] = useState<number[]>([]);
-  const [activeTrack, setActiveTrack] = useState<number | null>(null);
-  const [allPlayed, setAllPlayed] = useState(false);
+  const [tappedNotes, setTappedNotes] = useState<number[]>([]);
+  const [tooltip, setTooltip] = useState<{ emoji: string; text: string } | null>(null);
+  const [eqIntensity, setEqIntensity] = useState(1);
+  const [playerExiting, setPlayerExiting] = useState(false);
+  const [sleeveVisible, setSleeveVisible] = useState(isPreview);
   const [sleeveReady, setSleeveReady] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
@@ -316,20 +155,25 @@ export default function VinylCard() {
 
   /* ── canvas ── */
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const notesRef = useRef<Note[]>([]);
-  const dustRef = useRef<Dust[]>([]);
+  const eqRingsRef = useRef<EQRing[]>([]);
+  const burstRef = useRef<BurstDot[]>([]);
+  const dustRef = useRef<DustDot[]>([]);
+  const canvasModeRef = useRef<"ambient" | "golden">("ambient");
   const rafRef = useRef<number>(0);
   const phaseRef = useRef<VinylPhase>(isPreview ? "sleeve" : "hook");
+  const eqIntensityRef = useRef(1);
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const eqRingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /* keep phaseRef in sync */
+  /* ── sync refs ── */
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { eqIntensityRef.current = eqIntensity; }, [eqIntensity]);
 
-  /* set sleeveReady when phase hits sleeve (covers preview + normal flows) */
+  /* ── sleeve ready when phase hits sleeve ── */
   useEffect(() => {
-    if (phase === "sleeve") {
-      const t = setTimeout(() => setSleeveReady(true), 650);
-      return () => clearTimeout(t);
-    }
+    if (phase !== "sleeve") return;
+    const t = setTimeout(() => setSleeveReady(true), 700);
+    return () => clearTimeout(t);
   }, [phase]);
 
   /* ── clear native splash ── */
@@ -343,11 +187,31 @@ export default function VinylCard() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const onResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    const onResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  /* ── EQ ring spawner ── */
+  useEffect(() => {
+    if (phase !== "playing") {
+      if (eqRingTimerRef.current) { clearInterval(eqRingTimerRef.current); eqRingTimerRef.current = null; }
+      return;
+    }
+    eqRingTimerRef.current = setInterval(() => {
+      const intensity = eqIntensityRef.current;
+      for (let i = 0; i < intensity; i++) {
+        eqRingsRef.current.push({ r: 50 + i * 12, opacity: 0.7, intensity });
+      }
+    }, 480);
+    return () => {
+      if (eqRingTimerRef.current) clearInterval(eqRingTimerRef.current);
+    };
+  }, [phase]);
 
   /* ── canvas draw loop ── */
   const drawLoop = useCallback(() => {
@@ -358,62 +222,51 @@ export default function VinylCard() {
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
 
-    const active = phaseRef.current === "playing" || phaseRef.current === "sleeve";
-
-    /* spawn new notes */
-    if (Math.random() < (active ? 0.06 : 0.025)) {
-      notesRef.current.push({
-        id: noteId++,
-        x: Math.random() * W,
-        y: H + 10,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: -(0.6 + Math.random() * 1.2),
-        opacity: 0.55 + Math.random() * 0.35,
-        size: 12 + Math.random() * 14,
-        char: NOTES[Math.floor(Math.random() * NOTES.length)],
-        rotation: (Math.random() - 0.5) * 0.6,
-        spin: (Math.random() - 0.5) * 0.025,
-      });
+    /* EQ rings radiating from record center */
+    const cx = W / 2, cy = H * 0.42;
+    for (let i = eqRingsRef.current.length - 1; i >= 0; i--) {
+      const ring = eqRingsRef.current[i];
+      ring.r += 2.2;
+      ring.opacity -= 0.012;
+      if (ring.opacity <= 0 || ring.r > 220) { eqRingsRef.current.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(cx, cy, ring.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(184, 118, 42, ${ring.opacity})`;
+      ctx.lineWidth = 1.5 + ring.intensity * 0.4;
+      ctx.stroke();
     }
 
-    /* draw & update notes */
-    for (let i = notesRef.current.length - 1; i >= 0; i--) {
-      const n = notesRef.current[i];
-      n.x += n.vx; n.y += n.vy;
-      n.opacity -= 0.003;
-      n.rotation += n.spin;
-      if (n.opacity <= 0 || n.y < -20) { notesRef.current.splice(i, 1); continue; }
-      ctx.save();
-      ctx.translate(n.x, n.y);
-      ctx.rotate(n.rotation);
-      ctx.globalAlpha = n.opacity;
-      ctx.fillStyle = active ? "#C8832E" : "#A07048";
-      ctx.font = `${n.size}px Georgia, serif`;
-      ctx.textAlign = "center";
-      ctx.fillText(n.char, 0, 0);
-      ctx.restore();
+    /* burst particles from note taps */
+    for (let i = burstRef.current.length - 1; i >= 0; i--) {
+      const b = burstRef.current[i];
+      b.x += b.vx; b.y += b.vy; b.vy += 0.05;
+      b.opacity -= b.decay;
+      if (b.opacity <= 0) { burstRef.current.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${b.hue}, 75%, 58%, ${b.opacity})`;
+      ctx.fill();
     }
 
-    /* spawn dust on playing/sleeve */
-    if (active && Math.random() < 0.18) {
-      dustRef.current.push({
-        x: Math.random() * W,
-        y: H + 5,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: -(0.3 + Math.random() * 0.8),
-        r: 1 + Math.random() * 1.5,
-        opacity: 0.5 + Math.random() * 0.4,
-        hue: 28 + Math.random() * 20,
-      });
+    /* golden falling dust on sleeve phase */
+    if (canvasModeRef.current === "golden") {
+      for (let i = 0; i < 6; i++) {
+        dustRef.current.push({
+          x: Math.random() * W, y: -8,
+          vx: (Math.random() - 0.5) * 0.6, vy: 0.8 + Math.random() * 1.4,
+          r: 1 + Math.random() * 2, opacity: 0.6 + Math.random() * 0.35,
+          hue: 28 + Math.random() * 22,
+        });
+      }
+      if (dustRef.current.length > 400) dustRef.current.splice(0, dustRef.current.length - 400);
     }
     for (let i = dustRef.current.length - 1; i >= 0; i--) {
       const d = dustRef.current[i];
-      d.x += d.vx; d.y += d.vy;
-      d.opacity -= 0.006;
-      if (d.opacity <= 0 || d.y < -10) { dustRef.current.splice(i, 1); continue; }
+      d.x += d.vx; d.y += d.vy; d.opacity -= 0.005;
+      if (d.opacity <= 0 || d.y > H + 10) { dustRef.current.splice(i, 1); continue; }
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${d.hue}, 65%, 55%, ${d.opacity})`;
+      ctx.fillStyle = `hsla(${d.hue}, 78%, 58%, ${d.opacity})`;
       ctx.fill();
     }
 
@@ -425,7 +278,7 @@ export default function VinylCard() {
     return () => cancelAnimationFrame(rafRef.current);
   }, [drawLoop]);
 
-  /* ── drop needle ── */
+  /* ── press to play ── */
   function dropNeedle() {
     if (phase !== "hook") return;
     setPhase("dropping");
@@ -433,24 +286,41 @@ export default function VinylCard() {
     setTimeout(() => {
       setSpinning(true);
       setPhase("playing");
-    }, 900);
+    }, 950);
   }
 
-  /* ── play track ── */
-  function handleTrack(idx: number) {
-    if (allPlayed && !playedTracks.includes(idx)) return;
-    if (activeTrack === idx) {
-      setActiveTrack(null);
-      return;
-    }
-    setActiveTrack(idx);
-    if (!playedTracks.includes(idx)) {
-      const next = [...playedTracks, idx];
-      setPlayedTracks(next);
-      if (next.length === tpl.tracks.length) {
-        setAllPlayed(true);
-        setTimeout(() => triggerSleeve(), 1800);
-      }
+  /* ── tap note ── */
+  function handleNoteTap(idx: number, e: React.PointerEvent) {
+    if (phase !== "playing" || tappedNotes.includes(idx)) return;
+    e.stopPropagation();
+
+    /* burst from tap point */
+    const bx = e.clientX, by = e.clientY;
+    const burst: BurstDot[] = Array.from({ length: 24 }, () => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 4;
+      return {
+        x: bx, y: by,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        r: 1.5 + Math.random() * 2, opacity: 0.9,
+        decay: 0.025 + Math.random() * 0.025,
+        hue: 28 + Math.random() * 22,
+      };
+    });
+    burstRef.current.push(...burst);
+
+    /* tooltip */
+    const track = tpl.tracks[idx];
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
+    setTooltip({ emoji: track.emoji, text: track.text });
+    tooltipTimerRef.current = setTimeout(() => setTooltip(null), 2200);
+
+    const next = [...tappedNotes, idx];
+    setTappedNotes(next);
+    setEqIntensity(1 + next.length);
+
+    if (next.length === tpl.tracks.length) {
+      setTimeout(() => triggerSleeve(), 1600);
     }
   }
 
@@ -458,10 +328,12 @@ export default function VinylCard() {
   function triggerSleeve() {
     setSpinning(false);
     setTonearmDown(false);
+    setPlayerExiting(true);
     setTimeout(() => {
+      canvasModeRef.current = "golden";
       setPhase("sleeve");
-      setTimeout(() => setSleeveReady(true), 600);
-    }, 700);
+      setTimeout(() => setSleeveVisible(true), 300);
+    }, 800);
   }
 
   /* ── share ── */
@@ -470,124 +342,115 @@ export default function VinylCard() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
   async function copyForInstagram() {
-    try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch {}
+    try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch { /* ignore */ }
   }
   async function copySenderLink() {
-    try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch {}
+    try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch { /* ignore */ }
   }
   async function copyRecipLink() {
-    const recipUrl = senderShareUrl;
-    try { await navigator.clipboard.writeText(recipUrl); setRecipCopied(true); setTimeout(() => setRecipCopied(false), 2500); } catch {}
+    try { await navigator.clipboard.writeText(senderShareUrl); setRecipCopied(true); setTimeout(() => setRecipCopied(false), 2500); } catch { /* ignore */ }
   }
 
-  /* ─────────────────────────── render ──────────────────────────────── */
+  const totalNotes = tpl.tracks.length;
+
+  /* ─────────────────────────── render ─────────────────────── */
   return (
     <div
       style={{
         position: "fixed", inset: 0, overflow: "hidden",
-        background: "linear-gradient(160deg, #F4ECE1 0%, #EDE0CC 40%, #E5D5B8 60%, #DDD0B0 100%)",
+        background: "linear-gradient(160deg, #F4ECE1 0%, #EDE0CC 40%, #E5D5B8 65%, #DDD0B0 100%)",
         fontFamily: "'Segoe UI', system-ui, sans-serif",
         userSelect: "none", WebkitUserSelect: "none",
       } as React.CSSProperties}
     >
-      {/* Canvas */}
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }} />
 
-      {/* ══ PHASE 1: Hook ══ */}
+      {/* ══ PHASE 1 + 2: Hook & Dropping ══ */}
       <AnimatePresence>
         {(phase === "hook" || phase === "dropping") && (
-          <motion.div key="hook"
+          <motion.div
+            key="hook"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.6 } }}
+            exit={{ opacity: 0, transition: { duration: 0.5 } }}
             style={{
               position: "fixed", inset: 0, zIndex: 10,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               padding: "0 24px",
             }}
           >
-            {/* Top label */}
+            {/* Header */}
             <motion.div
               initial={{ opacity: 0, y: -14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.7 }}
-              style={{ textAlign: "center", marginBottom: 32 }}
+              transition={{ delay: 0.25, duration: 0.7 }}
+              style={{ textAlign: "center", marginBottom: 28 }}
             >
               <div style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: "0.18em",
-                color: "#B8762A", textTransform: "uppercase", marginBottom: 8,
+                color: "#B8762A", textTransform: "uppercase", marginBottom: 6,
               }}>
                 ♪ A Mixtape for
               </div>
               <h1 style={{
-                fontSize: "min(32px, 8vw)", fontWeight: 800,
+                fontSize: "min(30px, 7.5vw)", fontWeight: 800,
                 color: "#4A3C31", fontFamily: "Georgia, serif",
-                letterSpacing: "-0.01em", lineHeight: 1.1, margin: 0,
+                letterSpacing: "-0.01em", lineHeight: 1.15, margin: 0,
               }}>
                 {recipientName}
               </h1>
-              <div style={{
-                marginTop: 8, fontSize: 13, color: "#8A7060", fontStyle: "italic",
-              }}>
+              <div style={{ marginTop: 6, fontSize: 13, color: "#8A7060", fontStyle: "italic" }}>
                 {tpl.album_title}
               </div>
             </motion.div>
 
-            {/* Record player */}
+            {/* Record player cabinet */}
             <motion.div
               initial={{ opacity: 0, scale: 0.88 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.6, type: "spring", bounce: 0.3 }}
-              style={{
-                position: "relative",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
+              transition={{ delay: 0.45, duration: 0.6, type: "spring", bounce: 0.3 }}
+              style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              {/* Cabinet */}
               <div style={{
-                width: "min(280px, 75vw)", height: "min(280px, 75vw)",
+                width: "min(268px, 72vw)", height: "min(268px, 72vw)",
                 borderRadius: 20,
                 background: "linear-gradient(145deg, #F0E8D8 0%, #E8DCC8 40%, #D8CCB0 100%)",
                 boxShadow: "0 16px 48px rgba(74,60,49,0.22), 0 4px 12px rgba(74,60,49,0.14), inset 0 1px 2px rgba(255,255,255,0.7), inset 0 -2px 4px rgba(74,60,49,0.08)",
-                border: "1.5px solid rgba(184,118,42,0.25)",
+                border: "1.5px solid rgba(184,118,42,0.22)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 position: "relative",
               }}>
-                {/* Platter ring */}
                 <div style={{
-                  width: "min(240px, 64vw)", height: "min(240px, 64vw)",
+                  width: "min(230px, 62vw)", height: "min(230px, 62vw)",
                   borderRadius: "50%",
                   background: "linear-gradient(145deg, #3A2E24, #2A2018)",
                   boxShadow: "inset 0 4px 16px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  position: "relative",
                 }}>
-                  <VinylRecord spinning={spinning} size={Math.min(window.innerWidth * 0.55, 210)} />
+                  <VinylRecord spinning={spinning} size={Math.min(window.innerWidth * 0.52, 200)} />
                 </div>
-                {/* Tonearm */}
                 <Tonearm down={tonearmDown} />
               </div>
             </motion.div>
 
-            {/* Drop needle CTA */}
+            {/* CTA */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9, duration: 0.6 }}
-              style={{ marginTop: 36, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}
+              transition={{ delay: 0.85, duration: 0.6 }}
+              style={{ marginTop: 32, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}
             >
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.94 }}
                 onClick={dropNeedle}
                 disabled={phase === "dropping"}
                 style={{
-                  padding: "14px 36px",
-                  borderRadius: 50,
+                  padding: "14px 36px", borderRadius: 50,
                   background: phase === "dropping"
                     ? "rgba(184,118,42,0.3)"
                     : "linear-gradient(135deg, #C8832E, #B8762A)",
                   color: "#F4ECE1",
-                  fontWeight: 700, fontSize: 16,
-                  border: "none", cursor: phase === "dropping" ? "default" : "pointer",
+                  fontWeight: 700, fontSize: 16, border: "none",
+                  cursor: phase === "dropping" ? "default" : "pointer",
                   boxShadow: phase === "dropping"
                     ? "none"
                     : "0 4px 16px rgba(184,118,42,0.4), 0 2px 6px rgba(0,0,0,0.15)",
@@ -596,36 +459,34 @@ export default function VinylCard() {
                   fontFamily: "Georgia, serif",
                 }}
               >
-                {phase === "dropping" ? "Dropping the needle…" : "▶  Drop the Needle"}
+                {phase === "dropping" ? "Dropping the needle…" : "▶  PRESS TO PLAY"}
               </motion.button>
               <p style={{ fontSize: 12, color: "#A09080", letterSpacing: "0.06em" }}>
-                Tap to play your mixtape
+                Tap to start your mixtape
               </p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ══ PHASE 2+3: Playing ══ */}
+      {/* ══ PHASE 3: Playing / Groove ══ */}
       <AnimatePresence>
         {phase === "playing" && (
-          <motion.div key="playing"
+          <motion.div
+            key="playing"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.5 } }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 10,
-              display: "flex", flexDirection: "column",
-              overflowY: "auto",
-            }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            style={{ position: "fixed", inset: 0, zIndex: 10 }}
           >
-            {/* Progress pill */}
+            {/* Progress pill — full-width flex, never overflows */}
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               style={{
-                position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))",
+                position: "fixed",
+                top: "max(18px, env(safe-area-inset-top, 18px))",
                 left: 0, right: 0,
                 display: "flex", justifyContent: "center", padding: "0 20px",
                 zIndex: 15, pointerEvents: "none",
@@ -633,117 +494,162 @@ export default function VinylCard() {
             >
               <span style={{
                 display: "inline-block",
-                fontSize: 13, color: "#6B5040",
-                letterSpacing: "0.06em", fontWeight: 600,
-                background: "rgba(244,236,225,0.88)",
+                fontSize: 13, color: "#6B5040", letterSpacing: "0.06em", fontWeight: 600,
+                background: "rgba(244,236,225,0.9)",
                 borderRadius: 999, padding: "8px 20px",
                 border: "1px solid rgba(184,118,42,0.3)",
                 backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
                 whiteSpace: "nowrap",
                 boxShadow: "0 2px 12px rgba(74,60,49,0.1)",
               }}>
-                ♪ Now Playing — {playedTracks.length} / {tpl.tracks.length} tracks
+                PLAYING TRACKS ({tappedNotes.length} / {totalNotes})
               </span>
             </motion.div>
 
-            {/* Scrollable content */}
+            {/* Record player — centered slightly above middle */}
             <div style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-              padding: "72px 20px 32px",
-              maxWidth: 480, margin: "0 auto", width: "100%",
+              position: "fixed", left: "50%", top: "42%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 11,
             }}>
-              {/* Mini record + EQ row */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 20,
-                  marginBottom: 24, width: "100%",
-                }}
+                animate={playerExiting ? { y: 340, opacity: 0 } : { y: 0, opacity: 1 }}
+                transition={{ duration: 0.75, ease: "easeIn" }}
+                style={{ position: "relative" }}
               >
-                <VinylRecord spinning={spinning} size={72} />
-                <div style={{ flex: 1 }}>
+                <div style={{
+                  width: "min(230px, 60vw)", height: "min(230px, 60vw)",
+                  borderRadius: 18,
+                  background: "linear-gradient(145deg, #F0E8D8 0%, #E8DCC8 40%, #D8CCB0 100%)",
+                  boxShadow: "0 12px 40px rgba(74,60,49,0.2), 0 4px 10px rgba(74,60,49,0.12), inset 0 1px 2px rgba(255,255,255,0.7)",
+                  border: "1.5px solid rgba(184,118,42,0.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  position: "relative",
+                }}>
                   <div style={{
-                    fontSize: 12, fontWeight: 700, letterSpacing: "0.12em",
-                    color: "#B8762A", textTransform: "uppercase", marginBottom: 2,
+                    width: "min(198px, 52vw)", height: "min(198px, 52vw)",
+                    borderRadius: "50%",
+                    background: "linear-gradient(145deg, #3A2E24, #2A2018)",
+                    boxShadow: "inset 0 4px 16px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    {tpl.side_label}
+                    <VinylRecord spinning={spinning} size={Math.min(window.innerWidth * 0.44, 170)} />
                   </div>
-                  <div style={{
-                    fontSize: 16, fontWeight: 800, color: "#4A3C31",
-                    fontFamily: "Georgia, serif", marginBottom: 8,
-                  }}>
-                    {tpl.album_title}
-                  </div>
-                  <EQBars active={spinning && playedTracks.length < tpl.tracks.length} />
+                  <Tonearm down={tonearmDown} />
                 </div>
               </motion.div>
-
-              {/* Track list */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
-                {tpl.tracks.map((track, i) => (
-                  <TrackRow
-                    key={i}
-                    track={track}
-                    index={i}
-                    played={playedTracks.includes(i)}
-                    active={activeTrack === i}
-                    onPlay={() => handleTrack(i)}
-                  />
-                ))}
-              </div>
-
-              {/* Hint */}
-              {!allPlayed && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  style={{
-                    marginTop: 20, fontSize: 12, color: "#A09080",
-                    textAlign: "center", fontStyle: "italic", letterSpacing: "0.04em",
-                  }}
-                >
-                  Tap each track to play it ♪
-                </motion.p>
-              )}
-
-              {/* All played message */}
-              {allPlayed && (
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{
-                    marginTop: 20, fontSize: 13, color: "#B8762A",
-                    textAlign: "center", fontWeight: 600, letterSpacing: "0.04em",
-                  }}
-                >
-                  ✦ Side A complete — revealing your sleeve…
-                </motion.p>
-              )}
             </div>
+
+            {/* Floating note buttons */}
+            {tpl.tracks.map((track, i) => {
+              const tapped = tappedNotes.includes(i);
+              /* fixed positions around the record player */
+              const positions: React.CSSProperties[] = [
+                { top: "17%", left: "9%" },
+                { top: "17%", right: "9%" },
+                { bottom: "22%", left: "9%" },
+                { bottom: "22%", right: "9%" },
+              ];
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.12 + 0.1, type: "spring", bounce: 0.5 }}
+                  style={{
+                    position: "fixed",
+                    zIndex: 12,
+                    cursor: tapped ? "default" : "pointer",
+                    ...positions[i],
+                  }}
+                  onPointerDown={(e) => handleNoteTap(i, e)}
+                >
+                  <motion.div
+                    animate={tapped
+                      ? { scale: 1.35, rotate: 0 }
+                      : {
+                        y: [0, -10, 0, -6, 0],
+                        rotate: [-4, 4, -3, 3, -4],
+                      }}
+                    transition={tapped
+                      ? { duration: 0.3, type: "spring", bounce: 0.4 }
+                      : { duration: 3 + i * 0.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
+                    style={{
+                      width: "min(60px, 14.5vw)", height: "min(60px, 14.5vw)",
+                      borderRadius: "50%",
+                      background: tapped
+                        ? "radial-gradient(circle, #FFE566 0%, #FFA500 65%, rgba(255,140,0,0.3) 100%)"
+                        : "radial-gradient(circle, rgba(244,236,225,0.95) 0%, rgba(232,216,192,0.8) 70%)",
+                      boxShadow: tapped
+                        ? "0 0 14px #D4924A, 0 0 36px rgba(184,118,42,0.55), 0 0 72px rgba(200,140,0,0.2)"
+                        : "0 4px 16px rgba(74,60,49,0.2), 0 0 0 1px rgba(184,118,42,0.2)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "min(26px, 6.5vw)",
+                      transition: "background 0.3s, box-shadow 0.3s",
+                    }}
+                  >
+                    {tapped ? track.emoji : NOTE_CHARS[i]}
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+
+            {/* Glassmorphism cassette tooltip pinned at bottom */}
+            <AnimatePresence>
+              {tooltip && (
+                <motion.div
+                  key={tooltip.text}
+                  initial={{ opacity: 0, scale: 0.88, y: 18 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.88, y: 10 }}
+                  transition={{ duration: 0.32 }}
+                  style={{
+                    position: "fixed",
+                    bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
+                    left: 16, right: 16,
+                    zIndex: 20, pointerEvents: "none",
+                    background: "rgba(244,236,225,0.72)",
+                    borderRadius: 18,
+                    border: "1px solid rgba(184,118,42,0.28)",
+                    padding: "16px 22px",
+                    textAlign: "center",
+                    backdropFilter: "blur(16px)",
+                    WebkitBackdropFilter: "blur(16px)",
+                    boxShadow: "0 8px 32px rgba(74,60,49,0.15)",
+                  } as React.CSSProperties}
+                >
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>{tooltip.emoji}</div>
+                  <p style={{
+                    margin: 0, fontSize: 15, fontWeight: 600,
+                    color: "#4A3C31", fontFamily: "Georgia, serif",
+                    fontStyle: "italic", lineHeight: 1.5,
+                  }}>
+                    {tooltip.text}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ══ PHASE 4: Sleeve ══ */}
+      {/* ══ PHASE 4: Platinum Sleeve ══ */}
       <AnimatePresence>
-        {phase === "sleeve" && (
-          <motion.div key="sleeve"
+        {phase === "sleeve" && sleeveVisible && (
+          <motion.div
+            key="sleeve"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             style={{
               position: "fixed", inset: 0, zIndex: 10,
               overflowY: "auto",
               display: "flex", flexDirection: "column", alignItems: "center",
             }}
           >
-            {/* Warm light haze */}
+            {/* Warm glow */}
             <div style={{
-              position: "fixed", top: 0, left: 0, right: 0, height: "45%",
-              background: "radial-gradient(ellipse at 50% 0%, rgba(184,118,42,0.12) 0%, transparent 70%)",
+              position: "fixed", top: 0, left: 0, right: 0, height: "50%",
+              background: "radial-gradient(ellipse at 50% 0%, rgba(184,118,42,0.13) 0%, transparent 65%)",
               pointerEvents: "none", zIndex: 0,
             }} />
 
@@ -753,11 +659,11 @@ export default function VinylCard() {
               maxWidth: 480, margin: "0 auto", width: "100%",
               position: "relative", zIndex: 1,
             }}>
-              {/* Platinum Sleeve badge */}
+              {/* Badge */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: 0.2, type: "spring", bounce: 0.4 }}
+                transition={{ delay: 0.15, type: "spring", bounce: 0.4 }}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
                   fontSize: 11, fontWeight: 700, letterSpacing: "0.16em",
@@ -773,14 +679,13 @@ export default function VinylCard() {
                 <span>✦</span>
               </motion.div>
 
-              {/* Album cover card */}
+              {/* Sleeve card */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35, duration: 0.7 }}
+                initial={{ y: 60, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.7, type: "spring", bounce: 0.2 }}
                 style={{
-                  width: "100%",
-                  padding: "32px 28px",
+                  width: "100%", padding: "32px 28px 28px",
                   borderRadius: 20,
                   background: "linear-gradient(145deg, #FEFAF4 0%, #F8F0E0 50%, #F0E6CC 100%)",
                   boxShadow: "0 20px 60px rgba(74,60,49,0.18), 0 4px 16px rgba(74,60,49,0.1), inset 0 1px 1px rgba(255,255,255,0.9)",
@@ -789,74 +694,84 @@ export default function VinylCard() {
                   marginBottom: 24,
                 }}
               >
+                {/* Gold foil shimmer top line */}
+                <div style={{
+                  position: "absolute", top: 0, left: "-40%", right: "-40%", height: 2,
+                  background: "linear-gradient(90deg, transparent, rgba(184,118,42,0.4), rgba(212,160,80,0.6), rgba(184,118,42,0.4), transparent)",
+                  pointerEvents: "none",
+                }} />
                 {/* Decorative groove lines */}
                 {[0, 1, 2].map(i => (
                   <div key={i} style={{
-                    position: "absolute", top: 0, bottom: 0, left: `${20 + i * 30}%`,
-                    width: 1, background: "rgba(184,118,42,0.06)",
-                    pointerEvents: "none",
+                    position: "absolute", top: 0, bottom: 0, left: `${18 + i * 32}%`,
+                    width: 1, background: "rgba(184,118,42,0.05)", pointerEvents: "none",
                   }} />
                 ))}
 
-                {/* Album title */}
+                {/* Side label */}
                 <div style={{
                   fontSize: 11, fontWeight: 700, letterSpacing: "0.14em",
-                  color: "#B8762A", textTransform: "uppercase", marginBottom: 6,
+                  color: "#B8762A", textTransform: "uppercase", marginBottom: 8,
                 }}>
                   {tpl.side_label}
                 </div>
+
+                {/* Title prefix */}
                 <div style={{
-                  fontSize: "min(22px, 5.5vw)", fontWeight: 800,
-                  color: "#4A3C31", fontFamily: "Georgia, serif",
-                  letterSpacing: "-0.01em", marginBottom: 20,
+                  fontSize: "min(14px, 3.5vw)", color: "#8A7060",
+                  fontFamily: "Georgia, serif", fontStyle: "italic",
+                  marginBottom: 4,
                 }}>
-                  {tpl.album_title}
+                  {titlePrefix}
+                </div>
+
+                {/* Recipient name — gold foil */}
+                <div style={{
+                  fontSize: "min(28px, 7vw)", fontWeight: 800,
+                  fontFamily: "Georgia, serif",
+                  background: "linear-gradient(135deg, #C8832E, #D4924A, #B8762A)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1.15,
+                  marginBottom: 18,
+                }}>
+                  {recipientName}
                 </div>
 
                 {/* Divider */}
                 <div style={{
-                  height: 1,
+                  height: 1, marginBottom: 18,
                   background: "linear-gradient(90deg, transparent, rgba(184,118,42,0.3), transparent)",
-                  marginBottom: 20,
                 }} />
 
                 {/* Final message */}
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.65, duration: 0.8 }}
+                  transition={{ delay: 0.6, duration: 0.8 }}
                   style={{
-                    fontSize: "min(17px, 4.3vw)",
-                    color: "#4A3C31",
-                    fontFamily: "Georgia, serif",
-                    lineHeight: 1.7,
-                    fontStyle: "italic",
-                    margin: 0,
-                    marginBottom: 20,
+                    fontSize: "min(16px, 4.2vw)", color: "#4A3C31",
+                    fontFamily: "Georgia, serif", lineHeight: 1.7,
+                    fontStyle: "italic", margin: 0, marginBottom: 18,
                   }}
                 >
                   "{finalMessage}"
                 </motion.p>
 
-                {/* Mini record decoration */}
+                {/* Mini vinyl decoration */}
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <VinylRecord spinning={false} size={48} />
+                  <VinylRecord spinning={false} size={44} />
                 </div>
-
-                {/* Gold foil shine overlay */}
-                <div style={{
-                  position: "absolute", top: 0, left: "-60%", right: "-60%", height: "2px",
-                  background: "linear-gradient(90deg, transparent, rgba(184,118,42,0.4), rgba(212,160,80,0.6), rgba(184,118,42,0.4), transparent)",
-                  pointerEvents: "none",
-                }} />
               </motion.div>
 
-              {/* ── Sender view: share ── */}
+              {/* Sender share */}
               {isSender && sleeveReady && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: 0.15 }}
                   style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}
                 >
                   <p style={{
@@ -865,8 +780,6 @@ export default function VinylCard() {
                   }}>
                     Share this mixtape with {recipientName} ♪
                   </p>
-
-                  {/* WhatsApp */}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={shareWhatsApp}
@@ -880,37 +793,34 @@ export default function VinylCard() {
                   >
                     <span style={{ fontSize: 20 }}>📱</span> Send on WhatsApp
                   </motion.button>
-
-                  {/* Copy link */}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={copySenderLink}
                     style={{
                       padding: "13px", borderRadius: 14,
                       background: senderCopied ? "rgba(184,118,42,0.15)" : "rgba(74,60,49,0.07)",
-                      color: senderCopied ? "#B8762A" : "#4A3C31", fontWeight: 600, fontSize: 14,
+                      color: senderCopied ? "#B8762A" : "#4A3C31",
+                      fontWeight: 600, fontSize: 14,
                       border: `1.5px solid ${senderCopied ? "rgba(184,118,42,0.4)" : "rgba(74,60,49,0.15)"}`,
                       cursor: "pointer", transition: "all 0.3s",
                     }}
                   >
                     {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
                   </motion.button>
-
-                  {/* Instagram */}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={copyForInstagram}
                     style={{
                       padding: "13px", borderRadius: 14,
                       background: senderIgCopied ? "rgba(184,118,42,0.12)" : "rgba(74,60,49,0.05)",
-                      color: senderIgCopied ? "#B8762A" : "#8A7060", fontWeight: 600, fontSize: 14,
+                      color: senderIgCopied ? "#B8762A" : "#8A7060",
+                      fontWeight: 600, fontSize: 14,
                       border: `1.5px solid ${senderIgCopied ? "rgba(184,118,42,0.3)" : "rgba(74,60,49,0.1)"}`,
                       cursor: "pointer", transition: "all 0.3s",
                     }}
                   >
                     {senderIgCopied ? "✓ Copied for Instagram!" : "📸 Copy for Instagram / DM"}
                   </motion.button>
-
                   <Link href="/">
                     <button style={{
                       width: "100%", padding: "11px", borderRadius: 14,
@@ -925,12 +835,12 @@ export default function VinylCard() {
                 </motion.div>
               )}
 
-              {/* ── Recipient view ── */}
+              {/* Recipient CTA */}
               {!isSender && !isPreview && sleeveReady && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: 0.15 }}
                   style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}
                 >
                   <motion.button
@@ -945,9 +855,8 @@ export default function VinylCard() {
                       cursor: "pointer", transition: "all 0.3s",
                     }}
                   >
-                    {recipCopied ? "✓ Link Copied!" : "🔗 Save this card"}
+                    {recipCopied ? "✓ Link Saved!" : "🔗 Save this card"}
                   </motion.button>
-
                   <Link href="/">
                     <button style={{
                       width: "100%", padding: "11px", borderRadius: 14,
@@ -961,7 +870,7 @@ export default function VinylCard() {
                 </motion.div>
               )}
 
-              {/* Preview mode: back link */}
+              {/* Preview: back */}
               {isPreview && (
                 <Link href="/">
                   <button style={{
@@ -979,7 +888,6 @@ export default function VinylCard() {
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
