@@ -20,7 +20,7 @@ function useQueryParams() {
   return new URLSearchParams(window.location.search);
 }
 
-const NOTE_CHARS = ["♪", "♫", "🎵", "♬"];
+const NOTE_CHARS = ["🎸", "🎹", "🎺", "🎻"];
 
 /* ─────────────────────────── VinylRecord ────────────────────── */
 
@@ -462,7 +462,17 @@ export default function VinylCard() {
                   fontFamily: "Georgia, serif",
                 }}
               >
-                {phase === "dropping" ? "Dropping the needle…" : "▶  PRESS TO PLAY"}
+                {phase === "dropping" ? (
+                  "Dropping the needle…"
+                ) : (
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
+                      <circle cx="9" cy="9" r="8.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+                      <polygon points="7,5.5 14,9 7,12.5" fill="white" />
+                    </svg>
+                    PRESS TO PLAY
+                  </span>
+                )}
               </motion.button>
               <p style={{ fontSize: 12, color: "#A09080", letterSpacing: "0.06em" }}>
                 Tap to start your mixtape
@@ -867,7 +877,7 @@ export default function VinylCard() {
                       color: "#F4ECE1", fontWeight: 600, fontSize: 14,
                       border: "none", cursor: "pointer",
                     }}>
-                      ♪ Make your own mixtape card
+                      🎵 Create your own card — free!
                     </button>
                   </Link>
                 </motion.div>
