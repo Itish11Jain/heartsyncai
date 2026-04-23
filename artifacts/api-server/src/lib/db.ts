@@ -31,5 +31,14 @@ export async function initDb(): Promise<void> {
       user_id INTEGER NOT NULL REFERENCES hs_users(id),
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS hs_moments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES hs_users(id),
+      purpose TEXT NOT NULL,
+      relation TEXT NOT NULL,
+      recipient TEXT NOT NULL,
+      message TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 }

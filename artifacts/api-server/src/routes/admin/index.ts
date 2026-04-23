@@ -62,14 +62,20 @@ router.get("/admin/revoke", async (req, res) => {
 router.get("/admin/users", async (req, res) => {
   if (!checkKey(req as never, res as never)) return;
 
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
   const rows = await pool.query(
     `SELECT u.id, u.display_name, u.credits, u.created_at,
-            COUNT(s.id) AS utr_count
+            COUNT(DISTINCT s.id) AS utr_count,
+            COUNT(DISTINCT m.id) FILTER (WHERE m.created_at >= $1) AS moments_this_month
      FROM hs_users u
      LEFT JOIN hs_utr_submissions s ON s.user_id = u.id
+     LEFT JOIN hs_moments m ON m.user_id = u.id
      GROUP BY u.id
      ORDER BY u.created_at DESC
      LIMIT 100`,
+    [monthStart],
   );
 
   res.json({ users: rows.rows });

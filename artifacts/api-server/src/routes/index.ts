@@ -4,6 +4,7 @@ import reportRouter from "./report";
 import paymentRouter from "./payment";
 import authRouter from "./auth";
 import adminRouter from "./admin";
+import momentRouter from "./moment";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(healthRouter);
 router.use(reportRouter);
 router.use(paymentRouter);
 router.use(adminRouter);
+router.use(momentRouter);
 
 export default router;

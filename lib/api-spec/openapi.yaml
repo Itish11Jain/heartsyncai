@@ -16,6 +16,8 @@ tags:
     description: Intelligence report generation
   - name: payment
     description: UPI payment submission and status
+  - name: moment
+    description: Animated card message generation
 paths:
   /healthz:
     get:
@@ -130,6 +132,72 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /moment/generate:
+    post:
+      operationId: generateMoment
+      tags: [moment]
+      summary: Generate a personalised card message
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateMomentBody"
+      responses:
+        "200":
+          description: Generated card message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateMomentResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Monthly moment limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MomentLimitResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /moment/status:
+    get:
+      operationId: getMomentStatus
+      tags: [moment]
+      summary: Get current monthly moment usage for the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Moment usage status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MomentStatusResponse"
         "401":
           description: Authentication required
           content:
@@ -304,6 +372,74 @@ components:
           description: Unix timestamp (ms) when submission was approved
       required:
         - approved
+
+    GenerateMomentBody:
+      type: object
+      properties:
+        recipientName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Name of the card recipient
+        purpose:
+          type: string
+          enum: [thank_you, sorry, i_love_you, feel_good]
+          description: The emotional purpose of the card
+        relation:
+          type: string
+          enum: [date, friend, partner, spouse]
+          description: Relationship to the recipient
+      required:
+        - recipientName
+        - purpose
+        - relation
+
+    GenerateMomentResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: AI-generated personalised card message
+        momentsUsed:
+          type: integer
+          description: Number of moments used this month after this generation
+        momentsLimit:
+          type: integer
+          description: Monthly free moment limit
+      required:
+        - message
+        - momentsUsed
+        - momentsLimit
+
+    MomentLimitResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        momentsUsed:
+          type: integer
+        momentsLimit:
+          type: integer
+      required:
+        - error
+        - message
+        - momentsUsed
+        - momentsLimit
+
+    MomentStatusResponse:
+      type: object
+      properties:
+        momentsUsed:
+          type: integer
+          description: Number of moments created this month
+        momentsLimit:
+          type: integer
+          description: Monthly free moment limit
+      required:
+        - momentsUsed
+        - momentsLimit
 
     ErrorResponse:
       type: object

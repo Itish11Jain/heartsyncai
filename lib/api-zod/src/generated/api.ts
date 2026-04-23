@@ -135,6 +135,33 @@ export const SubmitUtrResponse = zod.object({
 });
 
 /**
+ * @summary Generate a personalised card message
+ */
+export const GenerateMomentBody = zod.object({
+  recipientName: zod.string().min(1).max(100).describe("Name of the card recipient"),
+  purpose: zod.enum(["thank_you", "sorry", "i_love_you", "feel_good"]).describe("The emotional purpose of the card"),
+  relation: zod.enum(["date", "friend", "partner", "spouse"]).describe("Relationship to the recipient"),
+});
+
+export const GenerateMomentResponse = zod.object({
+  message: zod.string().describe("AI-generated personalised card message"),
+  momentsUsed: zod.number().describe("Number of moments used this month after this generation"),
+  momentsLimit: zod.number().describe("Monthly free moment limit"),
+});
+
+export const MomentLimitResponse = zod.object({
+  error: zod.string(),
+  message: zod.string(),
+  momentsUsed: zod.number(),
+  momentsLimit: zod.number(),
+});
+
+export const MomentStatusResponse = zod.object({
+  momentsUsed: zod.number().describe("Number of moments created this month"),
+  momentsLimit: zod.number().describe("Monthly free moment limit"),
+});
+
+/**
  * @summary Check payment status for a report session
  */
 export const GetPaymentStatusParams = zod.object({
