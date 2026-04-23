@@ -1,10 +1,13 @@
 /**
  * HeartSync AI — Crystal Ball card template
+ *
  * 4-Phase Universal Architecture:
- *   hook       — glowing ball visible, rub-to-clear interaction live
- *   clearing   — brief 700 ms flash/completion transition
- *   visions    — 4 vision orbs float in quadrants; tap each to unlock
+ *   hook       — misted crystal ball, rub-to-clear interaction
+ *   clearing   — 700ms white-flash transition after rub completes
+ *   visions    — 4 orbs float out to quadrants; tap each to reveal
  *   revelation — galaxy canvas + holographic final card
+ *
+ * Canvas: single fixed RAF loop; phaseRef + clearProgressRef prevent stale closures.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -14,12 +17,13 @@ import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
 import { trackEvent } from "../lib/trackEvent";
 
+/* ── helpers ── */
 function useQueryParams() {
   const search = useSearch();
   return new URLSearchParams(search);
 }
 
-/* ── Safe-zone quadrant layout ── */
+/* ── SAFE_ZONES — 4 quadrant positions (% of viewport) ── */
 const SAFE_ZONES = [
   { cx: 25, cy: 22 },
   { cx: 72, cy: 22 },
@@ -27,252 +31,20 @@ const SAFE_ZONES = [
   { cx: 72, cy: 68 },
 ];
 
-type Phase = "hook" | "clearing" | "visions" | "revelation";
+type CrystalPhase = "hook" | "clearing" | "visions" | "revelation";
 
-/* ══════════════════════════════════════════════════════════════
-   CrystalCanvas — ambient mist (hook/clearing) | galaxy (revelation)
-   ══════════════════════════════════════════════════════════════ */
-function CrystalCanvas({
-  mode,
-  clearProgress,
-  ballRef,
-}: {
-  mode: "mist" | "galaxy";
-  clearProgress: number;
-  ballRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
-  const particlesRef = useRef<
-    { x: number; y: number; vx: number; vy: number; r: number; alpha: number; hue: number; life: number }[]
-  >([]);
-  const starsRef = useRef<{ x: number; y: number; r: number; alpha: number; twinkle: number }[]>([]);
-  const shootersRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; maxLife: number }[]>([]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener("resize", resize);
-
-    function seedMist() {
-      const ball = ballRef.current;
-      if (!ball) return;
-      const rect = ball.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const r = rect.width / 2;
-      particlesRef.current = Array.from({ length: 55 }, () => {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * r * 0.88;
-        return {
-          x: cx + Math.cos(angle) * dist,
-          y: cy + Math.sin(angle) * dist,
-          vx: (Math.random() - 0.5) * 0.35,
-          vy: (Math.random() - 0.5) * 0.35,
-          r: Math.random() * 6 + 2,
-          alpha: Math.random() * 0.45 + 0.1,
-          hue: 270 + Math.random() * 60,
-          life: Math.random(),
-        };
-      });
-    }
-
-    function seedStars() {
-      if (!canvas) return;
-      starsRef.current = Array.from({ length: 180 }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: Math.random() * 1.8 + 0.3,
-        alpha: Math.random() * 0.7 + 0.15,
-        twinkle: Math.random() * Math.PI * 2,
-      }));
-    }
-
-    seedMist();
-    seedStars();
-
-    function draw() {
-      if (!canvas || !ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (mode === "mist") {
-        const ball = ballRef.current;
-        if (!ball) { rafRef.current = requestAnimationFrame(draw); return; }
-        const rect = ball.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const r = rect.width / 2;
-        const mistOpacity = Math.max(0, 1 - clearProgress * 1.1);
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(cx, cy, r * 0.93, 0, Math.PI * 2);
-        ctx.clip();
-
-        particlesRef.current.forEach((p) => {
-          const angle = Math.atan2(p.y - cy, p.x - cx);
-          p.vx += -Math.sin(angle) * 0.0025;
-          p.vy += Math.cos(angle) * 0.0025;
-          p.vx *= 0.985; p.vy *= 0.985;
-          p.x += p.vx; p.y += p.vy;
-          const dx = p.x - cx, dy = p.y - cy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > r * 0.88) {
-            p.x = cx + (dx / dist) * r * 0.85;
-            p.y = cy + (dy / dist) * r * 0.85;
-            p.vx *= -0.6; p.vy *= -0.6;
-          }
-          p.life = (p.life + 0.004) % 1;
-          const localAlpha = p.alpha * mistOpacity * Math.sin(p.life * Math.PI);
-          ctx.beginPath();
-          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3.5);
-          grad.addColorStop(0, `hsla(${p.hue},65%,80%,${localAlpha})`);
-          grad.addColorStop(1, `hsla(${p.hue},65%,80%,0)`);
-          ctx.fillStyle = grad;
-          ctx.arc(p.x, p.y, p.r * 3.5, 0, Math.PI * 2);
-          ctx.fill();
-        });
-        ctx.restore();
-      } else {
-        /* Galaxy */
-        starsRef.current.forEach((s) => {
-          s.twinkle += 0.03;
-          const a = s.alpha * (0.65 + 0.35 * Math.sin(s.twinkle));
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(220,210,255,${a})`;
-          ctx.fill();
-        });
-        if (Math.random() < 0.015) {
-          shootersRef.current.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height * 0.5,
-            vx: 4 + Math.random() * 3,
-            vy: 1.5 + Math.random() * 2,
-            life: 0,
-            maxLife: 35 + Math.random() * 25,
-          });
-        }
-        shootersRef.current = shootersRef.current.filter(s => s.life < s.maxLife);
-        shootersRef.current.forEach((s) => {
-          s.x += s.vx; s.y += s.vy; s.life++;
-          const prog = s.life / s.maxLife;
-          const a = Math.sin(prog * Math.PI) * 0.8;
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(s.x - s.vx * 8, s.y - s.vy * 8);
-          ctx.strokeStyle = `rgba(220,200,255,${a})`;
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-          ctx.restore();
-        });
-      }
-
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    draw();
-    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener("resize", resize); };
-  }, [mode, clearProgress, ballRef]);
-
-  return <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} />;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   BurstCanvas — 35 prismatic particles at tap coordinates
-   ══════════════════════════════════════════════════════════════ */
-function BurstCanvas({ bursts }: { bursts: { id: number; x: number; y: number; startTime: number }[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
-  const particlePoolRef = useRef<
-    {
-      burstId: number;
-      x: number; y: number; vx: number; vy: number;
-      hue: number; alpha: number; life: number; maxLife: number; r: number;
-    }[]
-  >([]);
-
-  /* When a new burst is added, seed its particles */
-  const lastBurstCount = useRef(0);
-  useEffect(() => {
-    const newBursts = bursts.slice(lastBurstCount.current);
-    newBursts.forEach((b) => {
-      for (let i = 0; i < 35; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 2.5 + Math.random() * 4;
-        particlePoolRef.current.push({
-          burstId: b.id,
-          x: b.x, y: b.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          hue: Math.floor(Math.random() * 360),
-          alpha: 0.9,
-          life: 0,
-          maxLife: 35 + Math.floor(Math.random() * 20),
-          r: 2 + Math.random() * 3,
-        });
-      }
-    });
-    lastBurstCount.current = bursts.length;
-  }, [bursts]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener("resize", resize);
-
-    function draw() {
-      if (!canvas || !ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particlePoolRef.current = particlePoolRef.current.filter(p => p.life < p.maxLife);
-      particlePoolRef.current.forEach((p) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.08; // subtle gravity
-        p.vx *= 0.97;
-        p.life++;
-        p.alpha = (1 - p.life / p.maxLife) * 0.9;
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        grad.addColorStop(0, `hsla(${p.hue},100%,75%,${p.alpha})`);
-        grad.addColorStop(1, `hsla(${(p.hue + 60) % 360},100%,80%,0)`);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-      });
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    draw();
-    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener("resize", resize); };
-  }, []);
-
-  return <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 25 }} />;
-}
-
-/* ══════════════════════════════════════════════════════════════
+/* ────────────────────────────────────────────────────────────────
    CrystalCard — main export
-   ══════════════════════════════════════════════════════════════ */
+   ──────────────────────────────────────────────────────────────── */
 export default function CrystalCard() {
   const params = useQueryParams();
-
   const recipientName = params.get("to") || "Friend";
-  const occasion = params.get("occasion") || "feel_good";
-  const relation = params.get("relation") || "friend";
-  const isPreview = params.get("preview") === "1";
-  const isSender = params.get("sender") === "1";
-  const isRecipient = !isSender;
+  const occasion     = params.get("occasion") || "feel_good";
+  const relation     = params.get("relation") || "friend";
+  const likesParam   = params.get("likes") || "";
+  const isPreview    = params.get("preview") === "1";
+  const isSender     = params.get("sender") === "1";
+  const isRecipient  = !isSender;
 
   const tpl = getCrystalTemplate(occasion, relation) ?? getCrystalFallback(occasion);
   const finalMessage = (() => {
@@ -282,30 +54,57 @@ export default function CrystalCard() {
     } catch { /* */ }
     return tpl.final_message;
   })();
+  const likesChips = likesParam ? likesParam.split(",").map(s => s.trim()).filter(Boolean) : [];
 
-  const [phase, setPhase] = useState<Phase>(isPreview ? "visions" : "hook");
-  const [tappedOrbs, setTappedOrbs] = useState<Set<number>>(new Set());
-  const [tooltip, setTooltip] = useState<{ emoji: string; text: string } | null>(null);
-  const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* ── Phase state ── */
+  const [phase, setPhase] = useState<CrystalPhase>(isPreview ? "visions" : "hook");
+  const phaseRef = useRef<CrystalPhase>(isPreview ? "visions" : "hook");
+  function advancePhase(p: CrystalPhase) { phaseRef.current = p; setPhase(p); }
 
-  /* Rub mechanic */
+  /* ── Rub mechanic ── */
   const clearProgressRef = useRef(0);
   const [clearDisplay, setClearDisplay] = useState(0);
-  const isDragging = useRef(false);
-  const lastPt = useRef<{ x: number; y: number } | null>(null);
-  const RUB_TARGET = 280;
+  const isRubbingRef    = useRef(false);
+  const lastPtrRef      = useRef<{ x: number; y: number } | null>(null);
+  const totalRubRef     = useRef(0);
+  const hapticDistRef   = useRef(0); // tracks distance since last haptic pulse
+  const RUB_TARGET      = 280;
+  const HAPTIC_INTERVAL = 60;
 
-  /* Canvas bursts */
-  const [bursts, setBursts] = useState<{ id: number; x: number; y: number; startTime: number }[]>([]);
-  const burstId = useRef(0);
+  /* ── Orb state ── */
+  const [tappedOrbs, setTappedOrbs]   = useState<Set<number>>(new Set());
+  const tappedOrbsRef = useRef<Set<number>>(new Set());
+  const [tooltip, setTooltip]         = useState<{ emoji: string; text: string } | null>(null);
+  const tooltipTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const orbsDoneRef   = useRef(false);
 
-  /* Share state */
-  const [senderCopied, setSenderCopied] = useState(false);
+  /* ── Orb + ball exit animation state ── */
+  const [orbsExiting, setOrbsExiting] = useState(false);
+  const [ballExiting, setBallExiting] = useState(false);
+
+  /* ── Share state ── */
+  const [senderCopied,   setSenderCopied]   = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
 
-  const ballRef = useRef<HTMLDivElement | null>(null);
+  /* ── Canvas ── */
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const rafRef       = useRef<number>(0);
+  const ballBoundsRef = useRef<{ cx: number; cy: number; r: number } | null>(null);
 
-  /* Music + analytics */
+  /* Particle pools */
+  interface MistDot { x: number; y: number; vx: number; vy: number; r: number; opacity: number; hue: number; life: number; }
+  interface SparkDot { x: number; y: number; vx: number; vy: number; r: number; opacity: number; }
+  interface ShardDot { x: number; y: number; vx: number; vy: number; r: number; opacity: number; decay: number; hue: number; }
+  interface Star     { x: number; y: number; vx: number; vy: number; r: number; opacity: number; twinkle: number; }
+  interface Shooter  { x: number; y: number; vx: number; vy: number; len: number; opacity: number; active: boolean; wait: number; }
+
+  const mistRef   = useRef<MistDot[]>([]);
+  const sparksRef = useRef<SparkDot[]>([]);
+  const shardsRef = useRef<ShardDot[]>([]);
+  const starsRef  = useRef<Star[]>([]);
+  const shootersRef = useRef<Shooter[]>([]);
+
+  /* ── Music + analytics on mount ── */
   useEffect(() => {
     music.start("crystal");
     if (isRecipient && !isPreview) {
@@ -314,83 +113,362 @@ export default function CrystalCard() {
     return () => music.stop();
   }, []);
 
-  /* clearing → visions auto-advance after 700ms */
+  /* ── clearing → visions auto-advance after 700ms ── */
   useEffect(() => {
     if (phase !== "clearing") return;
-    const t = setTimeout(() => setPhase("visions"), 700);
+    const t = setTimeout(() => advancePhase("visions"), 700);
     return () => clearTimeout(t);
   }, [phase]);
 
-  /* Rub pointer handlers — active in hook phase */
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (phase !== "hook") return;
-      isDragging.current = true;
-      lastPt.current = { x: e.clientX, y: e.clientY };
-      try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch { /* */ }
-    },
-    [phase],
-  );
+  /* ── Canvas RAF ── */
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isDragging.current || !lastPt.current) return;
-      const dx = e.clientX - lastPt.current.x;
-      const dy = e.clientY - lastPt.current.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      lastPt.current = { x: e.clientX, y: e.clientY };
+    const W = () => canvas.width;
+    const H = () => canvas.height;
 
-      clearProgressRef.current = Math.min(1, clearProgressRef.current + dist / RUB_TARGET);
-      setClearDisplay(clearProgressRef.current);
-
-      if (dist > 4) crystalHaptics.rubPulse();
-
-      if (clearProgressRef.current >= 1) {
-        isDragging.current = false;
-        crystalHaptics.reveal();
-        setPhase("clearing");
-      }
-    },
-    [],
-  );
-
-  const handlePointerUp = useCallback(() => { isDragging.current = false; }, []);
-
-  /* Orb tap — onPointerDown for instant response */
-  const handleOrbPointerDown = useCallback(
-    (idx: number, e: React.PointerEvent) => {
-      if (phase !== "visions") return;
-      e.stopPropagation();
-      crystalHaptics.visionTap();
-      crystalHaptics.shatter();
-
-      setBursts((prev) => [
-        ...prev,
-        { id: ++burstId.current, x: e.clientX, y: e.clientY, startTime: Date.now() },
-      ]);
-
-      if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
-      setTooltip({ emoji: tpl.nodes[idx].emoji, text: tpl.nodes[idx].text });
-      tooltipTimer.current = setTimeout(() => setTooltip(null), 2200);
-
-      setTappedOrbs((prev) => {
-        const next = new Set(prev);
-        next.add(idx);
-        if (next.size === tpl.nodes.length) {
-          setTimeout(() => setPhase("revelation"), 600);
-        }
-        return next;
+    /* Seed functions */
+    function seedMist() {
+      const b = ballBoundsRef.current;
+      if (!b) return;
+      mistRef.current = Array.from({ length: 50 }, () => {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.random() * b.r * 0.82;
+        return {
+          x: b.cx + Math.cos(a) * d, y: b.cy + Math.sin(a) * d,
+          vx: (Math.random() - 0.5) * 0.28, vy: (Math.random() - 0.5) * 0.28,
+          r: 2 + Math.random() * 3, opacity: 0.3 + Math.random() * 0.3,
+          hue: 220 + Math.random() * 60, life: Math.random() * Math.PI * 2,
+        };
       });
-    },
-    [phase, tpl.nodes],
-  );
+    }
 
-  /* Share helpers */
+    function seedSparks() {
+      sparksRef.current = Array.from({ length: 25 }, () => ({
+        x: Math.random() * W(), y: Math.random() * H(),
+        vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18,
+        r: 1 + Math.random() * 1.5, opacity: 0.3 + Math.random() * 0.4,
+      }));
+    }
+
+    function seedGalaxy(w: number, h: number) {
+      starsRef.current = Array.from({ length: 180 }, () => ({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
+        r: 0.5 + Math.random() * 2, opacity: 0.25 + Math.random() * 0.55,
+        twinkle: Math.random() * Math.PI * 2,
+      }));
+      /* 6 shooting stars with staggered waits */
+      shootersRef.current = Array.from({ length: 6 }, () => makeShooter(w, h, true));
+    }
+
+    function makeShooter(w: number, h: number, randomWait = false): Shooter {
+      const startEdge = Math.random() < 0.5 ? "top" : "left";
+      const x = startEdge === "top" ? Math.random() * w : 0;
+      const y = startEdge === "top" ? 0 : Math.random() * h * 0.5;
+      const angle = (Math.PI / 6) + Math.random() * (Math.PI / 6);
+      const speed = 12 + Math.random() * 8;
+      return {
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        len: 8 + Math.random() * 6,
+        opacity: 0,
+        active: false,
+        wait: randomWait ? Math.random() * 240 : 0,
+      };
+    }
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      seedSparks();
+      if (phaseRef.current === "revelation") {
+        seedGalaxy(canvas.width, canvas.height);
+      }
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    seedMist();
+
+    /* Nebula positions (fixed) */
+    const nebulae = [
+      { x: 0.25, y: 0.3,  r: 0.35, hue: 270 },
+      { x: 0.72, y: 0.6,  r: 0.28, hue: 290 },
+      { x: 0.5,  y: 0.15, r: 0.22, hue: 250 },
+      { x: 0.4,  y: 0.8,  r: 0.3,  hue: 280 },
+    ];
+
+    let t = 0;
+    let galaxySeeded = false;
+
+    function draw() {
+      if (!canvas || !ctx) return;
+      const p = phaseRef.current;
+      const cp = clearProgressRef.current;
+      const w = W(), h = H();
+      ctx.clearRect(0, 0, w, h);
+      t += 0.014;
+
+      if (p === "revelation") {
+        /* ── Galaxy mode ── */
+        if (!galaxySeeded) { seedGalaxy(w, h); galaxySeeded = true; }
+
+        /* 1. Nebula wash */
+        nebulae.forEach(n => {
+          const grad = ctx.createRadialGradient(n.x * w, n.y * h, 0, n.x * w, n.y * h, n.r * Math.min(w, h));
+          grad.addColorStop(0, `hsla(${n.hue},60%,30%,0.045)`);
+          grad.addColorStop(1, `hsla(${n.hue},60%,20%,0)`);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(n.x * w, n.y * h, n.r * Math.min(w, h), 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        /* 2. Star field */
+        starsRef.current.forEach(s => {
+          s.x += s.vx; s.y += s.vy;
+          if (s.x < 0) s.x = w; if (s.x > w) s.x = 0;
+          if (s.y < 0) s.y = h; if (s.y > h) s.y = 0;
+          s.twinkle += 0.028;
+          const a = s.opacity * (0.65 + 0.35 * Math.sin(s.twinkle));
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(210,200,255,${a})`;
+          ctx.fill();
+        });
+
+        /* 3. Shooting stars */
+        shootersRef.current.forEach((s, i) => {
+          if (s.wait > 0) { s.wait--; return; }
+          if (!s.active) { s.active = true; s.opacity = 0; }
+          s.x += s.vx; s.y += s.vy;
+          s.opacity = Math.min(1, s.opacity + 0.12);
+
+          /* Draw streak */
+          ctx.save();
+          const tailX = s.x - s.vx * s.len;
+          const tailY = s.y - s.vy * s.len;
+          const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
+          grad.addColorStop(0, `rgba(255,255,255,0)`);
+          grad.addColorStop(1, `rgba(255,255,255,${s.opacity * 0.9})`);
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(s.x, s.y);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.restore();
+
+          /* Reset when off-screen */
+          if (s.x > w + 50 || s.y > h + 50) {
+            const fresh = makeShooter(w, h);
+            fresh.wait = 60 + Math.floor(Math.random() * 180); // 1-4s at 60fps
+            shootersRef.current[i] = fresh;
+          }
+        });
+
+        /* Shards on top */
+        shardsRef.current = shardsRef.current.filter(s => s.opacity > 0.01);
+        shardsRef.current.forEach(s => {
+          s.x += s.vx; s.y += s.vy;
+          s.vy += 0.07;
+          s.vx *= 0.97;
+          s.opacity -= s.decay;
+          if (s.opacity <= 0) return;
+          const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+          grad.addColorStop(0, `hsla(${s.hue},100%,75%,${s.opacity})`);
+          grad.addColorStop(1, `hsla(${(s.hue + 60) % 360},100%,80%,0)`);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+        });
+
+      } else {
+        /* ── Ambient mode (hook / clearing / visions) ── */
+        const b = ballBoundsRef.current;
+        const mistOpacity = Math.max(0, 1 - cp * 1.15);
+
+        /* Mist inside ball (only during hook/clearing) */
+        if (b && (p === "hook" || p === "clearing")) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(b.cx, b.cy, b.r * 0.93, 0, Math.PI * 2);
+          ctx.clip();
+
+          mistRef.current.forEach(m => {
+            const angle = Math.atan2(m.y - b.cy, m.x - b.cx);
+            m.vx += -Math.sin(angle) * 0.003 + (Math.random() - 0.5) * 0.008;
+            m.vy += Math.cos(angle) * 0.003 + (Math.random() - 0.5) * 0.008;
+            m.vx *= 0.982; m.vy *= 0.982;
+            m.x += m.vx; m.y += m.vy;
+            const dx = m.x - b.cx, dy = m.y - b.cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > b.r * 0.88) {
+              m.x = b.cx + (dx / dist) * b.r * 0.83;
+              m.y = b.cy + (dy / dist) * b.r * 0.83;
+              m.vx *= -0.5; m.vy *= -0.5;
+            }
+            m.life += 0.006;
+            const sinLife = Math.sin(m.life * Math.PI);
+            const a = m.opacity * mistOpacity * Math.max(0, sinLife);
+            if (a <= 0.005) { m.life = 0; return; }
+            const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 4);
+            g.addColorStop(0, `hsla(${m.hue},55%,78%,${a})`);
+            g.addColorStop(1, `hsla(${m.hue},55%,78%,0)`);
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.r * 4, 0, Math.PI * 2);
+            ctx.fillStyle = g;
+            ctx.fill();
+          });
+          ctx.restore();
+        }
+
+        /* Ambient full-screen sparkles */
+        sparksRef.current.forEach(s => {
+          s.x += s.vx; s.y += s.vy;
+          if (s.x < 0) s.x = w; if (s.x > w) s.x = 0;
+          if (s.y < 0) s.y = h; if (s.y > h) s.y = 0;
+          const a = s.opacity * (0.5 + 0.5 * Math.sin(t * 1.5 + s.x));
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(275,70%,80%,${a})`;
+          ctx.fill();
+        });
+
+        /* Shards (carry over briefly into visions) */
+        shardsRef.current = shardsRef.current.filter(s => s.opacity > 0.01);
+        shardsRef.current.forEach(s => {
+          s.x += s.vx; s.y += s.vy;
+          s.vy += 0.07;
+          s.vx *= 0.97;
+          s.opacity -= s.decay;
+          if (s.opacity <= 0) return;
+          const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+          grad.addColorStop(0, `hsla(${s.hue},100%,75%,${s.opacity})`);
+          grad.addColorStop(1, `hsla(${(s.hue + 60) % 360},100%,80%,0)`);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+        });
+      }
+
+      rafRef.current = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener("resize", resize); };
+  }, []);
+
+  /* ── Compute ball bounds on render ── */
+  const ballRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    function updateBounds() {
+      const el = ballRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      ballBoundsRef.current = { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, r: rect.width / 2 };
+    }
+    updateBounds();
+    window.addEventListener("resize", updateBounds);
+    return () => window.removeEventListener("resize", updateBounds);
+  }, [phase]);
+
+  /* ── Rub pointer handlers (active in hook phase only) ── */
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (phaseRef.current !== "hook") return;
+    isRubbingRef.current = true;
+    lastPtrRef.current = { x: e.clientX, y: e.clientY };
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* */ }
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isRubbingRef.current || !lastPtrRef.current) return;
+    const dx = e.clientX - lastPtrRef.current.x;
+    const dy = e.clientY - lastPtrRef.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    lastPtrRef.current = { x: e.clientX, y: e.clientY };
+    totalRubRef.current += dist;
+    hapticDistRef.current += dist;
+
+    if (hapticDistRef.current >= HAPTIC_INTERVAL) {
+      crystalHaptics.rubPulse();
+      hapticDistRef.current -= HAPTIC_INTERVAL;
+    }
+
+    const cp = Math.min(1, totalRubRef.current / RUB_TARGET);
+    clearProgressRef.current = cp;
+    setClearDisplay(cp);
+
+    if (cp >= 1) {
+      isRubbingRef.current = false;
+      crystalHaptics.reveal();
+      advancePhase("clearing");
+    }
+  }, []);
+
+  const handlePointerUp = useCallback(() => { isRubbingRef.current = false; }, []);
+
+  /* ── Orb tap — onPointerDown ── */
+  const handleOrbPointerDown = useCallback((idx: number, e: React.PointerEvent) => {
+    if (phaseRef.current !== "visions") return;
+    if (tappedOrbsRef.current.has(idx)) return; // already tapped, ignore
+    e.stopPropagation();
+
+    crystalHaptics.visionTap(idx);
+
+    /* Spawn 35 prismatic shards */
+    const bx = e.clientX, by = e.clientY;
+    const newShards: typeof shardsRef.current = Array.from({ length: 35 }, (_, i) => {
+      const angle = (i / 35) * Math.PI * 2 + Math.random() * 0.4;
+      const speed = 4 + Math.random() * 6;
+      return {
+        x: bx, y: by,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        r: 1.5 + Math.random() * 2,
+        opacity: 0.9,
+        decay: 0.022,
+        hue: Math.floor((i / 35) * 360),
+      };
+    });
+    shardsRef.current.push(...newShards);
+
+    /* Tooltip */
+    if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+    setTooltip({ emoji: tpl.nodes[idx].emoji, text: tpl.nodes[idx].text });
+    tooltipTimer.current = setTimeout(() => setTooltip(null), 2200);
+
+    setTappedOrbs(prev => {
+      const next = new Set(prev);
+      next.add(idx);
+      tappedOrbsRef.current = next;
+
+      if (next.size === tpl.nodes.length && !orbsDoneRef.current) {
+        orbsDoneRef.current = true;
+        /* Exit animation: orbs + ball dissolve, then revelation */
+        setTimeout(() => {
+          crystalHaptics.shatter();
+          setOrbsExiting(true);
+          setBallExiting(true);
+          setTimeout(() => advancePhase("revelation"), 700);
+        }, 400);
+      }
+      return next;
+    });
+  }, [tpl.nodes]);
+
+  /* ── Share helpers ── */
   function cardUrl() {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: recipientName, occasion, relation, template: "crystal" });
     const msgParam = params.get("msg");
     if (msgParam) p.set("msg", msgParam);
+    if (likesParam) p.set("likes", likesParam);
     const ref = params.get("ref");
     if (ref) p.set("ref", ref);
     return `${base}/card?${p.toString()}`;
@@ -418,16 +496,16 @@ export default function CrystalCard() {
   }
 
   const BALL_SIZE = "min(250px, 80vw)";
+  const ORB_SIZE  = "min(68px, 17vw)";
 
   return (
     <div
       style={{
-        position: "fixed",
-        inset: 0,
+        position: "fixed", inset: 0,
         background:
           phase === "revelation"
-            ? "radial-gradient(ellipse at 50% 35%, rgba(50,10,110,0.85) 0%, rgba(8,4,28,1) 80%)"
-            : "radial-gradient(ellipse at 50% 40%, rgba(70,20,140,0.88) 0%, rgba(12,4,36,1) 75%)",
+            ? "radial-gradient(ellipse at 50% 35%, rgba(40,8,90,0.92) 0%, rgba(6,2,20,1) 80%)"
+            : "radial-gradient(ellipse at 50% 42%, rgba(65,15,130,0.92) 0%, rgba(10,3,30,1) 78%)",
         overflow: "hidden",
         touchAction: phase === "hook" ? "none" : "auto",
         userSelect: "none",
@@ -435,245 +513,190 @@ export default function CrystalCard() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
-      {/* Nebula glow */}
-      <div style={{
-        position: "fixed", inset: 0,
-        background: "radial-gradient(ellipse 80% 60% at 50% 55%, rgba(100,40,200,0.12) 0%, transparent 70%)",
-        pointerEvents: "none", zIndex: 0,
-      }} />
+      {/* Single RAF canvas — fixed, full-screen, pointer-events: none */}
+      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} />
 
-      {/* Ambient canvas */}
-      {(phase === "hook" || phase === "clearing" || phase === "visions" || phase === "revelation") && (
-        <CrystalCanvas
-          mode={phase === "revelation" ? "galaxy" : "mist"}
-          clearProgress={clearDisplay}
-          ballRef={ballRef}
-        />
-      )}
-
-      {/* Prismatic burst canvas */}
-      <BurstCanvas bursts={bursts} />
-
-      {/* ══ Hook + Clearing phase — crystal ball visible ══ */}
+      {/* ══ Hook + Clearing — crystal ball phase ══ */}
       <AnimatePresence>
         {(phase === "hook" || phase === "clearing") && (
           <motion.div
             key="hook-wrap"
             initial={{ opacity: 0 }}
-            animate={{ opacity: phase === "clearing" ? [1, 1, 0] : 1 }}
-            transition={phase === "clearing" ? { duration: 0.7, times: [0, 0.5, 1] } : { duration: 0.6 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            transition={{ duration: 0.6 }}
             style={{
               position: "fixed", inset: 0, zIndex: 5,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
               padding: "0 24px",
             }}
           >
             {/* Hook title */}
             <motion.p
-              initial={{ opacity: 0, y: -14 }}
+              initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.65 }}
               style={{
-                fontSize: "min(18px, 4.5vw)",
-                color: "rgba(220,190,255,0.88)",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textAlign: "center",
-                marginBottom: 28,
-                textShadow: "0 0 18px rgba(160,100,255,0.55)",
+                fontSize: "min(18px, 4.5vw)", color: "rgba(210,185,255,0.9)",
+                fontWeight: 700, letterSpacing: "0.07em",
+                textAlign: "center", marginBottom: 32,
+                textShadow: "0 0 20px rgba(160,100,255,0.6)",
               }}
             >
               {tpl.hook_title}
             </motion.p>
 
-            {/* Crystal ball sphere */}
+            {/* Crystal ball */}
             <motion.div
               ref={ballRef}
-              animate={{
-                boxShadow: [
-                  "0 0 40px 14px rgba(130,60,240,0.35)",
-                  "0 0 70px 24px rgba(160,90,255,0.55)",
-                  "0 0 40px 14px rgba(130,60,240,0.35)",
-                ],
-              }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+              animate={ballExiting
+                ? { scale: [1, 1.4, 0], opacity: [1, 1, 0] }
+                : { scale: 1, opacity: 1 }
+              }
+              transition={ballExiting ? { duration: 0.7, ease: "easeInOut" } : {}}
               style={{
-                width: BALL_SIZE,
-                height: BALL_SIZE,
-                borderRadius: "50%",
-                flexShrink: 0,
-                position: "relative",
+                width: BALL_SIZE, height: BALL_SIZE,
+                borderRadius: "50%", position: "relative",
                 cursor: phase === "hook" ? "grab" : "default",
+                flexShrink: 0,
               }}
             >
+              {/* Outer glow ring */}
+              <motion.div
+                animate={{
+                  boxShadow: phase === "clearing"
+                    ? ["0 0 80px 30px rgba(230,210,255,0.7)", "0 0 120px 50px rgba(255,255,255,0.55)", "0 0 40px 14px rgba(140,80,255,0.35)"]
+                    : [
+                      "0 0 40px 14px rgba(130,60,240,0.35)",
+                      "0 0 70px 24px rgba(160,90,255,0.55)",
+                      "0 0 40px 14px rgba(130,60,240,0.35)",
+                    ],
+                }}
+                transition={{ duration: phase === "clearing" ? 0.7 : 3.2, repeat: phase === "clearing" ? 0 : Infinity, ease: "easeInOut" }}
+                style={{ position: "absolute", inset: -4, borderRadius: "50%" }}
+              />
+
+              {/* Sphere */}
               <div style={{
                 width: "100%", height: "100%",
                 borderRadius: "50%",
-                background:
-                  "radial-gradient(circle at 38% 32%, rgba(200,170,255,0.25) 0%, rgba(100,40,200,0.65) 40%, rgba(30,8,80,0.92) 75%, rgba(15,4,48,0.98) 100%)",
-                border: "1.5px solid rgba(180,140,255,0.35)",
-                position: "relative",
-                overflow: "hidden",
+                background: phase === "clearing"
+                  ? `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.95) 0%, rgba(230,210,255,0.8) 20%, rgba(180,140,255,0.5) 55%, rgba(80,30,160,0.6) 85%, rgba(20,5,50,0.7) 100%)`
+                  : `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.75) 0%, rgba(210,190,255,${0.5 - clearDisplay * 0.15}) 18%, rgba(140,90,220,0.35) 50%, rgba(60,20,110,0.6) 80%, rgba(20,5,50,0.8) 100%)`,
+                boxShadow: `0 0 60px rgba(140,80,255,0.4), 0 0 120px rgba(100,50,200,0.2), inset 0 0 ${40 + clearDisplay * 60}px rgba(180,130,255,${0.15 + clearDisplay * 0.4})`,
+                position: "relative", overflow: "hidden",
+                transition: "background 0.3s, box-shadow 0.15s",
               }}>
-                {/* Shimmer highlight */}
+                {/* Glass shimmer highlight */}
                 <div style={{
-                  position: "absolute", top: "10%", left: "15%", width: "35%", height: "28%",
+                  position: "absolute", top: "8%", left: "12%", width: "38%", height: "30%",
                   borderRadius: "50%",
-                  background: "radial-gradient(ellipse, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%)",
-                  transform: "rotate(-20deg)",
-                }} />
-                {/* Centre glow */}
-                <motion.div
-                  animate={{ opacity: [0.35, 0.75, 0.35] }}
-                  transition={{ duration: 2.6, repeat: Infinity }}
-                  style={{
-                    position: "absolute", top: "50%", left: "50%",
-                    transform: "translate(-50%,-50%)",
-                    width: "50%", height: "50%",
-                    borderRadius: "50%",
-                    background: "radial-gradient(circle, rgba(180,120,255,0.45) 0%, transparent 70%)",
-                  }}
-                />
-                {/* Mist veil fades as cleared */}
-                <div style={{
-                  position: "absolute", inset: 0, borderRadius: "50%",
-                  background: "radial-gradient(circle at 50% 55%, rgba(140,100,220,0.22) 0%, rgba(60,20,120,0.18) 60%, transparent 100%)",
-                  opacity: Math.max(0, 1 - clearDisplay * 1.3),
-                  transition: "opacity 0.15s",
+                  background: "radial-gradient(ellipse at 38% 25%, rgba(255,255,255,0.55) 0%, transparent 55%)",
+                  transform: "rotate(-15deg)",
                   pointerEvents: "none",
                 }} />
-                {/* Progress ring */}
-                {clearDisplay > 0 && (
+                {/* Mist veil div (fades with clearProgress) */}
+                <div style={{
+                  position: "absolute", inset: 0, borderRadius: "50%",
+                  background: "radial-gradient(circle at 50% 55%, rgba(130,90,210,0.20) 0%, rgba(55,15,120,0.16) 60%, transparent 100%)",
+                  opacity: Math.max(0, 1 - clearDisplay * 1.3),
+                  transition: "opacity 0.12s",
+                  pointerEvents: "none",
+                }} />
+                {/* Progress arc */}
+                {clearDisplay > 0 && clearDisplay < 1 && (
                   <svg style={{
                     position: "absolute", inset: 0, width: "100%", height: "100%",
                     transform: "rotate(-90deg)", pointerEvents: "none",
                   }} viewBox="0 0 100 100">
-                    <circle
-                      cx="50" cy="50" r="47"
-                      fill="none"
-                      stroke="rgba(200,160,255,0.55)"
-                      strokeWidth="2.5"
-                      strokeDasharray={`${clearDisplay * 295.3} 295.3`}
-                      strokeLinecap="round"
-                    />
+                    <circle cx="50" cy="50" r="47" fill="none"
+                      stroke="rgba(200,160,255,0.55)" strokeWidth="2.5"
+                      strokeDasharray={`${clearDisplay * 295.3} 295.3`} strokeLinecap="round" />
                   </svg>
                 )}
               </div>
 
-              {/* Pulse ring */}
+              {/* Outer pulse ring (hook only) */}
               {phase === "hook" && (
                 <motion.div
-                  animate={{ scale: [1, 1.22, 1], opacity: [0.42, 0, 0.42] }}
+                  animate={{ scale: [1, 1.22, 1], opacity: [0.4, 0, 0.4] }}
                   transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                  style={{
-                    position: "absolute", inset: 0, borderRadius: "50%",
-                    border: "1.5px solid rgba(180,130,255,0.42)",
-                    pointerEvents: "none",
-                  }}
+                  style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(180,130,255,0.42)", pointerEvents: "none" }}
                 />
               )}
             </motion.div>
 
             {/* Pedestal */}
-            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div style={{
-                width: "min(90px, 22vw)", height: 10,
-                background: "linear-gradient(90deg, transparent, rgba(160,120,255,0.35), transparent)",
-                borderRadius: 999,
-              }} />
-              <div style={{
-                width: "min(50px, 13vw)", height: 18,
-                background: "linear-gradient(180deg, rgba(140,100,220,0.28) 0%, rgba(80,40,160,0.18) 100%)",
-                borderRadius: "0 0 8px 8px", marginTop: -2,
-              }} />
-              <div style={{
-                width: "min(80px, 20vw)", height: 8,
-                background: "linear-gradient(90deg, transparent, rgba(160,120,255,0.22), transparent)",
-                borderRadius: 999, marginTop: 1,
-              }} />
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: "min(90px, 22vw)", height: 10, background: "linear-gradient(90deg, transparent, rgba(160,120,255,0.38), transparent)", borderRadius: 999 }} />
+              <div style={{ width: "min(50px, 13vw)", height: "min(30px, 9vw)", background: "linear-gradient(180deg, rgba(140,100,220,0.28) 0%, rgba(80,40,160,0.16) 100%)", borderRadius: "0 0 10px 10px", marginTop: -2 }} />
+              <div style={{ width: "min(80px, 20vw)", height: 8, background: "linear-gradient(90deg, transparent, rgba(160,120,255,0.2), transparent)", borderRadius: 999, marginTop: 1 }} />
             </div>
 
-            {/* Instruction */}
+            {/* Rub prompt */}
             {phase === "hook" && (
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: [0, 0.85, 0.85, 0.55] }}
-                transition={{ duration: 2.2, times: [0, 0.2, 0.7, 1], repeat: Infinity, delay: 0.5 }}
+                transition={{ duration: 2.2, times: [0, 0.2, 0.7, 1], repeat: Infinity, delay: 0.6 }}
                 style={{
-                  marginTop: 28,
-                  fontSize: "min(14px, 3.6vw)",
-                  color: "rgba(200,170,255,0.7)",
-                  letterSpacing: "0.1em",
-                  textAlign: "center",
-                  pointerEvents: "none",
+                  marginTop: 28, fontSize: "min(14px, 3.6vw)",
+                  color: "rgba(200,170,255,0.72)", letterSpacing: "0.1em",
+                  textAlign: "center", pointerEvents: "none",
                 }}
               >
-                ✦ rub to clear the mist ✦
+                Rub the crystal ball to reveal your vision
               </motion.p>
-            )}
-
-            {/* Clearing flash overlay */}
-            {phase === "clearing" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.55, 0] }}
-                transition={{ duration: 0.7 }}
-                style={{
-                  position: "fixed", inset: 0,
-                  background: "radial-gradient(ellipse at 50% 45%, rgba(200,160,255,0.55) 0%, rgba(100,50,200,0.18) 60%, transparent 85%)",
-                  pointerEvents: "none", zIndex: 20,
-                }}
-              />
             )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ══ Visions phase — 4 floating orbs ══ */}
+      {/* ══ Visions phase — 4 orbs ══ */}
       <AnimatePresence>
         {phase === "visions" && (
           <motion.div
             key="visions"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.7 }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 8,
-              background: "radial-gradient(ellipse at 50% 45%, rgba(90,30,160,0.75) 0%, rgba(20,6,50,0.98) 70%)",
-            }}
+            style={{ position: "fixed", inset: 0, zIndex: 8 }}
           >
-            {/* Hint */}
+            {/* Progress hint */}
             <motion.p
-              initial={{ opacity: 0 }} animate={{ opacity: 0.55 }} transition={{ delay: 0.8 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 0.65 }} transition={{ delay: 0.9 }}
               style={{
-                position: "absolute",
-                bottom: "max(28px, env(safe-area-inset-bottom, 28px))",
+                position: "absolute", bottom: "max(28px, env(safe-area-inset-bottom, 28px))",
                 left: 0, right: 0, textAlign: "center",
-                fontSize: "min(12px, 3vw)",
-                color: "rgba(200,170,255,0.7)",
-                letterSpacing: "0.14em",
-                pointerEvents: "none", zIndex: 2,
+                fontSize: "min(14px, 3.5vw)", color: "rgba(200,175,255,0.72)",
+                letterSpacing: "0.1em", pointerEvents: "none", zIndex: 2,
               }}
             >
               {tappedOrbs.size === tpl.nodes.length
-                ? "✦ all visions revealed ✦"
-                : `✦ tap each vision orb — ${tappedOrbs.size} / ${tpl.nodes.length} ✦`}
+                ? "✦ All visions revealed ✦"
+                : `✦ ${tappedOrbs.size} / 4 visions revealed ✦`}
             </motion.p>
 
             {/* Orbs */}
             {tpl.nodes.map((node, idx) => {
               const zone = SAFE_ZONES[idx];
               const tapped = tappedOrbs.has(idx);
-              const ORB_SIZE = "min(68px, 17vw)";
               return (
                 <motion.button
                   key={idx}
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.25 + idx * 0.18, type: "spring", stiffness: 180, damping: 16 }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={orbsExiting
+                    ? { scale: [tapped ? 0.6 : 1, tapped ? 0.9 : 1.6, 0], opacity: [tapped ? 0.4 : 1, tapped ? 0.8 : 0.8, 0] }
+                    : tapped
+                    ? { scale: 0.6, opacity: 0.4 }
+                    : { scale: 1, opacity: 1 }
+                  }
+                  transition={orbsExiting
+                    ? { duration: 0.55, delay: idx * 0.07, ease: "easeInOut" }
+                    : { type: "spring", stiffness: 200, damping: 18, delay: 0.25 + idx * 0.15 }
+                  }
                   onPointerDown={(e) => handleOrbPointerDown(idx, e)}
                   style={{
                     position: "absolute",
@@ -681,34 +704,26 @@ export default function CrystalCard() {
                     transform: "translate(-50%,-50%)",
                     width: ORB_SIZE, height: ORB_SIZE,
                     borderRadius: "50%",
-                    border: tapped ? "2px solid rgba(220,200,255,0.65)" : "1.5px solid rgba(180,140,255,0.4)",
                     background: tapped
-                      ? "linear-gradient(135deg, rgba(160,100,255,0.45), rgba(80,30,180,0.65))"
-                      : "linear-gradient(135deg, rgba(100,50,200,0.35), rgba(40,10,100,0.55))",
+                      ? "radial-gradient(circle at 35% 30%, rgba(160,120,220,0.55), rgba(80,30,160,0.4))"
+                      : "radial-gradient(circle at 35% 30%, rgba(220,180,255,0.9), rgba(120,60,200,0.8))",
                     boxShadow: tapped
-                      ? "0 0 22px rgba(180,130,255,0.55), inset 0 0 12px rgba(255,255,255,0.08)"
-                      : "0 0 10px rgba(130,80,220,0.3)",
-                    backdropFilter: "blur(8px)",
-                    cursor: "pointer",
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                    zIndex: 10, padding: 0, transition: "background 0.3s, box-shadow 0.3s",
+                      ? "0 0 10px rgba(140,90,200,0.2)"
+                      : "0 0 20px rgba(180,120,255,0.6), 0 0 40px rgba(140,80,255,0.3)",
+                    cursor: tapped ? "default" : "pointer",
+                    pointerEvents: tapped ? "none" : "auto",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    border: "none", zIndex: 10, padding: 0,
                   }}
                 >
                   <motion.div
-                    animate={!tapped ? { y: [0, -6, 0], opacity: [0.75, 1, 0.75] } : { y: 0, opacity: 1 }}
-                    transition={!tapped ? { duration: 2.8 + idx * 0.4, repeat: Infinity, ease: "easeInOut", delay: idx * 0.35 } : {}}
+                    animate={!tapped ? { y: [0, -5, 0], opacity: [0.85, 1, 0.85] } : {}}
+                    transition={!tapped ? { duration: 2.6 + idx * 0.4, repeat: Infinity, ease: "easeInOut", delay: idx * 0.3 } : {}}
                     style={{ fontSize: "min(26px, 6.5vw)" }}
                   >
                     {tapped ? node.emoji : "🔮"}
                   </motion.div>
-                  {tapped && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
-                      style={{ fontSize: "min(9px, 2.2vw)", color: "rgba(220,200,255,0.9)", marginTop: 4, fontWeight: 600 }}
-                    >
-                      ✦
-                    </motion.div>
-                  )}
                 </motion.button>
               );
             })}
@@ -718,24 +733,30 @@ export default function CrystalCard() {
               {tooltip && (
                 <motion.div
                   key={tooltip.text}
-                  initial={{ opacity: 0, scale: 0.82, y: 16 }}
+                  initial={{ opacity: 0, scale: 0.88, y: 18 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.82, y: -10 }}
-                  transition={{ duration: 0.3 }}
+                  exit={{ opacity: 0, scale: 0.88, y: -12 }}
+                  transition={{ duration: 0.28 }}
                   style={{
                     position: "fixed",
-                    bottom: "max(80px, env(safe-area-inset-bottom, 80px))",
-                    left: 16, right: 16, zIndex: 20, pointerEvents: "none",
-                    background: "rgba(14,6,36,0.6)",
+                    top: "50%", left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    zIndex: 50, pointerEvents: "none",
+                    width: "min(310px, 88vw)",
+                    background: "rgba(12,4,30,0.82)",
+                    backdropFilter: "blur(18px)",
+                    border: "1px solid rgba(180,120,255,0.4)",
                     borderRadius: 18,
-                    border: "1px solid rgba(180,140,255,0.25)",
-                    padding: "16px 22px", textAlign: "center",
-                    boxShadow: "0 4px 30px rgba(80,30,150,0.35)",
-                    backdropFilter: "blur(16px)",
+                    padding: "28px 36px",
+                    textAlign: "center",
+                    boxShadow: "0 4px 40px rgba(80,30,160,0.45)",
                   }}
                 >
-                  <div style={{ fontSize: 40, marginBottom: 10 }}>{tooltip.emoji}</div>
-                  <p style={{ fontSize: "min(14px, 3.8vw)", color: "rgba(220,210,255,0.92)", fontWeight: 500, lineHeight: 1.55, margin: 0 }}>
+                  <div style={{ fontSize: 52, marginBottom: 14 }}>{tooltip.emoji}</div>
+                  <p style={{
+                    fontSize: "min(15px, 3.8vw)", color: "rgba(210,185,255,0.94)",
+                    fontWeight: 500, fontStyle: "italic", lineHeight: 1.6, margin: 0,
+                  }}>
                     {tooltip.text}
                   </p>
                 </motion.div>
@@ -750,124 +771,166 @@ export default function CrystalCard() {
         {phase === "revelation" && (
           <motion.div
             key="revelation"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
             style={{
               position: "fixed", inset: 0, zIndex: 30,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
               padding: "0 20px", overflowY: "auto",
             }}
           >
-            {/* Floating holographic card */}
+            {/* Holographic card */}
             <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-              style={{
-                width: "min(340px, calc(100vw - 40px))",
-                background: "linear-gradient(145deg, rgba(42,12,80,0.98) 0%, rgba(16,4,44,0.99) 100%)",
-                borderRadius: 26,
-                border: "1.5px solid rgba(190,150,255,0.45)",
-                padding: "38px 30px", textAlign: "center",
-                boxShadow: "0 0 60px rgba(130,60,240,0.38), 0 0 140px rgba(100,40,200,0.18), inset 0 1px 0 rgba(255,255,255,0.1)",
-                position: "relative", overflow: "hidden",
-              }}
+              initial={{ y: 50, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              transition={{ delay: 0.7, duration: 0.7, ease: "easeOut" }}
             >
-              {/* Iridescent shimmer sweep */}
               <motion.div
-                animate={{ x: ["-120%", "120%"] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 3 }}
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
                 style={{
-                  position: "absolute", top: 0, left: 0, width: "60%", height: "100%",
-                  background: "linear-gradient(105deg, transparent, rgba(200,160,255,0.06), rgba(255,220,200,0.04), transparent)",
+                  width: "min(340px, 90vw)",
+                  background: "linear-gradient(135deg, #0D0520 0%, #1A0535 50%, #0D0820 100%)",
+                  borderRadius: 22,
+                  border: "1px solid rgba(180,120,255,0.45)",
+                  padding: "36px 28px", textAlign: "center",
+                  boxShadow: "0 0 80px rgba(140,80,255,0.18), 0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.7)",
+                  position: "relative", overflow: "hidden",
+                }}
+              >
+                {/* Iridescent shimmer sweep */}
+                <motion.div
+                  animate={{ x: ["-120%", "120%"] }}
+                  transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 3.5 }}
+                  style={{
+                    position: "absolute", top: 0, left: 0, width: "60%", height: "100%",
+                    background: "linear-gradient(105deg, transparent, rgba(200,160,255,0.055), rgba(255,220,200,0.035), transparent)",
+                    pointerEvents: "none",
+                  }}
+                />
+                {/* Inner nebula glow */}
+                <div style={{
+                  position: "absolute", top: "40%", left: "50%", transform: "translate(-50%,-50%)",
+                  width: "75%", height: "60%",
+                  background: "radial-gradient(ellipse, rgba(120,50,230,0.11) 0%, transparent 70%)",
                   pointerEvents: "none",
-                }}
-              />
-              {/* Nebula glow */}
-              <div style={{
-                position: "absolute", top: "40%", left: "50%", transform: "translate(-50%,-50%)",
-                width: "75%", height: "60%",
-                background: "radial-gradient(ellipse, rgba(120,50,230,0.12) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }} />
+                }} />
 
-              <motion.div
-                initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2, type: "spring" }}
-                style={{ fontSize: 36, marginBottom: 14, position: "relative", zIndex: 1 }}
-              >
-                🔮
-              </motion.div>
-
-              <motion.p
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                style={{ fontSize: 11, color: "rgba(210,185,255,0.78)", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8, zIndex: 1, position: "relative" }}
-              >
-                {tpl.title_prefix}
-              </motion.p>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.52 }}
-                style={{
-                  fontSize: "min(34px, 8.5vw)", fontWeight: 800, color: "#e2d0ff",
-                  marginBottom: 22, letterSpacing: "0.02em", zIndex: 1, position: "relative",
-                  textShadow: "0 0 20px rgba(160,100,255,0.45)",
-                }}
-              >
-                {recipientName}
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-                style={{ fontSize: "min(15px, 3.9vw)", color: "rgba(232,220,255,0.94)", lineHeight: 1.75, margin: 0, zIndex: 1, position: "relative" }}
-              >
-                {finalMessage}
-              </motion.p>
-
-              <motion.div
-                animate={{ opacity: [0.3, 0.75, 0.3] }} transition={{ duration: 3, repeat: Infinity }}
-                style={{ marginTop: 24, fontSize: 14, color: "rgba(200,170,255,0.5)", letterSpacing: "0.35em", position: "relative", zIndex: 1 }}
-              >
-                ✦ ✦ ✦
-              </motion.div>
-
-              {isRecipient && (
-                <motion.p
-                  initial={{ opacity: 0 }} animate={{ opacity: 0.38 }} transition={{ delay: 1.4 }}
-                  style={{ marginTop: 18, fontSize: 10, color: "rgba(200,170,255,0.5)", letterSpacing: "0.1em", position: "relative", zIndex: 1 }}
+                {/* 🔮 emoji */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.9, type: "spring" }}
+                  style={{ fontSize: "min(44px, 11vw)", marginBottom: 14, position: "relative", zIndex: 1 }}
                 >
-                  ✦ sent with HeartSync AI ✦
+                  🔮
+                </motion.div>
+
+                {/* hook_title */}
+                <motion.p
+                  initial={{ opacity: 0 }} animate={{ opacity: 0.72 }} transition={{ delay: 1.1 }}
+                  style={{
+                    fontSize: "min(10px, 2.6vw)", color: "rgba(180,140,255,0.72)",
+                    letterSpacing: "0.2em", textTransform: "uppercase",
+                    marginBottom: 10, position: "relative", zIndex: 1,
+                  }}
+                >
+                  {tpl.hook_title}
                 </motion.p>
-              )}
+
+                {/* "{title_prefix}, {recipientName}" */}
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.25 }}
+                  style={{
+                    fontSize: "min(22px, 5.5vw)", fontWeight: 600, color: "#fff",
+                    marginBottom: 18, letterSpacing: "0.01em",
+                    position: "relative", zIndex: 1, lineHeight: 1.3,
+                  }}
+                >
+                  {tpl.title_prefix}, {recipientName}
+                </motion.h1>
+
+                {/* Final message */}
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4 }}
+                  style={{
+                    fontSize: "min(15px, 3.8vw)", color: "rgba(222,210,255,0.92)",
+                    fontStyle: "italic", lineHeight: 1.72, margin: 0,
+                    position: "relative", zIndex: 1,
+                  }}
+                >
+                  {finalMessage}
+                </motion.p>
+
+                {/* Thin divider */}
+                {likesChips.length > 0 && (
+                  <div style={{ width: "60%", height: 1, background: "rgba(160,100,255,0.25)", margin: "18px auto 14px" }} />
+                )}
+
+                {/* Likes chips */}
+                {likesChips.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }}
+                    style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", position: "relative", zIndex: 1 }}
+                  >
+                    {likesChips.map((chip, i) => (
+                      <span key={i} style={{
+                        fontSize: "min(12px, 3vw)", color: "rgba(200,170,255,0.88)",
+                        background: "rgba(140,80,255,0.2)", border: "1px solid rgba(180,120,255,0.3)",
+                        borderRadius: 999, padding: "4px 12px",
+                      }}>{chip}</span>
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* Divider + decorative stars */}
+                <motion.div
+                  animate={{ opacity: [0.28, 0.72, 0.28] }} transition={{ duration: 3, repeat: Infinity }}
+                  style={{ marginTop: 22, fontSize: 13, color: "rgba(190,150,255,0.5)", letterSpacing: "0.4em", position: "relative", zIndex: 1 }}
+                >
+                  ✦ ✦ ✦
+                </motion.div>
+
+                {/* Sender credit for recipient */}
+                {isRecipient && (
+                  <motion.p
+                    initial={{ opacity: 0 }} animate={{ opacity: 0.42 }} transition={{ delay: 2 }}
+                    style={{ marginTop: 16, fontSize: 11, color: "rgba(190,155,255,0.5)", letterSpacing: "0.08em", position: "relative", zIndex: 1 }}
+                  >
+                    Sent with love 🔮
+                  </motion.p>
+                )}
+              </motion.div>
             </motion.div>
 
             {/* ── Sender share panel ── */}
             {isSender && (
               <motion.div
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, duration: 0.5 }}
-                style={{ width: "min(340px, calc(100vw - 40px))", marginTop: 20 }}
+                initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5, duration: 0.5 }}
+                style={{ width: "min(340px, 90vw)", marginTop: 22 }}
               >
-                <p style={{ fontSize: 12, color: "rgba(190,160,255,0.38)", textAlign: "center", marginBottom: 12, letterSpacing: "0.08em" }}>
+                <p style={{ fontSize: 12, color: "rgba(190,160,255,0.35)", textAlign: "center", marginBottom: 12, letterSpacing: "0.08em" }}>
                   ✦ share this card
                 </p>
                 <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
                   <button onClick={shareSenderWhatsApp} style={{
                     flex: 1, padding: "12px 8px", borderRadius: 12,
-                    background: "rgba(37,211,102,0.09)", border: "1.5px solid rgba(37,211,102,0.26)",
-                    color: "rgba(37,211,102,0.88)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    background: "rgba(37,211,102,0.08)", border: "1.5px solid rgba(37,211,102,0.24)",
+                    color: "rgba(37,211,102,0.86)", fontWeight: 700, fontSize: 13, cursor: "pointer",
                   }}>💬 WhatsApp</button>
                   <button onClick={copySenderLinkForInstagram} style={{
                     flex: 1, padding: "12px 8px", borderRadius: 12,
-                    background: "rgba(200,100,200,0.09)", border: "1.5px solid rgba(200,100,200,0.26)",
-                    color: "rgba(220,140,255,0.88)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    background: "rgba(200,100,200,0.08)", border: "1.5px solid rgba(200,100,200,0.24)",
+                    color: "rgba(220,140,255,0.86)", fontWeight: 700, fontSize: 13, cursor: "pointer",
                   }}>{senderIgCopied ? "✅ Copied!" : "📸 Instagram"}</button>
                 </div>
                 <button onClick={copySenderLink} style={{
                   width: "100%", padding: "11px", borderRadius: 12,
-                  background: "rgba(180,130,255,0.08)", border: "1.5px solid rgba(180,130,255,0.22)",
-                  color: "rgba(200,170,255,0.75)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  background: "rgba(180,130,255,0.07)", border: "1.5px solid rgba(180,130,255,0.2)",
+                  color: "rgba(200,170,255,0.72)", fontWeight: 700, fontSize: 13, cursor: "pointer",
                 }}>{senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}</button>
                 <div style={{ textAlign: "center", marginTop: 14 }}>
                   <Link href="/send?ref=card">
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", cursor: "pointer" }}>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.16)", cursor: "pointer" }}>
                       Make another card
                     </span>
                   </Link>
@@ -878,16 +941,16 @@ export default function CrystalCard() {
             {/* ── Recipient CTA ── */}
             {isRecipient && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2, duration: 0.5 }}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.2, duration: 0.5 }}
                 style={{ width: "min(300px, calc(100vw - 40px))", textAlign: "center", marginTop: 18, paddingBottom: 8 }}
               >
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.48)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.46)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
                   Feeling the magic? Send one back ✦
                 </p>
                 <Link href="/send?ref=card">
                   <button style={{
                     width: "100%", padding: "14px", borderRadius: 14,
-                    background: "rgba(120,60,200,0.14)", border: "1.5px solid rgba(180,130,255,0.3)",
+                    background: "rgba(120,60,200,0.13)", border: "1.5px solid rgba(180,120,255,0.28)",
                     color: "rgba(210,185,255,0.9)", fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: "0.02em",
                   }}>🔮 Create your own card — free!</button>
                 </Link>
@@ -897,17 +960,17 @@ export default function CrystalCard() {
         )}
       </AnimatePresence>
 
-      {/* Back link */}
+      {/* ← make your own card */}
       <Link href="/send?ref=card">
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
           style={{
             position: "fixed", top: 16, left: 16, fontSize: 12,
-            color: "rgba(255,255,255,0.18)", cursor: "pointer", zIndex: 60,
+            color: "rgba(255,255,255,0.17)", cursor: "pointer", zIndex: 60,
             padding: "4px 10px", borderRadius: 999, background: "rgba(255,255,255,0.04)",
           }}
         >
-          ← make your own
+          ← make your own card
         </motion.div>
       </Link>
     </div>

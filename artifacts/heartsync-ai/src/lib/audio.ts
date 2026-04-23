@@ -330,7 +330,7 @@ export const envelope = {
 export const crystal = {
   rubPulse()   { haptic.light();     },
   reveal()     { haptic.strong();    },
-  visionTap()  { haptic.light();     },
+  visionTap(_nth?: number) { haptic.light(); },
   shatter()    { haptic.celebrate(); },
   copy()       { haptic.click();     },
 };
