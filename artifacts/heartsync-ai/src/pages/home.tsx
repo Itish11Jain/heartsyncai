@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { home } from "@/lib/audio";
 
 const STEPS = [
   { num: "01", title: "Pick who it's for", desc: "Your partner, friend, date, or spouse. Tell us the relationship." },
@@ -351,6 +352,307 @@ function CardIllustration() {
   );
 }
 
+/* ── Vinyl Mixtape Card Preview ─────────────────────────── */
+const VINYL_TRACKS = ["Always You", "City Nights", "Slow Dance"];
+
+function VinylCardIllustration() {
+  const [seq, setSeq] = useState(0);
+  const [loopCount, setLoopCount] = useState(0);
+
+  useEffect(() => {
+    setSeq(0);
+    const t1 = setTimeout(() => setSeq(1), 2600);
+    const t2 = setTimeout(() => setSeq(2), 4400);
+    const t3 = setTimeout(() => setSeq(3), 7800);
+    const t4 = setTimeout(() => setLoopCount(c => c + 1), 11200);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, [loopCount]);
+
+  return (
+    <div className="relative w-72 h-96 select-none">
+      {/* Ambient glow — warm amber-rose */}
+      <div
+        className="absolute inset-0 rounded-3xl blur-3xl scale-105"
+        style={{ background: "radial-gradient(ellipse, rgba(220,60,60,0.2) 0%, rgba(255,120,40,0.1) 50%, transparent 75%)" }}
+      />
+
+      {/* Card shell */}
+      <div
+        className="relative w-full h-full rounded-3xl overflow-hidden"
+        style={{
+          background: "radial-gradient(ellipse at 50% 30%, #1a0808 0%, #0c0606 60%, #060203 100%)",
+          border: "1px solid rgba(220,80,60,0.18)",
+          boxShadow: "0 32px 64px rgba(0,0,0,0.65), 0 0 0 1px rgba(220,80,60,0.07)",
+        }}
+      >
+        {/* Subtle grain */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{ opacity: [0.04, 0.1, 0.04] }}
+            transition={{ duration: 1.8 + i * 0.5, repeat: Infinity, delay: i * 0.4 }}
+            style={{
+              position: "absolute",
+              width: 2, height: 2, borderRadius: "50%",
+              background: "rgba(255,200,160,0.9)",
+              top: `${[14, 25, 60, 75, 88][i]}%`,
+              left: `${[70, 18, 85, 42, 65][i]}%`,
+            }}
+          />
+        ))}
+
+        {/* ── Phase 0/1: Sleeve front ── */}
+        <AnimatePresence>
+          {(seq === 0 || seq === 1) && (
+            <motion.div
+              key="sleeve"
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, y: 60, transition: { duration: 0.4 } }}
+              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}
+            >
+              <motion.p
+                animate={{ opacity: [0.5, 0.95, 0.5] }}
+                transition={{ duration: 2.2, repeat: Infinity }}
+                style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,140,100,0.7)", letterSpacing: "0.08em" }}
+              >
+                🎵 A MIXTAPE FOR YOU
+              </motion.p>
+
+              {/* Sleeve box */}
+              <div style={{
+                width: 168, height: 168,
+                borderRadius: 12,
+                background: "linear-gradient(145deg, #1c0b0b 0%, #2a1010 40%, #1c0b0b 100%)",
+                border: "1.5px solid rgba(200,80,60,0.35)",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,160,120,0.12)",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                position: "relative", overflow: "hidden",
+              }}>
+                {/* Corner accents */}
+                {[0,1,2,3].map(c => (
+                  <div key={c} style={{
+                    position: "absolute",
+                    top: c < 2 ? 8 : "auto", bottom: c >= 2 ? 8 : "auto",
+                    left: c % 2 === 0 ? 8 : "auto", right: c % 2 === 1 ? 8 : "auto",
+                    width: 14, height: 14,
+                    borderTop: c < 2 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
+                    borderBottom: c >= 2 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
+                    borderLeft: c % 2 === 0 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
+                    borderRight: c % 2 === 1 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
+                  }} />
+                ))}
+                <span style={{ fontSize: 36, marginBottom: 8 }}>❤️</span>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.85)", fontFamily: "Georgia,serif", letterSpacing: "0.02em" }}>For You</p>
+                <p style={{ fontSize: 9, color: "rgba(200,80,60,0.6)", marginTop: 4, letterSpacing: "0.12em" }}>FROM ARJUN</p>
+
+                {/* Record peeking — phase 1 */}
+                <motion.div
+                  animate={seq === 1 ? { y: 0, opacity: 1 } : { y: 30, opacity: 0 }}
+                  transition={{ type: "spring", damping: 14, stiffness: 90 }}
+                  style={{
+                    position: "absolute", bottom: -28, left: "50%", transform: "translateX(-50%)",
+                    width: 100, height: 100, borderRadius: "50%",
+                    background: "radial-gradient(circle at 50% 50%, #1a1a1a 0%, #0a0a0a 60%, #050505 100%)",
+                    border: "2px solid rgba(255,255,255,0.06)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.7)",
+                  }}
+                >
+                  {/* Grooves */}
+                  {[30,40,50,60,70].map(r => (
+                    <div key={r} style={{ position: "absolute", inset: `${(100-r)/2}%`, borderRadius: "50%", border: "0.5px solid rgba(255,255,255,0.04)" }} />
+                  ))}
+                  <div style={{ position: "absolute", inset: "38%", borderRadius: "50%", background: "radial-gradient(#333 0%, #111 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", fontWeight: 700 }}>HS</span>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Track hint */}
+              <div style={{ display: "flex", gap: 6 }}>
+                {VINYL_TRACKS.slice(0, 3).map((t, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.15 + 0.3 }}
+                    style={{
+                      padding: "3px 8px", borderRadius: 99,
+                      background: "rgba(200,80,60,0.12)",
+                      border: "1px solid rgba(200,80,60,0.2)",
+                      fontSize: 7, color: "rgba(255,200,180,0.6)",
+                    }}
+                  >
+                    {t}
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Phase 2: Spinning record ── */}
+        <AnimatePresence>
+          {(seq === 2 || seq === 3) && (
+            <motion.div
+              key="spinning"
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: "spring", damping: 16, stiffness: 160 }}
+              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
+            >
+              {/* Spinning disc */}
+              <div style={{ position: "relative", width: 174, height: 174 }}>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3.2, repeat: Infinity, ease: "linear" }}
+                  style={{
+                    width: 174, height: 174, borderRadius: "50%",
+                    background: "radial-gradient(circle at 50% 50%, #222 0%, #0d0d0d 60%, #060606 100%)",
+                    border: "2px solid rgba(255,255,255,0.05)",
+                    boxShadow: "0 16px 40px rgba(0,0,0,0.7)",
+                    position: "relative",
+                  }}
+                >
+                  {[20,32,44,56,68,80].map(r => (
+                    <div key={r} style={{ position: "absolute", inset: `${(100-r)/2}%`, borderRadius: "50%", border: "0.8px solid rgba(255,255,255,0.04)" }} />
+                  ))}
+                  {/* Light sheen */}
+                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%)" }} />
+                  {/* Center label */}
+                  <div style={{ position: "absolute", inset: "34%", borderRadius: "50%", background: "radial-gradient(#2a1010, #1a0808)", border: "1px solid rgba(200,80,60,0.3)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 14 }}>❤️</span>
+                  </div>
+                </motion.div>
+                {/* Needle */}
+                <motion.div
+                  animate={seq === 2 ? { rotate: -18 } : { rotate: -30 }}
+                  transition={{ type: "spring", damping: 12, stiffness: 80 }}
+                  style={{
+                    position: "absolute", top: -14, right: -12,
+                    width: 4, height: 72, borderRadius: 99,
+                    background: "linear-gradient(to bottom, #888 0%, #444 100%)",
+                    transformOrigin: "top center",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                  }}
+                />
+              </div>
+
+              {/* Now playing */}
+              <AnimatePresence>
+                {seq === 3 && (
+                  <motion.div
+                    key="np"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", damping: 18 }}
+                    style={{ textAlign: "center" }}
+                  >
+                    <p style={{ fontSize: 9, color: "rgba(200,80,60,0.6)", letterSpacing: "0.12em", marginBottom: 4 }}>▶ NOW PLAYING</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)", fontFamily: "Georgia,serif" }}>{VINYL_TRACKS[0]}</p>
+                    {/* Progress bar */}
+                    <div style={{ width: 120, height: 2, background: "rgba(255,255,255,0.08)", borderRadius: 99, margin: "8px auto 0", overflow: "hidden" }}>
+                      <motion.div
+                        initial={{ width: "0%" }}
+                        animate={{ width: "60%" }}
+                        transition={{ duration: 2.5, ease: "linear" }}
+                        style={{ height: "100%", background: "linear-gradient(90deg, rgba(200,80,60,0.7), rgba(255,140,80,0.9))", borderRadius: 99 }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom label */}
+        <motion.div
+          animate={{ opacity: [0.25, 0.55, 0.25] }}
+          transition={{ duration: 3.5, repeat: Infinity }}
+          style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(200,80,60,0.4)", letterSpacing: "0.1em" }}
+        >
+          ✦ HeartSync AI
+        </motion.div>
+      </div>
+
+      {/* Floating sparkles */}
+      {[
+        { top: "-6%", left: "-8%", size: 18, delay: 0.3 },
+        { top: "30%", right: "-10%", size: 13, delay: 1.0 },
+        { bottom: "-5%", right: "-6%", size: 20, delay: 0.8 },
+      ].map((s, i) => (
+        <motion.div
+          key={i}
+          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 2.8 + i * 0.6, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
+          style={{ position: "absolute", ...s, fontSize: s.size, color: "rgba(200,80,60,0.6)" }}
+        >
+          ✦
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ── 2-Card Carousel ─────────────────────────────────────── */
+function CardCarousel() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setActive(a => (a + 1) % 2), 12000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative" style={{ width: 288, height: 384 }}>
+        <AnimatePresence mode="wait">
+          {active === 0 ? (
+            <motion.div
+              key="env"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            >
+              <CardIllustration />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="vinyl"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            >
+              <VinylCardIllustration />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Dot indicators */}
+      <div className="flex gap-2">
+        {[0, 1].map(i => (
+          <button
+            key={i}
+            onClick={() => setActive(i)}
+            style={{
+              width: i === active ? 20 : 6,
+              height: 6, borderRadius: 99,
+              background: i === active ? "rgba(255,215,0,0.7)" : "rgba(255,255,255,0.15)",
+              border: "none", cursor: "pointer",
+              transition: "all 0.3s ease",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const guideCta = "/date-guide";
 
@@ -375,10 +677,10 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" className="text-white/40 hover:text-white/70 hover:bg-transparent text-sm px-3 h-auto py-1.5">
-              <Link href={guideCta}>Date Guide</Link>
+              <Link href={guideCta} onClick={() => home.navTap()}>Date Guide</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
-              <Link href={guideCta}>Log in</Link>
+              <Link href={guideCta} onClick={() => home.navTap()}>Log in</Link>
             </Button>
           </div>
         </header>
@@ -388,55 +690,107 @@ export default function Home() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-          className="grid md:grid-cols-2 gap-16 items-center mb-28"
+          className="mb-28"
         >
-          <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/8 mb-7">
-              <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
+          {/* ── Mobile layout (< md): card first, CTA below ── */}
+          <div className="md:hidden flex flex-col items-center">
+            {/* Scaled-down carousel so card + CTA both fit in first fold */}
+            <div style={{ transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -108 }}>
+              <CardCarousel />
             </div>
 
-            <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-4 text-white">
-              Send love in<br />a card.
-            </h1>
+            <div className="w-full px-1 mt-3">
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/8">
+                  <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
+                </div>
+              </div>
 
-            <p className="text-sm font-semibold mb-5 tracking-wide" style={{ color: "rgba(255,215,0,0.65)" }}>
-              Personalised &nbsp;·&nbsp; 100+ Unique Templates &nbsp;·&nbsp; All Occasions
-            </p>
+              <h1 className="text-4xl font-extrabold tracking-tight leading-[1.1] mb-3 text-white text-center">
+                Send love<br />in a card.
+              </h1>
 
-            <p className="text-sm text-white/40 mb-10 leading-relaxed max-w-sm">
-              We write the perfect heartfelt message for you. Pick a style. Share in 60 seconds.
-            </p>
+              <p className="text-xs font-semibold mb-5 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
+                Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
+              </p>
 
-            <div className="mb-10">
               <Button
                 asChild
                 size="lg"
-                className="rounded-2xl h-14 px-8 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all"
+                className="w-full rounded-2xl h-13 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all"
               >
-                <Link href="/send" className="flex items-center gap-2">
+                <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => home.cta()}>
                   Send cards now — Free!
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
                 </Link>
               </Button>
-            </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-2">
-                {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-background" style={{ background: c }} />
-                ))}
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <div className="flex -space-x-1.5">
+                  {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
+                    <div key={i} className="w-6 h-6 rounded-full border-2 border-background" style={{ background: c }} />
+                  ))}
+                </div>
+                <p className="text-xs text-white/30">3,200+ cards sent this month</p>
               </div>
-              <p className="text-xs text-white/30">3,200+ cards sent this month</p>
             </div>
           </div>
 
-          <div className="flex justify-center md:justify-start md:pl-4">
-            <CardIllustration />
+          {/* ── Desktop layout (md+): side-by-side ── */}
+          <div className="hidden md:grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/8 mb-7">
+                <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
+              </div>
+
+              <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-4 text-white">
+                Send love in<br />a card.
+              </h1>
+
+              <p className="text-sm font-semibold mb-5 tracking-wide" style={{ color: "rgba(255,215,0,0.65)" }}>
+                Personalised &nbsp;·&nbsp; 100+ Unique Templates &nbsp;·&nbsp; All Occasions
+              </p>
+
+              <p className="text-sm text-white/40 mb-10 leading-relaxed max-w-sm">
+                We write the perfect heartfelt message for you. Pick a style. Share in 60 seconds.
+              </p>
+
+              <div className="mb-10">
+                <Button
+                  asChild
+                  size="lg"
+                  className="rounded-2xl h-14 px-8 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all"
+                >
+                  <Link href="/send" className="flex items-center gap-2" onClick={() => home.cta()}>
+                    Send cards now — Free!
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex -space-x-2">
+                  {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-background" style={{ background: c }} />
+                  ))}
+                </div>
+                <p className="text-xs text-white/30">3,200+ cards sent this month</p>
+              </div>
+            </div>
+
+            <div className="flex justify-center md:justify-start md:pl-4">
+              <CardCarousel />
+            </div>
           </div>
         </motion.section>
 
