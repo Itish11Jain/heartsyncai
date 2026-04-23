@@ -1,62 +1,154 @@
 /**
  * UnboxCard — Gift Unbox, 3D Cinematic Reveal
  *
- * Phase 1 (0–1.3s):  Camera dolly-in toward the envelope
- * Phase 2 (1.3–2.3s): Spring flap opens (damping:10 → bouncy tactile)
- * Phase 3 (2.0–3.2s): Luxury card slides out, envelope dissolves
- * Post-reveal:         Photo ring glow, shimmer sweep, word-stagger message
+ * Phase 1 (0–1.3s):  Camera dolly-in toward the envelope (z-depth + scale)
+ * Phase 2 (1.3–2.3s): Spring flap opens — rose flower seal twists, petals float
+ * Phase 3 (2.0–3.2s): Luxury blush card slides out, envelope dissolves
+ * Post-reveal:         Photo ring glow, shimmer, word-stagger, petals continue
+ *
+ * Palette: deep plum room · blush parchment envelope · pearl-blush inner card
  */
 import { motion, useAnimation } from "framer-motion";
 import { useEffect, useState } from "react";
 
-/* ─── tiny SVG pieces ─────────────────────────────── */
+/* ─── Floating petal particles ──────────────────────── */
+const PETALS = Array.from({ length: 20 }, (_, i) => ({
+  id: i,
+  size: 9 + (i % 4) * 5,
+  left: 4 + (i * 4.9) % 90,
+  duration: 9 + (i % 5) * 2.2,
+  delay: (i * 0.55) % 8,
+  drift: i % 2 === 0 ? 22 : -22,
+  rotate: (i * 47) % 360,
+  opacity: 0.22 + (i % 4) * 0.1,
+}));
+const PETAL_COLORS = [
+  "#fda4af", "#fb7185", "#f9a8d4",
+  "#f472b6", "#fce7f3", "#fbcfe8",
+  "#fecdd3", "#ff6b8a",
+];
 
-const HeartPath = "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
+/* ─── Rose petal SVG ─────────────────────────────────── */
+function PetalSVG({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16">
+      {[0, 72, 144, 216, 288].map((deg, i) => (
+        <ellipse key={i}
+          cx={8} cy={4.6} rx={1.9} ry={3.4}
+          fill={i % 2 === 0 ? color : color + "bb"}
+          transform={`rotate(${deg} 8 8)`}
+        />
+      ))}
+      <circle cx={8} cy={8} r={2} fill="rgba(220,60,90,0.75)" />
+      <circle cx={8} cy={8} r={0.9} fill="rgba(255,200,215,0.9)" />
+    </svg>
+  );
+}
 
+/* ─── Floating petals layer ──────────────────────────── */
+function FloatingPetals({ startDelay = 0 }: { startDelay?: number }) {
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+      {PETALS.map(p => (
+        <motion.div
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: p.left + "%",
+            bottom: "-10%",
+          }}
+          initial={{ opacity: 0, y: 0, x: 0, rotate: p.rotate }}
+          animate={{
+            opacity: [0, p.opacity, p.opacity, 0],
+            y: [0, -(320 + p.size * 10)],
+            x: [0, p.drift, p.drift * 0.5, p.drift * 1.3],
+            rotate: [p.rotate, p.rotate + 180],
+          }}
+          transition={{
+            duration: p.duration,
+            delay: startDelay + p.delay,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        >
+          <PetalSVG size={p.size} color={PETAL_COLORS[p.id % PETAL_COLORS.length]} />
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Rose flower seal ───────────────────────────────── */
+function FlowerSeal() {
+  return (
+    <svg width={36} height={36} viewBox="0 0 100 100">
+      {/* 8 petals arranged in a circle */}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => (
+        <ellipse key={i}
+          cx={50} cy={23} rx={10} ry={19}
+          fill={i % 2 === 0 ? "rgba(244,63,94,0.88)" : "rgba(251,113,133,0.72)"}
+          transform={`rotate(${deg} 50 50)`}
+        />
+      ))}
+      {/* Center circles */}
+      <circle cx={50} cy={50} r={15} fill="rgba(205,25,65,0.95)" />
+      <circle cx={50} cy={50} r={8}  fill="rgba(255,175,195,0.85)" />
+      <circle cx={50} cy={50} r={3}  fill="rgba(255,230,235,0.95)" />
+    </svg>
+  );
+}
+
+/* ─── Stamp ──────────────────────────────────────────── */
 function StampSVG() {
   return (
     <div style={{
       width: 36, height: 42,
-      background: "#fffef8",
+      background: "#fff8fa",
       borderRadius: 2,
-      border: "1px solid rgba(160,130,80,0.35)",
+      border: "1px solid rgba(200,140,160,0.4)",
       boxShadow: "1px 1px 4px rgba(0,0,0,0.18)",
       padding: 3,
       flexShrink: 0,
     }}>
       <div style={{
         width: "100%", height: "100%",
-        border: "1px dashed rgba(160,120,60,0.55)",
+        border: "1px dashed rgba(200,120,140,0.55)",
         borderRadius: 1,
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", gap: 2,
       }}>
-        <svg width={12} height={11} viewBox="0 0 24 22" fill="#e07040">
-          <path d={HeartPath} />
+        {/* Mini flower stamp art */}
+        <svg width={12} height={12} viewBox="0 0 100 100">
+          {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+            <ellipse key={i}
+              cx={50} cy={26} rx={9} ry={17}
+              fill={i % 2 === 0 ? "#fb7185" : "#fda4af"}
+              transform={`rotate(${deg} 50 50)`}
+            />
+          ))}
+          <circle cx={50} cy={50} r={12} fill="#e11d48" />
         </svg>
         <span style={{
           fontFamily: "monospace", fontSize: 4.5,
-          color: "rgba(80,50,20,0.65)", letterSpacing: "0.04em",
+          color: "rgba(120,50,70,0.65)", letterSpacing: "0.04em",
         }}>♥ 5.00</span>
       </div>
     </div>
   );
 }
 
+/* ─── Postmark ───────────────────────────────────────── */
 function PostmarkSVG() {
   return (
-    <svg width={36} height={36} viewBox="0 0 36 36" style={{ opacity: 0.55 }}>
+    <svg width={36} height={36} viewBox="0 0 36 36" style={{ opacity: 0.5 }}>
       <defs>
-        {/* Arc path for HEARTSYNC text — follows top arc of the circle */}
         <path id="ucpm-arc" d="M 4,18 A 14,14 0 0,1 32,18" />
       </defs>
-      <circle cx={18} cy={18} r={14} fill="none" stroke="rgba(90,55,18,0.55)" strokeWidth={1.4} />
-      {/* Horizontal cancel lines */}
-      <line x1={10} y1={15} x2={26} y2={15} stroke="rgba(90,55,18,0.42)" strokeWidth={0.85} />
-      <line x1={10} y1={18} x2={26} y2={18} stroke="rgba(90,55,18,0.42)" strokeWidth={0.85} />
-      <line x1={10} y1={21} x2={26} y2={21} stroke="rgba(90,55,18,0.42)" strokeWidth={0.85} />
-      {/* "HEARTSYNC" on arc path */}
-      <text fontSize={4} fill="rgba(90,55,18,0.6)" fontFamily="monospace">
+      <circle cx={18} cy={18} r={14} fill="none" stroke="rgba(160,60,90,0.55)" strokeWidth={1.4} />
+      <line x1={10} y1={15} x2={26} y2={15} stroke="rgba(160,60,90,0.4)" strokeWidth={0.85} />
+      <line x1={10} y1={18} x2={26} y2={18} stroke="rgba(160,60,90,0.4)" strokeWidth={0.85} />
+      <line x1={10} y1={21} x2={26} y2={21} stroke="rgba(160,60,90,0.4)" strokeWidth={0.85} />
+      <text fontSize={4} fill="rgba(160,60,90,0.6)" fontFamily="monospace">
         <textPath href="#ucpm-arc" startOffset="50%" textAnchor="middle">
           HEARTSYNC
         </textPath>
@@ -65,82 +157,75 @@ function PostmarkSVG() {
   );
 }
 
+/* ─── Cherry blossom divider ─────────────────────────── */
 function CherryBlossomDivider() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, marginTop: 8 }}>
-      {/* Left line */}
       <div style={{
         width: 38, height: 1,
-        background: "linear-gradient(to right, transparent, rgba(180,140,60,0.4))",
+        background: "linear-gradient(to right, transparent, rgba(210,120,150,0.5))",
       }} />
-      {/* Blossom SVG */}
       <svg width={16} height={16} viewBox="0 0 16 16">
         {[0, 72, 144, 216, 288].map((deg, i) => (
-          <ellipse
-            key={i} cx={8} cy={4.8} rx={2} ry={3.4}
-            fill={i % 2 === 0 ? "rgba(255,175,188,0.85)" : "rgba(240,145,160,0.75)"}
+          <ellipse key={i} cx={8} cy={4.8} rx={2} ry={3.4}
+            fill={i % 2 === 0 ? "rgba(255,160,185,0.9)" : "rgba(240,120,150,0.8)"}
             transform={`rotate(${deg} 8 8)`}
           />
         ))}
-        <circle cx={8} cy={8} r={2.2} fill="rgba(220,70,90,0.85)" />
-        <circle cx={8} cy={8} r={0.9} fill="rgba(255,210,218,0.95)" />
+        <circle cx={8} cy={8} r={2.2} fill="rgba(210,40,70,0.9)" />
+        <circle cx={8} cy={8} r={0.9} fill="rgba(255,210,225,0.95)" />
       </svg>
-      {/* Right line */}
       <div style={{
         width: 38, height: 1,
-        background: "linear-gradient(to left, transparent, rgba(180,140,60,0.4))",
+        background: "linear-gradient(to left, transparent, rgba(210,120,150,0.5))",
       }} />
     </div>
   );
 }
 
+/* ─── Camera icon ────────────────────────────────────── */
 function CameraIcon() {
   return (
     <svg width={18} height={15} viewBox="0 0 18 15" fill="none">
       <rect x={0.6} y={2.8} width={16.8} height={11.4} rx={1.8}
-        stroke="rgba(160,120,60,0.5)" strokeWidth={1.1} />
+        stroke="rgba(190,100,130,0.55)" strokeWidth={1.1} />
       <circle cx={9} cy={8.5} r={3.2}
-        stroke="rgba(160,120,60,0.5)" strokeWidth={1.1} />
+        stroke="rgba(190,100,130,0.55)" strokeWidth={1.1} />
       <path d="M6 0.7 h6 a0.6 0.6 0 0 1 0.6 0.6 v1.5 H5.4 V1.3 A0.6 0.6 0 0 1 6 0.7z"
-        stroke="rgba(160,120,60,0.5)" strokeWidth={1} fill="none" />
-      <circle cx={14.2} cy={5} r={0.9} fill="rgba(160,120,60,0.45)" />
+        stroke="rgba(190,100,130,0.5)" strokeWidth={1} fill="none" />
+      <circle cx={14.2} cy={5} r={0.9} fill="rgba(190,100,130,0.45)" />
     </svg>
   );
 }
 
-/* ─── Gold double-line SVG border ─────────────────── */
-function GoldBorder({ w, h }: { w: number; h: number }) {
-  const o = 13; // outer inset
-  const i = 18; // inner inset
+/* ─── Rose-gold double-line SVG border ───────────────── */
+function RoseBorder({ w, h }: { w: number; h: number }) {
+  const o = 13;
+  const inn = 18;
   return (
     <svg
       width={w} height={h}
       viewBox={`0 0 ${w} ${h}`}
       style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
-      <rect
-        x={o} y={o} width={w - o * 2} height={h - o * 2}
-        fill="none" stroke="rgba(175,138,58,0.55)" strokeWidth={0.9}
-      />
-      <rect
-        x={i} y={i} width={w - i * 2} height={h - i * 2}
-        fill="none" stroke="rgba(200,165,78,0.3)" strokeWidth={0.7}
-      />
-      {/* Gold corner diamonds */}
+      <rect x={o} y={o} width={w - o * 2} height={h - o * 2}
+        fill="none" stroke="rgba(210,130,155,0.55)" strokeWidth={0.9} />
+      <rect x={inn} y={inn} width={w - inn * 2} height={h - inn * 2}
+        fill="none" stroke="rgba(230,155,175,0.3)" strokeWidth={0.7} />
+      {/* Rose-gold corner diamonds */}
       {[
         [o, o], [w - o, o], [o, h - o], [w - o, h - o]
       ].map(([cx, cy], idx) => (
-        <polygon
-          key={idx}
+        <polygon key={idx}
           points={`${cx},${cy - 3.5} ${cx + 3.5},${cy} ${cx},${cy + 3.5} ${cx - 3.5},${cy}`}
-          fill="rgba(185,148,58,0.55)"
+          fill="rgba(215,130,155,0.6)"
         />
       ))}
     </svg>
   );
 }
 
-/* ─── Dot-grid address decoration ─────────────────── */
+/* ─── Dot-grid address decoration ───────────────────── */
 function DotGrid() {
   const dots = [];
   for (let r = 0; r < 3; r++) {
@@ -148,7 +233,7 @@ function DotGrid() {
       dots.push(
         <circle key={`${r}-${c}`}
           cx={c * 4} cy={r * 4} r={0.8}
-          fill="rgba(100,65,25,0.35)"
+          fill="rgba(160,70,100,0.4)"
         />
       );
     }
@@ -160,7 +245,7 @@ function DotGrid() {
   );
 }
 
-/* ─── Message words ───────────────────────────────── */
+/* ─── Message variants ───────────────────────────────── */
 const MSG_WORDS = "Every moment with you feels like a dream come true".split(" ");
 const wordCont = {
   hidden: {},
@@ -171,41 +256,41 @@ const wordVar = {
   show: { opacity: 1, transition: { duration: 0.4, ease: "easeOut" } },
 };
 
-/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    MAIN COMPONENT
-   ═══════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 export function UnboxCard() {
   const envCtrl     = useAnimation();
-  const sealCtrl    = useAnimation(); // glow
+  const sealCtrl    = useAnimation(); // flower glow / filter
   const sealRotCtrl = useAnimation(); // spring rotation
   const [shimmerKey, setShimmerKey] = useState(0);
 
   /* ── Animation sequence ── */
   useEffect(() => {
     async function run() {
-      // Phase 1: Dolly in — scale + true z-depth (translateZ via Framer Motion)
+      // Phase 1: dolly-in — z-depth + scale
       envCtrl.start({
         scale: 1, opacity: 1, z: 0,
         transition: { duration: 1.1, ease: [0.22, 1, 0.36, 1] },
       });
 
-      // Wax seal: spring rotate tied to flap open at t=1.3s
+      // Seal rotation tied to flap open
       sealRotCtrl.start({
         rotate: -8,
         transition: { type: "spring", damping: 10, stiffness: 100, delay: 1.3 },
       });
 
-      // Wax seal glow loop (starts immediately)
+      // Flower seal petal-glow loop
       sealCtrl.start({
-        boxShadow: [
-          "0 3px 10px rgba(0,0,0,0.45), 0 0 4px rgba(180,60,40,0.0)",
-          "0 3px 10px rgba(0,0,0,0.45), 0 0 22px rgba(210,80,50,0.55)",
-          "0 3px 10px rgba(0,0,0,0.45), 0 0 4px rgba(180,60,40,0.0)",
+        filter: [
+          "drop-shadow(0 0 2px rgba(244,63,94,0.0))",
+          "drop-shadow(0 0 12px rgba(244,63,94,0.75)) drop-shadow(0 0 24px rgba(251,113,133,0.4))",
+          "drop-shadow(0 0 2px rgba(244,63,94,0.0))",
         ],
-        transition: { duration: 3.2, repeat: Infinity, ease: "easeInOut" },
+        transition: { duration: 3.0, repeat: Infinity, ease: "easeInOut" },
       });
 
-      // Phase 3: After card rises, dissolve envelope at t=2.5s
+      // Dissolve envelope at t=2.5s
       await new Promise(r => setTimeout(r, 2500));
       await envCtrl.start({
         opacity: 0, scale: 0.95, y: 14,
@@ -214,9 +299,9 @@ export function UnboxCard() {
     }
     run();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // envCtrl / sealCtrl / sealRotCtrl from useAnimation are stable refs
+  }, []);
 
-  /* ── Shimmer repeat trigger ── */
+  /* ── Shimmer repeat ── */
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     const first = setTimeout(() => {
@@ -227,38 +312,42 @@ export function UnboxCard() {
   }, []);
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: "#06050a" }}
+    <div className="min-h-screen flex items-center justify-center"
+      style={{ background: "#0d0509" }}
     >
-      {/* ── Scene container — perspective here gives the z-depth dolly its depth field ── */}
+      {/* Scene container — perspective for z-depth dolly */}
       <div
         className="relative overflow-hidden"
         style={{
           width: 340, height: 420,
           borderRadius: 22,
-          background: "#0a080f",
-          boxShadow: "0 40px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04)",
+          background: "#110609",
+          boxShadow: "0 40px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,150,180,0.06)",
           perspective: 700,
           perspectiveOrigin: "50% 60%",
         }}
       >
 
-        {/* ══ LAYER B: Luxury inner card (z=10) ══ */}
+        {/* ══ LAYER B: Blush luxury inner card (z=10) ══ */}
         <motion.div
           style={{ position: "absolute", inset: 0, zIndex: 10 }}
           initial={{ y: 90, scale: 0.9, opacity: 0 }}
           animate={{ y: 0, scale: 1, opacity: 1 }}
           transition={{ type: "spring", damping: 18, stiffness: 120, delay: 2.0 }}
         >
-          {/* Ivory parchment background */}
+          {/* Blush ivory background */}
           <div style={{
             position: "absolute", inset: 0,
-            background: "linear-gradient(148deg, #fdfaf5 0%, #f9f1e4 38%, #f3e9d6 100%)",
+            background: "linear-gradient(148deg, #fff8f8 0%, #fdf0f2 35%, #f8e8eb 100%)",
           }} />
 
-          {/* Very subtle paper grain */}
-          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.04, pointerEvents: "none" }}>
+          {/* Subtle petals on card background (very faint) */}
+          <div style={{ position: "absolute", inset: 0, opacity: 0.35, zIndex: 1 }}>
+            <FloatingPetals startDelay={2.8} />
+          </div>
+
+          {/* Paper grain */}
+          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.03, pointerEvents: "none", zIndex: 2 }}>
             <filter id="ucpapergrain">
               <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" result="noise" />
               <feColorMatrix type="saturate" values="0" in="noise" />
@@ -266,17 +355,19 @@ export function UnboxCard() {
             <rect width="100%" height="100%" filter="url(#ucpapergrain)" />
           </svg>
 
-          {/* Gold double-line border */}
-          <GoldBorder w={340} h={420} />
+          {/* Rose-gold double-line border */}
+          <div style={{ position: "absolute", inset: 0, zIndex: 3 }}>
+            <RoseBorder w={340} h={420} />
+          </div>
 
-          {/* Shimmer sweep — rerenders on key change to replay */}
+          {/* Shimmer sweep */}
           {shimmerKey > 0 && (
             <motion.div
               key={shimmerKey}
               style={{
                 position: "absolute", top: 0, bottom: 0,
                 width: "55%",
-                background: "linear-gradient(108deg, transparent 30%, rgba(255,255,255,0.52) 50%, transparent 70%)",
+                background: "linear-gradient(108deg, transparent 30%, rgba(255,230,235,0.55) 50%, transparent 70%)",
                 pointerEvents: "none", zIndex: 8,
               }}
               initial={{ x: "-100%" }}
@@ -301,34 +392,34 @@ export function UnboxCard() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 2.3, ease: [0.34, 1.56, 0.64, 1] }}
             >
-              {/* Outer gold ring */}
+              {/* Outer rose-gold ring */}
               <motion.div
                 style={{
                   width: 98, height: 98, borderRadius: "50%",
-                  border: "2px solid rgba(178,138,58,0.65)",
+                  border: "2px solid rgba(215,120,145,0.7)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}
                 animate={{
                   boxShadow: [
-                    "0 0 0px rgba(195,160,75,0)",
-                    "0 0 20px rgba(195,160,75,0.45)",
-                    "0 0 0px rgba(195,160,75,0)",
+                    "0 0 0px rgba(240,120,150,0)",
+                    "0 0 22px rgba(240,120,150,0.5)",
+                    "0 0 0px rgba(240,120,150,0)",
                   ]
                 }}
                 transition={{ duration: 3.5, repeat: Infinity, delay: 3.2, ease: "easeInOut" }}
               >
-                {/* Inner white pearl ring */}
+                {/* Pearl inner ring */}
                 <div style={{
                   width: 88, height: 88, borderRadius: "50%",
-                  border: "1.5px solid rgba(255,255,255,0.85)",
+                  border: "1.5px solid rgba(255,220,230,0.9)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "linear-gradient(135deg, #eee0cb 0%, #f6ecdc 50%, #eddcc8 100%)",
+                  background: "linear-gradient(135deg, #fceef2 0%, #fdf5f6 50%, #f8e8ec 100%)",
                   flexDirection: "column", gap: 4,
                 }}>
                   <CameraIcon />
                   <span style={{
                     fontSize: 6.5, letterSpacing: "0.22em", textTransform: "uppercase",
-                    color: "rgba(155,115,55,0.7)", fontFamily: "sans-serif",
+                    color: "rgba(190,80,110,0.7)", fontFamily: "sans-serif",
                     fontWeight: 500,
                   }}>
                     add photo
@@ -351,7 +442,7 @@ export function UnboxCard() {
               style={{
                 fontFamily: "Georgia, serif",
                 fontSize: 33, fontWeight: 600,
-                color: "#3d2a1e",
+                color: "#4a1c2c",
                 letterSpacing: "0.025em",
                 lineHeight: 1,
                 marginBottom: 14,
@@ -368,7 +459,7 @@ export function UnboxCard() {
               style={{
                 fontFamily: "Georgia, serif",
                 fontSize: 12.5, fontStyle: "italic",
-                color: "rgba(85,55,28,0.72)",
+                color: "rgba(100,40,60,0.72)",
                 lineHeight: 1.78, textAlign: "center",
                 maxWidth: 228,
               }}
@@ -377,11 +468,7 @@ export function UnboxCard() {
               animate="show"
             >
               {MSG_WORDS.map((w, i) => (
-                <motion.span
-                  key={i}
-                  variants={wordVar}
-                  style={{ display: "inline" }}
-                >
+                <motion.span key={i} variants={wordVar} style={{ display: "inline" }}>
                   {w}{i < MSG_WORDS.length - 1 ? " " : ""}
                 </motion.span>
               ))}
@@ -392,7 +479,7 @@ export function UnboxCard() {
           <motion.div
             style={{
               position: "absolute", bottom: 18, right: 20, zIndex: 6,
-              fontSize: 9, color: "rgba(158,120,58,0.38)", letterSpacing: "0.045em",
+              fontSize: 9, color: "rgba(200,100,130,0.38)", letterSpacing: "0.045em",
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -408,28 +495,30 @@ export function UnboxCard() {
           initial={{ scale: 0.68, opacity: 0, z: -200 }}
           style={{ position: "absolute", inset: 0, zIndex: 20, pointerEvents: "none" }}
         >
-          {/* Dark room atmosphere */}
+          {/* Deep plum/wine room atmosphere */}
           <div style={{
             position: "absolute", inset: 0,
-            background: "radial-gradient(ellipse at 50% 30%, #1a1008 0%, #0a0806 100%)",
+            background: "radial-gradient(ellipse at 50% 28%, #2e0d1c 0%, #16060e 60%, #0d0408 100%)",
           }} />
 
-          {/* Ambient light from above (like a desk lamp) */}
+          {/* Ambient rosy desk-lamp glow from above */}
           <div style={{
-            position: "absolute", top: -20, left: "50%", transform: "translateX(-50%)",
-            width: 240, height: 200,
-            background: "radial-gradient(ellipse, rgba(255,210,140,0.08) 0%, transparent 70%)",
-            filter: "blur(20px)",
-            pointerEvents: "none",
+            position: "absolute", top: -30, left: "50%", transform: "translateX(-50%)",
+            width: 260, height: 220,
+            background: "radial-gradient(ellipse, rgba(255,130,165,0.1) 0%, rgba(255,200,160,0.04) 50%, transparent 75%)",
+            filter: "blur(18px)",
           }} />
 
-          {/* Desk surface */}
+          {/* Floating petals in the room (start right away) */}
+          <FloatingPetals startDelay={0.4} />
+
+          {/* Desk surface — plum-tinted dark wood */}
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0, height: 155,
-            background: "linear-gradient(to bottom, #2c1a0c, #1c1008)",
-            borderTop: "1px solid rgba(120,80,40,0.2)",
+            background: "linear-gradient(to bottom, #1e0c16, #0f0609)",
+            borderTop: "1px solid rgba(180,80,120,0.15)",
           }}>
-            {/* Wood grain texture */}
+            {/* Wood grain */}
             <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.07 }}>
               <filter id="ucwoodgrain">
                 <feTurbulence type="turbulence" baseFrequency="0.02 0.5" numOctaves="4" seed="3" result="noise" />
@@ -437,11 +526,11 @@ export function UnboxCard() {
               </filter>
               <rect width="100%" height="100%" filter="url(#ucwoodgrain)" />
             </svg>
-            {/* Subtle desk reflection under envelope */}
+            {/* Rosy desk reflection */}
             <div style={{
               position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
               width: 280, height: 40,
-              background: "radial-gradient(ellipse, rgba(180,120,60,0.12) 0%, transparent 70%)",
+              background: "radial-gradient(ellipse, rgba(220,100,140,0.1) 0%, transparent 70%)",
               filter: "blur(8px)",
             }} />
           </div>
@@ -453,95 +542,59 @@ export function UnboxCard() {
             left: "50%", transform: "translateX(-50%)",
             width: 300, height: 190,
           }}>
-            {/* Envelope shadow on desk */}
+            {/* Envelope drop shadow */}
             <div style={{
               position: "absolute", bottom: -8, left: "5%", right: "5%", height: 20,
               background: "rgba(0,0,0,0.45)",
-              filter: "blur(14px)",
-              borderRadius: "50%",
+              filter: "blur(14px)", borderRadius: "50%",
             }} />
 
-            {/* Envelope body surface */}
+            {/* Envelope parchment (blush-tinted) */}
             <div style={{
               position: "absolute", inset: 0,
               borderRadius: 6,
-              background: "linear-gradient(158deg, #f2e8d5 0%, #e9d7b8 45%, #ddc9a0 100%)",
-              boxShadow: "0 18px 55px rgba(0,0,0,0.52), 0 6px 18px rgba(0,0,0,0.32), inset 0 0 28px rgba(0,0,0,0.07)",
-              border: "1px solid rgba(175,145,95,0.45)",
+              background: "linear-gradient(158deg, #f8eef0 0%, #f2dde2 45%, #e8cdd4 100%)",
+              boxShadow: "0 18px 55px rgba(0,0,0,0.5), 0 6px 18px rgba(0,0,0,0.3), inset 0 0 28px rgba(0,0,0,0.06)",
+              border: "1px solid rgba(210,150,170,0.5)",
               overflow: "hidden",
             }}>
-              {/* Inside view — top center area (behind fold lines) */}
+              {/* Inside center (cream, behind fold lines) */}
               <div style={{
                 position: "absolute", top: 0, left: "23%", right: "23%", height: "54%",
-                background: "linear-gradient(to bottom, #f8f2e8, #eedfc8)",
-                clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)",
+                background: "linear-gradient(to bottom, #fdf5f6, #f5e0e5)",
                 opacity: 0.9,
               }} />
 
-              {/* Left fold shadow */}
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "rgba(0,0,0,0)",
-                clipPath: "polygon(0 0, 46% 52%, 0 100%)",
-                backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.14), rgba(0,0,0,0.04))",
-              }} />
-              {/* Left fold tone */}
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "#d8c49e",
-                clipPath: "polygon(0 0, 46% 52%, 0 100%)",
-                opacity: 0.55,
-              }} />
+              {/* Left fold */}
+              <div style={{ position: "absolute", inset: 0, background: "#d8b0bc", clipPath: "polygon(0 0, 46% 52%, 0 100%)", opacity: 0.55 }} />
+              <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.12), rgba(0,0,0,0.03))", clipPath: "polygon(0 0, 46% 52%, 0 100%)" }} />
 
-              {/* Right fold shadow */}
-              <div style={{
-                position: "absolute", inset: 0,
-                backgroundImage: "linear-gradient(to left, rgba(0,0,0,0.14), rgba(0,0,0,0.04))",
-                clipPath: "polygon(100% 0, 54% 52%, 100% 100%)",
-              }} />
-              {/* Right fold tone */}
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "#d8c49e",
-                clipPath: "polygon(100% 0, 54% 52%, 100% 100%)",
-                opacity: 0.55,
-              }} />
+              {/* Right fold */}
+              <div style={{ position: "absolute", inset: 0, background: "#d8b0bc", clipPath: "polygon(100% 0, 54% 52%, 100% 100%)", opacity: 0.55 }} />
+              <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(to left, rgba(0,0,0,0.12), rgba(0,0,0,0.03))", clipPath: "polygon(100% 0, 54% 52%, 100% 100%)" }} />
 
               {/* Bottom fold */}
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "#e2ceac",
-                clipPath: "polygon(0 100%, 46% 52%, 54% 52%, 100% 100%)",
-                opacity: 0.7,
-              }} />
+              <div style={{ position: "absolute", inset: 0, background: "#e2c0ca", clipPath: "polygon(0 100%, 46% 52%, 54% 52%, 100% 100%)", opacity: 0.7 }} />
 
-              {/* Crease shadow at fold hinge line (appears when flap opens) */}
+              {/* Crease shadow at hinge */}
               <motion.div
                 style={{
-                  position: "absolute",
-                  top: "51%", left: 0, right: 0, height: 4,
-                  background: "linear-gradient(to bottom, rgba(0,0,0,0.22), transparent)",
-                  pointerEvents: "none",
+                  position: "absolute", top: "51%", left: 0, right: 0, height: 4,
+                  background: "linear-gradient(to bottom, rgba(0,0,0,0.2), transparent)",
                 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.7 }}
                 transition={{ delay: 1.3, duration: 0.4 }}
               />
 
-              {/* Stamp — top right */}
-              <div style={{
-                position: "absolute", top: 8, right: 8,
-                display: "flex", flexDirection: "column", alignItems: "flex-end",
-              }}>
+              {/* Stamp */}
+              <div style={{ position: "absolute", top: 8, right: 8 }}>
                 <StampSVG />
               </div>
 
-              {/* Postmark — overlapping stamp slightly */}
+              {/* Postmark */}
               <motion.div
-                style={{
-                  position: "absolute", top: 2, right: 30,
-                  transform: "rotate(-12deg)",
-                }}
+                style={{ position: "absolute", top: 2, right: 30, transform: "rotate(-12deg)" }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
@@ -549,78 +602,43 @@ export function UnboxCard() {
                 <PostmarkSVG />
               </motion.div>
 
-              {/* Address block — appears when flap opens */}
+              {/* Address block */}
               <motion.div
-                style={{
-                  position: "absolute",
-                  top: "55%", left: 14,
-                  display: "flex", flexDirection: "column", gap: 2,
-                }}
+                style={{ position: "absolute", top: "55%", left: 14, display: "flex", flexDirection: "column", gap: 2 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.35, duration: 0.6 }}
               >
                 <div style={{ display: "flex", alignItems: "center" }}>
                   <DotGrid />
-                  <span style={{
-                    fontFamily: "Georgia, serif", fontSize: 8.5,
-                    color: "rgba(75,48,18,0.65)", letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                  }}>To:</span>
+                  <span style={{ fontFamily: "Georgia, serif", fontSize: 8.5, color: "rgba(140,50,80,0.65)", letterSpacing: "0.06em", textTransform: "uppercase" }}>To:</span>
                 </div>
-                <span style={{
-                  fontFamily: "Georgia, serif", fontSize: 11,
-                  fontStyle: "italic",
-                  color: "rgba(65,38,12,0.8)",
-                  letterSpacing: "0.02em",
-                  paddingLeft: 17,
-                }}>Priya  ♥</span>
+                <span style={{ fontFamily: "Georgia, serif", fontSize: 11, fontStyle: "italic", color: "rgba(120,40,65,0.8)", letterSpacing: "0.02em", paddingLeft: 17 }}>Priya  ♥</span>
               </motion.div>
             </div>
 
-            {/* ── Wax seal (sits at the flap–body junction) ── */}
+            {/* ── Flower seal ── */}
             <div style={{
               position: "absolute",
               top: "48%", left: "50%",
               transform: "translate(-50%, -50%)",
               zIndex: 15,
             }}>
-              {/* Outer wrapper: spring rotation tied to flap open */}
               <motion.div
                 animate={sealRotCtrl}
                 initial={{ rotate: 0 }}
               >
-                {/* Inner div: candlelight glow loop */}
-                <motion.div
-                  animate={sealCtrl}
-                  style={{
-                    width: 30, height: 30,
-                    borderRadius: "50%",
-                    background: "radial-gradient(circle at 38% 35%, #d44030 0%, #a02618 55%, #7b1c12 100%)",
-                    boxShadow: "0 3px 10px rgba(0,0,0,0.45)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    border: "1.5px solid rgba(190,70,50,0.4)",
-                  }}
-                >
-                  <span style={{
-                    fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 700,
-                    color: "rgba(255,225,215,0.88)",
-                    textShadow: "0 1px 3px rgba(0,0,0,0.45)",
-                    lineHeight: 1,
-                    userSelect: "none",
-                  }}>
-                    H
-                  </span>
+                <motion.div animate={sealCtrl}>
+                  <FlowerSeal />
                 </motion.div>
               </motion.div>
             </div>
 
-            {/* ── Envelope FLAP (opens with spring) ── */}
+            {/* ── Envelope flap (spring open) ── */}
             <div style={{
               perspective: 620, perspectiveOrigin: "50% 0%",
               position: "absolute", top: 0, left: 0, right: 0,
-              height: "56%",
-              zIndex: 12,
+              height: "56%", zIndex: 12,
             }}>
               <motion.div
                 initial={{ rotateX: 0 }}
@@ -633,20 +651,20 @@ export function UnboxCard() {
                   position: "relative",
                 }}
               >
-                {/* Flap front (outside of envelope) */}
+                {/* Flap outside — blush parchment */}
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: "linear-gradient(172deg, #d6b990 0%, #c8a878 55%, #b89860 100%)",
+                  background: "linear-gradient(172deg, #deb8c4 0%, #cfa4b2 55%, #c09098 100%)",
                   clipPath: "polygon(0 0, 100% 0, 50% 88%)",
                   borderRadius: "5px 5px 0 0",
                   backfaceVisibility: "hidden",
-                  border: "1px solid rgba(165,130,80,0.3)",
-                  boxShadow: "inset 0 -3px 12px rgba(0,0,0,0.1)",
+                  border: "1px solid rgba(190,120,145,0.3)",
+                  boxShadow: "inset 0 -3px 12px rgba(0,0,0,0.08)",
                 }} />
-                {/* Flap back (inside, cream — shown when open) */}
+                {/* Flap inside — cream */}
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: "linear-gradient(to bottom, #f8f2e8 0%, #eddfca 100%)",
+                  background: "linear-gradient(to bottom, #fdf5f6 0%, #f2e0e5 100%)",
                   clipPath: "polygon(0 0, 100% 0, 50% 88%)",
                   transform: "rotateX(180deg)",
                   backfaceVisibility: "hidden",
@@ -654,14 +672,14 @@ export function UnboxCard() {
               </motion.div>
             </div>
 
-            {/* "A letter for Priya" — small label beneath envelope */}
+            {/* Subtitle beneath envelope */}
             <motion.div
               style={{
                 position: "absolute", bottom: -22, left: "50%",
                 transform: "translateX(-50%)",
                 whiteSpace: "nowrap",
                 fontFamily: "Georgia, serif", fontStyle: "italic",
-                fontSize: 9, color: "rgba(200,175,130,0.45)",
+                fontSize: 9, color: "rgba(220,150,175,0.45)",
                 letterSpacing: "0.12em",
               }}
               initial={{ opacity: 0 }}
