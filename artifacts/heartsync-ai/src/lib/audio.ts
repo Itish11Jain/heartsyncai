@@ -137,87 +137,88 @@ function _musicTick() {
    ENVELOPE: 112 BPM waltz — Q=0.536s  H=1.071s
 ─────────────────────────────────────────────────────────────── */
 
-/* VINYL — bright, skippy major melody (116 BPM, ~8.3 s loop)
-   Phrase A: C·E·G A·· | Phrase B: G·E D·C·· | Phrase C: E G A C6·· | Phrase D: G E C··
-   Bass: I-vi-V-I (C3→A2→G2→C3)                                                         */
+/* VINYL — warm, skippy major melody (116 BPM, ~8.3 s loop)
+   Melody sits in the C4–C5 range for a mellow, rounded feel.
+   Phrase A: C·E·G A·· | Phrase B: G·E D·C·· | Phrase C: E G A C5·· | Phrase D: G E C··
+   Bass: I-vi-V-I (C3→A2→G2→C3)                                                          */
 const Qv = 0.517, Ev = 0.259, Hv = 1.034;
 const VINYL_SEQ: MStep[] = [
   // Phrase A
-  { freq: N.C5, dur: Ev, bass: N.C3, bassDur: Hv * 0.9 },
-  { freq: N.E5, dur: Ev },
-  { freq: N.G5, dur: Qv },
-  { freq: N.A5, dur: Hv },
+  { freq: N.C4, dur: Ev, bass: N.C3, bassDur: Hv * 0.9 },
+  { freq: N.E4, dur: Ev },
+  { freq: N.G4, dur: Qv },
+  { freq: N.A4, dur: Hv },
   // Phrase B
-  { freq: N.G5, dur: Ev, bass: N.A2, bassDur: Hv * 0.9 },
-  { freq: N.E5, dur: Ev },
-  { freq: N.D5, dur: Ev },
+  { freq: N.G4, dur: Ev, bass: N.A2, bassDur: Hv * 0.9 },
+  { freq: N.E4, dur: Ev },
+  { freq: N.D4, dur: Ev },
+  { freq: N.C4, dur: Hv },
+  // Phrase C  — climbs to C5 for a warm peak
+  { freq: N.E4, dur: Ev, bass: N.G2, bassDur: Hv * 0.9 },
+  { freq: N.G4, dur: Ev },
+  { freq: N.A4, dur: Ev },
   { freq: N.C5, dur: Hv },
-  // Phrase C  — climbs up to C6 for a joyful peak
-  { freq: N.E5, dur: Ev, bass: N.G2, bassDur: Hv * 0.9 },
-  { freq: N.G5, dur: Ev },
-  { freq: N.A5, dur: Ev },
-  { freq: N.C6, dur: Hv },
   // Phrase D  — descends home
-  { freq: N.A5, dur: Ev, bass: N.C3, bassDur: Hv * 0.9 },
-  { freq: N.G5, dur: Ev },
-  { freq: N.E5, dur: Ev },
-  { freq: N.C5, dur: Hv },
+  { freq: N.A4, dur: Ev, bass: N.C3, bassDur: Hv * 0.9 },
+  { freq: N.G4, dur: Ev },
+  { freq: N.E4, dur: Ev },
+  { freq: N.C4, dur: Hv },
 ];
 
-/* COSMIC — sparkling rising pentatonic (104 BPM, ~7.4 s loop)
-   Phrases rise and fall in an airy arpeggio; bass: C3→G2→C3            */
+/* COSMIC — mellow rising pentatonic (104 BPM, ~7.4 s loop)
+   Melody in C4–C5; airy arpeggios; bass: C3→G2→C3                       */
 const Qc = 0.577, Ec = 0.288, Hc = 1.154;
 const COSMIC_SEQ: MStep[] = [
   // Bar 1 — rise
-  { freq: N.C5, dur: Ec, bass: N.C3, bassDur: Hc },
-  { freq: N.E5, dur: Ec },
-  { freq: N.G5, dur: Qc },
-  { freq: N.C6, dur: Hc },
-  // Bar 2 — glitter down
-  { freq: N.A5, dur: Ec, bass: N.G2, bassDur: Hc },
-  { freq: N.G5, dur: Ec },
-  { freq: N.E5, dur: Qc },
+  { freq: N.C4, dur: Ec, bass: N.C3, bassDur: Hc },
+  { freq: N.E4, dur: Ec },
+  { freq: N.G4, dur: Qc },
   { freq: N.C5, dur: Hc },
-  // Bar 3 — quick up again
-  { freq: N.G5, dur: Ec, bass: N.C3, bassDur: Hc },
-  { freq: N.A5, dur: Ec },
-  { freq: N.C6, dur: Hc },
-  { freq: N.G5, dur: Qc },
+  // Bar 2 — float down
+  { freq: N.A4, dur: Ec, bass: N.G2, bassDur: Hc },
+  { freq: N.G4, dur: Ec },
+  { freq: N.E4, dur: Qc },
+  { freq: N.C4, dur: Hc },
+  // Bar 3 — rise again
+  { freq: N.G4, dur: Ec, bass: N.C3, bassDur: Hc },
+  { freq: N.A4, dur: Ec },
+  { freq: N.C5, dur: Hc },
+  { freq: N.G4, dur: Qc },
 ];
 
-/* ENVELOPE — joyful waltz "Ode to Joy" (112 BPM, 3/4, ~12.9 s loop)
-   8 bars × 3 beats × 0.536s = 12.86 s                                   */
+/* ENVELOPE — warm waltz "Ode to Joy" (112 BPM, 3/4, ~12.9 s loop)
+   Melody in C4–A4; 8 bars × 3 beats × 0.536s = 12.86 s                 */
 const Qe = 0.536, He = 1.071;
 const ENVELOPE_SEQ: MStep[] = [
   // Bar 1
-  { freq: N.E5, dur: Qe, bass: N.C3, bassDur: He },
-  { freq: N.D5, dur: Qe },
-  { freq: N.C5, dur: Qe },
+  { freq: N.E4, dur: Qe, bass: N.C3, bassDur: He },
+  { freq: N.D4, dur: Qe },
+  { freq: N.C4, dur: Qe },
   // Bar 2
-  { freq: N.D5, dur: Qe, bass: N.G2, bassDur: He },
-  { freq: N.E5, dur: Qe },
-  { freq: N.E5, dur: Qe },
+  { freq: N.D4, dur: Qe, bass: N.G2, bassDur: He },
+  { freq: N.E4, dur: Qe },
+  { freq: N.E4, dur: Qe },
   // Bar 3
-  { freq: N.E5, dur: He, bass: N.C3, bassDur: He },
+  { freq: N.E4, dur: He, bass: N.C3, bassDur: He },
   { freq: 0,    dur: Qe },                            // rest
   // Bar 4
-  { freq: N.D5, dur: Qe, bass: N.G2, bassDur: He },
-  { freq: N.D5, dur: Qe },
-  { freq: N.D5, dur: Qe },
+  { freq: N.D4, dur: Qe, bass: N.G2, bassDur: He },
+  { freq: N.D4, dur: Qe },
+  { freq: N.D4, dur: Qe },
   // Bar 5
-  { freq: N.E5, dur: Qe, bass: N.C3, bassDur: He },
-  { freq: N.G5, dur: Qe },
-  { freq: N.A5, dur: Qe },
-  // Bar 6  — rises to A5 for a joyful peak
-  { freq: N.A5, dur: He, bass: N.G2, bassDur: He },
+  { freq: N.E4, dur: Qe, bass: N.C3, bassDur: He },
+  { freq: N.G4, dur: Qe },
+  { freq: N.A4, dur: Qe },
+  // Bar 6
+  { freq: N.A4, dur: He, bass: N.G2, bassDur: He },
   { freq: 0,    dur: Qe },                            // rest
   // Bar 7
-  { freq: N.E5, dur: Qe, bass: N.A2, bassDur: He },
-  { freq: N.D5, dur: Qe },
-  { freq: N.C5, dur: Qe },
+  { freq: N.E4, dur: Qe, bass: N.A2, bassDur: He },
+  { freq: N.D4, dur: Qe },
+  { freq: N.C4, dur: Qe },
   // Bar 8
-  { freq: N.D5, dur: Qe, bass: N.G2, bassDur: He },
-  { freq: N.C5, dur: He },
+  { freq: N.D4, dur: Qe, bass: N.G2, bassDur: He },
+  { freq: N.C4, dur: He },
 ];
 
 export const music = {
