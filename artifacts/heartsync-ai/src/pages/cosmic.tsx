@@ -139,8 +139,8 @@ export default function CosmicCard() {
       y: Math.random() * window.innerHeight,
       vx: (Math.random() - 0.5) * 0.18,
       vy: (Math.random() - 0.5) * 0.18,
-      r: Math.random() * 1.4 + 0.2,
-      opacity: Math.random() * 0.55 + 0.1,
+      r: Math.random() * 2.2 + 0.5,
+      opacity: Math.random() * 0.72 + 0.25,
     }));
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -377,7 +377,7 @@ export default function CosmicCard() {
                   }}
                 />
               </div>
-              <p style={{ fontSize: 11, color: "rgba(200,175,255,0.45)", letterSpacing: "0.1em" }}>
+              <p style={{ fontSize: 11, color: "rgba(240,225,255,0.78)", letterSpacing: "0.12em", fontWeight: 600 }}>
                 PRESS &amp; HOLD TO IGNITE
               </p>
             </motion.div>
@@ -394,16 +394,18 @@ export default function CosmicCard() {
             exit={{ opacity: 0, transition: { duration: 0.5 } }}
             style={{ position: "fixed", inset: 0, zIndex: 10 }}
           >
-            {/* Progress prompt */}
+            {/* Progress prompt — fixed at top-centre, safe from browser chrome */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               style={{
-                position: "absolute", bottom: "max(32px,6vh)", left: "50%", transform: "translateX(-50%)",
-                fontSize: 13, color: "rgba(200,175,255,0.65)", letterSpacing: "0.1em",
-                background: "rgba(255,255,255,0.05)", borderRadius: 999, padding: "8px 22px",
-                border: "1px solid rgba(255,255,255,0.07)", whiteSpace: "nowrap",
+                position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))", left: "50%", transform: "translateX(-50%)",
+                fontSize: 13, color: "rgba(220,200,255,0.85)", letterSpacing: "0.1em", fontWeight: 600,
+                background: "rgba(40,20,80,0.7)", borderRadius: 999, padding: "8px 22px",
+                border: "1px solid rgba(180,150,255,0.2)", whiteSpace: "nowrap",
+                backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+                zIndex: 15,
               }}
             >
               Discover the stars ({clickedIds.length} / {totalStars})
@@ -530,12 +532,12 @@ export default function CosmicCard() {
               transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
               style={{
                 width: "min(350px,calc(100vw - 40px))",
-                background: "linear-gradient(145deg, rgba(28,10,55,0.97) 0%, rgba(10,4,28,0.99) 100%)",
+                background: "linear-gradient(145deg, rgba(38,15,70,0.98) 0%, rgba(18,6,40,0.99) 100%)",
                 borderRadius: 26,
-                border: "1px solid rgba(170,130,255,0.22)",
+                border: "1.5px solid rgba(190,155,255,0.42)",
                 padding: "36px 28px",
                 textAlign: "center",
-                boxShadow: "0 0 50px rgba(100,50,200,0.22), 0 0 120px rgba(70,30,150,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
+                boxShadow: "0 0 60px rgba(120,60,220,0.38), 0 0 140px rgba(90,40,180,0.18), inset 0 1px 0 rgba(255,255,255,0.1)",
                 position: "relative", overflow: "hidden",
               }}
             >
@@ -549,7 +551,7 @@ export default function CosmicCard() {
 
               <motion.p
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                style={{ fontSize: 11, color: "rgba(175,155,255,0.5)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, zIndex: 1, position: "relative" }}
+                style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, zIndex: 1, position: "relative" }}
               >
                 {tpl.title_prefix}
               </motion.p>
@@ -563,7 +565,7 @@ export default function CosmicCard() {
 
               <motion.p
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-                style={{ fontSize: "min(15px,3.9vw)", color: "rgba(215,205,255,0.82)", lineHeight: 1.72, margin: 0, zIndex: 1, position: "relative" }}
+                style={{ fontSize: "min(15px,3.9vw)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, zIndex: 1, position: "relative" }}
               >
                 {finalMessage}
               </motion.p>

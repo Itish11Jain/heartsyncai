@@ -94,7 +94,7 @@ export default function Send() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-start"
+      className="h-dvh flex flex-col items-center overflow-hidden"
       style={{
         background: "radial-gradient(ellipse at 50% 20%, #1a0a2e 0%, #0d0618 60%, #060310 100%)",
         fontFamily: "'Segoe UI', system-ui, sans-serif",
@@ -126,24 +126,24 @@ export default function Send() {
         </div>
       </div>
 
-      <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-8" style={{ maxWidth: 520 }}>
+      <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-2" style={{ maxWidth: 520, minHeight: 0 }}>
         <AnimatePresence mode="wait" initial={false}>
 
           {/* Step 1: Occasion */}
           {step === 1 && (
             <motion.div key="step1" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
-              <h1 className="text-2xl font-bold text-white text-center mb-2">What's the occasion?</h1>
-              <p className="text-center text-sm mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <h1 className="text-2xl font-bold text-white text-center mb-1">What's the occasion?</h1>
+              <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
                 Pick the vibe for your card
               </p>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {OCCASIONS.map(occ => (
                   <motion.button
                     key={occ.id}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => { setOccasion(occ.id); goTo(2, 1); }}
                     style={{
-                      padding: "18px 20px",
+                      padding: "11px 16px",
                       borderRadius: 16,
                       background: occasion === occ.id
                         ? "linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.12))"
@@ -153,9 +153,9 @@ export default function Send() {
                       cursor: "pointer", textAlign: "left",
                     }}
                   >
-                    <span style={{ fontSize: 36 }}>{occ.emoji}</span>
+                    <span style={{ fontSize: 28 }}>{occ.emoji}</span>
                     <div>
-                      <div className="text-base font-semibold text-white">{occ.label}</div>
+                      <div className="text-sm font-semibold text-white">{occ.label}</div>
                       <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{occ.description}</div>
                     </div>
                   </motion.button>
