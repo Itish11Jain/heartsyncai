@@ -1,0 +1,65 @@
+Meta-PRD: Scalable Interactive Card Architecture
+
+1. System Objective
+
+This document outlines the architectural framework for building a scalable library of "Premium Interactive Greeting Cards." The goal is to generate new, unique visual themes and experiences that all adhere to a highly engaging, standardized interactive flow.
+
+When generating a new template, the AI Agent must strictly follow the 4-Phase Universal Architecture detailed below while inventing completely new visual assets, interactions, and aesthetic styles.
+
+2. Technical Non-Negotiables
+
+Regardless of the theme, every template must utilize the following tech stack and principles:
+
+Framework: React / Next.js.
+
+Styling: Tailwind CSS and custom CSS (for complex 3D transforms, box-shadow depth, and @keyframes).
+
+Responsiveness (Crucial): All layouts must use min() constraints (e.g., width: min(340px, 90vw)) to ensure centralized components scale perfectly on small mobile screens without causing horizontal overflow.
+
+Animations: Framer Motion (or GSAP) for smooth state transitions, layout changes, and dynamic positioning.
+
+Canvas Engine: HTML5 Canvas must be used for high-performance particle effects (bursts, raining effects, ambient floating elements). CSS particles are not permitted for complex physics.
+
+3. The 4-Phase Universal Architecture
+
+Every new greeting card template must invent a unique narrative that maps exactly to these four phases:
+
+Phase 1: The Hook (Physical Interaction)
+
+Concept: A central, beautifully designed 3D/Premium object sits on the screen.
+
+Requirement: The user must perform a physical, tactile interaction to start the experience.
+
+Examples: Drag-to-unlock (Envelope), Press-and-hold (Cosmic Core), Drag-and-drop (Vinyl Tonearm), Wipe-to-clear (Foggy Window).
+
+Transition: Completing the interaction triggers an ambient change (lights dim, background shifts, engine starts) and moves to Phase 2.
+
+Phase 2: The Discovery (Node Spawning)
+
+Concept: The "Hook" object reveals the hidden messages.
+
+Requirement: 4 to 6 interactive "Nodes" must spawn dynamically onto the screen in a deliberate pattern (e.g., a circle, floating randomly, or constrained to quadrants).
+
+Examples: Floating Orbs, Glowing Stars, Musical Notes, Origami Flowers.
+
+UI: A subtle progress tracker must appear (e.g., "0 / 4 Discovered").
+
+Phase 3: The Interaction (Granular Reveals)
+
+Concept: The user explores the discovered nodes.
+
+Requirement: Clicking a node must trigger three simultaneous events:
+
+Node State Change: The node changes visually (ignites, dims, anchors, opens) and becomes unclickable.
+
+Particle Burst: An HTML5 Canvas mini-explosion specific to the theme (e.g., confetti, stardust, neon sparks, bubbles) bursts from the exact X/Y coordinate of the clicked node.
+
+The Tooltip: A heavily stylized, themed glassmorphism tooltip fades into the center of the screen, displaying a personalized emoji and text.
+
+Phase 4: The Grand Finale (The Reveal)
+
+Concept: The ultimate emotional payoff once all nodes are clicked.
+
+Requirement: 1. The Clear-Out: The Nodes and the Phase 1 Hook object dramatically exit the screen (explode outward, sink away, speed up and vanish).
+2. The Environment: The background Canvas effect switches to a massive, screen-filling weather/particle effect (e.g., falling golden dust, heavy rain, blooming vines, massive confetti).
+3. The Final Card: A sleek, minimalist "Final Card" (themed to the template) elegantly transitions into the center of the screen, revealing the ultimate personalized message and the sender's details.
