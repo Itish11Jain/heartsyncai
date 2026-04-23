@@ -114,6 +114,23 @@ export default function Moments() {
     return undefined;
   }, [isNewUser, isLoggedIn]);
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const token = authStore.sessionToken;
+    if (!token) return;
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/moment/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((d: { momentsCredits?: number }) => {
+        if (typeof d.momentsCredits === "number") {
+          setMomentsCredits(d.momentsCredits);
+        }
+      })
+      .catch(() => { /* non-blocking — pill stays loading */ });
+  }, [isLoggedIn]);
+
   function goTo(next: 1 | 2 | 3 | 4, direction: number) {
     setDir(direction);
     setStep(next);
@@ -288,7 +305,9 @@ export default function Moments() {
   const creditsLeft = isLoggedIn ? (momentsCredits ?? null) : Math.max(0, GUEST_LIMIT - guestCount);
   const showPill = creditsLeft !== null;
   const pillLabel = isLoggedIn
-    ? `${momentsCredits ?? "?"} card${momentsCredits !== 1 ? "s" : ""} left`
+    ? momentsCredits === null
+      ? "loading..."
+      : `${momentsCredits} card${momentsCredits !== 1 ? "s" : ""} left`
     : `${creditsLeft} free left`;
 
   return (
