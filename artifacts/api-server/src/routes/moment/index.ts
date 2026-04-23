@@ -42,7 +42,7 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
     return;
   }
 
-  const { recipientName, purpose, relation } = parseResult.data;
+  const { recipientName, purpose, relation, likes } = parseResult.data;
   const userId = req.user!.userId;
 
   const now = new Date();
@@ -67,7 +67,7 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
   const userPrompt = `Write a card message for:
 - Recipient's name: ${recipientName}
 - Purpose: ${PURPOSE_TONE[purpose]}
-- Relationship: ${RELATION_REGISTER[relation]}`;
+- Relationship: ${RELATION_REGISTER[relation]}${likes ? `\n- Things they love: ${likes} (weave a subtle reference to one of these into the message if it fits naturally — don't force it)` : ""}`;
 
   let generatedMessage: string;
   try {

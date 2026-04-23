@@ -52,6 +52,7 @@ export default function Moments() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [dir, setDir] = useState(1);
   const [recipientName, setRecipientName] = useState("");
+  const [likes, setLikes] = useState("");
   const [purpose, setPurpose] = useState<Purpose | null>(null);
   const [relation, setRelation] = useState<Relation | null>(null);
   const [generatedMessage, setGeneratedMessage] = useState("");
@@ -86,7 +87,7 @@ export default function Moments() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ recipientName: recipientName.trim(), purpose, relation }),
+        body: JSON.stringify({ recipientName: recipientName.trim(), purpose, relation, ...(likes.trim() ? { likes: likes.trim() } : {}) }),
       });
       const data = await res.json() as GenerateResponse & { error?: string; momentsUsed?: number; momentsLimit?: number };
       if (!res.ok) {
@@ -143,6 +144,7 @@ export default function Moments() {
       return;
     }
     setRecipientName("");
+    setLikes("");
     setPurpose(null);
     setRelation(null);
     setGeneratedMessage("");
@@ -202,9 +204,21 @@ export default function Moments() {
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && recipientName.trim()) goTo(2, 1); }}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-14 text-lg rounded-xl mb-6"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-14 text-lg rounded-xl mb-4"
                     autoFocus
                   />
+                  <div className="mb-6">
+                    <label className="block text-xs font-medium text-white/40 mb-2 uppercase tracking-wider">
+                      What do they like? <span className="text-white/25 normal-case tracking-normal font-normal">(optional)</span>
+                    </label>
+                    <Input
+                      placeholder="loves pandas, obsessed with minions, loves pink…"
+                      value={likes}
+                      onChange={(e) => setLikes(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-12 text-sm rounded-xl"
+                    />
+                    <p className="text-white/25 text-xs mt-2 leading-relaxed">We'll personalise the card message around what they love.</p>
+                  </div>
                   <Button
                     onClick={() => goTo(2, 1)}
                     disabled={!recipientName.trim()}

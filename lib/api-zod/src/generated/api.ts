@@ -141,6 +141,7 @@ export const GenerateMomentBody = zod.object({
   recipientName: zod.string().min(1).max(100).describe("Name of the card recipient"),
   purpose: zod.enum(["thank_you", "sorry", "i_love_you", "feel_good"]).describe("The emotional purpose of the card"),
   relation: zod.enum(["date", "friend", "partner", "spouse"]).describe("Relationship to the recipient"),
+  likes: zod.string().max(200).optional().describe("Optional: things the recipient likes (used to personalise the message)"),
 });
 
 export const GenerateMomentResponse = zod.object({
