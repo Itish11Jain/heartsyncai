@@ -45,19 +45,21 @@ function StampSVG() {
 
 function PostmarkSVG() {
   return (
-    <svg width={34} height={34} viewBox="0 0 34 34" style={{ opacity: 0.5 }}>
-      <circle cx={17} cy={17} r={14} fill="none" stroke="rgba(90,55,18,0.6)" strokeWidth={1.5} />
+    <svg width={36} height={36} viewBox="0 0 36 36" style={{ opacity: 0.55 }}>
+      <defs>
+        {/* Arc path for HEARTSYNC text — follows top arc of the circle */}
+        <path id="ucpm-arc" d="M 4,18 A 14,14 0 0,1 32,18" />
+      </defs>
+      <circle cx={18} cy={18} r={14} fill="none" stroke="rgba(90,55,18,0.55)" strokeWidth={1.4} />
       {/* Horizontal cancel lines */}
-      <line x1={9} y1={14} x2={25} y2={14} stroke="rgba(90,55,18,0.45)" strokeWidth={0.9} />
-      <line x1={9} y1={17} x2={25} y2={17} stroke="rgba(90,55,18,0.45)" strokeWidth={0.9} />
-      <line x1={9} y1={20} x2={25} y2={20} stroke="rgba(90,55,18,0.45)" strokeWidth={0.9} />
-      {/* "HEARTSYNC" text at top arc - approximated with straight text */}
-      <text
-        fontSize={4.2} fill="rgba(90,55,18,0.55)"
-        fontFamily="monospace" letterSpacing={1.1}
-        textAnchor="middle" x={17} y={9}
-      >
-        HEARTSYNC
+      <line x1={10} y1={15} x2={26} y2={15} stroke="rgba(90,55,18,0.42)" strokeWidth={0.85} />
+      <line x1={10} y1={18} x2={26} y2={18} stroke="rgba(90,55,18,0.42)" strokeWidth={0.85} />
+      <line x1={10} y1={21} x2={26} y2={21} stroke="rgba(90,55,18,0.42)" strokeWidth={0.85} />
+      {/* "HEARTSYNC" on arc path */}
+      <text fontSize={4} fill="rgba(90,55,18,0.6)" fontFamily="monospace">
+        <textPath href="#ucpm-arc" startOffset="50%" textAnchor="middle">
+          HEARTSYNC
+        </textPath>
       </text>
     </svg>
   );
@@ -173,17 +175,24 @@ const wordVar = {
    MAIN COMPONENT
    ═══════════════════════════════════════════════════ */
 export function UnboxCard() {
-  const envCtrl  = useAnimation();
-  const sealCtrl = useAnimation();
+  const envCtrl     = useAnimation();
+  const sealCtrl    = useAnimation(); // glow
+  const sealRotCtrl = useAnimation(); // spring rotation
   const [shimmerKey, setShimmerKey] = useState(0);
 
   /* ── Animation sequence ── */
   useEffect(() => {
     async function run() {
-      // Phase 1: Dolly in (scale up from depth)
+      // Phase 1: Dolly in — scale + true z-depth (translateZ via Framer Motion)
       envCtrl.start({
-        scale: 1, opacity: 1,
+        scale: 1, opacity: 1, z: 0,
         transition: { duration: 1.1, ease: [0.22, 1, 0.36, 1] },
+      });
+
+      // Wax seal: spring rotate tied to flap open at t=1.3s
+      sealRotCtrl.start({
+        rotate: -8,
+        transition: { type: "spring", damping: 10, stiffness: 100, delay: 1.3 },
       });
 
       // Wax seal glow loop (starts immediately)
@@ -205,7 +214,7 @@ export function UnboxCard() {
     }
     run();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // envCtrl / sealCtrl / sealRotCtrl from useAnimation are stable refs
 
   /* ── Shimmer repeat trigger ── */
   useEffect(() => {
@@ -222,7 +231,7 @@ export function UnboxCard() {
       className="min-h-screen flex items-center justify-center"
       style={{ background: "#06050a" }}
     >
-      {/* ── Scene container ── */}
+      {/* ── Scene container — perspective here gives the z-depth dolly its depth field ── */}
       <div
         className="relative overflow-hidden"
         style={{
@@ -230,6 +239,8 @@ export function UnboxCard() {
           borderRadius: 22,
           background: "#0a080f",
           boxShadow: "0 40px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04)",
+          perspective: 700,
+          perspectiveOrigin: "50% 60%",
         }}
       >
 
@@ -394,7 +405,7 @@ export function UnboxCard() {
         {/* ══ LAYER A: Envelope scene (z=20) ══ */}
         <motion.div
           animate={envCtrl}
-          initial={{ scale: 0.68, opacity: 0 }}
+          initial={{ scale: 0.68, opacity: 0, z: -200 }}
           style={{ position: "absolute", inset: 0, zIndex: 20, pointerEvents: "none" }}
         >
           {/* Dark room atmosphere */}
@@ -574,26 +585,33 @@ export function UnboxCard() {
               transform: "translate(-50%, -50%)",
               zIndex: 15,
             }}>
+              {/* Outer wrapper: spring rotation tied to flap open */}
               <motion.div
-                animate={sealCtrl}
-                style={{
-                  width: 30, height: 30,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle at 38% 35%, #d44030 0%, #a02618 55%, #7b1c12 100%)",
-                  boxShadow: "0 3px 10px rgba(0,0,0,0.45)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "1.5px solid rgba(190,70,50,0.4)",
-                }}
+                animate={sealRotCtrl}
+                initial={{ rotate: 0 }}
               >
-                <span style={{
-                  fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 700,
-                  color: "rgba(255,225,215,0.88)",
-                  textShadow: "0 1px 3px rgba(0,0,0,0.45)",
-                  lineHeight: 1,
-                  userSelect: "none",
-                }}>
-                  H
-                </span>
+                {/* Inner div: candlelight glow loop */}
+                <motion.div
+                  animate={sealCtrl}
+                  style={{
+                    width: 30, height: 30,
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle at 38% 35%, #d44030 0%, #a02618 55%, #7b1c12 100%)",
+                    boxShadow: "0 3px 10px rgba(0,0,0,0.45)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    border: "1.5px solid rgba(190,70,50,0.4)",
+                  }}
+                >
+                  <span style={{
+                    fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 700,
+                    color: "rgba(255,225,215,0.88)",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.45)",
+                    lineHeight: 1,
+                    userSelect: "none",
+                  }}>
+                    H
+                  </span>
+                </motion.div>
               </motion.div>
             </div>
 
