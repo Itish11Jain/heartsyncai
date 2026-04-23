@@ -98,14 +98,15 @@ function _musicTick() {
       const gNode = ac.createGain();
       osc.type = wave;
       osc.frequency.setValueAtTime(step.freq, t0);
-      gNode.gain.setValueAtTime(0.001, t0);
-      gNode.gain.linearRampToValueAtTime(g, t0 + 0.018);
-      gNode.gain.setValueAtTime(g * 0.80, t0 + dur * 0.40);
-      gNode.gain.linearRampToValueAtTime(0.001, t0 + dur * 0.88);
+      // Start at absolute 0, attack, then fade fully to 0 before oscillator stops
+      gNode.gain.setValueAtTime(0, t0);
+      gNode.gain.linearRampToValueAtTime(g, t0 + 0.025);
+      gNode.gain.linearRampToValueAtTime(g * 0.75, t0 + dur * 0.50);
+      gNode.gain.linearRampToValueAtTime(0, t0 + dur * 0.92);
       osc.connect(gNode);
       gNode.connect(_music.masterGain);
       osc.start(t0);
-      osc.stop(t0 + dur);
+      osc.stop(t0 + dur + 0.05); // stop 50 ms after gain already hit 0
     }
 
     _music.nextTime += dur;
