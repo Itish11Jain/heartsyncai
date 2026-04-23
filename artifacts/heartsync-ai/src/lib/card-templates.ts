@@ -616,3 +616,271 @@ export function getCosmicFallback(occasion: string): CosmicTemplate {
     final_message: "Wishing you all the happiness in the universe.",
   };
 }
+
+/* ═══════════════════════════ VINYL TEMPLATES ═════════════════════════════ */
+
+export interface VinylTrack {
+  emoji: string;
+  title: string;
+  text: string;
+}
+
+export interface VinylTemplate {
+  album_title: string;
+  side_label: string;
+  tracks: VinylTrack[];
+  final_message: string;
+}
+
+const VINYL: Record<string, Record<string, VinylTemplate>> = {
+  thank_you: {
+    friend: {
+      album_title: "Thank You, Legend",
+      side_label: "Side A — For My Absolute Favourite",
+      tracks: [
+        { emoji: "🎮", title: "Always There", text: "Always got my back when it counts." },
+        { emoji: "🍕", title: "Late Night Vibes", text: "The absolute best late-night energy." },
+        { emoji: "💡", title: "Bright Ideas", text: "Top-tier advice and brilliant ideas." },
+        { emoji: "🔥", title: "Good Energy", text: "Bringing the best energy to the room." },
+      ],
+      final_message: "Thank you for being an amazing friend. I truly appreciate you!",
+    },
+    partner: {
+      album_title: "For My Favourite Person",
+      side_label: "Side A — A Mixtape of Gratitude",
+      tracks: [
+        { emoji: "💖", title: "Better Every Day", text: "You make every single day better." },
+        { emoji: "☕", title: "Keeping Me Sane", text: "Thanks for the calm in the chaos." },
+        { emoji: "🫂", title: "Safe Place", text: "My ultimate safe space — always." },
+        { emoji: "✨", title: "Literal Magic", text: "You are, quite simply, magic." },
+      ],
+      final_message: "Thank you for everything you do. I'm so lucky to have you.",
+    },
+    spouse: {
+      album_title: "To My Everything",
+      side_label: "Side A — A Love Mixtape",
+      tracks: [
+        { emoji: "💍", title: "Greatest Adventure", text: "You are my greatest adventure." },
+        { emoji: "🌙", title: "Complete", text: "Every night feels complete with you." },
+        { emoji: "🏡", title: "Home", text: "Home is wherever you are." },
+        { emoji: "💫", title: "Extraordinary", text: "You make life extraordinary." },
+      ],
+      final_message: "Thank you for choosing me every single day. I love you deeply.",
+    },
+    date: {
+      album_title: "Something Special",
+      side_label: "Side A — For Someone Unforgettable",
+      tracks: [
+        { emoji: "😊", title: "That Smile", text: "You made me smile like I forgot how." },
+        { emoji: "🌟", title: "One of a Kind", text: "Genuinely one of a kind." },
+        { emoji: "🦋", title: "Butterflies", text: "You give me the best butterflies." },
+        { emoji: "🎯", title: "Glad We Met", text: "I'm so glad our paths crossed." },
+      ],
+      final_message: "Thank you for a genuinely amazing time. I can't stop smiling.",
+    },
+  },
+  birthday: {
+    friend: {
+      album_title: "Happy Birthday, Legend",
+      side_label: "Side A — Birthday Bangers",
+      tracks: [
+        { emoji: "🎂", title: "Eat the Cake", text: "Time to eat all the cake — zero guilt." },
+        { emoji: "🥳", title: "Celebrate You", text: "Ready to celebrate you properly." },
+        { emoji: "🎁", title: "You Deserve It", text: "You deserve the absolute best." },
+        { emoji: "🥂", title: "Cheers!", text: "Cheers to another amazing year!" },
+      ],
+      final_message: "Happy Birthday! Wishing you the most incredible year ahead!",
+    },
+    partner: {
+      album_title: "Happy Birthday, My Love",
+      side_label: "Side A — For the Centre of My World",
+      tracks: [
+        { emoji: "🎈", title: "Every Year a Gift", text: "Every year with you is a gift." },
+        { emoji: "💝", title: "Every Celebration", text: "You deserve every celebration." },
+        { emoji: "🌹", title: "Always Yours", text: "My heart is yours today and always." },
+        { emoji: "🎊", title: "Best Year Yet", text: "This year is going to be your best one yet." },
+      ],
+      final_message: "Happy Birthday, my love! I'm so grateful for every moment with you.",
+    },
+    spouse: {
+      album_title: "To My Partner in Everything",
+      side_label: "Side A — A Birthday Mixtape",
+      tracks: [
+        { emoji: "🎂", title: "Another Year of Love", text: "Another year of loving you." },
+        { emoji: "💑", title: "Beautiful Life", text: "Life is beautiful because of you." },
+        { emoji: "🥳", title: "All About You", text: "Today is all about you, babe." },
+        { emoji: "✨", title: "Every Room", text: "You light up every room you walk into." },
+      ],
+      final_message: "Happy Birthday! I fall more in love with you every single day.",
+    },
+    date: {
+      album_title: "Celebrating You Today",
+      side_label: "Side A — For Someone Wonderful",
+      tracks: [
+        { emoji: "🎉", title: "World Is Better", text: "The world is better because you're in it." },
+        { emoji: "🌟", title: "Feel Amazing", text: "You deserve to feel amazing today." },
+        { emoji: "🎂", title: "Make a Wish", text: "Make a wish — you've earned it." },
+        { emoji: "😊", title: "All Good Things", text: "Wishing you all the good things." },
+      ],
+      final_message: "Happy Birthday! Hope today is as wonderful as you are.",
+    },
+  },
+  sorry: {
+    partner: {
+      album_title: "Let Me Make It Right",
+      side_label: "Side A — From the Heart",
+      tracks: [
+        { emoji: "💔", title: "Hate Fighting", text: "I hate fighting with you." },
+        { emoji: "😔", title: "I Was Wrong", text: "I was wrong, and I own that." },
+        { emoji: "❤️‍🩹", title: "You Mean the World", text: "You mean the world to me." },
+        { emoji: "🌹", title: "Let Me Try", text: "Let me make it up to you." },
+      ],
+      final_message: "I am so deeply sorry. I love you and I promise to do better.",
+    },
+    friend: {
+      album_title: "I'm Sorry, Truly",
+      side_label: "Side A — Because You Matter",
+      tracks: [
+        { emoji: "🙁", title: "I Was Wrong", text: "I handled that all wrong." },
+        { emoji: "🤝", title: "Friendship First", text: "Our friendship means everything." },
+        { emoji: "💙", title: "I Care", text: "I genuinely care about you." },
+        { emoji: "🌱", title: "Grow Together", text: "Let's grow from this together." },
+      ],
+      final_message: "I'm truly sorry. You deserve better from me, and I'll do better.",
+    },
+    spouse: {
+      album_title: "To My Heart",
+      side_label: "Side A — A Heartfelt Apology",
+      tracks: [
+        { emoji: "💔", title: "Never Want to Hurt You", text: "I never want to hurt you." },
+        { emoji: "🕊️", title: "I Choose Us", text: "I choose us, always." },
+        { emoji: "❤️", title: "Unconditional", text: "My love for you is unconditional." },
+        { emoji: "🙏", title: "Please Forgive Me", text: "Please forgive me." },
+      ],
+      final_message: "I'm so sorry, my love. You are everything to me, and I'll never stop trying.",
+    },
+    date: {
+      album_title: "An Honest Apology",
+      side_label: "Side A — Because You Deserve Better",
+      tracks: [
+        { emoji: "😞", title: "Didn't Mean It", text: "I didn't mean to make you feel that way." },
+        { emoji: "💫", title: "You Deserve Kindness", text: "You deserve kindness and care." },
+        { emoji: "🌸", title: "Moving Forward", text: "I hope we can move forward." },
+        { emoji: "🙏", title: "Genuinely Sorry", text: "I'm genuinely sorry." },
+      ],
+      final_message: "I'm sorry. I hope you'll give me a chance to make it right.",
+    },
+  },
+  feel_good: {
+    friend: {
+      album_title: "A Reminder, Just for You",
+      side_label: "Side A — Hey You — Yes, YOU",
+      tracks: [
+        { emoji: "🌟", title: "One of a Kind", text: "You are genuinely one of a kind." },
+        { emoji: "💪", title: "Stronger Than You Know", text: "Tougher and stronger than you know." },
+        { emoji: "🌻", title: "The World Needs You", text: "The world is better with you in it." },
+        { emoji: "✨", title: "Good Vibes", text: "Sending you all the good vibes." },
+      ],
+      final_message: "Just a reminder that you're incredible. Keep going — you've got this!",
+    },
+    partner: {
+      album_title: "To My Sunshine",
+      side_label: "Side A — You Are Doing Great",
+      tracks: [
+        { emoji: "🌈", title: "Grey Days Brighter", text: "You brighten even the grey days." },
+        { emoji: "💖", title: "I See You", text: "I see how hard you work, every day." },
+        { emoji: "🫂", title: "Always Here", text: "I'm here for you, always." },
+        { emoji: "🌟", title: "All the Good Things", text: "You deserve all the good things." },
+      ],
+      final_message: "I just want you to know — you're doing amazing. I'm so proud of you.",
+    },
+    spouse: {
+      album_title: "To My Person",
+      side_label: "Side A — A Love Note",
+      tracks: [
+        { emoji: "🏡", title: "Home Reset", text: "Coming home to you resets everything." },
+        { emoji: "💛", title: "Hard Days Easy", text: "You make even hard days better." },
+        { emoji: "🌙", title: "Who We Are", text: "I love who we are together." },
+        { emoji: "✨", title: "Extraordinary", text: "You are extraordinary." },
+      ],
+      final_message: "I just wanted to remind you how much you matter. I love you so much.",
+    },
+    date: {
+      album_title: "A Little Something",
+      side_label: "Side A — For Someone Special",
+      tracks: [
+        { emoji: "😊", title: "That Smile", text: "You have the best smile." },
+        { emoji: "🦋", title: "Feeling Light", text: "You make me feel light." },
+        { emoji: "🌸", title: "Just Smiling", text: "Just a little something to make you smile." },
+        { emoji: "💫", title: "Good Things Coming", text: "You deserve all good things." },
+      ],
+      final_message: "Just sending some good vibes your way. You deserve to feel amazing today!",
+    },
+  },
+  congratulations: {
+    friend: {
+      album_title: "Look at You Go!",
+      side_label: "Side A — Absolute Champion",
+      tracks: [
+        { emoji: "🏆", title: "You Crushed It", text: "You absolutely crushed it." },
+        { emoji: "🎊", title: "Knew You Had It", text: "I knew you had this in you." },
+        { emoji: "🥂", title: "Big Time Celebrate", text: "Time to celebrate — big time." },
+        { emoji: "🔥", title: "Not Even Surprised", text: "Honestly? Not even surprised." },
+      ],
+      final_message: "Congratulations!! I'm SO proud of you. You worked hard for this and you deserve every bit of it!",
+    },
+    partner: {
+      album_title: "My Most Capable Person",
+      side_label: "Side A — So Proud of You",
+      tracks: [
+        { emoji: "🌟", title: "Always Knew", text: "I always knew you'd make it here." },
+        { emoji: "💪", title: "Paying Off", text: "Your hard work is finally paying off." },
+        { emoji: "🎊", title: "Just the Beginning", text: "This is just the beginning." },
+        { emoji: "💖", title: "Incredibly Proud", text: "So incredibly proud of you." },
+      ],
+      final_message: "Congratulations, love! Watching you achieve your dreams is the most beautiful thing. So proud!",
+    },
+    spouse: {
+      album_title: "My Person — What a Star!",
+      side_label: "Side A — Your Biggest Fan",
+      tracks: [
+        { emoji: "🏆", title: "Made It Look Easy", text: "You made it look easy — it wasn't." },
+        { emoji: "💫", title: "Watched You Work", text: "I've watched you work so hard for this." },
+        { emoji: "🎉", title: "Your Day", text: "Today is YOUR day." },
+        { emoji: "❤️", title: "Biggest Fan", text: "I'm your biggest fan, always." },
+      ],
+      final_message: "Congratulations! You deserve every celebration today. I'm so proud to be by your side.",
+    },
+    date: {
+      album_title: "Celebrating You!",
+      side_label: "Side A — Big News Energy",
+      tracks: [
+        { emoji: "🎊", title: "Big News", text: "This is such big news!" },
+        { emoji: "🌟", title: "Feel Good", text: "You should feel really good about this." },
+        { emoji: "🥂", title: "Proper Celebration", text: "A proper celebration is in order." },
+        { emoji: "✨", title: "Happy for You", text: "Genuinely happy for you." },
+      ],
+      final_message: "Congratulations! This is amazing news. You should be so proud of yourself!",
+    },
+  },
+};
+
+export function getVinylTemplate(occasion: string, relation: string): VinylTemplate | null {
+  return VINYL[occasion]?.[relation] ?? VINYL[occasion]?.["friend"] ?? null;
+}
+
+export function getVinylFallback(occasion: string): VinylTemplate {
+  const oc = VINYL[occasion];
+  if (oc) return Object.values(oc)[0];
+  return {
+    album_title: "A Mixtape for You",
+    side_label: "Side A — From the Heart",
+    tracks: [
+      { emoji: "💖", title: "You Are Amazing", text: "You are amazing." },
+      { emoji: "✨", title: "Brighter Days", text: "You make everything brighter." },
+      { emoji: "🌟", title: "Here for You", text: "The world is better with you in it." },
+      { emoji: "🎉", title: "Here's to You", text: "Here's to you!" },
+    ],
+    final_message: "Wishing you all the happiness in the world.",
+  };
+}

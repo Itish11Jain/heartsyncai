@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
 import CosmicCard from "@/pages/cosmic";
+import VinylCard from "@/pages/vinyl";
 
 /* ─────────────────────────── helpers ──────────────────────────── */
 
@@ -770,6 +771,8 @@ export default function Card() {
 
   /* Route to Cosmic template if requested */
   if (params.get("template") === "cosmic") return <CosmicCard />;
+  /* Route to Vinyl template if requested */
+  if (params.get("template") === "vinyl") return <VinylCard />;
 
   const recipientName = params.get("to") || "Friend";
   const occasion = params.get("occasion") || "thank_you";

@@ -49,10 +49,10 @@ export default function Send() {
   }
 
   function pickTemplate(): string {
+    const TEMPLATES = ["envelope", "cosmic", "vinyl"];
     const last = localStorage.getItem("hs_last_template");
-    const next = !last
-      ? (Math.random() < 0.5 ? "envelope" : "cosmic")
-      : (last === "envelope" ? "cosmic" : "envelope");
+    const lastIdx = last ? TEMPLATES.indexOf(last) : -1;
+    const next = TEMPLATES[(lastIdx + 1) % TEMPLATES.length];
     localStorage.setItem("hs_last_template", next);
     return next;
   }
