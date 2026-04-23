@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, ExternalLink, ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
 
@@ -12,7 +11,6 @@ function useSearchParams() {
 }
 
 export default function Send() {
-  const [, setLocation] = useLocation();
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState(1);

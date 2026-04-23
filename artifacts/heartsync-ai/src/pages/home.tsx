@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { authStore } from "@/lib/auth-store";
 
 const STEPS = [
   { num: "01", title: "Pick who it's for", desc: "Your partner, friend, date, or spouse. Tell us the relationship." },
@@ -313,7 +312,6 @@ function CardIllustration() {
 }
 
 export default function Home() {
-  const [isLoggedIn] = useState(() => authStore.isLoggedIn);
   const guideCta = "/date-guide";
 
   return (
