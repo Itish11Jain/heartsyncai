@@ -668,7 +668,7 @@ export default function Home() {
               <Link href={guideCta} onClick={() => home.navTap()}>Date Guide</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
-              <Link href={guideCta} onClick={() => home.navTap()}>Log in</Link>
+              <Link href="/sign-in" onClick={() => home.navTap()}>Log in</Link>
             </Button>
           </div>
         </header>

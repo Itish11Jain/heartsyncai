@@ -78,6 +78,10 @@ export default function Analytics() {
 
   useEffect(() => {
     if (!isLoaded) return;
+    if (!user) {
+      navigate("/sign-in?redirect_url=/analytics");
+      return;
+    }
     if (userEmail !== SUPERUSER_EMAIL) {
       navigate("/");
       return;
