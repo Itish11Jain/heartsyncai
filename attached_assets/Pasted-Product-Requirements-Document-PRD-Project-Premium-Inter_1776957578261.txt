@@ -1,0 +1,163 @@
+Product Requirements Document (PRD)
+
+Project: Premium Interactive Greeting Card Generator - "Retro Vinyl Mixtape" Edition
+
+1. Project Overview
+
+We are building a premium, mobile-responsive, interactive web-based greeting card application. This iteration offers a warm, high-contrast "Vintage Audiophile" experience. The recipient interacts with a luxurious ivory-and-copper record player, discovers floating musical notes that reveal personalized messages, and unlocks a crisp, minimalist "Platinum Edition" record sleeve.
+
+Aesthetic Note (CRITICAL): Do NOT use dark mode, pure black, or heavy neon colors. The palette must be highly aesthetic, bright, and feature high contrast: deep vintage beige backgrounds (#D8CBB8 to #F4ECE1), pristine ivory/white components for the player to make it pop, soft charcoal vinyl, deep mocha typography (#4A3C31), and rich copper/gold foil accents.
+
+Multi-Template Strategy: This "Retro Vinyl Mixtape" edition serves as an additional template to the growing library. The application must support multiple templates using the following selection logic:
+
+When a user creates a card for the first time, the system should choose a template randomly.
+
+When the user returns to create a second or subsequent card, the system must automatically provide a new, unused template to guarantee variety.
+
+2. The Recipient Experience (Animation Sequence)
+
+The core experience is divided into four distinct phases.
+
+Phase 1: The Hook & The Play Button
+
+Visuals: * A warm, deep vintage beige radial gradient background with subtle multiply-blend film grain.
+
+A sleek 3D record player sits in the center. The base is a crisp ivory/white to provide high contrast against the beige background. It features charcoal vinyl and a copper tonearm.
+
+Elegant, gold-foil serif text at the top displays a dynamic mixtape_title (e.g., "Vol 1: Another Trip Around the Sun").
+
+Interaction (Tactile Button): A premium, metallic "PRESS TO PLAY" button sits below the player.
+
+Feedback: Clicking the button physically depresses it. The button fades out, and the tonearm automatically rotates smoothly and drops onto the vinyl.
+
+Phase 2: The Tracklist (Discovery Phase)
+
+Action: Upon the tonearm dropping, the record begins to spin steadily. Ambient copper "equalizer waves" radiate outward from the center of the record player using HTML5 Canvas.
+
+The Math: 4 to 6 glowing "Musical Notes" float up around the record and bounce gently in a dynamic pattern.
+
+Progress UI: A sleek mocha text prompt appears at the bottom: "PLAYING TRACKS (0 / X)".
+
+Phase 3: The Groove (Interaction)
+
+Action: The recipient taps the floating musical notes one by one.
+
+Effects on Click: 1. Ignition: The tapped note brightens, scales up, and anchors in place.
+2. Particle Burst: A mini-burst of warm copper/peach sparks (using Canvas) erupts from the tapped note.
+3. The Message: A white glassmorphism "Cassette Tape" tooltip containing a personalized emoji and compliment fades into the center of the screen.
+4. The Connection: The ambient copper equalizer waves in the background grow slightly more intense with each note clicked.
+
+Phase 4: The Platinum Record Sleeve (Final Reveal)
+
+Trigger: Once the final note is clicked, wait ~1.5 seconds.
+
+The Transition: The tonearm lifts off. The record spins at hyper-speed. The entire record player and the notes smoothly slide down and fade off-screen.
+
+The Environment: The background Canvas switches from radiating waves to a prominent, magical shower of large, slow-falling gold, copper, and bright white dust to create a high-contrast sparkling effect.
+
+The Final Card: A crisp, white "Platinum Edition" record sleeve slides up into the center. It displays the dedication (Title Prefix), the Recipient's Name in gold-foil typography, and the Final Message in deep mocha.
+
+3. Technical Specifications
+
+Framework: React (Next.js highly recommended for URL parameter parsing and SEO routing).
+
+Styling: Tailwind CSS for layout. Custom CSS required for box-shadow depth, gradients, and the @keyframes vinyl spin.
+
+Responsiveness: Must be 100% mobile-friendly. Use CSS min() functions (e.g., width: min(340px, 90vw)) so the record player and final album cover scale perfectly on small screens without breaking layout.
+
+Animations: Framer Motion (or GSAP). Crucial for handling the tactile button press, tonearm rotation, floating musical notes, and the synchronized phase transitions.
+
+Canvas Engine: Native HTML5 Canvas to handle the growing equalizer waves, the click-triggered copper sparks, and the final prominent golden/white dust rain.
+
+4. Data Architecture (Templatization)
+
+The application dynamically populates the UI based on this JSON structure.
+
+{
+  "templates": {
+    "thank_you": {
+      "friend": {
+        "mixtape_title": "Vol 1: A Universe of Thanks",
+        "dedication": "For the absolute legend",
+        "tracks": [
+          {"emoji": "🎮", "text": "Always got my back when it counts."},
+          {"emoji": "🍕", "text": "The absolute best late-night vibes."},
+          {"emoji": "💡", "text": "Top-tier advice and brilliant ideas."},
+          {"emoji": "🔥", "text": "Bringing the best energy to the room."}
+        ],
+        "final_message": "Thank you for being an amazing friend. You're my favorite track!"
+      },
+      "partner": {
+        "mixtape_title": "Vol 1: Our Greatest Hits",
+        "dedication": "To my favorite person",
+        "tracks": [
+          {"emoji": "💖", "text": "You make every single day better."},
+          {"emoji": "☕", "text": "Thanks for keeping me sane."},
+          {"emoji": "🫂", "text": "My ultimate safe space."},
+          {"emoji": "✨", "text": "You are literal magic."}
+        ],
+        "final_message": "Thank you for everything you do. I'd leave you on repeat forever."
+      }
+    },
+    "birthday": {
+      "friend": {
+        "mixtape_title": "Vol 1: Another Trip Around the Sun",
+        "dedication": "Happy Solar Return",
+        "tracks": [
+          {"emoji": "🎂", "text": "Time to eat all the cake."},
+          {"emoji": "🥳", "text": "Ready to celebrate you."},
+          {"emoji": "🎁", "text": "You deserve the absolute best."},
+          {"emoji": "🥂", "text": "Cheers to another amazing year!"}
+        ],
+        "final_message": "Happy Birthday! Wishing you the most incredible year ahead!"
+      }
+    },
+    "sorry": {
+      "partner": {
+        "mixtape_title": "Vol 1: A Better Track",
+        "dedication": "To my everything",
+        "tracks": [
+          {"emoji": "💔", "text": "I hate fighting with you."},
+          {"emoji": "😔", "text": "I was wrong, and I own that."},
+          {"emoji": "❤️‍🩹", "text": "You mean the world to me."},
+          {"emoji": "🌹", "text": "Let me make it up to you."}
+        ],
+        "final_message": "I am so deeply sorry. Let's start the record over."
+      }
+    },
+    "congratulations": {
+      "generic": {
+        "mixtape_title": "Vol 1: Platinum Status",
+        "dedication": "You did it!",
+        "tracks": [
+          {"emoji": "🏆", "text": "Absolute champion behavior."},
+          {"emoji": "👏", "text": "So incredibly well deserved."},
+          {"emoji": "🍾", "text": "Time to pop the champagne!"},
+          {"emoji": "🚀", "text": "The sky is truly the limit."}
+        ],
+        "final_message": "Huge congratulations on your achievement! So proud of you."
+      }
+    }
+  }
+}
+
+
+5. AI/Agent Prompt to Kickstart Build
+
+Copy and paste the following prompt to your AI Agent (Replit, Cursor, v0) along with this document:
+
+"I want to build a Premium Interactive Greeting Card Generator based on the 'Retro Vinyl Mixtape' theme detailed in this PRD. Please initialize a Next.js application using Tailwind CSS.
+
+Important Aesthetic Note: Use a high-end, high-contrast audiophile aesthetic. No pure blacks or dark mode. Use deep vintage beige backgrounds (#D8CBB8), pristine ivory components (to pop off the background), charcoal vinyl, deep mocha text, and copper/gold foil accents.
+
+Start by implementing the exact 4-Phase 'Recipient Experience' UI:
+
+Build the vintage beige background and the crisp Ivory 3D Record Player. Implement the tactile 'PRESS TO PLAY' button interaction that triggers the tonearm to drop onto the vinyl.
+
+Create the Tracklist phase where 4-6 interactive 'Musical Notes' float around the spinning record.
+
+Implement the interaction: When a note is clicked, show a centered white glassmorphism cassette tooltip, burst warm copper sparks using HTML5 Canvas, and intensify the Canvas equalizer waves radiating from the record player.
+
+Build the 'Platinum Sleeve' Grand Finale sequence: the tonearm lifts, the record player sinks away, the canvas switches to prominent falling gold and bright white dust, and a sleek minimalist 'Record Sleeve' (Final Card) drops in.
+
+Create a robust state management system to step through these phases, and use the provided JSON schema to populate the data. Ensure the entire layout uses min() CSS constraints so it looks flawless and proportional on mobile devices."
