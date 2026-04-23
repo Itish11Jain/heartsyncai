@@ -591,43 +591,50 @@ function Orb({
 
 function OrbTooltip({ orb, tooltipKey }: { orb: OrbData; tooltipKey: number }) {
   return (
+    /* Pinned to top area — safely above the orb ring (which lives near center) */
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
         display: "flex",
-        alignItems: "center",
         justifyContent: "center",
+        padding: "20px 24px 0",
         pointerEvents: "none",
-        zIndex: 20,
-        padding: "0 24px",
+        zIndex: 35,
       }}
     >
       <motion.div
         key={tooltipKey}
-        initial={{ scale: 0.7, opacity: 0, y: 10 }}
+        initial={{ scale: 0.8, opacity: 0, y: -12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.8, opacity: 0, y: -6 }}
-        transition={{ type: "spring", damping: 16, stiffness: 280 }}
+        exit={{ scale: 0.85, opacity: 0, y: -8 }}
+        transition={{ type: "spring", damping: 18, stiffness: 300 }}
         style={{
-          width: "min(280px, calc(100vw - 48px))",
-          padding: "18px 22px",
+          width: "min(300px, calc(100vw - 48px))",
+          padding: "16px 20px",
           borderRadius: 20,
-          background: "rgba(10, 6, 20, 0.88)",
-          border: "1.5px solid rgba(255,215,0,0.3)",
-          backdropFilter: "blur(20px)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(255,215,0,0.08)",
+          background: "rgba(10, 6, 20, 0.92)",
+          border: "1.5px solid rgba(255,215,0,0.35)",
+          backdropFilter: "blur(24px)",
+          boxShadow: "0 16px 50px rgba(0,0,0,0.55), 0 0 30px rgba(255,215,0,0.1)",
           textAlign: "center",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
         }}
       >
-        <div style={{ fontSize: 36, marginBottom: 10 }}>{orb.emoji}</div>
+        <span style={{ fontSize: 32, flexShrink: 0 }}>{orb.emoji}</span>
         <p
           style={{
             color: "rgba(255,255,255,0.92)",
-            fontSize: 15,
-            lineHeight: 1.6,
+            fontSize: 14,
+            lineHeight: 1.55,
             fontWeight: 500,
             fontStyle: "italic",
+            textAlign: "left",
+            margin: 0,
           }}
         >
           "{orb.text}"
@@ -737,49 +744,12 @@ function FinalCard({
         {finalMessage}
       </motion.p>
 
-      {/* Send love back CTA */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.6, duration: 0.6 }}
-      >
-        <div
-          style={{
-            width: "100%",
-            height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
-            marginBottom: 14,
-          }}
-        />
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 8, letterSpacing: "0.04em" }}>
-          Feeling the love? Send one back ✨
-        </p>
-        <Link href="/send">
-          <button
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: 12,
-              background: "rgba(255,215,0,0.1)",
-              border: "1px solid rgba(255,215,0,0.25)",
-              color: "rgba(255,215,0,0.9)",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: "pointer",
-              letterSpacing: "0.02em",
-            }}
-          >
-            💛 Create your own card — free
-          </button>
-        </Link>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2.0, duration: 0.6 }}
         style={{
-          marginTop: 14,
+          marginTop: 8,
           fontSize: 10,
           color: "rgba(255,215,0,0.25)",
           letterSpacing: "0.08em",
@@ -802,6 +772,7 @@ export default function Card() {
   const relation = params.get("relation") || "friend";
   const likes = params.get("likes") || "";
   const customMsg = decodeMsg(params.get("msg"));
+  const isPreview = params.get("preview") === "1";
 
   const template =
     getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
@@ -1083,10 +1054,11 @@ export default function Card() {
             transition={{ delay: 0.7 }}
             style={{
               position: "fixed", inset: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               zIndex: 30,
               padding: "16px",
               overflowY: "auto",
+              gap: 16,
             }}
           >
             <FinalCard
@@ -1094,6 +1066,35 @@ export default function Card() {
               titlePrefix={template.title_prefix}
               finalMessage={finalMessage}
             />
+
+            {/* "Create your own" — only shown to actual recipients (not preview) */}
+            {!isPreview && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 2.2, duration: 0.6 }}
+                style={{ textAlign: "center", paddingBottom: 8 }}
+              >
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginBottom: 6, letterSpacing: "0.04em" }}>
+                  Feeling the love? ✨
+                </p>
+                <Link href="/send">
+                  <span
+                    style={{
+                      fontSize: 13,
+                      color: "rgba(255,215,0,0.55)",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      letterSpacing: "0.02em",
+                      borderBottom: "1px solid rgba(255,215,0,0.2)",
+                      paddingBottom: 1,
+                    }}
+                  >
+                    Create your own card — free
+                  </span>
+                </Link>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

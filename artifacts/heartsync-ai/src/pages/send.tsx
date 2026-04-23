@@ -421,7 +421,7 @@ export default function Send() {
                 </motion.button>
 
                 <a
-                  href={shareUrl}
+                  href={shareUrl + (shareUrl.includes("?") ? "&preview=1" : "?preview=1")}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

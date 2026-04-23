@@ -48,18 +48,24 @@ const PREVIEW_ORB_POSITIONS = PREVIEW_ORBS.map((_, i) => {
   return { x: Math.cos(angle) * 65, y: Math.sin(angle) * 65 };
 });
 
+const PREVIEW_BLURB = { emoji: "🐼", text: "Panda-sized birthday hugs!" };
+
 function CardIllustration() {
   /* seq: 0 = envelope, 1 = opening, 2 = orbs, 3 = finale */
   const [seq, setSeq] = useState(0);
+  const [showBlurb, setShowBlurb] = useState(false);
   const [loopCount, setLoopCount] = useState(0);
 
   useEffect(() => {
     setSeq(0);
+    setShowBlurb(false);
     const t1 = setTimeout(() => setSeq(1), 2800);
     const t2 = setTimeout(() => setSeq(2), 4200);
-    const t3 = setTimeout(() => setSeq(3), 7400);
-    const t4 = setTimeout(() => setLoopCount(c => c + 1), 10800);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+    const t3 = setTimeout(() => setShowBlurb(true), 5700);
+    const t4 = setTimeout(() => setShowBlurb(false), 7000);
+    const t5 = setTimeout(() => setSeq(3), 7400);
+    const t6 = setTimeout(() => setLoopCount(c => c + 1), 10800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); clearTimeout(t6); };
   }, [loopCount]);
 
   return (
@@ -186,16 +192,48 @@ function CardIllustration() {
               exit={{ opacity: 0 }}
               style={{ position: "absolute", inset: 0 }}
             >
-              {/* Counter */}
-              {seq === 2 && (
+              {/* Hint label */}
+              {seq === 2 && !showBlurb && (
                 <motion.p
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  style={{ position: "absolute", top: 20, left: 0, right: 0, textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em" }}
+                  exit={{ opacity: 0 }}
+                  style={{ position: "absolute", top: 18, left: 0, right: 0, textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em" }}
                 >
                   Tap the orbs! ✨
                 </motion.p>
               )}
+              {/* Orb blurb bubble — appears when one orb is "tapped" in the preview */}
+              <AnimatePresence>
+                {showBlurb && (
+                  <motion.div
+                    key="blurb"
+                    initial={{ scale: 0.8, opacity: 0, y: -6 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.85, opacity: 0, y: -4 }}
+                    transition={{ type: "spring", damping: 18, stiffness: 320 }}
+                    style={{
+                      position: "absolute",
+                      top: 14, left: 12, right: 12,
+                      padding: "10px 12px",
+                      borderRadius: 14,
+                      background: "rgba(8, 4, 18, 0.92)",
+                      border: "1px solid rgba(255,215,0,0.3)",
+                      backdropFilter: "blur(16px)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      zIndex: 30,
+                    }}
+                  >
+                    <span style={{ fontSize: 22, flexShrink: 0 }}>{PREVIEW_BLURB.emoji}</span>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.88)", fontStyle: "italic", lineHeight: 1.5, margin: 0 }}>
+                      "{PREVIEW_BLURB.text}"
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {/* Orbs */}
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {PREVIEW_ORBS.map((emoji, i) => {
@@ -360,15 +398,16 @@ export default function Home() {
               <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
             </div>
 
-            <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-5 text-white">
-              Send love in<br />a card.{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-pink-400 to-secondary">
-                Made for them.
-              </span>
+            <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-4 text-white">
+              Send love in<br />a card.
             </h1>
 
-            <p className="text-base text-white/50 mb-10 leading-relaxed max-w-md">
-              Create a heartfelt, personalised greeting card for your partner, friend, or date. We write the perfect message. You pick the style. Done in 60 seconds.
+            <p className="text-sm font-semibold mb-5 tracking-wide" style={{ color: "rgba(255,215,0,0.65)" }}>
+              Personalised &nbsp;·&nbsp; 100+ Unique Templates &nbsp;·&nbsp; All Occasions
+            </p>
+
+            <p className="text-sm text-white/40 mb-10 leading-relaxed max-w-sm">
+              We write the perfect heartfelt message for you. Pick a style. Share in 60 seconds.
             </p>
 
             <div className="mb-10">
@@ -378,7 +417,7 @@ export default function Home() {
                 className="rounded-2xl h-14 px-8 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all"
               >
                 <Link href="/send" className="flex items-center gap-2">
-                  Send a Card Free
+                  Send cards now — Free!
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
