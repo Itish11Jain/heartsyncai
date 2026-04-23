@@ -140,21 +140,23 @@ function CardIllustration() {
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, #FFE566 0%, #FFCC00 100%)", clipPath: "polygon(0 0, 100% 0, 50% 88%)", transform: "rotateX(180deg)", backfaceVisibility: "hidden" }} />
                   </motion.div>
                 </div>
-                {/* Flower seal */}
-                <motion.div
-                  animate={seq === 1 ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  style={{
-                    position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-                    width: 28, height: 28, borderRadius: "50%",
-                    background: "radial-gradient(circle at 35% 35%, #FF8FAB, #C2185B)",
-                    boxShadow: "0 2px 8px rgba(194,24,91,0.5)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 14, zIndex: 5,
-                  }}
-                >
-                  🌸
-                </motion.div>
+                {/* Wax seal */}
+                <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 5 }}>
+                  <motion.div
+                    animate={seq === 1 ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      background: "radial-gradient(circle at 38% 33%, #A82020, #7A0A0A 58%, #4A0000 92%)",
+                      boxShadow: "0 2px 8px rgba(80,0,0,0.6), inset 0 1px 2px rgba(255,140,140,0.2)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      position: "relative", overflow: "hidden",
+                    }}
+                  >
+                    <div style={{ position: "absolute", inset: "12%", borderRadius: "50%", border: "1px solid rgba(255,160,160,0.18)" }} />
+                    <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 10, color: "rgba(255,210,210,0.6)", zIndex: 2 }}>H</span>
+                  </motion.div>
+                </div>
               </div>
 
               {/* Slider hint */}
@@ -394,7 +396,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex justify-center md:justify-end pr-4">
+          <div className="flex justify-center md:justify-start md:pl-4">
             <CardIllustration />
           </div>
         </motion.section>
