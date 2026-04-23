@@ -1,0 +1,68 @@
+PRD: HeartSync Moments (AI Animated Cards)
+1. Product Overview
+Goal: To provide users with a "social glue" tool that helps them express emotions (Thank You, Sorry, Love) through high-quality, personalized animated cards.
+Target Audience: 18–35 years old, Tier 2 & 3 cities.
+Core Value: Moves the user from "advice" to "actionable connection" by solving the "what do I send next?" problem.
+
+2. User Stories
+The "First Date" Follow-up: "As a user who just finished a coffee date, I want to send a unique 'Thank You' card so I stand out and secure a second date."
+
+The "Oops" Moment: "As someone who made a mistake, I want a creative 'Sorry' card that uses humor to break the tension without being awkward."
+
+The "Relationship Milestone": "As a boyfriend, I want to send an animated 'Thinking of You' card that feels more premium than a basic WhatsApp GIF."
+
+3. Functional Requirements
+A. Simple Input Flow (4 Steps)
+The system shall provide a frictionless 4-step wizard to gather data:
+
+Name: Recipient's name.
+
+Purpose: Selection from four categories: Thank You, Sorry, I Love You, Feel Good.
+
+Relation: Selection from: Date, Friend, Girlfriend/Boyfriend, Wife/Husband.
+
+Picture (Optional): Upload a photo to be integrated into the animation.
+
+B. AI Generation Engine
+Template Library: A library of 50+ unique animation templates ranging from "Minimalist Chic" to "Vibrant Maximalism".
+
+Personalization: The AI shall inject the recipient's name and relationship-specific "Simple English" messages into the animation.
+
+Photo Integration: If a photo is uploaded, the AI will use "Smart Cropping" to place it within the card's design.
+
+C. Output & Sharing
+Format: High-quality MP4 or GIF (optimized for WhatsApp and Instagram).
+
+Shareability: One-tap sharing to WhatsApp, Instagram Stories, and direct download.
+
+4. Design & UI/UX (Tier 2/3 Focus)
+Language: Use "Easy English" (e.g., "Tell us who it is for" instead of "Identify the recipient").
+
+Visuals: High-contrast buttons and large, legible typography.
+
+Micro-interactions: Use "dopamine delivery" animations during the card generation process to keep the user engaged.
+
+5. Technical Requirements (Replit Stack)
+Frontend: React.js or Next.js for a responsive, mobile-first interface.
+
+Backend: Python (FastAPI/Flask) to handle AI image/video processing requests.
+
+AI Model Integration: * Text: LLM (e.g., GPT-4o) to generate the custom message based on "Relation" and "Purpose."
+
+Animation: Integration with a video generation API (e.g., Replicate or Cloudinary) to render the 50+ templates.
+
+Storage: AWS S3 or CloudFront for hosting generated media files.
+
+6. Success Metrics (KPIs)
+Feature Adoption: % of HeartSync users who create at least one card per week.
+
+Viral Coefficient: Number of new app signups originating from the "Made with HeartSync AI" watermark on shared cards.
+
+User Satisfaction: Average rating of the "Creativity" of the 50 templates.
+
+7. Strategic Positioning in HeartSync AI
+This feature should be marketed as the "Aura Delivery" tool.
+
+Placement: A prominent "Send a Moment" button on the main dashboard.
+
+Upsell: Free users get 3 cards/month; Premium HeartSync members get unlimited access to all 50+ premium templates.
