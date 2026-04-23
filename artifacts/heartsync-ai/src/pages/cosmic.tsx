@@ -92,7 +92,7 @@ export default function CosmicCard() {
     try { return decodeURIComponent(escape(atob(m))); } catch { return null; }
   })();
   const isSender = params.get("sender") === "1";
-  const isPreview = params.get("preview") === "1" || isSender;
+  const isPreview = params.get("preview") === "1";
   const isRecipient = !isSender && !isPreview;
 
   const tpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
