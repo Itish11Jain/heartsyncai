@@ -307,7 +307,8 @@ export default function CosmicCard() {
       position: "fixed", inset: 0, overflow: "hidden",
       background: "radial-gradient(ellipse at 50% 50%, #0e0520 0%, #050112 60%, #020108 100%)",
       fontFamily: "'Segoe UI', system-ui, sans-serif",
-    }}>
+      userSelect: "none", WebkitUserSelect: "none",
+    } as React.CSSProperties}>
       {/* Background canvas */}
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }} />
 
@@ -350,11 +351,16 @@ export default function CosmicCard() {
               style={{ position: "absolute", bottom: "max(60px,14vh)", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, zIndex: 2 }}
             >
               <div
-                style={{ position: "relative", width: 84, height: 84, cursor: "pointer", touchAction: "none", userSelect: "none" }}
+                style={{
+                  position: "relative", width: 84, height: 84, cursor: "pointer",
+                  touchAction: "none", userSelect: "none",
+                  WebkitUserSelect: "none", WebkitTouchCallout: "none",
+                } as React.CSSProperties}
                 onPointerDown={startHold}
                 onPointerUp={releaseHold}
                 onPointerLeave={releaseHold}
                 onPointerCancel={releaseHold}
+                onContextMenu={e => e.preventDefault()}
               >
                 {/* Charging ring */}
                 <svg width={84} height={84} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
@@ -400,12 +406,14 @@ export default function CosmicCard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               style={{
-                position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))", left: "50%", transform: "translateX(-50%)",
-                fontSize: 13, color: "rgba(220,200,255,0.85)", letterSpacing: "0.1em", fontWeight: 600,
-                background: "rgba(40,20,80,0.7)", borderRadius: 999, padding: "8px 22px",
-                border: "1px solid rgba(180,150,255,0.2)", whiteSpace: "nowrap",
+                position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))",
+                left: "50%", transform: "translateX(-50%)",
+                maxWidth: "calc(100vw - 48px)", width: "max-content",
+                fontSize: 13, color: "rgba(220,200,255,0.9)", letterSpacing: "0.08em", fontWeight: 600,
+                background: "rgba(40,20,80,0.75)", borderRadius: 999, padding: "8px 20px",
+                border: "1px solid rgba(180,150,255,0.25)",
                 backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-                zIndex: 15,
+                zIndex: 15, textAlign: "center",
               }}
             >
               Discover the stars ({clickedIds.length} / {totalStars})
@@ -476,18 +484,17 @@ export default function CosmicCard() {
                   exit={{ opacity: 0, scale: 0.82, y: -10 }}
                   transition={{ duration: 0.32 }}
                   style={{
-                    position: "fixed", top: "50%", left: "50%",
-                    transform: "translate(-50%,-50%)",
+                    position: "fixed",
+                    bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
+                    left: "50%", transform: "translateX(-50%)",
+                    width: "min(320px, calc(100vw - 40px))",
                     zIndex: 20, pointerEvents: "none",
-                    background: "rgba(18,8,38,0.7)",
-                    backdropFilter: "blur(18px)",
-                    WebkitBackdropFilter: "blur(18px)",
-                    borderRadius: 22,
-                    border: "1px solid rgba(200,175,255,0.2)",
-                    padding: "22px 30px",
+                    background: "rgba(14,6,30,0.55)",
+                    borderRadius: 18,
+                    border: "1px solid rgba(200,175,255,0.22)",
+                    padding: "16px 22px",
                     textAlign: "center",
-                    maxWidth: "min(290px,72vw)",
-                    boxShadow: "0 8px 40px rgba(70,20,120,0.4), inset 0 1px 0 rgba(255,255,255,0.07)",
+                    boxShadow: "0 4px 30px rgba(70,20,120,0.3)",
                   }}
                 >
                   <div style={{ fontSize: 44, marginBottom: 12 }}>{tooltip.emoji}</div>

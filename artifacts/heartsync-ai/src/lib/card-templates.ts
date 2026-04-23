@@ -291,7 +291,6 @@ export function getFallbackTemplate(occasion: string): CardTemplate {
 
 export const OCCASIONS: { id: Occasion; label: string; emoji: string; description: string }[] = [
   { id: "birthday", label: "Birthday", emoji: "🎂", description: "Celebrate their special day" },
-  { id: "anniversary", label: "Anniversary", emoji: "🥂", description: "Celebrate your time together" },
   { id: "congratulations", label: "Congrats!", emoji: "🏆", description: "Celebrate their achievement" },
   { id: "feel_good", label: "Feel Good", emoji: "🌟", description: "Brighten someone's day" },
   { id: "thank_you", label: "Thank You", emoji: "🙏", description: "Show your appreciation" },
