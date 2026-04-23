@@ -48,13 +48,23 @@ export default function Send() {
     setStep(nextStep);
   }
 
-  function buildCardUrl(name: string, msg: string, senderFlag = false) {
+  function pickTemplate(): string {
+    const last = localStorage.getItem("hs_last_template");
+    const next = !last
+      ? (Math.random() < 0.5 ? "envelope" : "cosmic")
+      : (last === "envelope" ? "cosmic" : "envelope");
+    localStorage.setItem("hs_last_template", next);
+    return next;
+  }
+
+  function buildCardUrl(name: string, msg: string, senderFlag = false, template = "envelope") {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: name, occasion, relation });
     if (likes.trim()) p.set("likes", likes.trim());
     if (msg.trim() && msg.trim() !== defaultMsg) {
       try { p.set("msg", btoa(unescape(encodeURIComponent(msg.trim())))); } catch { /* ignore */ }
     }
+    if (template !== "envelope") p.set("template", template);
     if (senderFlag) p.set("sender", "1");
     return `${base}/card?${p.toString()}`;
   }
@@ -70,7 +80,8 @@ export default function Send() {
 
   function handleFinish() {
     if (!recipientName.trim()) return;
-    const url = buildCardUrl(recipientName.trim(), customMsg, true);
+    const template = pickTemplate();
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, template);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }

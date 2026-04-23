@@ -1,0 +1,182 @@
+Product Requirements Document (PRD)
+
+Project: Premium Interactive Greeting Card Generator - "Cosmic Constellation" Edition
+
+1. Project Overview
+
+We are building a premium, mobile-responsive, interactive web-based greeting card application. This product offers a deeply emotional, cinematic "Cosmic Journey." The recipient interacts with a starry night sky, discovers glowing stars that hold personalized messages, and connects them to form a dazzling constellation, culminating in a beautiful supernova reveal.
+
+Multi-Template Strategy: This "Cosmic Constellation" edition serves as an additional template to the previously built "Golden Envelope" interactive template. The application must support multiple templates using the following selection logic:
+
+When a user creates a card for the first time, the system should choose a template randomly.
+
+When the user returns to create a second or subsequent card, the system must automatically provide a new, unused template (e.g., if they got the Envelope first, give them the Cosmic Constellation next) to guarantee variety.
+
+The app must have two primary sides:
+
+The Configurator: A simple form where a user selects an Occasion, a Relationship, inputs a Name, and optionally edits the final message. It generates a unique shareable link (e.g., /?to=Rahul&template=birthday_friend).
+
+The Experience: The final interactive cosmic card that the recipient views.
+
+2. The Recipient Experience (Animation Sequence)
+
+The core experience is strictly divided into four distinct phases. Note: Smooth, ethereal transitions between these phases are critical to maintain the premium space aesthetic.
+
+Phase 1: The Hook & The Ignition
+
+Visuals: * A deep, immersive space background (pitch black with subtle navy/purple hues) with prominent, slowly drifting ambient starlight.
+
+A glowing, ethereal nebula sits in the center (CSS radial gradients with heavy blur).
+
+Elegant, glowing text at the top displays a dynamic hook_title (e.g., "✨ Another Trip Around the Sun ✨") and a subtitle ("A stellar surprise awaits...").
+
+Interaction (Press & Hold): A glowing "Energy Core" sits in the lower center. The user must click and hold (or touch and hold on mobile) for ~1.5 seconds.
+
+Feedback: While holding, the core visually charges up (scales down, glowing ring appears), and the background nebula sharpens.
+
+Phase 2: The Star Map (Discovery Phase)
+
+Action: Upon successful ignition, the core, hook text, and nebula fade out completely.
+
+The Math: 4 to 6 incredibly bright, pulsing "Core Stars" spawn dynamically. They must be plotted using an algorithm (or quadrant constraint) to ensure they are spaced out nicely across the screen to form a constellation shape without overlapping.
+
+Progress UI: A sleek, futuristic text prompt appears at the bottom: "Discover the stars (0 / X)".
+
+Phase 3: The Interaction & Constellation Drawing
+
+Action: The recipient taps the pulsing Core Stars one by one.
+
+Effects on Click: 1. Ignition: The tapped star flares up brilliantly (lens flare/box-shadow effect), turns bright gold, and stops pulsing.
+2. Particle Burst: A mini-supernova burst of golden stardust (using HTML5 Canvas) erupts from the tapped star.
+3. The Message: A glassmorphism tooltip containing a personalized emoji and compliment elegantly fades into the center of the screen.
+4. The Connection: As the user clicks the second star and onwards, a glowing, animated SVG line draws itself from the previous star to the newly clicked star, physically building a constellation.
+
+Phase 4: The Supernova & Final Reveal
+
+Trigger: Once the final star is clicked and the constellation is complete, wait ~1.5 seconds.
+
+The Blow Up: A massive "Supernova" flash (a pure white-out screen overlay) triggers.
+
+The Final Card: Under the cover of the flash, the stars, lines, and tooltip are removed. The Canvas background transitions from drifting stars to a beautiful falling "Golden Cosmic Dust." As the white flash fades, a stunning, glowing holographic "Final Card" is revealed floating in the center of the galaxy, displaying the Title Prefix, Recipient's Name, and the Final Message.
+
+3. Technical Specifications
+
+Framework: React (Next.js highly recommended for URL parameter parsing and SEO routing).
+
+Styling: Tailwind CSS for layout, custom CSS for advanced glowing effects (box-shadow, filter: drop-shadow).
+
+Responsiveness: Must be 100% mobile-friendly. Use CSS min() functions and relative view heights/widths to ensure the star map and final card don't overflow on small screens.
+
+Animations: Framer Motion (or GSAP). Crucial for handling the star mapping, the SVG line drawing between stars (using stroke-dasharray animations), and the supernova sequence.
+
+Canvas Engine: Native HTML5 Canvas to handle the ambient background stars, the interactive click bursts, and the final golden dust effect.
+
+4. Data Architecture (Templatization)
+
+The application dynamically populates the UI based on this JSON structure.
+
+{
+  "templates": {
+    "thank_you": {
+      "friend": {
+        "hook_title": "✨ A Universe of Thanks ✨",
+        "title_prefix": "To the brightest star",
+        "stars": [
+          {"emoji": "🎮", "text": "Always got my back when it counts."},
+          {"emoji": "🍕", "text": "The absolute best late-night vibes."},
+          {"emoji": "💡", "text": "Top-tier advice and brilliant ideas."},
+          {"emoji": "🔥", "text": "Bringing the best energy to the room."}
+        ],
+        "final_message": "Thank you for being an amazing friend. My universe is better with you in it!"
+      },
+      "partner": {
+        "hook_title": "✨ You are my Universe ✨",
+        "title_prefix": "To my favorite person",
+        "stars": [
+          {"emoji": "💖", "text": "You make every single day better."},
+          {"emoji": "☕", "text": "Thanks for keeping me sane."},
+          {"emoji": "🫂", "text": "My ultimate safe space."},
+          {"emoji": "✨", "text": "You are literal magic."}
+        ],
+        "final_message": "Thank you for everything you do. I'm so lucky to orbit with you."
+      }
+    },
+    "birthday": {
+      "friend": {
+        "hook_title": "✨ Another Trip Around the Sun ✨",
+        "title_prefix": "Happy Solar Return",
+        "stars": [
+          {"emoji": "🎂", "text": "Time to eat all the cake."},
+          {"emoji": "🥳", "text": "Ready to celebrate you."},
+          {"emoji": "🎁", "text": "You deserve the absolute best."},
+          {"emoji": "🥂", "text": "Cheers to another amazing year!"}
+        ],
+        "final_message": "Happy Birthday! Wishing you the most incredible year ahead!"
+      },
+      "partner": {
+        "hook_title": "✨ A Stellar Birthday ✨",
+        "title_prefix": "To the center of my universe",
+        "stars": [
+          {"emoji": "💘", "text": "My absolute favorite person."},
+          {"emoji": "🎉", "text": "I love celebrating you."},
+          {"emoji": "🍰", "text": "Even sweeter than the cake."},
+          {"emoji": "🌟", "text": "My shining star today and always."}
+        ],
+        "final_message": "Happy Birthday, my love! I love celebrating you today and every single day."
+      }
+    },
+    "sorry": {
+      "friend": {
+        "hook_title": "✨ I Messed Up ✨",
+        "title_prefix": "To my amazing friend",
+        "stars": [
+          {"emoji": "🌧️", "text": "I feel terrible about what happened."},
+          {"emoji": "🥺", "text": "I value our friendship too much to lose it."},
+          {"emoji": "🤝", "text": "I want to make things right."},
+          {"emoji": "⏳", "text": "Take your time, but know I'm sorry."}
+        ],
+        "final_message": "I am truly sorry. Let's move past this when you're ready."
+      },
+      "partner": {
+        "hook_title": "✨ Let Me Make It Right ✨",
+        "title_prefix": "To my everything",
+        "stars": [
+          {"emoji": "💔", "text": "I hate fighting with you."},
+          {"emoji": "😔", "text": "I was wrong, and I own that."},
+          {"emoji": "❤️‍🩹", "text": "You mean the world to me."},
+          {"emoji": "🌹", "text": "Let me make it up to you."}
+        ],
+        "final_message": "I am so deeply sorry. I love you and I promise to do better."
+      }
+    },
+    "feel_good": {
+      "generic": {
+        "hook_title": "✨ A Stellar Reminder ✨",
+        "title_prefix": "Just so you know",
+        "stars": [
+          {"emoji": "🌟", "text": "You are a literal star."},
+          {"emoji": "👑", "text": "Don't let your crown slip."},
+          {"emoji": "💪", "text": "You are stronger than you know."},
+          {"emoji": "🚀", "text": "You are destined for great things."}
+        ],
+        "final_message": "Never forget how incredibly awesome you are. Keep shining!"
+      }
+    },
+    "congratulations": {
+      "generic": {
+        "hook_title": "✨ A Supernova Achievement ✨",
+        "title_prefix": "You did it!",
+        "stars": [
+          {"emoji": "🏆", "text": "Absolute champion behavior."},
+          {"emoji": "👏", "text": "So incredibly well deserved."},
+          {"emoji": "🍾", "text": "Time to pop the champagne!"},
+          {"emoji": "🚀", "text": "The sky is truly the limit."}
+        ],
+        "final_message": "Huge congratulations on your achievement! So incredibly proud of you."
+      }
+    }
+  }
+}
+
+
+

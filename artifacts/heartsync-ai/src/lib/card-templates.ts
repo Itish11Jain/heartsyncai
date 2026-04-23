@@ -304,3 +304,316 @@ export const RELATIONS: { id: Relation; label: string; sub: string; emoji: strin
   { id: "spouse", label: "Spouse", sub: "Wife / Husband", emoji: "💍" },
   { id: "date", label: "Date", sub: "First date or crush", emoji: "🦋" },
 ];
+
+/* ═══════════════════════════ COSMIC TEMPLATES ════════════════════════════ */
+
+export interface CosmicStar {
+  emoji: string;
+  text: string;
+}
+
+export interface CosmicTemplate {
+  hook_title: string;
+  title_prefix: string;
+  stars: CosmicStar[];
+  final_message: string;
+}
+
+const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
+  thank_you: {
+    friend: {
+      hook_title: "✨ A Universe of Thanks ✨",
+      title_prefix: "To the brightest star",
+      stars: [
+        { emoji: "🎮", text: "Always got my back when it counts." },
+        { emoji: "🍕", text: "The absolute best late-night vibes." },
+        { emoji: "💡", text: "Top-tier advice and brilliant ideas." },
+        { emoji: "🔥", text: "Bringing the best energy to the room." },
+      ],
+      final_message: "Thank you for being an amazing friend. My universe is better with you in it!",
+    },
+    partner: {
+      hook_title: "✨ You are my Universe ✨",
+      title_prefix: "To my favourite person",
+      stars: [
+        { emoji: "💖", text: "You make every single day better." },
+        { emoji: "☕", text: "Thanks for keeping me sane." },
+        { emoji: "🫂", text: "My ultimate safe space." },
+        { emoji: "✨", text: "You are literal magic." },
+      ],
+      final_message: "Thank you for everything you do. I'm so lucky to orbit with you.",
+    },
+    spouse: {
+      hook_title: "✨ You are my Everything ✨",
+      title_prefix: "To my person",
+      stars: [
+        { emoji: "💍", text: "My greatest adventure, always." },
+        { emoji: "🌙", text: "Every night feels complete with you." },
+        { emoji: "🏡", text: "Home is wherever you are." },
+        { emoji: "💫", text: "You make life extraordinary." },
+      ],
+      final_message: "Thank you for choosing me every single day. I love you deeply.",
+    },
+    date: {
+      hook_title: "✨ You Made My World Brighter ✨",
+      title_prefix: "To someone wonderful",
+      stars: [
+        { emoji: "😊", text: "You made me smile like I forgot how." },
+        { emoji: "🌟", text: "Genuinely one of a kind." },
+        { emoji: "🦋", text: "You give me the best butterflies." },
+        { emoji: "🎯", text: "I'm so glad our paths crossed." },
+      ],
+      final_message: "Thank you for a genuinely amazing time. I can't stop smiling.",
+    },
+  },
+  birthday: {
+    friend: {
+      hook_title: "✨ Another Trip Around the Sun ✨",
+      title_prefix: "Happy Solar Return",
+      stars: [
+        { emoji: "🎂", text: "Time to eat all the cake." },
+        { emoji: "🥳", text: "Ready to celebrate you." },
+        { emoji: "🎁", text: "You deserve the absolute best." },
+        { emoji: "🥂", text: "Cheers to another amazing year!" },
+      ],
+      final_message: "Happy Birthday! Wishing you the most incredible year ahead!",
+    },
+    partner: {
+      hook_title: "✨ A Stellar Birthday ✨",
+      title_prefix: "To the centre of my universe",
+      stars: [
+        { emoji: "💘", text: "My absolute favourite person." },
+        { emoji: "🎉", text: "I love celebrating you." },
+        { emoji: "🍰", text: "Even sweeter than the cake." },
+        { emoji: "🌟", text: "My shining star today and always." },
+      ],
+      final_message: "Happy Birthday, my love! I love celebrating you today and every single day.",
+    },
+    spouse: {
+      hook_title: "✨ A Cosmic Celebration ✨",
+      title_prefix: "To my favourite human",
+      stars: [
+        { emoji: "💍", text: "The love of my life." },
+        { emoji: "🎉", text: "I never want to stop celebrating you." },
+        { emoji: "🌹", text: "You grow more beautiful every year." },
+        { emoji: "🌟", text: "My constant star in this galaxy." },
+      ],
+      final_message: "Happy Birthday, my love. Every year with you is the best year yet.",
+    },
+    date: {
+      hook_title: "✨ A Stellar Day for a Stellar Person ✨",
+      title_prefix: "Happy Birthday",
+      stars: [
+        { emoji: "🦋", text: "Something about you is just magnetic." },
+        { emoji: "🎂", text: "Eat all the cake — you deserve it." },
+        { emoji: "✨", text: "You light up every room you're in." },
+        { emoji: "🥂", text: "Here's to you and this incredible year!" },
+      ],
+      final_message: "Happy Birthday! Wishing you a day as wonderful as you are.",
+    },
+  },
+  anniversary: {
+    friend: {
+      hook_title: "✨ Here's to Us ✨",
+      title_prefix: "To my ride-or-die",
+      stars: [
+        { emoji: "🌱", text: "Look how far we've come." },
+        { emoji: "🤝", text: "The most dependable person I know." },
+        { emoji: "🎉", text: "Years of memories and counting." },
+        { emoji: "💛", text: "Here's to many more adventures." },
+      ],
+      final_message: "Happy Anniversary! So grateful our friendship has stood the test of time.",
+    },
+    partner: {
+      hook_title: "✨ One More Orbit Together ✨",
+      title_prefix: "To the love of my life",
+      stars: [
+        { emoji: "💖", text: "Every day with you is a gift." },
+        { emoji: "🌙", text: "My favourite feeling is home — and you're it." },
+        { emoji: "🎉", text: "Celebrating us. Always." },
+        { emoji: "🚀", text: "So many more adventures ahead." },
+      ],
+      final_message: "Happy Anniversary, my love. Here's to us — today, tomorrow, and always.",
+    },
+    spouse: {
+      hook_title: "✨ A Lifetime of Stars ✨",
+      title_prefix: "To my forever person",
+      stars: [
+        { emoji: "💍", text: "The best yes I ever said." },
+        { emoji: "🌹", text: "More in love with you every single day." },
+        { emoji: "🏡", text: "Every home is paradise with you." },
+        { emoji: "🌌", text: "You are my whole universe." },
+      ],
+      final_message: "Happy Anniversary. Choosing you is the greatest thing I've ever done.",
+    },
+    date: {
+      hook_title: "✨ Something Worth Celebrating ✨",
+      title_prefix: "Here's to you and me",
+      stars: [
+        { emoji: "🦋", text: "Still get butterflies with you." },
+        { emoji: "😊", text: "You make everything more fun." },
+        { emoji: "✨", text: "Something magical about us." },
+        { emoji: "🥂", text: "Cheers to whatever this beautiful thing is." },
+      ],
+      final_message: "Here's to us. I'm so happy we found each other.",
+    },
+  },
+  sorry: {
+    friend: {
+      hook_title: "✨ I Messed Up ✨",
+      title_prefix: "To my amazing friend",
+      stars: [
+        { emoji: "🌧️", text: "I feel terrible about what happened." },
+        { emoji: "🥺", text: "I value our friendship too much to lose it." },
+        { emoji: "🤝", text: "I want to make things right." },
+        { emoji: "⏳", text: "Take your time, but know I'm sorry." },
+      ],
+      final_message: "I am truly sorry. Let's move past this when you're ready.",
+    },
+    partner: {
+      hook_title: "✨ Let Me Make It Right ✨",
+      title_prefix: "To my everything",
+      stars: [
+        { emoji: "💔", text: "I hate fighting with you." },
+        { emoji: "😔", text: "I was wrong, and I own that." },
+        { emoji: "❤️‍🩹", text: "You mean the world to me." },
+        { emoji: "🌹", text: "Let me make it up to you." },
+      ],
+      final_message: "I am so deeply sorry. I love you and I promise to do better.",
+    },
+    spouse: {
+      hook_title: "✨ I'm So Sorry ✨",
+      title_prefix: "To the person I love most",
+      stars: [
+        { emoji: "💔", text: "It hurts me to have hurt you." },
+        { emoji: "😔", text: "I was completely wrong." },
+        { emoji: "❤️‍🩹", text: "Your happiness means everything to me." },
+        { emoji: "🌹", text: "I will make this right." },
+      ],
+      final_message: "I am deeply sorry. I love you and I will do better, always.",
+    },
+    date: {
+      hook_title: "✨ I'm Sorry ✨",
+      title_prefix: "To someone I care about",
+      stars: [
+        { emoji: "🌧️", text: "I didn't mean for things to go that way." },
+        { emoji: "🥺", text: "I really do care about you." },
+        { emoji: "🤝", text: "I'd love the chance to make it up." },
+        { emoji: "✨", text: "You're worth so much more than that." },
+      ],
+      final_message: "I'm sorry. You deserve better, and I want to show you that.",
+    },
+  },
+  feel_good: {
+    friend: {
+      hook_title: "✨ A Stellar Reminder ✨",
+      title_prefix: "Just so you know",
+      stars: [
+        { emoji: "🌟", text: "You are a literal star." },
+        { emoji: "👑", text: "Don't let your crown slip." },
+        { emoji: "💪", text: "You are stronger than you know." },
+        { emoji: "🚀", text: "You are destined for great things." },
+      ],
+      final_message: "Never forget how incredibly awesome you are. Keep shining!",
+    },
+    partner: {
+      hook_title: "✨ A Love Note from the Galaxy ✨",
+      title_prefix: "Just so you know",
+      stars: [
+        { emoji: "🌟", text: "You are a literal star." },
+        { emoji: "💖", text: "You are so deeply loved." },
+        { emoji: "💪", text: "You can handle anything." },
+        { emoji: "🚀", text: "Destined for extraordinary things." },
+      ],
+      final_message: "You are incredible. Never forget that for a single second.",
+    },
+    spouse: {
+      hook_title: "✨ A Love Note from the Galaxy ✨",
+      title_prefix: "Just so you know",
+      stars: [
+        { emoji: "💍", text: "The best thing that ever happened to me." },
+        { emoji: "🌟", text: "You shine so incredibly bright." },
+        { emoji: "💪", text: "Unstoppable — always." },
+        { emoji: "💛", text: "Loved beyond words." },
+      ],
+      final_message: "You are my everything. I hope you never forget that.",
+    },
+    date: {
+      hook_title: "✨ A Little Cosmic Cheer ✨",
+      title_prefix: "Just so you know",
+      stars: [
+        { emoji: "🌟", text: "You are genuinely special." },
+        { emoji: "😊", text: "Your smile is everything." },
+        { emoji: "✨", text: "Something about you is magical." },
+        { emoji: "🚀", text: "The world needs more of you in it." },
+      ],
+      final_message: "Just wanted you to know you're pretty amazing. Keep being you!",
+    },
+  },
+  congratulations: {
+    friend: {
+      hook_title: "✨ A Supernova Achievement ✨",
+      title_prefix: "You did it!",
+      stars: [
+        { emoji: "🏆", text: "Absolute champion behavior." },
+        { emoji: "👏", text: "So incredibly well deserved." },
+        { emoji: "🍾", text: "Time to pop the champagne!" },
+        { emoji: "🚀", text: "The sky is truly the limit." },
+      ],
+      final_message: "Huge congratulations on your achievement! So incredibly proud of you.",
+    },
+    partner: {
+      hook_title: "✨ A Supernova Achievement ✨",
+      title_prefix: "You did it, superstar!",
+      stars: [
+        { emoji: "🏆", text: "You worked so hard for this." },
+        { emoji: "💖", text: "I'm so unbelievably proud of you." },
+        { emoji: "🍾", text: "Champagne is calling!" },
+        { emoji: "🌟", text: "The world hasn't seen anything yet." },
+      ],
+      final_message: "Congratulations! Your achievement is extraordinary, and so are you.",
+    },
+    spouse: {
+      hook_title: "✨ My Champion ✨",
+      title_prefix: "Look at you go!",
+      stars: [
+        { emoji: "🏆", text: "You earned every bit of this." },
+        { emoji: "💍", text: "Proudest partner in the universe." },
+        { emoji: "🍾", text: "We are absolutely celebrating this!" },
+        { emoji: "🌟", text: "Limitless — that's you." },
+      ],
+      final_message: "Congratulations! I've never been more proud. Let's celebrate you!",
+    },
+    date: {
+      hook_title: "✨ Way to Go! ✨",
+      title_prefix: "You absolutely did it!",
+      stars: [
+        { emoji: "🏆", text: "This is so well deserved." },
+        { emoji: "👏", text: "Seriously impressive." },
+        { emoji: "🍾", text: "This calls for a celebration." },
+        { emoji: "✨", text: "You are genuinely unstoppable." },
+      ],
+      final_message: "Congratulations! You should be so proud of yourself today.",
+    },
+  },
+};
+
+export function getCosmicTemplate(occasion: string, relation: string): CosmicTemplate | null {
+  return COSMIC[occasion]?.[relation] ?? COSMIC[occasion]?.["friend"] ?? null;
+}
+
+export function getCosmicFallback(occasion: string): CosmicTemplate {
+  const oc = COSMIC[occasion];
+  if (oc) return Object.values(oc)[0];
+  return {
+    hook_title: "✨ A Stellar Surprise ✨",
+    title_prefix: "A message from the stars",
+    stars: [
+      { emoji: "🌟", text: "You light up the room." },
+      { emoji: "💖", text: "Truly one of a kind." },
+      { emoji: "✨", text: "The universe conspired to make you." },
+      { emoji: "🚀", text: "Limitless — always." },
+    ],
+    final_message: "Wishing you all the happiness in the universe.",
+  };
+}

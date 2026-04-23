@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
+import CosmicCard from "@/pages/cosmic";
 
 /* ─────────────────────────── helpers ──────────────────────────── */
 
@@ -766,6 +767,10 @@ type Phase = "envelope" | "opening" | "orbs" | "finale";
 
 export default function Card() {
   const params = useQueryParams();
+
+  /* Route to Cosmic template if requested */
+  if (params.get("template") === "cosmic") return <CosmicCard />;
+
   const recipientName = params.get("to") || "Friend";
   const occasion = params.get("occasion") || "thank_you";
   const relation = params.get("relation") || "friend";
