@@ -97,8 +97,10 @@ export default function Send() {
     if (msg.trim() && msg.trim() !== defaultMsg) {
       try { p.set("msg", btoa(unescape(encodeURIComponent(msg.trim())))); } catch { /* ignore */ }
     }
-    if (template !== "envelope") p.set("template", template);
     if (senderFlag) p.set("sender", "1");
+    /* Crystal uses /crystal.html so WhatsApp reads the crystal-specific OG image */
+    if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
+    if (template !== "envelope") p.set("template", template);
     return `${base}/card?${p.toString()}`;
   }
 

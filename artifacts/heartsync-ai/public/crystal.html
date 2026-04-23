@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>HeartSync AI — The Crystal Glows for You 🔮</title>
+    <meta name="description" content="Someone special is revealing a vision just for you. Rub the crystal ball to uncover your message 🔮" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The Crystal Glows for You 🔮" />
+    <meta property="og:description" content="Someone special is revealing a vision just for you. Rub the crystal ball to uncover your message." />
+    <meta property="og:image" content="/crystal-og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Crystal Glows for You 🔮" />
+    <meta name="twitter:description" content="Someone special is revealing a vision just for you. Rub the crystal ball to uncover your message." />
+    <meta name="twitter:image" content="/crystal-og.jpg" />
+    <style>
+      html, body { background: #050210; margin: 0; padding: 0; }
+      #hs-splash {
+        position: fixed; inset: 0;
+        background: radial-gradient(ellipse at 50% 42%, #2a0a5a 0%, #0d0320 55%, #050210 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+      }
+      #hs-splash-emoji { font-size: 76px; line-height: 1; }
+      #hs-splash-title { font-size: 20px; font-weight: 700; color: #c8a0ff; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; letter-spacing: 0.06em; text-align: center; }
+      #hs-splash-sub { font-size: 13px; color: rgba(200,160,255,0.45); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <!-- Shown briefly while JS runs; social bots never execute JS so they only see OG tags above -->
+    <div id="hs-splash">
+      <div id="hs-splash-emoji">🔮</div>
+      <p id="hs-splash-title">The crystal is awakening…</p>
+      <p id="hs-splash-sub">Your vision is waiting to be revealed ✦</p>
+    </div>
+    <script>
+      (function () {
+        var p = new URLSearchParams(window.location.search);
+        p.set('template', 'crystal');
+        window.location.replace('/card?' + p.toString());
+      })();
+    </script>
+  </body>
+</html>
