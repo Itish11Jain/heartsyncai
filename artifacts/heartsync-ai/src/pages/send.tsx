@@ -98,10 +98,11 @@ export default function Send() {
       try { p.set("msg", btoa(unescape(encodeURIComponent(msg.trim())))); } catch { /* ignore */ }
     }
     if (senderFlag) p.set("sender", "1");
-    /* Crystal uses /crystal.html so WhatsApp reads the crystal-specific OG image */
+    /* Each template uses its own .html file so WhatsApp reads template-specific OG tags */
     if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
-    if (template !== "envelope") p.set("template", template);
-    return `${base}/card?${p.toString()}`;
+    if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
+    if (template === "vinyl")   return `${base}/vinyl.html?${p.toString()}`;
+    return `${base}/envelope.html?${p.toString()}`;
   }
 
   useEffect(() => {

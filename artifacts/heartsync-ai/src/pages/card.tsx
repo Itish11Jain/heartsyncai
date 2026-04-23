@@ -789,12 +789,12 @@ export default function Card() {
   const isPreview = params.get("preview") === "1" || isSender;
   const isRecipient = !isSender && !isPreview;
 
-  /* Share URL for sender panel (current URL minus sender=1) */
+  /* Share URL for sender panel — uses /envelope.html so WhatsApp reads envelope-specific OG tags */
   const senderShareUrl = (() => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search);
     p.delete("sender");
-    return window.location.origin + window.location.pathname + "?" + p.toString();
+    return window.location.origin + "/envelope.html?" + p.toString();
   })();
 
   const template =

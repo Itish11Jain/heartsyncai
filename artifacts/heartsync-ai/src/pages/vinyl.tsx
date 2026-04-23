@@ -132,11 +132,12 @@ export default function VinylCard() {
   const titlePrefix = tpl.title_prefix;
   const finalMessage = customMsg ?? tpl.final_message;
 
+  /* Share URL — uses /vinyl.html so WhatsApp reads vinyl-specific OG tags */
   const senderShareUrl = (() => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search);
     p.delete("sender");
-    return window.location.origin + window.location.pathname + "?" + p.toString();
+    return window.location.origin + "/vinyl.html?" + p.toString();
   })();
 
   /* ── state ── */

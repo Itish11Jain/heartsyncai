@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>HeartSync AI — The stars have aligned for you ✨</title>
+    <meta name="description" content="Someone wrote the universe a message just for you. Open your cosmic card!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The stars have aligned for you ✨" />
+    <meta property="og:description" content="Someone wrote the universe a message just for you. Open your cosmic card!" />
+    <meta property="og:image" content="/opengraph.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The stars have aligned for you ✨" />
+    <meta name="twitter:description" content="Someone wrote the universe a message just for you. Open your cosmic card!" />
+    <meta name="twitter:image" content="/opengraph.jpg" />
+    <style>
+      html, body { background: #020818; margin: 0; padding: 0; }
+      #hs-splash {
+        position: fixed; inset: 0;
+        background: radial-gradient(ellipse at 50% 42%, #0a1a4a 0%, #040c28 55%, #020818 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+      }
+      #hs-splash-emoji { font-size: 76px; line-height: 1; }
+      #hs-splash-title { font-size: 20px; font-weight: 700; color: #a0c0ff; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; letter-spacing: 0.06em; text-align: center; }
+      #hs-splash-sub { font-size: 13px; color: rgba(160,192,255,0.45); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <!-- Shown briefly while JS runs; social bots never execute JS so they only see OG tags above -->
+    <div id="hs-splash">
+      <div id="hs-splash-emoji">✨</div>
+      <p id="hs-splash-title">Reading the stars for you…</p>
+      <p id="hs-splash-sub">Your cosmic message is waiting ✦</p>
+    </div>
+    <script>
+      (function () {
+        var p = new URLSearchParams(window.location.search);
+        window.location.replace('/cosmic?' + p.toString());
+      })();
+    </script>
+  </body>
+</html>

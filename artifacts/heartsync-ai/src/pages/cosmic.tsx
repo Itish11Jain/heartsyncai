@@ -100,11 +100,12 @@ export default function CosmicCard() {
   const tpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
   const finalMessage = customMsg ?? tpl.final_message;
 
+  /* Share URL — uses /cosmic.html so WhatsApp reads cosmic-specific OG tags */
   const senderShareUrl = (() => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search);
     p.delete("sender");
-    return window.location.origin + window.location.pathname + "?" + p.toString();
+    return window.location.origin + "/cosmic.html?" + p.toString();
   })();
 
   /* ── state ── */
