@@ -27,6 +27,8 @@ type Step = "form" | "otp";
 
 interface AuthGateProps {
   onSuccess: (isNewUser: boolean) => void;
+  subtitle?: string;
+  onDismiss?: () => void;
 }
 
 function getFirebaseErrorMessage(code: string): string {
@@ -45,7 +47,7 @@ function getFirebaseErrorMessage(code: string): string {
   return map[code] ?? "Something went wrong. Please try again.";
 }
 
-export default function AuthGate({ onSuccess }: AuthGateProps) {
+export default function AuthGate({ onSuccess, subtitle, onDismiss }: AuthGateProps) {
   const [tab, setTab] = useState<Tab>("email");
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
@@ -178,7 +180,7 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
         <div className="bg-card/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
           <h2 className="text-xl font-bold text-white mb-1 text-center">Welcome</h2>
           <p className="text-sm text-white/45 text-center mb-6">
-            Sign in to get your first free report
+            {subtitle ?? "Sign in to get your first free report"}
           </p>
 
           {/* Tabs */}
@@ -360,6 +362,15 @@ export default function AuthGate({ onSuccess }: AuthGateProps) {
               Contact Us
             </Link>
           </p>
+
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              className="text-xs text-white/25 hover:text-white/50 transition-colors w-full text-center mt-3"
+            >
+              Maybe later
+            </button>
+          )}
         </div>
       </motion.div>
     </div>

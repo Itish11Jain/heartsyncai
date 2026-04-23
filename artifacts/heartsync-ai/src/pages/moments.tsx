@@ -1,8 +1,18 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toPng } from "html-to-image";
-import { ChevronLeft, Loader2, Download, Share2, Plus, Heart, AlertCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  Loader2,
+  Download,
+  Share2,
+  Plus,
+  Heart,
+  AlertCircle,
+  Sparkles,
+  CreditCard,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authStore } from "@/lib/auth-store";
@@ -26,6 +36,30 @@ const RELATION_OPTIONS: { id: Relation; label: string; sub: string }[] = [
   { id: "spouse", label: "Spouse", sub: "Wife / Husband" },
 ];
 
+const GUEST_KEY = "hs_guest_moments";
+const GUEST_LIMIT = 2;
+
+function getGuestCount(): number {
+  try {
+    return parseInt(localStorage.getItem(GUEST_KEY) ?? "0", 10);
+  } catch {
+    return 0;
+  }
+}
+
+function incGuestCount(): void {
+  try {
+    localStorage.setItem(GUEST_KEY, String(getGuestCount() + 1));
+  } catch {
+    /* ignore */
+  }
+}
+
+function isValidUtr(value: string): boolean {
+  const v = value.trim();
+  return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
+}
+
 function pickTemplateSubset(): TemplateId[] {
   const all: TemplateId[] = [1, 2, 3, 4, 5, 6, 7, 8];
   const shuffled = [...all].sort(() => Math.random() - 0.5);
@@ -40,14 +74,12 @@ function stepVariants(dir: number) {
   };
 }
 
-interface GenerateResponse {
-  message: string;
-  momentsUsed: number;
-  momentsLimit: number;
-}
-
 export default function Moments() {
   const [isLoggedIn, setIsLoggedIn] = useState(authStore.isLoggedIn);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [showNewUserBanner, setShowNewUserBanner] = useState(false);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [showPaymentWall, setShowPaymentWall] = useState(false);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [dir, setDir] = useState(1);
@@ -58,28 +90,65 @@ export default function Moments() {
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [isOutOfCredits, setIsOutOfCredits] = useState(false);
   const [templateOptions, setTemplateOptions] = useState<TemplateId[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [momentsUsed, setMomentsUsed] = useState(0);
-  const [momentsLimit, setMomentsLimit] = useState(3);
+
+  const [momentsCredits, setMomentsCredits] = useState<number | null>(null);
+  const [guestCount, setGuestCount] = useState(getGuestCount);
+
+  const [paymentUtr, setPaymentUtr] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const staticCardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isNewUser && isLoggedIn) {
+      setShowNewUserBanner(true);
+      const t = setTimeout(() => setShowNewUserBanner(false), 6000);
+      return () => { clearTimeout(t); };
+    }
+    return undefined;
+  }, [isNewUser, isLoggedIn]);
 
   function goTo(next: 1 | 2 | 3 | 4, direction: number) {
     setDir(direction);
     setStep(next);
   }
 
+  function handleAuthSuccess(newUser: boolean) {
+    setIsLoggedIn(true);
+    setIsNewUser(newUser);
+    setShowAuthGate(false);
+    if (newUser) {
+      setMomentsCredits(2);
+    }
+  }
+
   async function generate() {
     if (!recipientName.trim() || !purpose || !relation) return;
+
+    if (!isLoggedIn && guestCount >= GUEST_LIMIT) {
+      setShowAuthGate(true);
+      return;
+    }
+
+    if (isLoggedIn && momentsCredits !== null && momentsCredits <= 0) {
+      setShowPaymentWall(true);
+      return;
+    }
+
     setApiError(null);
+    setIsOutOfCredits(false);
     goTo(4, 1);
     setIsLoading(true);
+
     const token = authStore.sessionToken;
     const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
     try {
       const res = await fetch(`${base}/api/moment/generate`, {
         method: "POST",
@@ -87,23 +156,42 @@ export default function Moments() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ recipientName: recipientName.trim(), purpose, relation, ...(likes.trim() ? { likes: likes.trim() } : {}) }),
+        body: JSON.stringify({
+          recipientName: recipientName.trim(),
+          purpose,
+          relation,
+          ...(likes.trim() ? { likes: likes.trim() } : {}),
+        }),
       });
-      const data = await res.json() as GenerateResponse & { error?: string; momentsUsed?: number; momentsLimit?: number };
+
+      const data = await res.json() as {
+        message?: string;
+        momentsCredits?: number | null;
+        error?: string;
+        message_text?: string;
+      };
+
       if (!res.ok) {
-        if (data.error === "MOMENT_LIMIT_REACHED") {
-          setMomentsUsed(data.momentsUsed ?? 3);
-          setMomentsLimit(data.momentsLimit ?? 3);
-          setIsLimitReached(true);
+        if (data.error === "MOMENTS_OUT_OF_CREDITS") {
+          setMomentsCredits(0);
+          setIsOutOfCredits(true);
+          goTo(4, 1);
           return;
         }
         goTo(3, -1);
-        setApiError(data.error ?? "Something went wrong. Please try again.");
+        setApiError((data as { message?: string }).message ?? "Something went wrong. Please try again.");
         return;
       }
-      setGeneratedMessage(data.message);
-      setMomentsUsed(data.momentsUsed);
-      setMomentsLimit(data.momentsLimit);
+
+      if (!isLoggedIn) {
+        const newCount = guestCount + 1;
+        incGuestCount();
+        setGuestCount(newCount);
+      } else if (typeof data.momentsCredits === "number") {
+        setMomentsCredits(data.momentsCredits);
+      }
+
+      setGeneratedMessage(data.message ?? "");
       const subset = pickTemplateSubset();
       setTemplateOptions(subset);
       setSelectedTemplate(subset[0]);
@@ -139,8 +227,12 @@ export default function Moments() {
   }
 
   function handleMakeAnother() {
-    if (momentsUsed >= momentsLimit) {
-      setIsLimitReached(true);
+    if (!isLoggedIn && guestCount >= GUEST_LIMIT) {
+      setShowAuthGate(true);
+      return;
+    }
+    if (isLoggedIn && momentsCredits !== null && momentsCredits <= 0) {
+      setShowPaymentWall(true);
       return;
     }
     setRecipientName("");
@@ -149,15 +241,55 @@ export default function Moments() {
     setRelation(null);
     setGeneratedMessage("");
     setApiError(null);
-    setIsLimitReached(false);
+    setIsOutOfCredits(false);
     setTemplateOptions([]);
     setSelectedTemplate(null);
     goTo(1, -1);
   }
 
-  if (!isLoggedIn) {
-    return <AuthGate onSuccess={() => setIsLoggedIn(true)} />;
+  async function handlePaymentSubmit() {
+    const cleanUtr = paymentUtr.trim();
+    if (!isValidUtr(cleanUtr)) return;
+
+    setPaymentLoading(true);
+    setPaymentError(null);
+
+    try {
+      const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/moment/payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authStore.sessionToken}`,
+        },
+        body: JSON.stringify({ utr: cleanUtr }),
+      });
+
+      const data = await res.json() as { ok?: boolean; momentsCredits?: number; error?: string; message?: string };
+
+      if (!res.ok) {
+        setPaymentError(data.message ?? "Failed to verify payment. Please try again.");
+        return;
+      }
+
+      setMomentsCredits(data.momentsCredits ?? 10);
+      setShowPaymentWall(false);
+      setPaymentUtr("");
+      setPaymentError(null);
+      setIsOutOfCredits(false);
+      handleMakeAnother();
+    } catch {
+      setPaymentError("Network error. Please try again.");
+    } finally {
+      setPaymentLoading(false);
+    }
   }
+
+  const creditsLeft = isLoggedIn ? (momentsCredits ?? null) : Math.max(0, GUEST_LIMIT - guestCount);
+  const showPill = creditsLeft !== null;
+  const pillLabel = isLoggedIn
+    ? `${momentsCredits ?? "?"} card${momentsCredits !== 1 ? "s" : ""} left`
+    : `${creditsLeft} free left`;
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground">
@@ -166,6 +298,77 @@ export default function Moments() {
         <div className="absolute bottom-0 left-0 w-[40%] h-[40%] rounded-full bg-secondary/10 blur-[120px]" />
       </div>
 
+      {showAuthGate && (
+        <AuthGate
+          subtitle="Sign up free to unlock 2 more cards"
+          onSuccess={handleAuthSuccess}
+          onDismiss={() => setShowAuthGate(false)}
+        />
+      )}
+
+      {showPaymentWall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="w-full max-w-sm"
+          >
+            <div className="bg-card/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h2 className="text-xl font-bold text-white text-center mb-1">Get 10 more cards</h2>
+              <p className="text-sm text-white/45 text-center mb-6">
+                Pay ₹50 via UPI and get 10 Moments credits added instantly.
+              </p>
+
+              <div className="flex flex-col items-center gap-2 mb-6">
+                <img
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=50%26cu=INR%26tn=HeartSync+Moments"
+                  alt="UPI QR Code"
+                  className="w-36 h-36 rounded-xl border border-white/10"
+                />
+                <p className="text-[10px] text-white/35 uppercase tracking-wide mt-1">UPI ID</p>
+                <p className="font-mono font-bold text-white text-base">8905158970@upi</p>
+                <p className="text-xs text-white/35">Amount: ₹50</p>
+              </div>
+
+              <div className="space-y-3">
+                <Input
+                  placeholder="Paste UTR / Transaction ID"
+                  value={paymentUtr}
+                  onChange={(e) => { setPaymentUtr(e.target.value); setPaymentError(null); }}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-11 rounded-xl font-mono"
+                />
+                {paymentError && <p className="text-xs text-destructive">{paymentError}</p>}
+                <Button
+                  onClick={handlePaymentSubmit}
+                  disabled={!isValidUtr(paymentUtr) || paymentLoading}
+                  className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold"
+                >
+                  {paymentLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Verifying…
+                    </span>
+                  ) : (
+                    "Submit & Unlock 10 Cards"
+                  )}
+                </Button>
+                <button
+                  onClick={() => { setShowPaymentWall(false); setPaymentUtr(""); setPaymentError(null); }}
+                  className="text-xs text-white/25 hover:text-white/50 transition-colors w-full text-center"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <div className="relative z-10 max-w-lg mx-auto px-5 py-10 flex flex-col min-h-screen">
         <div className="flex items-center justify-between mb-8">
           <Button asChild variant="ghost" className="pl-0 text-white/50 hover:text-white hover:bg-transparent">
@@ -173,11 +376,37 @@ export default function Moments() {
               <ChevronLeft className="w-5 h-5" /> Back
             </Link>
           </Button>
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-primary fill-primary" />
-            <span className="text-sm font-bold text-white">HeartSync Moments</span>
+          <div className="flex items-center gap-3">
+            {showPill && (
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                  creditsLeft! > 0
+                    ? "bg-primary/10 text-primary border-primary/20"
+                    : "bg-red-500/10 text-red-400 border-red-500/20"
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                {pillLabel}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Heart className="w-4 h-4 text-primary fill-primary" />
+              <span className="text-sm font-bold text-white">HeartSync Moments</span>
+            </div>
           </div>
         </div>
+
+        {showNewUserBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 mb-6"
+          >
+            <span className="text-lg">🎉</span>
+            <p className="text-sm text-green-300 font-medium">2 free cards unlocked! Enjoy your Moments.</p>
+          </motion.div>
+        )}
 
         {step < 4 && (
           <div className="flex items-center gap-2 mb-8">
@@ -327,28 +556,41 @@ export default function Moments() {
                       <p className="text-white/40 text-sm">Writing the perfect message for {recipientName}</p>
                     </div>
                   </div>
-                ) : isLimitReached ? (
+                ) : isOutOfCredits ? (
                   <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-2xl bg-white/[0.05] flex items-center justify-center mx-auto mb-5">
-                      <Heart className="w-8 h-8 text-white/30" />
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                      <CreditCard className="w-8 h-8 text-primary" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-3">You're all out for this month</h2>
-                    <p className="text-white/50 text-sm mb-2 max-w-xs mx-auto leading-relaxed">
-                      You've used all {momentsLimit} free Moments for this month. Come back next month for more!
+                    <h2 className="text-2xl font-bold text-white mb-3">You're all out of cards</h2>
+                    <p className="text-white/50 text-sm mb-8 max-w-xs mx-auto leading-relaxed">
+                      Get 10 more cards for ₹50 — pay via UPI and credits are added instantly.
                     </p>
-                    <p className="text-white/30 text-xs mb-8">
-                      {momentsUsed} / {momentsLimit} moments used
-                    </p>
-                    <Button asChild className="h-11 px-8 rounded-xl bg-primary/80 hover:bg-primary text-white font-semibold">
-                      <Link href="/generate">Generate a Date Guide instead</Link>
-                    </Button>
+                    <div className="flex flex-col gap-3 max-w-xs mx-auto">
+                      <Button
+                        onClick={() => setShowPaymentWall(true)}
+                        className="h-12 rounded-xl bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white font-semibold"
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Get 10 cards for ₹50
+                      </Button>
+                      <Button asChild variant="ghost" className="h-11 rounded-xl text-white/40 hover:text-white hover:bg-white/5 border border-white/10">
+                        <Link href="/generate">Try Date Guide instead</Link>
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <>
                     <h2 className="text-2xl font-bold text-white mb-1">Your Moment is ready 💙</h2>
-                    <p className="text-white/40 text-sm mb-5">
-                      {momentsUsed} / {momentsLimit} moments used this month
-                    </p>
+                    {isLoggedIn && momentsCredits !== null && (
+                      <p className="text-white/40 text-sm mb-5">
+                        {momentsCredits} card{momentsCredits !== 1 ? "s" : ""} remaining
+                      </p>
+                    )}
+                    {!isLoggedIn && (
+                      <p className="text-white/40 text-sm mb-5">
+                        {Math.max(0, GUEST_LIMIT - guestCount)} free card{Math.max(0, GUEST_LIMIT - guestCount) !== 1 ? "s" : ""} remaining — sign up to unlock 2 more
+                      </p>
+                    )}
 
                     {templateOptions.length > 0 && (
                       <div className="mb-6">

@@ -18,6 +18,7 @@ export async function initDb(): Promise<void> {
       credits INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE hs_users ADD COLUMN IF NOT EXISTS moments_credits INTEGER NOT NULL DEFAULT 2;
     CREATE TABLE IF NOT EXISTS hs_credit_logs (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES hs_users(id),

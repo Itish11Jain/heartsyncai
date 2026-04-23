@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { requireAuth } from "../../middleware/requireAuth.js";
+import { verifySession } from "../../lib/session.js";
 import { pool } from "../../lib/db.js";
 import { GenerateMomentBody } from "@workspace/api-zod";
 
 const router = Router();
-
-const MOMENTS_LIMIT = 3;
 
 const PURPOSE_TONE: Record<string, string> = {
   thank_you: "warm gratitude — the card should feel sincere and appreciative, like a heartfelt thank-you that makes the person feel truly seen",
@@ -35,7 +34,15 @@ Rules:
 - The message must read beautifully on its own when displayed as text on a card.
 - Respond with ONLY a JSON object: { "message": "..." }`;
 
-router.post("/moment/generate", requireAuth, async (req, res) => {
+function validateUtr(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const v = value.trim();
+  const isUpiRef = /^\d{12}$/.test(v);
+  const isBankUtr = /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
+  return isUpiRef || isBankUtr;
+}
+
+router.post("/moment/generate", async (req, res) => {
   const parseResult = GenerateMomentBody.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ error: "validation_error", message: "Invalid request body." });
@@ -43,25 +50,40 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
   }
 
   const { recipientName, purpose, relation, likes } = parseResult.data;
-  const userId = req.user!.userId;
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  let userId: number | null = null;
 
-  const preCheck = await pool.query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM hs_moments
-     WHERE user_id = $1 AND created_at >= $2`,
-    [userId, monthStart],
-  );
-  const preUsed = parseInt(preCheck.rows[0]?.count ?? "0", 10);
-  if (preUsed >= MOMENTS_LIMIT) {
-    res.status(403).json({
-      error: "MOMENT_LIMIT_REACHED",
-      message: `You've used all ${MOMENTS_LIMIT} free moments for this month. Come back next month!`,
-      momentsUsed: preUsed,
-      momentsLimit: MOMENTS_LIMIT,
-    });
-    return;
+  const authHeader = req.headers["authorization"];
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const payload = verifySession(token);
+      const userRow = await pool.query<{ id: number }>(
+        "SELECT id FROM hs_users WHERE id = $1",
+        [payload.userId],
+      );
+      if (userRow.rows.length > 0) {
+        userId = payload.userId;
+      }
+    } catch {
+      // Invalid token — treat as guest
+    }
+  }
+
+  if (userId !== null) {
+    const creditRow = await pool.query<{ moments_credits: number }>(
+      "SELECT moments_credits FROM hs_users WHERE id = $1",
+      [userId],
+    );
+    const currentCredits = creditRow.rows[0]?.moments_credits ?? 0;
+    if (currentCredits <= 0) {
+      res.status(403).json({
+        error: "MOMENTS_OUT_OF_CREDITS",
+        message: "You've used all your Moments credits. Top up to continue.",
+        momentsCredits: 0,
+      });
+      return;
+    }
   }
 
   const userPrompt = `Write a card message for:
@@ -100,71 +122,108 @@ router.post("/moment/generate", requireAuth, async (req, res) => {
     return;
   }
 
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+  if (userId !== null) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT id FROM hs_users WHERE id = $1 FOR UPDATE", [userId]);
 
-    await client.query(
-      "SELECT id FROM hs_users WHERE id = $1 FOR UPDATE",
-      [userId],
-    );
+      const creditRow = await client.query<{ moments_credits: number }>(
+        "SELECT moments_credits FROM hs_users WHERE id = $1",
+        [userId],
+      );
+      const currentCredits = creditRow.rows[0]?.moments_credits ?? 0;
 
-    const countResult = await client.query<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM hs_moments
-       WHERE user_id = $1 AND created_at >= $2`,
-      [userId, monthStart],
-    );
-    const momentsUsed = parseInt(countResult.rows[0]?.count ?? "0", 10);
+      if (currentCredits <= 0) {
+        await client.query("ROLLBACK");
+        res.status(403).json({
+          error: "MOMENTS_OUT_OF_CREDITS",
+          message: "You've used all your Moments credits. Top up to continue.",
+          momentsCredits: 0,
+        });
+        return;
+      }
 
-    if (momentsUsed >= MOMENTS_LIMIT) {
+      await client.query(
+        "UPDATE hs_users SET moments_credits = moments_credits - 1 WHERE id = $1",
+        [userId],
+      );
+      await client.query(
+        `INSERT INTO hs_moments (user_id, purpose, relation, recipient, message) VALUES ($1, $2, $3, $4, $5)`,
+        [userId, purpose, relation, recipientName, generatedMessage],
+      );
+      await client.query("COMMIT");
+
+      req.log.info({ userId, purpose, relation }, "Moment generated (credits)");
+
+      res.json({ message: generatedMessage, momentsCredits: currentCredits - 1 });
+    } catch (err) {
       await client.query("ROLLBACK");
-      res.status(403).json({
-        error: "MOMENT_LIMIT_REACHED",
-        message: `You've used all ${MOMENTS_LIMIT} free moments for this month. Come back next month!`,
-        momentsUsed,
-        momentsLimit: MOMENTS_LIMIT,
-      });
-      return;
+      req.log.error({ err }, "Moment insert failed");
+      res.status(500).json({ error: "server_error", message: "Something went wrong on our end. Please try again." });
+    } finally {
+      client.release();
     }
-
-    await client.query(
-      `INSERT INTO hs_moments (user_id, purpose, relation, recipient, message)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, purpose, relation, recipientName, generatedMessage],
-    );
-
-    await client.query("COMMIT");
-
-    req.log.info({ userId, purpose, relation }, "Moment generated");
-
-    res.json({
-      message: generatedMessage,
-      momentsUsed: momentsUsed + 1,
-      momentsLimit: MOMENTS_LIMIT,
-    });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    req.log.error({ err }, "Moment insert failed");
-    res.status(500).json({ error: "server_error", message: "Something went wrong on our end. Please try again." });
-  } finally {
-    client.release();
+    return;
   }
+
+  req.log.info({ purpose, relation }, "Moment generated (guest)");
+  res.json({ message: generatedMessage, momentsCredits: null });
+});
+
+router.post("/moment/payment", requireAuth, async (req, res) => {
+  const { utr } = req.body as { utr?: unknown };
+
+  if (!validateUtr(utr)) {
+    res.status(400).json({
+      error: "validation_error",
+      message: "Invalid UTR format. Enter the 12-digit UPI reference or bank transaction ID.",
+    });
+    return;
+  }
+
+  const cleanUtr = (utr as string).trim().toUpperCase();
+
+  const existing = await pool.query("SELECT id FROM hs_utr_submissions WHERE utr = $1", [cleanUtr]);
+  if ((existing.rowCount ?? 0) > 0) {
+    res.status(409).json({
+      error: "duplicate_utr",
+      message: "This transaction ID has already been used. Contact support if you think this is a mistake.",
+    });
+    return;
+  }
+
+  await pool.query("INSERT INTO hs_utr_submissions (utr, user_id) VALUES ($1, $2)", [cleanUtr, req.user!.userId]);
+
+  const updated = await pool.query<{ moments_credits: number }>(
+    "UPDATE hs_users SET moments_credits = moments_credits + 10 WHERE id = $1 RETURNING moments_credits",
+    [req.user!.userId],
+  );
+  await pool.query(
+    "INSERT INTO hs_credit_logs (user_id, delta, reason) VALUES ($1, $2, $3)",
+    [req.user!.userId, 10, `moments_utr_payment:${cleanUtr}`],
+  );
+
+  const momentsCredits = updated.rows[0]?.moments_credits ?? 10;
+
+  req.log.info(
+    { utrMasked: `${cleanUtr.slice(0, 4)}****${cleanUtr.slice(-4)}`, userId: req.user!.userId, momentsCredits },
+    "Moments UTR payment recorded",
+  );
+
+  res.json({ ok: true, momentsCredits });
 });
 
 router.get("/moment/status", requireAuth, async (req, res) => {
   const userId = req.user!.userId;
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const countResult = await pool.query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM hs_moments
-     WHERE user_id = $1 AND created_at >= $2`,
-    [userId, monthStart],
+  const result = await pool.query<{ moments_credits: number }>(
+    "SELECT moments_credits FROM hs_users WHERE id = $1",
+    [userId],
   );
 
-  const momentsUsed = parseInt(countResult.rows[0]?.count ?? "0", 10);
-
-  res.json({ momentsUsed, momentsLimit: MOMENTS_LIMIT });
+  const momentsCredits = result.rows[0]?.moments_credits ?? 0;
+  res.json({ momentsCredits });
 });
 
 export default router;
