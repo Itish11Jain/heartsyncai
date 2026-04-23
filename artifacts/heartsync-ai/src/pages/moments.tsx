@@ -73,8 +73,9 @@ export default function Moments() {
 
   async function generate() {
     if (!recipientName.trim() || !purpose || !relation) return;
-    setIsLoading(true);
     setApiError(null);
+    goTo(4, 1);
+    setIsLoading(true);
     const token = authStore.sessionToken;
     const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     try {
@@ -92,9 +93,9 @@ export default function Moments() {
           setMomentsUsed(data.momentsUsed ?? 3);
           setMomentsLimit(data.momentsLimit ?? 3);
           setIsLimitReached(true);
-          goTo(4, 1);
           return;
         }
+        goTo(3, -1);
         setApiError(data.error ?? "Something went wrong. Please try again.");
         return;
       }
@@ -104,8 +105,8 @@ export default function Moments() {
       const subset = pickTemplateSubset();
       setTemplateOptions(subset);
       setSelectedTemplate(subset[0]);
-      goTo(4, 1);
     } catch {
+      goTo(3, -1);
       setApiError("Network error. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
@@ -288,7 +289,29 @@ export default function Moments() {
 
             {step === 4 && (
               <motion.div key="step4" variants={stepVariants(dir)} initial="initial" animate="animate" exit="exit" transition={{ type: "spring", stiffness: 300, damping: 30 }}>
-                {isLimitReached ? (
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center py-24 gap-6">
+                    <div className="relative">
+                      <motion.div
+                        className="w-20 h-20 rounded-full border-2 border-primary/30"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      />
+                      <motion.div
+                        className="absolute inset-2 rounded-full border-2 border-t-primary border-r-transparent border-b-transparent border-l-transparent"
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Heart className="w-7 h-7 text-primary fill-primary/40" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-semibold text-lg mb-1">Creating your Moment…</p>
+                      <p className="text-white/40 text-sm">Writing the perfect message for {recipientName}</p>
+                    </div>
+                  </div>
+                ) : isLimitReached ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-white/[0.05] flex items-center justify-center mx-auto mb-5">
                       <Heart className="w-8 h-8 text-white/30" />
