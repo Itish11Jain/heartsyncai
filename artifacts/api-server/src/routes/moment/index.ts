@@ -193,7 +193,19 @@ router.post("/moment/payment", requireAuth, async (req, res) => {
     return;
   }
 
-  await pool.query("INSERT INTO hs_utr_submissions (utr, user_id) VALUES ($1, $2)", [cleanUtr, req.user!.userId]);
+  try {
+    await pool.query("INSERT INTO hs_utr_submissions (utr, user_id) VALUES ($1, $2)", [cleanUtr, req.user!.userId]);
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string };
+    if (pgErr?.code === "23505") {
+      res.status(409).json({
+        error: "duplicate_utr",
+        message: "This transaction ID has already been used. Contact support if you think this is a mistake.",
+      });
+      return;
+    }
+    throw err;
+  }
 
   const updated = await pool.query<{ moments_credits: number }>(
     "UPDATE hs_users SET moments_credits = moments_credits + 10 WHERE id = $1 RETURNING moments_credits",
