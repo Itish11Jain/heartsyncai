@@ -352,226 +352,205 @@ function CardIllustration() {
   );
 }
 
-/* ── Vinyl Mixtape Card Preview ─────────────────────────── */
-const VINYL_TRACKS = ["Always You", "City Nights", "Slow Dance"];
+/* ── Cosmic Stars Card Preview ───────────────────────────── */
+const COSMIC_STARS = [
+  { x: 14, y: 16 }, { x: 74, y: 11 }, { x: 88, y: 38 },
+  { x: 52, y: 24 }, { x: 22, y: 58 }, { x: 81, y: 70 },
+  { x: 11, y: 80 }, { x: 44, y: 84 },
+];
+const COSMIC_STAR_BURSTS = [
+  { x: -130, y: -120 }, { x: 170, y: -100 }, { x: 200, y: 50 },
+  { x: 100, y: -160 }, { x: -140, y: 70 }, { x: 160, y: 130 },
+  { x: -120, y: 140 }, { x: 40, y: 180 },
+];
 
-function VinylCardIllustration() {
+function CosmicCardIllustration() {
   const [seq, setSeq] = useState(0);
   const [loopCount, setLoopCount] = useState(0);
 
   useEffect(() => {
     setSeq(0);
-    const t1 = setTimeout(() => setSeq(1), 2600);
-    const t2 = setTimeout(() => setSeq(2), 4400);
-    const t3 = setTimeout(() => setSeq(3), 7800);
-    const t4 = setTimeout(() => setLoopCount(c => c + 1), 11200);
+    const t1 = setTimeout(() => setSeq(1), 3000);
+    const t2 = setTimeout(() => setSeq(2), 4800);
+    const t3 = setTimeout(() => setSeq(3), 7600);
+    const t4 = setTimeout(() => setLoopCount(c => c + 1), 11000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [loopCount]);
 
   return (
     <div className="relative w-72 h-96 select-none">
-      {/* Ambient glow — warm amber-rose */}
+      {/* Ambient glow — deep purple */}
       <div
         className="absolute inset-0 rounded-3xl blur-3xl scale-105"
-        style={{ background: "radial-gradient(ellipse, rgba(220,60,60,0.2) 0%, rgba(255,120,40,0.1) 50%, transparent 75%)" }}
+        style={{ background: "radial-gradient(ellipse, rgba(120,60,240,0.28) 0%, rgba(60,0,180,0.12) 50%, transparent 75%)" }}
       />
 
       {/* Card shell */}
       <div
         className="relative w-full h-full rounded-3xl overflow-hidden"
         style={{
-          background: "radial-gradient(ellipse at 50% 30%, #1a0808 0%, #0c0606 60%, #060203 100%)",
-          border: "1px solid rgba(220,80,60,0.18)",
-          boxShadow: "0 32px 64px rgba(0,0,0,0.65), 0 0 0 1px rgba(220,80,60,0.07)",
+          background: "radial-gradient(ellipse at 50% 35%, #120728 0%, #080414 60%, #040208 100%)",
+          border: "1px solid rgba(140,80,255,0.2)",
+          boxShadow: "0 32px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(100,40,200,0.08)",
         }}
       >
-        {/* Subtle grain */}
-        {Array.from({ length: 5 }).map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{ opacity: [0.04, 0.1, 0.04] }}
-            transition={{ duration: 1.8 + i * 0.5, repeat: Infinity, delay: i * 0.4 }}
-            style={{
-              position: "absolute",
-              width: 2, height: 2, borderRadius: "50%",
-              background: "rgba(255,200,160,0.9)",
-              top: `${[14, 25, 60, 75, 88][i]}%`,
-              left: `${[70, 18, 85, 42, 65][i]}%`,
-            }}
-          />
-        ))}
+        {/* Background nebula */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "radial-gradient(ellipse at 30% 40%, rgba(80,20,180,0.18) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(20,0,100,0.12) 0%, transparent 50%)",
+        }} />
 
-        {/* ── Phase 0/1: Sleeve front ── */}
-        <AnimatePresence>
-          {(seq === 0 || seq === 1) && (
+        {/* Stars */}
+        {COSMIC_STARS.map((s, i) => {
+          const burst = COSMIC_STAR_BURSTS[i];
+          const scattered = seq >= 1;
+          return (
             <motion.div
-              key="sleeve"
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, y: 60, transition: { duration: 0.4 } }}
-              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}
+              key={i}
+              animate={scattered ? {
+                x: burst.x, y: burst.y,
+                opacity: seq >= 2 ? 0 : [0.6, 1, 0.6],
+                scale: seq >= 2 ? 0 : [1, 1.4, 1],
+              } : {
+                x: 0, y: 0,
+                opacity: [0.3, 0.9, 0.3],
+                scale: [0.8, 1.2, 0.8],
+              }}
+              transition={scattered
+                ? { duration: 0.65, ease: "easeOut" }
+                : { duration: 1.8 + i * 0.3, repeat: Infinity, ease: "easeInOut", delay: i * 0.2 }
+              }
+              style={{
+                position: "absolute",
+                left: `${s.x}%`, top: `${s.y}%`,
+                width: i % 3 === 0 ? 6 : 4, height: i % 3 === 0 ? 6 : 4,
+                borderRadius: "50%",
+                background: i % 2 === 0
+                  ? "radial-gradient(circle, rgba(200,160,255,1) 0%, rgba(140,80,255,0.6) 100%)"
+                  : "radial-gradient(circle, rgba(255,240,200,1) 0%, rgba(255,200,100,0.5) 100%)",
+                boxShadow: `0 0 ${i % 3 === 0 ? 8 : 4}px rgba(180,120,255,0.8)`,
+              }}
+            />
+          );
+        })}
+
+        {/* ── Phase 0: Hold hint ── */}
+        <AnimatePresence>
+          {seq === 0 && (
+            <motion.div
+              key="hint"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
             >
-              <motion.p
-                animate={{ opacity: [0.5, 0.95, 0.5] }}
-                transition={{ duration: 2.2, repeat: Infinity }}
-                style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,140,100,0.7)", letterSpacing: "0.08em" }}
+              <motion.div
+                animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                style={{
+                  width: 72, height: 72, borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(120,60,255,0.25) 0%, rgba(80,20,180,0.1) 100%)",
+                  border: "1.5px solid rgba(160,100,255,0.4)",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+                }}
               >
-                🎵 A MIXTAPE FOR YOU
+                ✨
+              </motion.div>
+              <motion.p
+                animate={{ opacity: [0.4, 0.85, 0.4] }}
+                transition={{ duration: 1.8, repeat: Infinity }}
+                style={{ fontSize: 11, color: "rgba(200,160,255,0.7)", letterSpacing: "0.08em", textAlign: "center" }}
+              >
+                Hold to reveal stars ✦
               </motion.p>
-
-              {/* Sleeve box */}
-              <div style={{
-                width: 168, height: 168,
-                borderRadius: 12,
-                background: "linear-gradient(145deg, #1c0b0b 0%, #2a1010 40%, #1c0b0b 100%)",
-                border: "1.5px solid rgba(200,80,60,0.35)",
-                boxShadow: "0 12px 32px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,160,120,0.12)",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                position: "relative", overflow: "hidden",
-              }}>
-                {/* Corner accents */}
-                {[0,1,2,3].map(c => (
-                  <div key={c} style={{
-                    position: "absolute",
-                    top: c < 2 ? 8 : "auto", bottom: c >= 2 ? 8 : "auto",
-                    left: c % 2 === 0 ? 8 : "auto", right: c % 2 === 1 ? 8 : "auto",
-                    width: 14, height: 14,
-                    borderTop: c < 2 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
-                    borderBottom: c >= 2 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
-                    borderLeft: c % 2 === 0 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
-                    borderRight: c % 2 === 1 ? "1.5px solid rgba(200,80,60,0.4)" : "none",
-                  }} />
-                ))}
-                <span style={{ fontSize: 36, marginBottom: 8 }}>❤️</span>
-                <p style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.85)", fontFamily: "Georgia,serif", letterSpacing: "0.02em" }}>For You</p>
-                <p style={{ fontSize: 9, color: "rgba(200,80,60,0.6)", marginTop: 4, letterSpacing: "0.12em" }}>FROM ARJUN</p>
-
-                {/* Record peeking — phase 1 */}
-                <motion.div
-                  animate={seq === 1 ? { y: 0, opacity: 1 } : { y: 30, opacity: 0 }}
-                  transition={{ type: "spring", damping: 14, stiffness: 90 }}
-                  style={{
-                    position: "absolute", bottom: -28, left: "50%", transform: "translateX(-50%)",
-                    width: 100, height: 100, borderRadius: "50%",
-                    background: "radial-gradient(circle at 50% 50%, #1a1a1a 0%, #0a0a0a 60%, #050505 100%)",
-                    border: "2px solid rgba(255,255,255,0.06)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.7)",
-                  }}
-                >
-                  {/* Grooves */}
-                  {[30,40,50,60,70].map(r => (
-                    <div key={r} style={{ position: "absolute", inset: `${(100-r)/2}%`, borderRadius: "50%", border: "0.5px solid rgba(255,255,255,0.04)" }} />
-                  ))}
-                  <div style={{ position: "absolute", inset: "38%", borderRadius: "50%", background: "radial-gradient(#333 0%, #111 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", fontWeight: 700 }}>HS</span>
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* Track hint */}
-              <div style={{ display: "flex", gap: 6 }}>
-                {VINYL_TRACKS.slice(0, 3).map((t, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.15 + 0.3 }}
-                    style={{
-                      padding: "3px 8px", borderRadius: 99,
-                      background: "rgba(200,80,60,0.12)",
-                      border: "1px solid rgba(200,80,60,0.2)",
-                      fontSize: 7, color: "rgba(255,200,180,0.6)",
-                    }}
-                  >
-                    {t}
-                  </motion.div>
-                ))}
-              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Phase 2: Spinning record ── */}
+        {/* ── Phase 2–3: Glowing message card ── */}
         <AnimatePresence>
-          {(seq === 2 || seq === 3) && (
+          {seq >= 2 && (
             <motion.div
-              key="spinning"
-              initial={{ opacity: 0, scale: 0.7 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ type: "spring", damping: 16, stiffness: 160 }}
-              style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
+              key="msg"
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", damping: 14, stiffness: 140, delay: 0.15 }}
+              style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              {/* Spinning disc */}
-              <div style={{ position: "relative", width: 174, height: 174 }}>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3.2, repeat: Infinity, ease: "linear" }}
-                  style={{
-                    width: 174, height: 174, borderRadius: "50%",
-                    background: "radial-gradient(circle at 50% 50%, #222 0%, #0d0d0d 60%, #060606 100%)",
-                    border: "2px solid rgba(255,255,255,0.05)",
-                    boxShadow: "0 16px 40px rgba(0,0,0,0.7)",
-                    position: "relative",
-                  }}
-                >
-                  {[20,32,44,56,68,80].map(r => (
-                    <div key={r} style={{ position: "absolute", inset: `${(100-r)/2}%`, borderRadius: "50%", border: "0.8px solid rgba(255,255,255,0.04)" }} />
-                  ))}
-                  {/* Light sheen */}
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%)" }} />
-                  {/* Center label */}
-                  <div style={{ position: "absolute", inset: "34%", borderRadius: "50%", background: "radial-gradient(#2a1010, #1a0808)", border: "1px solid rgba(200,80,60,0.3)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 14 }}>❤️</span>
-                  </div>
-                </motion.div>
-                {/* Needle */}
-                <motion.div
-                  animate={seq === 2 ? { rotate: -18 } : { rotate: -30 }}
-                  transition={{ type: "spring", damping: 12, stiffness: 80 }}
-                  style={{
-                    position: "absolute", top: -14, right: -12,
-                    width: 4, height: 72, borderRadius: 99,
-                    background: "linear-gradient(to bottom, #888 0%, #444 100%)",
-                    transformOrigin: "top center",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-                  }}
-                />
-              </div>
+              {/* Central glow */}
+              <div style={{
+                position: "absolute", width: 180, height: 180, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(120,60,255,0.22) 0%, transparent 70%)",
+              }} />
 
-              {/* Now playing */}
-              <AnimatePresence>
-                {seq === 3 && (
-                  <motion.div
-                    key="np"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", damping: 18 }}
-                    style={{ textAlign: "center" }}
+              <div style={{
+                width: 196, padding: "22px 18px",
+                borderRadius: 20,
+                background: "linear-gradient(145deg, rgba(100,40,220,0.12), rgba(60,10,150,0.08))",
+                border: "1.5px solid rgba(160,100,255,0.35)",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0 16px 48px rgba(0,0,0,0.55), 0 0 32px rgba(100,40,255,0.15)",
+                textAlign: "center", position: "relative",
+              }}>
+                {/* Top accent line */}
+                <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1.5, background: "linear-gradient(90deg, transparent, rgba(160,100,255,0.7), transparent)", borderRadius: 99 }} />
+
+                <AnimatePresence>
+                  {seq === 2 && (
+                    <motion.p
+                      key="sub2"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      style={{ fontSize: 9, color: "rgba(200,160,255,0.55)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}
+                    >
+                      A message from the stars
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                <p style={{ fontSize: 26, marginBottom: 8 }}>💫</p>
+                <p style={{ fontSize: 17, fontWeight: 800, color: "rgba(255,255,255,0.9)", fontFamily: "Georgia,serif", marginBottom: 8 }}>Priya</p>
+
+                <AnimatePresence>
+                  {seq === 3 && (
+                    <motion.p
+                      key="quote"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      style={{ fontSize: 10, color: "rgba(220,200,255,0.75)", fontStyle: "italic", fontFamily: "Georgia,serif", lineHeight: 1.6 }}
+                    >
+                      "You light up my universe."
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                {/* Floating micro-stars in finale */}
+                {seq === 3 && [
+                  { top: "-8%", left: "10%", d: 0 }, { top: "-6%", right: "14%", d: 0.2 },
+                  { bottom: "-6%", left: "18%", d: 0.4 }, { bottom: "-8%", right: "8%", d: 0.1 },
+                ].map((p, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: [0, 1, 0], scale: [0, 1, 0] }}
+                    transition={{ duration: 1.4, delay: p.d, repeat: Infinity, repeatDelay: 1.2 }}
+                    style={{ position: "absolute", fontSize: 10, ...p }}
                   >
-                    <p style={{ fontSize: 9, color: "rgba(200,80,60,0.6)", letterSpacing: "0.12em", marginBottom: 4 }}>▶ NOW PLAYING</p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)", fontFamily: "Georgia,serif" }}>{VINYL_TRACKS[0]}</p>
-                    {/* Progress bar */}
-                    <div style={{ width: 120, height: 2, background: "rgba(255,255,255,0.08)", borderRadius: 99, margin: "8px auto 0", overflow: "hidden" }}>
-                      <motion.div
-                        initial={{ width: "0%" }}
-                        animate={{ width: "60%" }}
-                        transition={{ duration: 2.5, ease: "linear" }}
-                        style={{ height: "100%", background: "linear-gradient(90deg, rgba(200,80,60,0.7), rgba(255,140,80,0.9))", borderRadius: 99 }}
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    ✦
+                  </motion.span>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Bottom label */}
         <motion.div
-          animate={{ opacity: [0.25, 0.55, 0.25] }}
+          animate={{ opacity: [0.2, 0.5, 0.2] }}
           transition={{ duration: 3.5, repeat: Infinity }}
-          style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(200,80,60,0.4)", letterSpacing: "0.1em" }}
+          style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(160,100,255,0.4)", letterSpacing: "0.1em" }}
         >
           ✦ HeartSync AI
         </motion.div>
@@ -579,15 +558,15 @@ function VinylCardIllustration() {
 
       {/* Floating sparkles */}
       {[
-        { top: "-6%", left: "-8%", size: 18, delay: 0.3 },
-        { top: "30%", right: "-10%", size: 13, delay: 1.0 },
-        { bottom: "-5%", right: "-6%", size: 20, delay: 0.8 },
+        { top: "-6%", left: "-8%", size: 18, delay: 0.5 },
+        { top: "28%", right: "-12%", size: 13, delay: 1.0 },
+        { bottom: "-5%", right: "-7%", size: 20, delay: 0.2 },
       ].map((s, i) => (
         <motion.div
           key={i}
-          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.8, 0.3] }}
-          transition={{ duration: 2.8 + i * 0.6, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
-          style={{ position: "absolute", ...s, fontSize: s.size, color: "rgba(200,80,60,0.6)" }}
+          animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0.9, 0.3] }}
+          transition={{ duration: 2.6 + i * 0.7, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
+          style={{ position: "absolute", ...s, fontSize: s.size, color: "rgba(160,100,255,0.65)" }}
         >
           ✦
         </motion.div>
@@ -621,13 +600,13 @@ function CardCarousel() {
             </motion.div>
           ) : (
             <motion.div
-              key="vinyl"
+              key="cosmic"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: "easeInOut" }}
             >
-              <VinylCardIllustration />
+              <CosmicCardIllustration />
             </motion.div>
           )}
         </AnimatePresence>
@@ -666,7 +645,7 @@ export default function Home() {
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 pt-6 pb-20">
         {/* Header */}
-        <header className="flex justify-between items-center mb-20">
+        <header className="flex justify-between items-center mb-3 md:mb-20">
           <div className="flex items-center gap-2.5">
             <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl">
               <HeartPulse className="w-5 h-5 text-white" />
@@ -692,28 +671,28 @@ export default function Home() {
           transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
           className="mb-28"
         >
-          {/* ── Mobile layout (< md): card first, CTA below ── */}
-          <div className="md:hidden flex flex-col items-center">
-            {/* Scaled-down carousel so card + CTA both fit in first fold */}
-            <div style={{ transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -108 }}>
+          {/* ── Mobile layout (< md): headline first, card, then CTA ── */}
+          <div className="md:hidden flex flex-col items-center pt-2">
+
+            {/* 1. Headline at the top */}
+            <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-2 text-white text-center">
+              Send love<br />in a card.
+            </h1>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-primary/8 mb-3">
+              <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
+            </div>
+
+            {/* 2. Scaled-down carousel */}
+            <div style={{ transform: "scale(0.65)", transformOrigin: "top center", marginBottom: -144 }}>
               <CardCarousel />
             </div>
 
-            <div className="w-full px-1 mt-3">
-              <div className="flex justify-center mb-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/8">
-                  <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
-                </div>
-              </div>
-
-              <h1 className="text-4xl font-extrabold tracking-tight leading-[1.1] mb-3 text-white text-center">
-                Send love<br />in a card.
-              </h1>
-
-              <p className="text-xs font-semibold mb-5 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
+            {/* 3. Subtitle + CTA + social proof */}
+            <div className="w-full px-1">
+              <p className="text-xs font-semibold mb-4 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
                 Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
               </p>
 
@@ -730,7 +709,7 @@ export default function Home() {
                 </Link>
               </Button>
 
-              <div className="flex items-center justify-center gap-3 mt-4">
+              <div className="flex items-center justify-center gap-3 mt-3" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
                 <div className="flex -space-x-1.5">
                   {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
                     <div key={i} className="w-6 h-6 rounded-full border-2 border-background" style={{ background: c }} />
