@@ -644,6 +644,21 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    function onFirstInteraction() {
+      home.start();
+    }
+    document.addEventListener("click",       onFirstInteraction, { once: true });
+    document.addEventListener("touchstart",  onFirstInteraction, { once: true, passive: true } as EventListenerOptions);
+    document.addEventListener("scroll",      onFirstInteraction, { once: true, passive: true } as EventListenerOptions);
+    return () => {
+      home.stop();
+      document.removeEventListener("click",      onFirstInteraction);
+      document.removeEventListener("touchstart", onFirstInteraction);
+      document.removeEventListener("scroll",     onFirstInteraction);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">

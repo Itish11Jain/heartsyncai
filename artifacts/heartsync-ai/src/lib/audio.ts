@@ -328,8 +328,49 @@ const BIRTHDAY_3_SEQ: MStep[] = [
 
 const BIRTHDAY_SEQS = [BIRTHDAY_1_SEQ, BIRTHDAY_2_SEQ, BIRTHDAY_3_SEQ];
 
+/* ── Home page ambient melody — C–G–Am–F, 72 BPM, slow & dreamy ──────
+   Quarter note = 0.83 s  |  Half = 1.67 s  |  Whole = 3.33 s
+   8 bars (~26 s loop), very soft gains (0.05–0.07)
+─────────────────────────────────────────────────────────────────────── */
+const HOME_SEQ: MStep[] = [
+  /* Bar 1 — C major */
+  { freq: N.E4, dur: 0.83, gain: 0.065, bass: N.C3, bassDur: 3.33, bassGain: 0.040 },
+  { freq: N.G4, dur: 0.83, gain: 0.065 },
+  { freq: N.A4, dur: 0.83, gain: 0.062 },
+  { freq: N.G4, dur: 0.83, gain: 0.058 },
+  /* Bar 2 — C major descend */
+  { freq: N.E4, dur: 1.67, gain: 0.065, bass: N.C3, bassDur: 3.33, bassGain: 0.038 },
+  { freq: N.D4, dur: 0.83, gain: 0.058 },
+  { freq: N.C4, dur: 0.83, gain: 0.055 },
+  /* Bar 3 — G major */
+  { freq: N.D4, dur: 0.83, gain: 0.065, bass: N.G2, bassDur: 3.33, bassGain: 0.040 },
+  { freq: N.G4, dur: 0.83, gain: 0.065 },
+  { freq: N.B4, dur: 1.67, gain: 0.062 },
+  /* Bar 4 — G major high */
+  { freq: N.D5, dur: 1.67, gain: 0.060, bass: N.G2, bassDur: 3.33, bassGain: 0.038 },
+  { freq: N.B4, dur: 0.83, gain: 0.058 },
+  { freq: N.G4, dur: 0.83, gain: 0.055 },
+  /* Bar 5 — A minor */
+  { freq: N.C4, dur: 0.83, gain: 0.065, bass: N.A2, bassDur: 3.33, bassGain: 0.040 },
+  { freq: N.E4, dur: 0.83, gain: 0.065 },
+  { freq: N.A4, dur: 1.67, gain: 0.062 },
+  /* Bar 6 — A minor descend */
+  { freq: N.G4, dur: 0.83, gain: 0.062, bass: N.A2, bassDur: 3.33, bassGain: 0.038 },
+  { freq: N.E4, dur: 0.83, gain: 0.060 },
+  { freq: N.C4, dur: 0.83, gain: 0.058 },
+  { freq: N.A3, dur: 0.83, gain: 0.055 },
+  /* Bar 7 — F major */
+  { freq: N.C4, dur: 0.83, gain: 0.065, bass: N.C3, bassDur: 3.33, bassGain: 0.040 },
+  { freq: N.F4, dur: 0.83, gain: 0.065 },
+  { freq: N.A4, dur: 1.67, gain: 0.062 },
+  /* Bar 8 — C major resolve */
+  { freq: N.G4, dur: 0.83, gain: 0.062, bass: N.C3, bassDur: 4.16, bassGain: 0.040 },
+  { freq: N.E4, dur: 0.83, gain: 0.060 },
+  { freq: N.C5, dur: 2.50, gain: 0.055 },
+];
+
 export const music = {
-  start(template: "vinyl" | "cosmic" | "envelope" | "crystal", occasion?: string): void {
+  start(template: "vinyl" | "cosmic" | "envelope" | "crystal" | "home", occasion?: string): void {
     music.stop();
     try {
       const ac = getCtx();
@@ -342,7 +383,8 @@ export const music = {
       /* Birthday occasion always gets a Happy Birthday melody regardless of template */
       const seq = occasion === "birthday"
         ? BIRTHDAY_SEQS[Math.floor(Math.random() * BIRTHDAY_SEQS.length)]!
-        : template === "vinyl"   ? VINYL_SEQ   :
+        : template === "home"    ? HOME_SEQ    :
+          template === "vinyl"   ? VINYL_SEQ   :
           template === "cosmic"  ? COSMIC_SEQ  :
           template === "crystal" ? CRYSTAL_SEQ :
                                    ENVELOPE_SEQ;
@@ -382,6 +424,8 @@ export const music = {
 export const home = {
   cta()    { haptic.medium(); },
   navTap() { haptic.click();  },
+  start()  { music.start("home"); },
+  stop()   { music.stop(); },
 };
 
 /* ══════════════════════════════════════════════════════════════
