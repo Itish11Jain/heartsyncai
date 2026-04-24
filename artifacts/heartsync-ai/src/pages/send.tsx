@@ -17,7 +17,7 @@ function useSearchParams() {
 
 export default function Send() {
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded, getToken } = useAuth();
+  const { isSignedIn, isLoaded, getToken, userId: clerkUserId } = useAuth();
   const clerk = useClerk();
   const [, navigate] = useLocation();
 
@@ -149,7 +149,7 @@ export default function Send() {
   }
 
   async function handleFinish() {
-    if (!recipientName.trim()) return;
+    if (!recipientName.trim() || showGenerating) return;
 
     // Check gate (only after usage has loaded)
     if (!usageLoading) {
@@ -176,6 +176,7 @@ export default function Send() {
     trackEvent({
       event: "card_created",
       fingerprint,
+      clerk_user_id: clerkUserId ?? undefined,
       email: userEmail ?? undefined,
       occasion,
       template,
@@ -381,7 +382,7 @@ export default function Send() {
 
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  disabled={!recipientName.trim() || usageLoading}
+                  disabled={!recipientName.trim() || usageLoading || showGenerating}
                   onClick={handleFinish}
                   style={{
                     padding: "16px",
