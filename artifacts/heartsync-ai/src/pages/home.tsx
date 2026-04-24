@@ -52,6 +52,36 @@ const PREVIEW_ORB_POSITIONS = PREVIEW_ORBS.map((_, i) => {
 
 const PREVIEW_BLURB = { emoji: "🐼", text: "Panda-sized birthday hugs!" };
 
+/* Falling confetti behind the hero card preview */
+const HERO_CONFETTI = [
+  { x: -100, color: "#FFD700", w: 5,  h: 12, delay: 0.0, dur: 1.8, rot: 25  },
+  { x: -65,  color: "#FF69B4", w: 4,  h: 9,  delay: 0.4, dur: 2.1, rot: -30 },
+  { x: -30,  color: "#A78BFA", w: 5,  h: 11, delay: 0.8, dur: 1.6, rot: 20  },
+  { x:  0,   color: "#34D399", w: 4,  h: 8,  delay: 1.2, dur: 2.0, rot: -15 },
+  { x:  35,  color: "#FFD700", w: 5,  h: 12, delay: 0.2, dur: 1.9, rot: 30  },
+  { x:  70,  color: "#FF69B4", w: 4,  h: 9,  delay: 1.5, dur: 1.7, rot: -25 },
+  { x:  105, color: "#4FC3F7", w: 5,  h: 10, delay: 0.6, dur: 2.2, rot: 20  },
+  { x: -82,  color: "#FFAB40", w: 4,  h: 8,  delay: 1.8, dur: 1.8, rot: -20 },
+  { x:  15,  color: "#F06292", w: 5,  h: 11, delay: 1.0, dur: 2.0, rot: 15  },
+  { x: -50,  color: "#81D4FA", w: 4,  h: 9,  delay: 0.3, dur: 1.7, rot: -30 },
+  { x:  52,  color: "#FFD700", w: 3,  h: 7,  delay: 2.0, dur: 1.9, rot: 35  },
+  { x: -15,  color: "#FF69B4", w: 3,  h: 8,  delay: 1.4, dur: 2.1, rot: -15 },
+];
+function HeroConfetti() {
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+      {HERO_CONFETTI.map((c, i) => (
+        <motion.div
+          key={i}
+          style={{ position: "absolute", top: 0, left: `calc(50% + ${c.x}px)`, width: c.w, height: c.h, borderRadius: 2, background: c.color }}
+          animate={{ y: ["0%", "500%"], opacity: [0, 1, 1, 0], rotate: [0, c.rot * 3] }}
+          transition={{ duration: c.dur, delay: c.delay, repeat: Infinity, ease: "easeIn" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function CardIllustration() {
   /* seq: 0 = envelope, 1 = opening, 2 = orbs, 3 = finale */
   const [seq, setSeq] = useState(0);
@@ -254,7 +284,7 @@ function CardIllustration() {
                         : { type: "spring", damping: 16, stiffness: 200, delay: i * 0.08 }
                       }
                       style={{
-                        position: "absolute", width: 42, height: 42,
+                        position: "absolute", width: 52, height: 52,
                         borderRadius: "50%",
                         background: "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.1))",
                         border: "1.5px solid rgba(255,215,0,0.4)",
@@ -309,16 +339,25 @@ function CardIllustration() {
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontStyle: "italic", fontFamily: "Georgia,serif", lineHeight: 1.6 }}>
                   "Wishing you all the happiness in the world."
                 </p>
-                {/* Confetti dots */}
-                {["#FFD700","#FF69B4","#C0C0C0","#FFD700","#FF69B4"].map((c, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ y: -20, x: (i - 2) * 30, opacity: 0 }}
-                    animate={{ y: 60 + i * 10, opacity: [0, 1, 0] }}
-                    transition={{ duration: 1.2, delay: 0.6 + i * 0.12, repeat: Infinity, repeatDelay: 2 }}
-                    style={{ position: "absolute", top: 0, left: "50%", width: 5, height: 10, borderRadius: 2, background: c, marginLeft: (i - 2) * 22 }}
-                  />
-                ))}
+                {/* Confetti — big burst */}
+                {[
+                  "#FFD700","#FF69B4","#A78BFA","#34D399","#4FC3F7",
+                  "#FFD700","#FF69B4","#FF4444","#FFAB40","#81D4FA",
+                  "#FFD700","#F06292","#A78BFA","#34D399",
+                ].map((c, i) => {
+                  const xOff = -90 + (i % 7) * 28;
+                  const sz = i % 3 === 0 ? 6 : i % 3 === 1 ? 4 : 3;
+                  const rot = (i % 2 === 0 ? 1 : -1) * (25 + i * 12);
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ y: -10, opacity: 0 }}
+                      animate={{ y: 80 + (i % 3) * 22, opacity: [0, 1, 1, 0], rotate: rot }}
+                      transition={{ duration: 1.4, delay: 0.45 + i * 0.07, repeat: Infinity, repeatDelay: 1.2 }}
+                      style={{ position: "absolute", top: 0, left: "50%", width: sz, height: sz * 2.8, borderRadius: 2, background: c, marginLeft: xOff }}
+                    />
+                  );
+                })}
               </div>
             </motion.div>
           )}
@@ -644,20 +683,6 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    function onFirstInteraction() {
-      home.start();
-    }
-    document.addEventListener("click",       onFirstInteraction, { once: true });
-    document.addEventListener("touchstart",  onFirstInteraction, { once: true, passive: true } as EventListenerOptions);
-    document.addEventListener("scroll",      onFirstInteraction, { once: true, passive: true } as EventListenerOptions);
-    return () => {
-      home.stop();
-      document.removeEventListener("click",      onFirstInteraction);
-      document.removeEventListener("touchstart", onFirstInteraction);
-      document.removeEventListener("scroll",     onFirstInteraction);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
@@ -710,8 +735,11 @@ export default function Home() {
             </div>
 
             {/* 2. Envelope preview — larger & more prominent */}
-            <div style={{ transform: "scale(0.82)", transformOrigin: "top center", marginBottom: -60 }}>
-              <CardIllustration />
+            <div style={{ position: "relative", transform: "scale(0.82)", transformOrigin: "top center", marginBottom: -60 }}>
+              <HeroConfetti />
+              <div style={{ position: "relative", zIndex: 1 }}>
+                <CardIllustration />
+              </div>
             </div>
 
             {/* 3. Subtitle + CTA + social proof */}
@@ -737,9 +765,9 @@ export default function Home() {
                 >
                   <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => home.cta()}>
                     <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
-                      style={{ background:"linear-gradient(to right, transparent, rgba(255,255,255,0.28), transparent)" }}
+                      style={{ background:"linear-gradient(to right, transparent 10%, rgba(255,255,255,0.55) 50%, transparent 90%)" }}
                       animate={{ x:["-200%","200%"] }}
-                      transition={{ duration:1.6, repeat:Infinity, repeatDelay:2.4, ease:"easeInOut" }} />
+                      transition={{ duration:1.4, repeat:Infinity, repeatDelay:2.0, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
                       Send cards now — Free!
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -800,9 +828,9 @@ export default function Home() {
                 >
                   <Link href="/send" className="flex items-center gap-2" onClick={() => home.cta()}>
                     <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
-                      style={{ background:"linear-gradient(to right, transparent, rgba(255,255,255,0.28), transparent)" }}
+                      style={{ background:"linear-gradient(to right, transparent 10%, rgba(255,255,255,0.55) 50%, transparent 90%)" }}
                       animate={{ x:["-200%","200%"] }}
-                      transition={{ duration:1.6, repeat:Infinity, repeatDelay:2.4, ease:"easeInOut" }} />
+                      transition={{ duration:1.4, repeat:Infinity, repeatDelay:2.0, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
                       Send cards now — Free!
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -824,7 +852,12 @@ export default function Home() {
             </div>
 
             <div className="flex justify-center md:justify-start md:pl-4">
-              <CardIllustration />
+              <div style={{ position: "relative" }}>
+                <HeroConfetti />
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <CardIllustration />
+                </div>
+              </div>
             </div>
           </div>
         </motion.section>

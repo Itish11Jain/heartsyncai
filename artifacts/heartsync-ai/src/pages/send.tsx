@@ -201,12 +201,44 @@ export default function Send() {
     <div
       className="h-dvh flex flex-col items-center overflow-hidden"
       style={{
+        position: "relative",
         background: "radial-gradient(ellipse at 50% 20%, #1a0a2e 0%, #0d0618 60%, #060310 100%)",
         fontFamily: "'Segoe UI', system-ui, sans-serif",
       }}
     >
+      {/* ── Full-screen sparkle background — persists across all steps ── */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
+        {[
+          { top: "6%",  left: "4%",  color: "#FFD700", sz: 11, delay: 0.0, dur: 1.5 },
+          { top: "4%",  left: "82%", color: "#FFD700", sz: 9,  delay: 1.1, dur: 1.3 },
+          { top: "13%", left: "42%", color: "#fff",    sz: 7,  delay: 0.5, dur: 1.7 },
+          { top: "20%", left: "91%", color: "#FF69B4", sz: 10, delay: 2.0, dur: 1.2 },
+          { top: "28%", left: "2%",  color: "#FFD700", sz: 8,  delay: 0.8, dur: 1.6 },
+          { top: "33%", left: "62%", color: "#fff",    sz: 7,  delay: 1.4, dur: 1.4 },
+          { top: "38%", left: "88%", color: "#A78BFA", sz: 9,  delay: 0.3, dur: 1.8 },
+          { top: "44%", left: "16%", color: "#FF69B4", sz: 8,  delay: 2.2, dur: 1.3 },
+          { top: "52%", left: "74%", color: "#FFD700", sz: 10, delay: 1.0, dur: 1.5 },
+          { top: "58%", left: "7%",  color: "#fff",    sz: 7,  delay: 0.6, dur: 1.4 },
+          { top: "64%", left: "52%", color: "#FF69B4", sz: 9,  delay: 1.7, dur: 1.3 },
+          { top: "70%", left: "84%", color: "#FFD700", sz: 8,  delay: 0.4, dur: 1.6 },
+          { top: "76%", left: "28%", color: "#fff",    sz: 7,  delay: 2.4, dur: 1.5 },
+          { top: "82%", left: "66%", color: "#FF69B4", sz: 10, delay: 1.3, dur: 1.2 },
+          { top: "88%", left: "11%", color: "#FFD700", sz: 8,  delay: 0.9, dur: 1.7 },
+          { top: "93%", left: "46%", color: "#A78BFA", sz: 7,  delay: 1.6, dur: 1.4 },
+          { top: "18%", left: "56%", color: "#FFD700", sz: 6,  delay: 2.7, dur: 1.3 },
+          { top: "47%", left: "38%", color: "#fff",    sz: 6,  delay: 0.2, dur: 1.6 },
+        ].map((s, i) => (
+          <motion.span
+            key={i}
+            style={{ position: "absolute", top: s.top, left: s.left, fontSize: s.sz, color: s.color, lineHeight: 1 }}
+            animate={{ scale: [0, 1.2, 0], opacity: [0, 0.75, 0] }}
+            transition={{ duration: s.dur, repeat: Infinity, repeatDelay: 2.2 + (i % 5) * 0.4, delay: s.delay, ease: "easeInOut" }}
+          >✦</motion.span>
+        ))}
+      </div>
+
       {/* Header */}
-      <div className="w-full flex items-center justify-between px-4 pt-4 pb-2" style={{ maxWidth: 520 }}>
+      <div className="w-full flex items-center justify-between px-4 pt-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1 }}>
         <Link href="/">
           <button className="flex items-center gap-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
             <ChevronLeft size={16} /> Back
@@ -231,7 +263,7 @@ export default function Send() {
         </div>
       </div>
 
-      <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-2" style={{ maxWidth: 520, minHeight: 0 }}>
+      <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-2" style={{ maxWidth: 520, minHeight: 0, position: "relative", zIndex: 1 }}>
         <AnimatePresence mode="wait" initial={false}>
 
           {/* Step 1: Occasion */}
