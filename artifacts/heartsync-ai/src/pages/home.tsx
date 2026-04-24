@@ -745,9 +745,6 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" className="text-white/40 hover:text-white/70 hover:bg-transparent text-sm px-3 h-auto py-1.5">
-              <Link href={guideCta} onClick={() => home.navTap()}>Date Guide</Link>
-            </Button>
             <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
               <Link href="/sign-in" onClick={() => home.navTap()}>Log in</Link>
             </Button>
