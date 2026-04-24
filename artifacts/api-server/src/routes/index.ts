@@ -7,6 +7,7 @@ import adminRouter from "./admin";
 import momentRouter from "./moment";
 import usageRouter from "./usage";
 import eventsRouter from "./events";
+import shareRouter from "./share";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(adminRouter);
 router.use(momentRouter);
 router.use(usageRouter);
 router.use(eventsRouter);
+router.use(shareRouter);
 
 export default router;

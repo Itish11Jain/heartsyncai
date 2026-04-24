@@ -109,6 +109,18 @@ CREATE TABLE hs_credit_logs (
 | POST | /api/payment/submit-utr | Required | Submit UTR, add 5 credits |
 | GET | /api/payment/status/:id | No | Check payment status (legacy) |
 | GET | /api/healthz | No | Health check |
+| GET | /api/og-image?name= | No | Returns 1200×630 PNG with "Hey, {name}!" for WhatsApp OG image |
+| GET | /api/share?t=&to=&... | No | Returns HTML with personalized OG tags + JS redirect to card |
+
+## WhatsApp OG Image System
+
+When a sender shares a card link, they share `/api/share?t={template}&to={name}&...` instead of the static HTML file. This URL:
+1. Serves HTML with personalized `og:title` ("Hey Sonakshi! You have a Birthday card 🎁") and `og:image` pointing to `/api/og-image?name=Sonakshi`
+2. `/api/og-image` generates a 1200×630 PNG at runtime using SVG rendered by `@resvg/resvg-js` with DejaVu fonts
+3. The HTML includes `<meta http-equiv="refresh">` + `<script>window.location.replace()` to redirect recipients to the actual card page
+4. All 4 card templates (envelope, crystal, cosmic, vinyl) build their share URLs via `/api/share`
+
+Files: `artifacts/api-server/src/routes/share.ts` (new), card pages: `card.tsx`, `crystal.tsx`, `cosmic.tsx`, `vinyl.tsx`
 
 ## Environment Variables
 

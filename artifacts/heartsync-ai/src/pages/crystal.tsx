@@ -447,14 +447,14 @@ export default function CrystalCard() {
 
   /* ── Share helpers ── */
   function cardUrl() {
-    const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-    /* Use /crystal.html so WhatsApp reads the crystal-specific OG image;
-       the file redirects humans to /card?template=crystal&... */
-    const p = new URLSearchParams({ to: recipientName, occasion, relation });
+    /* /api/share generates a personalised og:image ("Hey, {name}!") for
+       WhatsApp previews, then JS-redirects recipients to /crystal.html */
+    const p = new URLSearchParams({ t: "crystal", to: recipientName, occasion, relation });
     const msgP = params.get("msg"); if (msgP) p.set("msg", msgP);
     if (likesParam) p.set("likes", likesParam);
     const refP = params.get("ref"); if (refP) p.set("ref", refP);
-    return `${base}/crystal.html?${p.toString()}`;
+    const cidP = params.get("cid"); if (cidP) p.set("cid", cidP);
+    return `${window.location.origin}/api/share?${p.toString()}`;
   }
 
   function shareSenderWhatsApp() {
