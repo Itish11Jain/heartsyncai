@@ -759,7 +759,7 @@ export default function Home() {
           className="mb-28"
         >
           {/* ── Mobile layout (< md): headline first, card, then CTA ── */}
-          <div className="md:hidden flex flex-col items-center pt-1">
+          <div className="md:hidden flex flex-col items-center pt-6">
 
             {/* 1. Headline */}
             <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-4 text-white text-center">
