@@ -765,12 +765,12 @@ export default function Home() {
           <div className="md:hidden flex flex-col items-center pt-1">
 
             {/* 1. Headline */}
-            <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-1 text-white text-center">
+            <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-4 text-white text-center">
               Send love<br />in a card.
             </h1>
 
             {/* 2. Explainer — above the card, single line */}
-            <p className="text-xs font-medium mb-3 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.52)", letterSpacing: "0.01em" }}>
+            <p className="text-xs font-medium mb-5 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.52)", letterSpacing: "0.01em" }}>
               Pick who it's for
               <span style={{ color: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
               We write it
