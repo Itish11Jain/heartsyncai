@@ -29,6 +29,7 @@ export type CardEventPayload = {
   is_free?: boolean;
   from_card_ref?: boolean;
   recipient_name?: string;
+  card_id?: string;
 };
 
 export function trackEvent(payload: CardEventPayload): void {

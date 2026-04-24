@@ -28,6 +28,8 @@ const ENSURE_TABLE = `
   CREATE INDEX IF NOT EXISTS hs_card_events_email   ON hs_card_events(email);
   CREATE INDEX IF NOT EXISTS hs_card_events_created ON hs_card_events(created_at);
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS recipient_name TEXT;
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS card_id TEXT;
+  CREATE INDEX IF NOT EXISTS hs_card_events_card_id ON hs_card_events(card_id);
 `;
 
 /**
@@ -42,7 +44,7 @@ router.post("/events/card", async (req, res) => {
       event, fingerprint, clerk_user_id, email,
       occasion, template, channel,
       has_likes, used_custom_msg, is_free, from_card_ref,
-      recipient_name,
+      recipient_name, card_id,
     } = req.body as Record<string, unknown>;
 
     if (!event || typeof event !== "string") {
@@ -57,8 +59,8 @@ router.post("/events/card", async (req, res) => {
     await pool.query(
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
-          channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+          channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [
         event,
         fingerprint ?? null,
@@ -72,6 +74,7 @@ router.post("/events/card", async (req, res) => {
         is_free ?? null,
         from_card_ref ?? null,
         recipient_name ?? null,
+        card_id ?? null,
       ],
     );
 
@@ -119,7 +122,11 @@ router.get("/events/analytics", async (req, res) => {
             COUNT(*) FILTER (WHERE event = 'card_created')                                       AS likes_total,
             COUNT(*) FILTER (WHERE event = 'card_created' AND used_custom_msg = true)            AS custom_msg_changed,
             COUNT(*) FILTER (WHERE event = 'card_created' AND clerk_user_id IS NOT NULL
-                              AND is_free = true)                                                 AS signed_in_free_cards
+                              AND is_free = true)                                                 AS signed_in_free_cards,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'cta_clicked')          AS cta_users,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'generate_clicked')     AS generate_users,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_created')         AS cards_created_users,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_viewed')          AS card_viewed_users
            FROM hs_card_events WHERE ${EXCL}`,
           ep,
         ),
@@ -162,12 +169,19 @@ router.get("/events/analytics", async (req, res) => {
           ep,
         ),
 
-        /* ── recent cards with recipient names ── */
+        /* ── recent cards with recipient names and view counts ── */
         pool.query(
-          `SELECT recipient_name, occasion, template, is_free, created_at
-           FROM hs_card_events
-           WHERE event = 'card_created' AND ${EXCL}
-           ORDER BY created_at DESC
+          `SELECT c.card_id, c.recipient_name, c.occasion, c.template, c.is_free, c.created_at,
+                  COALESCE(v.view_count, 0) AS view_count
+           FROM hs_card_events c
+           LEFT JOIN (
+             SELECT card_id, COUNT(*) AS view_count
+             FROM hs_card_events
+             WHERE event = 'card_viewed' AND card_id IS NOT NULL
+             GROUP BY card_id
+           ) v ON v.card_id = c.card_id
+           WHERE c.event = 'card_created' AND ${EXCL}
+           ORDER BY c.created_at DESC
            LIMIT 20`,
           ep,
         ),

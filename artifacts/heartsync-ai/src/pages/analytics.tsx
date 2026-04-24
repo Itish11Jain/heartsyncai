@@ -10,12 +10,12 @@ type Overview = {
   cta_clicks: string;
   generate_clicks: string;
   cards_created: string;
+  card_views: string;
   free_cards: string;
   paid_cards: string;
   shared_wa: string;
   shared_ig: string;
   shared_link: string;
-  card_views: string;
   website_from_card: string;
   created_from_card_ref: string;
   signup_walls_shown: string;
@@ -25,11 +25,15 @@ type Overview = {
   likes_total: string;
   custom_msg_changed: string;
   signed_in_free_cards: string;
+  cta_users: string;
+  generate_users: string;
+  cards_created_users: string;
+  card_viewed_users: string;
 };
 
 type Occasion = { occasion: string; cnt: string };
 type Cohort = { cards_used?: string; card_count?: string; users: string };
-type RecentCard = { recipient_name: string | null; occasion: string | null; template: string | null; is_free: boolean | null; created_at: string };
+type RecentCard = { card_id: string | null; recipient_name: string | null; occasion: string | null; template: string | null; is_free: boolean | null; created_at: string; view_count: string | number };
 
 type AnalyticsData = {
   overview: Overview;
@@ -133,22 +137,34 @@ export default function Analytics() {
 
         {/* ── Conversion Funnel ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Conversion Funnel</h2>
-        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", padding: "12px 16px", marginBottom: 24 }}>
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+          {/* Header */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px", gap: 0, padding: "8px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Step</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Events</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Users</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Conv.</span>
+          </div>
           {[
-            { label: "Home CTA Clicked", value: o.cta_clicks, next: o.generate_clicks },
-            { label: "Generate Clicked", value: o.generate_clicks, next: o.cards_created },
-            { label: "Card Created", value: o.cards_created, next: null },
-          ].map((step, i) => (
-            <div key={step.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+            { label: "Home CTA Clicked",  events: o.cta_clicks,      users: o.cta_users,           nextEvents: o.generate_clicks,   nextUsers: o.generate_users },
+            { label: "Generate Clicked",  events: o.generate_clicks,  users: o.generate_users,      nextEvents: o.cards_created,     nextUsers: o.cards_created_users },
+            { label: "Card Created",      events: o.cards_created,    users: o.cards_created_users, nextEvents: o.card_views,        nextUsers: o.card_viewed_users },
+            { label: "Card Viewed (recip.)", events: o.card_views,    users: o.card_viewed_users,   nextEvents: null,                nextUsers: null },
+          ].map((step, i, arr) => (
+            <div key={step.label} style={{ display: "grid", gridTemplateColumns: "1fr 90px 90px 90px", gap: 0, padding: "10px 16px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
               <div>
-                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>{step.label}</span>
-                {step.next !== null && (
-                  <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginLeft: 8 }}>
-                    → {pct(step.next, step.value)} continued
-                  </span>
+                <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 500 }}>{step.label}</div>
+                {step.nextEvents !== null && (
+                  <div style={{ color: "rgba(255,255,255,0.28)", fontSize: 11, marginTop: 2 }}>
+                    ↓ {pct(step.nextEvents, step.events)} events · {pct(step.nextUsers ?? "0", step.users)} users continue
+                  </div>
                 )}
               </div>
-              <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 20 }}>{step.value}</span>
+              <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 18, textAlign: "right" }}>{step.events}</span>
+              <span style={{ color: "rgba(255,215,0,0.6)", fontWeight: 700, fontSize: 16, textAlign: "right" }}>{step.users}</span>
+              <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, textAlign: "right" }}>
+                {step.nextEvents !== null ? pct(step.nextEvents, step.events) : "—"}
+              </span>
             </div>
           ))}
         </div>
@@ -212,16 +228,16 @@ export default function Analytics() {
         {/* ── Recent Cards ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Recent Cards (Last 20)</h2>
         <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 0 }}>
-            {["Recipient", "Occasion", "Template", "Free?"].map(h => (
-              <div key={h} style={{ padding: "8px 14px", fontSize: 11, fontWeight: 700, color: "rgba(255,215,0,0.6)", letterSpacing: "0.06em", textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>{h}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 60px 60px", gap: 0 }}>
+            {["Recipient", "Occasion", "Template", "Free?", "👁 Views"].map(h => (
+              <div key={h} style={{ padding: "8px 14px", fontSize: 11, fontWeight: 700, color: "rgba(255,215,0,0.6)", letterSpacing: "0.06em", textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", textAlign: h === "👁 Views" ? "center" : "left" }}>{h}</div>
             ))}
           </div>
           {(data.recent_cards ?? []).length === 0 && (
             <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 14px" }}>No cards yet</p>
           )}
           {(data.recent_cards ?? []).map((r, i) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", borderBottom: i < (data.recent_cards ?? []).length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 60px 60px", borderBottom: i < (data.recent_cards ?? []).length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
               <div style={{ padding: "8px 14px", color: r.recipient_name ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)", fontSize: 13 }}>
                 {r.recipient_name ?? "—"}
               </div>
@@ -233,6 +249,11 @@ export default function Analytics() {
               </div>
               <div style={{ padding: "8px 14px", fontSize: 12, color: r.is_free ? "#34d399" : "#f59e0b", fontWeight: 600 }}>
                 {r.is_free === null ? "—" : r.is_free ? "Free" : "Paid"}
+              </div>
+              <div style={{ padding: "8px 6px", textAlign: "center" }}>
+                {Number(r.view_count) > 0
+                  ? <span style={{ background: "rgba(255,215,0,0.15)", color: "#FFD700", fontWeight: 700, fontSize: 13, borderRadius: 6, padding: "2px 8px" }}>{r.view_count}</span>
+                  : <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>0</span>}
               </div>
             </div>
           ))}

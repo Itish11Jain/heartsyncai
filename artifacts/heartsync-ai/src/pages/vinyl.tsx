@@ -169,7 +169,10 @@ export default function VinylCard() {
 
   /* ── background music ── */
   useEffect(() => {
-    if (!isSender && !isPreview) trackEvent({ event: "card_viewed", occasion, template: "vinyl" });
+    if (!isSender && !isPreview) {
+      const cardId = params.get("cid") ?? undefined;
+      trackEvent({ event: "card_viewed", occasion, template: "vinyl", recipient_name: recipientName, card_id: cardId });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

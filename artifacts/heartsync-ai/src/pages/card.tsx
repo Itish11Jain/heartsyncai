@@ -826,7 +826,10 @@ export default function Card() {
 
   /* ── background music ── */
   useEffect(() => {
-    if (isRecipient) trackEvent({ event: "card_viewed", occasion, template: "envelope" });
+    if (isRecipient) {
+      const cardId = params.get("cid") ?? undefined;
+      trackEvent({ event: "card_viewed", occasion, template: "envelope", recipient_name: recipientName, card_id: cardId });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

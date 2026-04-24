@@ -90,7 +90,7 @@ export default function Send() {
     return ALL[Math.floor(Math.random() * ALL.length)];
   }
 
-  function buildCardUrl(name: string, msg: string, senderFlag = false, template = "envelope") {
+  function buildCardUrl(name: string, msg: string, senderFlag = false, template = "envelope", cardId?: string) {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: name, occasion, relation });
     if (likes.trim()) p.set("likes", likes.trim());
@@ -98,6 +98,7 @@ export default function Send() {
       try { p.set("msg", btoa(unescape(encodeURIComponent(msg.trim())))); } catch { /* ignore */ }
     }
     if (senderFlag) p.set("sender", "1");
+    if (cardId) p.set("cid", cardId);
     /* Each template uses its own .html file so WhatsApp reads template-specific OG tags */
     if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
     if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
@@ -183,6 +184,8 @@ export default function Send() {
     const isFree = !usage || usage.is_superuser || (!usage.is_signed_in ? usage.anon_used < 2 : usage.signed_in_used < 2);
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
 
+    const cardId = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
+
     trackEvent({
       event: "card_created",
       fingerprint,
@@ -195,9 +198,10 @@ export default function Send() {
       is_free: isFree,
       from_card_ref: fromCardRef,
       recipient_name: recipientName.trim() || undefined,
+      card_id: cardId,
     });
 
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, template);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, template, cardId);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }

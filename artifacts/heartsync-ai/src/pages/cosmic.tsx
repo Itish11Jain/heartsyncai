@@ -132,7 +132,10 @@ export default function CosmicCard() {
 
   /* ── background music ── */
   useEffect(() => {
-    if (isRecipient) trackEvent({ event: "card_viewed", occasion, template: "cosmic" });
+    if (isRecipient) {
+      const cardId = params.get("cid") ?? undefined;
+      trackEvent({ event: "card_viewed", occasion, template: "cosmic", recipient_name: recipientName, card_id: cardId });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

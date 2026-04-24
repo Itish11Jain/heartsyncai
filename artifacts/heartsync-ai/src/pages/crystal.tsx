@@ -123,7 +123,8 @@ export default function CrystalCard() {
   useEffect(() => {
     music.start("crystal", occasion);
     if (isRecipient && !isPreview) {
-      trackEvent({ event: "card_viewed", occasion, template: "crystal" });
+      const cardId = params.get("cid") ?? undefined;
+      trackEvent({ event: "card_viewed", occasion, template: "crystal", recipient_name: recipientName, card_id: cardId });
     }
     return () => music.stop();
   }, []);
