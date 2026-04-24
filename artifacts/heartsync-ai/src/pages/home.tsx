@@ -780,8 +780,8 @@ export default function Home() {
               ))}
             </div>
 
-            {/* 3. Card preview — scale(0.72), marginBottom pulls next element to visual bottom */}
-            <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -108, width: "100%", display: "flex", justifyContent: "center" }}>
+            {/* 3. Card preview — scale(0.72), marginBottom compensates for layout vs visual size gap */}
+            <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -70, width: "100%", display: "flex", justifyContent: "center" }}>
               <CardIllustration />
             </div>
 
