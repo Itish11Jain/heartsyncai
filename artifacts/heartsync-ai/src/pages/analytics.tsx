@@ -22,7 +22,6 @@ type Overview = {
   likes_filled: string;
   likes_total: string;
   custom_msg_changed: string;
-  custom_msg_total: string;
   signed_in_free_cards: string;
 };
 
@@ -134,6 +133,7 @@ export default function Analytics() {
           <Stat label="Total Created" value={o.cards_created} />
           <Stat label="Free Cards" value={o.free_cards} sub={pct(o.free_cards, o.cards_created) + " of total"} />
           <Stat label="Paid Cards" value={o.paid_cards} sub={pct(o.paid_cards, o.cards_created) + " of total"} />
+          <Stat label="Free + Paid Sum" value={String(Number(o.free_cards) + Number(o.paid_cards))} sub={"gap = cards before is_free tracking"} />
         </div>
 
         {/* ── Sharing ── */}
@@ -156,7 +156,7 @@ export default function Analytics() {
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Funnel</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
           <Stat label="Signup Walls Shown" value={o.signup_walls_shown} />
-          <Stat label="Signed Up & Created" value={String(data.signed_up_after_wall)} sub={pct(data.signed_up_after_wall, o.signup_walls_shown) + " conversion"} />
+          <Stat label="Signed-In Creators" value={String(data.signed_up_after_wall)} sub={"unique users who created a card"} />
           <Stat label="Paywall Shown" value={o.paywall_shown} />
           <Stat label="Paywall Paid" value={o.paywall_paid} sub={pct(o.paywall_paid, o.paywall_shown) + " paid"} />
         </div>
@@ -165,7 +165,7 @@ export default function Analytics() {
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Engagement</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
           <Stat label="Filled 'What They Love'" value={o.likes_filled} sub={pct(o.likes_filled, o.likes_total) + " of senders"} />
-          <Stat label="Changed Default Msg" value={o.custom_msg_changed} sub={pct(o.custom_msg_changed, o.custom_msg_total) + " of senders"} />
+          <Stat label="Changed Default Msg" value={o.custom_msg_changed} sub={pct(o.custom_msg_changed, o.likes_total) + " of senders"} />
         </div>
 
         {/* ── Occasions ── */}

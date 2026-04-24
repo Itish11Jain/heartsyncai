@@ -157,7 +157,7 @@ router.get("/events/analytics", async (req, res) => {
           ep,
         ),
 
-        /* ── signed up after the signup wall ── */
+        /* ── unique signed-in users who have created at least one card ── */
         pool.query(
           `SELECT COUNT(DISTINCT clerk_user_id) AS count
            FROM hs_card_events
