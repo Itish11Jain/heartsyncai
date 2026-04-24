@@ -775,19 +775,15 @@ export default function Home() {
               <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
             </div>
 
-            {/* 2. Envelope preview — height-constrained so layout = visual size */}
-            <div style={{ position: "relative", width: "100%", height: 248, overflow: "visible", display: "flex", justifyContent: "center" }}>
+            {/* 2. Envelope preview — wrapper height = card visual height at scale so nothing overlaps */}
+            <div style={{ position: "relative", width: "100%", height: 292, overflow: "visible", display: "flex", justifyContent: "center" }}>
               <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%) scale(0.76)", transformOrigin: "top center", zIndex: 1 }}>
                 <CardIllustration />
               </div>
             </div>
 
-            {/* 3. Subtitle + CTA + social proof */}
+            {/* 3. CTA + social proof */}
             <div className="w-full px-1">
-              <p className="text-xs font-semibold mb-2 mt-1 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
-                Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
-              </p>
-
               {/* Explainer steps */}
               <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap">
                 {[
