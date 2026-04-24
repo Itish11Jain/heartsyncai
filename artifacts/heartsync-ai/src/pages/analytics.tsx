@@ -27,6 +27,7 @@ type Overview = {
 
 type Occasion = { occasion: string; cnt: string };
 type Cohort = { cards_used?: string; card_count?: string; users: string };
+type RecentCard = { recipient_name: string | null; occasion: string | null; template: string | null; is_free: boolean | null; created_at: string };
 
 type AnalyticsData = {
   overview: Overview;
@@ -34,6 +35,7 @@ type AnalyticsData = {
   signed_in_cohorts: Cohort[];
   anon_cohorts: Cohort[];
   signed_up_after_wall: string | number;
+  recent_cards: RecentCard[];
 };
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -182,6 +184,35 @@ export default function Analytics() {
             </div>
           </>
         )}
+
+        {/* ── Recent Cards ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Recent Cards (Last 20)</h2>
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 0 }}>
+            {["Recipient", "Occasion", "Template", "Free?"].map(h => (
+              <div key={h} style={{ padding: "8px 14px", fontSize: 11, fontWeight: 700, color: "rgba(255,215,0,0.6)", letterSpacing: "0.06em", textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>{h}</div>
+            ))}
+          </div>
+          {(data.recent_cards ?? []).length === 0 && (
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 14px" }}>No cards yet</p>
+          )}
+          {(data.recent_cards ?? []).map((r, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", borderBottom: i < (data.recent_cards ?? []).length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+              <div style={{ padding: "8px 14px", color: r.recipient_name ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)", fontSize: 13 }}>
+                {r.recipient_name ?? "—"}
+              </div>
+              <div style={{ padding: "8px 14px", color: "rgba(255,255,255,0.6)", fontSize: 13 }}>
+                {r.occasion?.replace(/_/g, " ") ?? "—"}
+              </div>
+              <div style={{ padding: "8px 14px", color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+                {r.template ?? "—"}
+              </div>
+              <div style={{ padding: "8px 14px", fontSize: 12, color: r.is_free ? "#34d399" : "#f59e0b", fontWeight: 600 }}>
+                {r.is_free === null ? "—" : r.is_free ? "Free" : "Paid"}
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* ── User Cohorts ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>User Cohorts (Signed-In)</h2>

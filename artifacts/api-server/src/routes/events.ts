@@ -8,37 +8,41 @@ const ADMIN_KEY = process.env["ADMIN_SECRET"] ?? "";
 const EXCL = `(email IS NULL OR email NOT IN (${SUPERUSER_EMAILS.map((_, i) => `$${i + 1}`).join(",")}))`;
 const EXCL_PARAMS = SUPERUSER_EMAILS;
 
+const ENSURE_TABLE = `
+  CREATE TABLE IF NOT EXISTS hs_card_events (
+    id           SERIAL PRIMARY KEY,
+    event        TEXT NOT NULL,
+    fingerprint  TEXT,
+    clerk_user_id TEXT,
+    email        TEXT,
+    occasion     TEXT,
+    template     TEXT,
+    channel      TEXT,
+    has_likes    BOOLEAN,
+    used_custom_msg BOOLEAN,
+    is_free      BOOLEAN,
+    from_card_ref BOOLEAN,
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS hs_card_events_event   ON hs_card_events(event);
+  CREATE INDEX IF NOT EXISTS hs_card_events_email   ON hs_card_events(email);
+  CREATE INDEX IF NOT EXISTS hs_card_events_created ON hs_card_events(created_at);
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS recipient_name TEXT;
+`;
+
 /**
  * POST /api/events/card
  * Records a card analytics event. Superuser emails are silently dropped.
  */
 router.post("/events/card", async (req, res) => {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS hs_card_events (
-        id           SERIAL PRIMARY KEY,
-        event        TEXT NOT NULL,
-        fingerprint  TEXT,
-        clerk_user_id TEXT,
-        email        TEXT,
-        occasion     TEXT,
-        template     TEXT,
-        channel      TEXT,
-        has_likes    BOOLEAN,
-        used_custom_msg BOOLEAN,
-        is_free      BOOLEAN,
-        from_card_ref BOOLEAN,
-        created_at   TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS hs_card_events_event   ON hs_card_events(event);
-      CREATE INDEX IF NOT EXISTS hs_card_events_email   ON hs_card_events(email);
-      CREATE INDEX IF NOT EXISTS hs_card_events_created ON hs_card_events(created_at);
-    `);
+    await pool.query(ENSURE_TABLE);
 
     const {
       event, fingerprint, clerk_user_id, email,
       occasion, template, channel,
       has_likes, used_custom_msg, is_free, from_card_ref,
+      recipient_name,
     } = req.body as Record<string, unknown>;
 
     if (!event || typeof event !== "string") {
@@ -53,8 +57,8 @@ router.post("/events/card", async (req, res) => {
     await pool.query(
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
-          channel, has_likes, used_custom_msg, is_free, from_card_ref)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
       [
         event,
         fingerprint ?? null,
@@ -67,6 +71,7 @@ router.post("/events/card", async (req, res) => {
         used_custom_msg ?? null,
         is_free ?? null,
         from_card_ref ?? null,
+        recipient_name ?? null,
       ],
     );
 
@@ -87,21 +92,11 @@ router.get("/events/analytics", async (req, res) => {
   }
 
   try {
-    // Ensure table exists
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS hs_card_events (
-        id SERIAL PRIMARY KEY, event TEXT NOT NULL,
-        fingerprint TEXT, clerk_user_id TEXT, email TEXT,
-        occasion TEXT, template TEXT, channel TEXT,
-        has_likes BOOLEAN, used_custom_msg BOOLEAN,
-        is_free BOOLEAN, from_card_ref BOOLEAN,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
+    await pool.query(ENSURE_TABLE);
 
     const ep = EXCL_PARAMS;
 
-    const [overview, occasions, userCohorts, anon_cohorts, signedInAfterWall] =
+    const [overview, occasions, userCohorts, anon_cohorts, signedInAfterWall, recentCards] =
       await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -164,6 +159,16 @@ router.get("/events/analytics", async (req, res) => {
            WHERE event = 'card_created' AND clerk_user_id IS NOT NULL AND ${EXCL}`,
           ep,
         ),
+
+        /* ── recent cards with recipient names ── */
+        pool.query(
+          `SELECT recipient_name, occasion, template, is_free, created_at
+           FROM hs_card_events
+           WHERE event = 'card_created' AND ${EXCL}
+           ORDER BY created_at DESC
+           LIMIT 20`,
+          ep,
+        ),
       ]);
 
     return res.json({
@@ -172,6 +177,7 @@ router.get("/events/analytics", async (req, res) => {
       signed_in_cohorts: userCohorts.rows,
       anon_cohorts: anon_cohorts.rows,
       signed_up_after_wall: signedInAfterWall.rows[0]?.count ?? 0,
+      recent_cards: recentCards.rows,
     });
   } catch (err) {
     console.error("[events/analytics]", err);

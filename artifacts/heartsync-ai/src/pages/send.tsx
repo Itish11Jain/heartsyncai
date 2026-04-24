@@ -184,6 +184,7 @@ export default function Send() {
       used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
       is_free: isFree,
       from_card_ref: fromCardRef,
+      recipient_name: recipientName.trim() || undefined,
     });
 
     const url = buildCardUrl(recipientName.trim(), customMsg, true, template);
