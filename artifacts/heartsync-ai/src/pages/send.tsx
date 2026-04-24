@@ -25,7 +25,7 @@ export default function Send() {
 
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState(1);
-  const [occasion, setOccasion] = useState(searchParams.get("occasion") ?? "");
+  const [occasion, setOccasion] = useState(searchParams.get("occasion") ?? "feel_good");
   const [relation, setRelation] = useState(searchParams.get("relation") ?? "");
   const [recipientName, setRecipientName] = useState("");
   const [likes, setLikes] = useState("");
@@ -237,7 +237,18 @@ export default function Send() {
           {/* Step 1: Occasion */}
           {step === 1 && (
             <motion.div key="step1" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
-              <h1 className="text-2xl font-bold text-white text-center mb-1">What's the occasion?</h1>
+              <div className="relative flex justify-center items-center mb-1">
+                <motion.span className="absolute -top-2 left-[8%] text-yellow-300 text-xs pointer-events-none"
+                  animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.85, repeat:Infinity, repeatDelay:2.8, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute -top-1 right-[10%] text-yellow-200 text-sm pointer-events-none"
+                  animate={{ scale:[0,1.0,0], opacity:[0,0.85,0] }}
+                  transition={{ duration:1.0, repeat:Infinity, repeatDelay:2.2, delay:1.1, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute bottom-0 left-[38%] text-pink-300 text-xs pointer-events-none"
+                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.75, repeat:Infinity, repeatDelay:3.2, delay:1.8, ease:"easeInOut" }}>✦</motion.span>
+                <h1 className="text-2xl font-bold text-white text-center">What's the occasion?</h1>
+              </div>
               <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
                 Pick the vibe for your card
               </p>
@@ -275,7 +286,18 @@ export default function Send() {
               <button onClick={() => goTo(1, -1)} className="flex items-center gap-1 text-sm mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>
                 <ChevronLeft size={15} /> Back
               </button>
-              <h1 className="text-2xl font-bold text-white text-center mb-2">Who is it for?</h1>
+              <div className="relative flex justify-center items-center mb-2">
+                <motion.span className="absolute -top-2 left-[14%] text-yellow-300 text-xs pointer-events-none"
+                  animate={{ scale:[0,1.2,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute -top-1 right-[14%] text-yellow-200 text-sm pointer-events-none"
+                  animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
+                  transition={{ duration:1.0, repeat:Infinity, repeatDelay:2.4, delay:1.0, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute bottom-0 right-[35%] text-pink-300 text-xs pointer-events-none"
+                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:3.0, delay:1.7, ease:"easeInOut" }}>✦</motion.span>
+                <h1 className="text-2xl font-bold text-white text-center">Who is it for?</h1>
+              </div>
               <p className="text-center text-sm mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
                 We'll personalise the message
               </p>
