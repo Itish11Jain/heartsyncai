@@ -720,18 +720,35 @@ export default function Home() {
                 Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
               </p>
 
-              <Button
-                asChild
-                size="lg"
-                className="w-full rounded-2xl h-13 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all"
-              >
-                <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => home.cta()}>
-                  Send cards now — Free!
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
-                </Link>
-              </Button>
+              <div className="relative w-full">
+                <motion.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
+                  animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute -top-3 right-[16%] text-yellow-200 text-sm pointer-events-none z-10"
+                  animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
+                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute -bottom-2 right-[28%] text-pink-300 text-xs pointer-events-none z-10"
+                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</motion.span>
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full rounded-2xl h-13 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
+                >
+                  <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => home.cta()}>
+                    <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
+                      style={{ background:"linear-gradient(to right, transparent, rgba(255,255,255,0.28), transparent)" }}
+                      animate={{ x:["-200%","200%"] }}
+                      transition={{ duration:1.6, repeat:Infinity, repeatDelay:2.4, ease:"easeInOut" }} />
+                    <span className="relative z-10 flex items-center gap-2">
+                      Send cards now — Free!
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      </svg>
+                    </span>
+                  </Link>
+                </Button>
+              </div>
 
               <div className="flex items-center justify-center gap-3 mt-3" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
                 <div className="flex -space-x-1.5">
@@ -766,17 +783,32 @@ export default function Home() {
                 We write the perfect heartfelt message for you. Pick a style. Share in 60 seconds.
               </p>
 
-              <div className="mb-10">
+              <div className="mb-10 relative inline-block">
+                <motion.span className="absolute -top-3 left-[8%] text-yellow-300 text-xs pointer-events-none z-10"
+                  animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute -top-3 right-[12%] text-yellow-200 text-sm pointer-events-none z-10"
+                  animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
+                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</motion.span>
+                <motion.span className="absolute -bottom-2 right-[22%] text-pink-300 text-xs pointer-events-none z-10"
+                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
+                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</motion.span>
                 <Button
                   asChild
                   size="lg"
-                  className="rounded-2xl h-14 px-8 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all"
+                  className="rounded-2xl h-14 px-8 text-base font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
                 >
                   <Link href="/send" className="flex items-center gap-2" onClick={() => home.cta()}>
-                    Send cards now — Free!
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
+                    <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
+                      style={{ background:"linear-gradient(to right, transparent, rgba(255,255,255,0.28), transparent)" }}
+                      animate={{ x:["-200%","200%"] }}
+                      transition={{ duration:1.6, repeat:Infinity, repeatDelay:2.4, ease:"easeInOut" }} />
+                    <span className="relative z-10 flex items-center gap-2">
+                      Send cards now — Free!
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      </svg>
+                    </span>
                   </Link>
                 </Button>
               </div>
