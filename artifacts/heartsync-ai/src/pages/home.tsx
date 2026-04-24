@@ -61,12 +61,12 @@ function CardIllustration() {
   useEffect(() => {
     setSeq(0);
     setShowBlurb(false);
-    const t1 = setTimeout(() => setSeq(1), 2800);
-    const t2 = setTimeout(() => setSeq(2), 4200);
-    const t3 = setTimeout(() => setShowBlurb(true), 5700);
-    const t4 = setTimeout(() => setShowBlurb(false), 7000);
-    const t5 = setTimeout(() => setSeq(3), 7400);
-    const t6 = setTimeout(() => setLoopCount(c => c + 1), 10800);
+    const t1 = setTimeout(() => setSeq(1), 1400);
+    const t2 = setTimeout(() => setSeq(2), 2100);
+    const t3 = setTimeout(() => setShowBlurb(true), 2850);
+    const t4 = setTimeout(() => setShowBlurb(false), 3500);
+    const t5 = setTimeout(() => setSeq(3), 3700);
+    const t6 = setTimeout(() => setLoopCount(c => c + 1), 5400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); clearTimeout(t6); };
   }, [loopCount]);
 
@@ -694,9 +694,9 @@ export default function Home() {
               <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
             </div>
 
-            {/* 2. Scaled-down carousel */}
-            <div style={{ transform: "scale(0.65)", transformOrigin: "top center", marginBottom: -100 }}>
-              <CardCarousel />
+            {/* 2. Envelope preview — larger & more prominent */}
+            <div style={{ transform: "scale(0.82)", transformOrigin: "top center", marginBottom: -60 }}>
+              <CardIllustration />
             </div>
 
             {/* 3. Subtitle + CTA + social proof */}
@@ -777,7 +777,7 @@ export default function Home() {
             </div>
 
             <div className="flex justify-center md:justify-start md:pl-4">
-              <CardCarousel />
+              <CardIllustration />
             </div>
           </div>
         </motion.section>
