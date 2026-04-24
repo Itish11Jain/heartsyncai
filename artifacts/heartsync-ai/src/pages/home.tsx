@@ -766,14 +766,26 @@ export default function Home() {
               Send love<br />in a card.
             </h1>
 
-            {/* 2. Explainer — above the card, single line */}
-            <p className="text-xs font-medium mb-5 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.52)", letterSpacing: "0.01em" }}>
+            {/* 2. Explainer — above the card, single line with golden shimmer */}
+            <motion.p
+              className="text-xs font-medium mb-5 whitespace-nowrap"
+              style={{
+                letterSpacing: "0.01em",
+                background: "linear-gradient(90deg, rgba(255,255,255,0.45) 0%, #FFD700 30%, #FFA500 50%, #FFD700 70%, rgba(255,255,255,0.45) 100%)",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+              animate={{ backgroundPosition: ["100% 0%", "-100% 0%"] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "linear", repeatDelay: 1.5 }}
+            >
               Pick who it's for
-              <span style={{ color: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
+              <span style={{ WebkitTextFillColor: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
               We write it
-              <span style={{ color: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
+              <span style={{ WebkitTextFillColor: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
               You share
-            </p>
+            </motion.p>
 
             {/* 3. Card preview — scale(0.72), marginBottom compensates for layout vs visual size gap */}
             <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -70, width: "100%", display: "flex", justifyContent: "center" }}>
