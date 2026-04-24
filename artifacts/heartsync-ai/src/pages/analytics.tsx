@@ -95,8 +95,15 @@ export default function Analytics() {
     }
     const key = ADMIN_KEY || prompt("Enter admin key:") || "";
     fetch(`${BASE}/api/events/analytics?key=${encodeURIComponent(key)}`)
-      .then(r => r.json())
-      .then((d: AnalyticsData) => { setData(d); setLoading(false); })
+      .then(r => {
+        if (!r.ok) throw new Error(`Analytics API returned ${r.status} — check VITE_ADMIN_SECRET`);
+        return r.json();
+      })
+      .then((d: AnalyticsData) => {
+        if (!d.overview) throw new Error("API response missing overview field");
+        setData(d);
+        setLoading(false);
+      })
       .catch(e => { setError(String(e)); setLoading(false); });
   }, [isLoaded, userEmail, navigate]);
 
