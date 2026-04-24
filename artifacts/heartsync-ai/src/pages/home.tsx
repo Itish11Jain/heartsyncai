@@ -733,9 +733,9 @@ export default function Home() {
         <div className="absolute top-[30%] right-[0%] w-[40%] h-[40%] rounded-full bg-accent/8 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-6 pb-20">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-3 pb-4 md:pt-6 md:pb-20">
         {/* Header */}
-        <header className="flex justify-between items-center mb-3 md:mb-20">
+        <header className="flex justify-between items-center mb-1 md:mb-20">
           <div className="flex items-center gap-2.5">
             <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl">
               <HeartPulse className="w-5 h-5 text-white" />
@@ -762,34 +762,34 @@ export default function Home() {
           className="mb-28"
         >
           {/* ── Mobile layout (< md): headline first, card, then CTA ── */}
-          <div className="md:hidden flex flex-col items-center pt-2">
+          <div className="md:hidden flex flex-col items-center pt-1">
 
             {/* 1. Headline at the top */}
-            <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-2 text-white text-center">
+            <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-1 text-white text-center">
               Send love<br />in a card.
             </h1>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-primary/8 mb-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-primary/8 mb-2">
               <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
               <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
             </div>
 
-            {/* 2. Envelope preview — larger & more prominent */}
-            <div style={{ position: "relative", transform: "scale(0.82)", transformOrigin: "top center", marginBottom: -60 }}>
-              <div style={{ position: "relative", zIndex: 1 }}>
+            {/* 2. Envelope preview — height-constrained so layout = visual size */}
+            <div style={{ position: "relative", width: "100%", height: 248, overflow: "visible", display: "flex", justifyContent: "center" }}>
+              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%) scale(0.76)", transformOrigin: "top center", zIndex: 1 }}>
                 <CardIllustration />
               </div>
             </div>
 
             {/* 3. Subtitle + CTA + social proof */}
             <div className="w-full px-1">
-              <p className="text-xs font-semibold mb-4 mt-2 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
+              <p className="text-xs font-semibold mb-2 mt-1 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
                 Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
               </p>
 
               {/* Explainer steps */}
-              <div className="flex items-center justify-center gap-1.5 mb-5 flex-wrap">
+              <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap">
                 {[
                   "Pick who it's for",
                   "→",
