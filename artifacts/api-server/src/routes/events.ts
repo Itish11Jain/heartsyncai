@@ -201,4 +201,22 @@ router.get("/events/analytics", async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/events/reset?key=ADMIN_SECRET
+ * Wipes all analytics + usage data (admin only).
+ */
+router.delete("/events/reset", async (req, res) => {
+  if (!ADMIN_KEY || req.query["key"] !== ADMIN_KEY) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    await pool.query("TRUNCATE TABLE hs_card_events RESTART IDENTITY");
+    await pool.query("TRUNCATE TABLE hs_card_usage RESTART IDENTITY");
+    await pool.query("TRUNCATE TABLE hs_clerk_users RESTART IDENTITY");
+    return res.json({ ok: true, message: "All analytics data cleared." });
+  } catch (err) {
+    return res.status(500).json({ error: "internal", detail: String(err) });
+  }
+});
+
 export default router;
