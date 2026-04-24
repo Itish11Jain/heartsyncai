@@ -769,16 +769,14 @@ export default function Home() {
               Send love<br />in a card.
             </h1>
 
-            {/* 2. Explainer — above the card so glow can never cover it */}
-            <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap">
-              {["Pick who it's for","→","We write the message","→","Share the link"].map((item, i) => (
-                <span key={i} className="text-xs font-medium" style={{
-                  color: item === "→" ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.52)",
-                }}>
-                  {item}
-                </span>
-              ))}
-            </div>
+            {/* 2. Explainer — above the card, single line */}
+            <p className="text-xs font-medium mb-3 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.52)", letterSpacing: "0.01em" }}>
+              Pick who it's for
+              <span style={{ color: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
+              We write it
+              <span style={{ color: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
+              You share
+            </p>
 
             {/* 3. Card preview — scale(0.72), marginBottom compensates for layout vs visual size gap */}
             <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -70, width: "100%", display: "flex", justifyContent: "center" }}>
