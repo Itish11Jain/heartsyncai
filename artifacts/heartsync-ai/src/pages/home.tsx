@@ -817,7 +817,7 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="w-full rounded-2xl h-13 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
+                  className="w-full rounded-2xl h-13 text-sm sm:text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
                 >
                   <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => home.cta()}>
                     <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
