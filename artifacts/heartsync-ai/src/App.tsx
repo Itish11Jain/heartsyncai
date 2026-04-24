@@ -18,6 +18,8 @@ import DateGuide from "@/pages/date-guide";
 import Send from "@/pages/send";
 import CardExperience from "@/pages/card";
 import CrystalCard from "@/pages/crystal";
+import CosmicCard from "@/pages/cosmic";
+import VinylCard from "@/pages/vinyl";
 import Analytics from "@/pages/analytics";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
@@ -177,6 +179,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/send" component={Send} />
             <Route path="/card" component={CardExperience} />
             <Route path="/crystal" component={CrystalCard} />
+            <Route path="/cosmic" component={CosmicCard} />
+            <Route path="/vinyl" component={VinylCard} />
             <Route path="/analytics" component={Analytics} />
             <Route component={NotFound} />
           </Switch>
