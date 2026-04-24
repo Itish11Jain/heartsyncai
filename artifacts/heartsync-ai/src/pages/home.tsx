@@ -764,41 +764,29 @@ export default function Home() {
           {/* ── Mobile layout (< md): headline first, card, then CTA ── */}
           <div className="md:hidden flex flex-col items-center pt-1">
 
-            {/* 1. Headline at the top */}
+            {/* 1. Headline */}
             <h1 className="text-4xl font-extrabold tracking-tight leading-[1.08] mb-1 text-white text-center">
               Send love<br />in a card.
             </h1>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-primary/8 mb-2">
-              <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
+
+            {/* 2. Explainer — above the card so glow can never cover it */}
+            <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap">
+              {["Pick who it's for","→","We write the message","→","Share the link"].map((item, i) => (
+                <span key={i} className="text-xs font-medium" style={{
+                  color: item === "→" ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.52)",
+                }}>
+                  {item}
+                </span>
+              ))}
             </div>
 
-            {/* 2. Envelope preview — wrapper height = card visual height at scale so nothing overlaps */}
-            <div style={{ position: "relative", width: "100%", height: 292, overflow: "visible", display: "flex", justifyContent: "center" }}>
-              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%) scale(0.76)", transformOrigin: "top center", zIndex: 1 }}>
-                <CardIllustration />
-              </div>
+            {/* 3. Card preview — scale(0.72), marginBottom pulls next element to visual bottom */}
+            <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -108, width: "100%", display: "flex", justifyContent: "center" }}>
+              <CardIllustration />
             </div>
 
-            {/* 3. CTA + social proof */}
+            {/* 4. CTA + social proof */}
             <div className="w-full px-1">
-              {/* Explainer steps */}
-              <div className="flex items-center justify-center gap-1.5 mb-3 flex-wrap">
-                {[
-                  "Pick who it's for",
-                  "→",
-                  "We write the message",
-                  "→",
-                  "Share the link",
-                ].map((item, i) => (
-                  <span key={i} className="text-xs font-medium" style={{
-                    color: item === "→" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.55)",
-                    letterSpacing: item === "→" ? 0 : "0.01em",
-                  }}>{item}</span>
-                ))}
-              </div>
 
               <div className="relative w-full">
                 <motion.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
