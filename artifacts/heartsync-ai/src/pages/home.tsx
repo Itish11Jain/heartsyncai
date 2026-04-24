@@ -52,30 +52,70 @@ const PREVIEW_ORB_POSITIONS = PREVIEW_ORBS.map((_, i) => {
 
 const PREVIEW_BLURB = { emoji: "🐼", text: "Panda-sized birthday hugs!" };
 
-/* Falling confetti behind the hero card preview */
-const HERO_CONFETTI = [
-  { x: -100, color: "#FFD700", w: 5,  h: 12, delay: 0.0, dur: 1.8, rot: 25  },
-  { x: -65,  color: "#FF69B4", w: 4,  h: 9,  delay: 0.4, dur: 2.1, rot: -30 },
-  { x: -30,  color: "#A78BFA", w: 5,  h: 11, delay: 0.8, dur: 1.6, rot: 20  },
-  { x:  0,   color: "#34D399", w: 4,  h: 8,  delay: 1.2, dur: 2.0, rot: -15 },
-  { x:  35,  color: "#FFD700", w: 5,  h: 12, delay: 0.2, dur: 1.9, rot: 30  },
-  { x:  70,  color: "#FF69B4", w: 4,  h: 9,  delay: 1.5, dur: 1.7, rot: -25 },
-  { x:  105, color: "#4FC3F7", w: 5,  h: 10, delay: 0.6, dur: 2.2, rot: 20  },
-  { x: -82,  color: "#FFAB40", w: 4,  h: 8,  delay: 1.8, dur: 1.8, rot: -20 },
-  { x:  15,  color: "#F06292", w: 5,  h: 11, delay: 1.0, dur: 2.0, rot: 15  },
-  { x: -50,  color: "#81D4FA", w: 4,  h: 9,  delay: 0.3, dur: 1.7, rot: -30 },
-  { x:  52,  color: "#FFD700", w: 3,  h: 7,  delay: 2.0, dur: 1.9, rot: 35  },
-  { x: -15,  color: "#FF69B4", w: 3,  h: 8,  delay: 1.4, dur: 2.1, rot: -15 },
+/* One-shot page-level confetti that bursts from behind the preview on load */
+const CONFETTI_PIECES = [
+  { dx:  -55, dy: -420, color: "#FFD700", w: 6,  h: 14, rot: 120,  delay: 0.05, dur: 2.8 },
+  { dx:   60, dy: -390, color: "#FF69B4", w: 5,  h: 11, rot: -95,  delay: 0.0,  dur: 3.0 },
+  { dx: -130, dy: -310, color: "#A78BFA", w: 5,  h: 12, rot: 80,   delay: 0.1,  dur: 3.2 },
+  { dx:  150, dy: -280, color: "#34D399", w: 4,  h: 10, rot: -110, delay: 0.05, dur: 2.9 },
+  { dx:   -5, dy: -460, color: "#FFD700", w: 6,  h: 13, rot: 60,   delay: 0.12, dur: 2.7 },
+  { dx:  220, dy: -200, color: "#FF69B4", w: 5,  h: 11, rot: -70,  delay: 0.0,  dur: 3.3 },
+  { dx: -230, dy: -180, color: "#4FC3F7", w: 5,  h: 12, rot: 140,  delay: 0.08, dur: 3.1 },
+  { dx:   95, dy: -430, color: "#FFAB40", w: 4,  h: 10, rot: -50,  delay: 0.15, dur: 2.6 },
+  { dx: -100, dy: -400, color: "#F06292", w: 6,  h: 13, rot: 100,  delay: 0.02, dur: 3.0 },
+  { dx:  310, dy:  -80, color: "#81D4FA", w: 5,  h: 11, rot: -130, delay: 0.1,  dur: 3.4 },
+  { dx: -320, dy:  -60, color: "#FFD700", w: 4,  h: 9,  rot: 75,   delay: 0.06, dur: 3.2 },
+  { dx:  170, dy: -360, color: "#A78BFA", w: 6,  h: 14, rot: -85,  delay: 0.0,  dur: 2.8 },
+  { dx: -170, dy: -340, color: "#FF69B4", w: 5,  h: 11, rot: 115,  delay: 0.14, dur: 3.0 },
+  { dx:  -30, dy:  200, color: "#FFD700", w: 5,  h: 12, rot: 45,   delay: 0.03, dur: 3.5 },
+  { dx:   40, dy:  230, color: "#34D399", w: 4,  h: 10, rot: -60,  delay: 0.1,  dur: 3.3 },
+  { dx: -260, dy:   80, color: "#4FC3F7", w: 5,  h: 12, rot: 90,   delay: 0.07, dur: 3.6 },
+  { dx:  260, dy:   60, color: "#FFAB40", w: 4,  h: 9,  rot: -100, delay: 0.12, dur: 3.4 },
+  { dx:  -80, dy: -480, color: "#FF69B4", w: 6,  h: 14, rot: 130,  delay: 0.0,  dur: 2.6 },
+  { dx:   80, dy: -450, color: "#FFD700", w: 5,  h: 11, rot: -55,  delay: 0.09, dur: 2.9 },
+  { dx:  370, dy:  120, color: "#F06292", w: 4,  h: 10, rot: 65,   delay: 0.04, dur: 3.7 },
+  { dx: -370, dy:  100, color: "#A78BFA", w: 5,  h: 12, rot: -90,  delay: 0.11, dur: 3.5 },
+  { dx:  130, dy:  310, color: "#81D4FA", w: 5,  h: 11, rot: 105,  delay: 0.06, dur: 3.8 },
+  { dx: -140, dy:  290, color: "#FFD700", w: 4,  h: 9,  rot: -75,  delay: 0.13, dur: 3.6 },
+  { dx:    5, dy: -500, color: "#FF69B4", w: 6,  h: 14, rot: 150,  delay: 0.01, dur: 2.7 },
+  { dx:  -45, dy:  380, color: "#34D399", w: 5,  h: 12, rot: -40,  delay: 0.08, dur: 4.0 },
+  { dx:   50, dy:  360, color: "#FFAB40", w: 4,  h: 10, rot: 85,   delay: 0.15, dur: 3.9 },
+  { dx: -200, dy: -260, color: "#4FC3F7", w: 5,  h: 11, rot: -120, delay: 0.03, dur: 3.1 },
+  { dx:  200, dy: -240, color: "#FFD700", w: 6,  h: 13, rot: 55,   delay: 0.1,  dur: 3.0 },
 ];
-function HeroConfetti() {
+
+function PageConfetti() {
+  const [fired, setFired] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFired(true), 200);
+    return () => clearTimeout(t);
+  }, []);
+  if (!fired) return null;
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-      {HERO_CONFETTI.map((c, i) => (
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, pointerEvents: "none", overflow: "hidden" }}>
+      {CONFETTI_PIECES.map((c, i) => (
         <motion.div
           key={i}
-          style={{ position: "absolute", top: 0, left: `calc(50% + ${c.x}px)`, width: c.w, height: c.h, borderRadius: 2, background: c.color }}
-          animate={{ y: ["0%", "500%"], opacity: [0, 1, 1, 0], rotate: [0, c.rot * 3] }}
-          transition={{ duration: c.dur, delay: c.delay, repeat: Infinity, ease: "easeIn" }}
+          style={{
+            position: "absolute",
+            top: "40%",
+            left: "50%",
+            width: c.w,
+            height: c.h,
+            borderRadius: 2,
+            background: c.color,
+            originX: 0.5,
+            originY: 0.5,
+          }}
+          initial={{ x: 0, y: 0, opacity: 0, rotate: 0, scale: 0.6 }}
+          animate={{
+            x: c.dx,
+            y: c.dy,
+            opacity: [0, 1, 1, 0],
+            rotate: c.rot,
+            scale: [0.6, 1.1, 1],
+          }}
+          transition={{ duration: c.dur, delay: c.delay, ease: [0.16, 1, 0.3, 1] }}
         />
       ))}
     </div>
@@ -686,6 +726,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
+      <PageConfetti />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[55%] h-[55%] rounded-full bg-primary/15 blur-[130px]" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-secondary/15 blur-[160px]" />
@@ -736,7 +777,6 @@ export default function Home() {
 
             {/* 2. Envelope preview — larger & more prominent */}
             <div style={{ position: "relative", transform: "scale(0.82)", transformOrigin: "top center", marginBottom: -60 }}>
-              <HeroConfetti />
               <div style={{ position: "relative", zIndex: 1 }}>
                 <CardIllustration />
               </div>
@@ -765,9 +805,9 @@ export default function Home() {
                 >
                   <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => home.cta()}>
                     <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
-                      style={{ background:"linear-gradient(to right, transparent 10%, rgba(255,255,255,0.55) 50%, transparent 90%)" }}
-                      animate={{ x:["-200%","200%"] }}
-                      transition={{ duration:1.4, repeat:Infinity, repeatDelay:2.0, ease:"easeInOut" }} />
+                      style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
+                      animate={{ x:["-130%","130%"] }}
+                      transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
                       Send cards now — Free!
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -828,9 +868,9 @@ export default function Home() {
                 >
                   <Link href="/send" className="flex items-center gap-2" onClick={() => home.cta()}>
                     <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
-                      style={{ background:"linear-gradient(to right, transparent 10%, rgba(255,255,255,0.55) 50%, transparent 90%)" }}
-                      animate={{ x:["-200%","200%"] }}
-                      transition={{ duration:1.4, repeat:Infinity, repeatDelay:2.0, ease:"easeInOut" }} />
+                      style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
+                      animate={{ x:["-130%","130%"] }}
+                      transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
                       Send cards now — Free!
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -853,7 +893,6 @@ export default function Home() {
 
             <div className="flex justify-center md:justify-start md:pl-4">
               <div style={{ position: "relative" }}>
-                <HeroConfetti />
                 <div style={{ position: "relative", zIndex: 1 }}>
                   <CardIllustration />
                 </div>
