@@ -151,6 +151,16 @@ export default function Send() {
   async function handleFinish() {
     if (!recipientName.trim() || showGenerating) return;
 
+    // Track generate button click immediately (before any gates)
+    trackEvent({
+      event: "generate_clicked",
+      fingerprint,
+      clerk_user_id: clerkUserId ?? undefined,
+      email: userEmail ?? undefined,
+      occasion,
+      recipient_name: recipientName.trim() || undefined,
+    });
+
     // Check gate (only after usage has loaded)
     if (!usageLoading) {
       const gate = gateNeeded(usage);

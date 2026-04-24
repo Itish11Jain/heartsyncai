@@ -7,6 +7,8 @@ const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const ADMIN_KEY = import.meta.env.VITE_ADMIN_SECRET ?? "";
 
 type Overview = {
+  cta_clicks: string;
+  generate_clicks: string;
   cards_created: string;
   free_cards: string;
   paid_cards: string;
@@ -128,6 +130,28 @@ export default function Analytics() {
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginBottom: 28 }}>
           Excluding superuser · Real users only
         </p>
+
+        {/* ── Conversion Funnel ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Conversion Funnel</h2>
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", padding: "12px 16px", marginBottom: 24 }}>
+          {[
+            { label: "Home CTA Clicked", value: o.cta_clicks, next: o.generate_clicks },
+            { label: "Generate Clicked", value: o.generate_clicks, next: o.cards_created },
+            { label: "Card Created", value: o.cards_created, next: null },
+          ].map((step, i) => (
+            <div key={step.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+              <div>
+                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>{step.label}</span>
+                {step.next !== null && (
+                  <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginLeft: 8 }}>
+                    → {pct(step.next, step.value)} continued
+                  </span>
+                )}
+              </div>
+              <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 20 }}>{step.value}</span>
+            </div>
+          ))}
+        </div>
 
         {/* ── Cards Created ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Cards</h2>

@@ -3,6 +3,9 @@
  * All calls are fire-and-forget — they never block the UI.
  * Events from SUPERUSER_EMAILS are dropped on the server too,
  * but we skip the network call entirely on the client for cleanliness.
+ *
+ * Uses fetch with keepalive:true (survives page navigation) instead of
+ * sendBeacon, which fails through the Replit mTLS proxy.
  */
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
@@ -30,21 +33,21 @@ export type CardEventPayload = {
 
 export function trackEvent(payload: CardEventPayload): void {
   if (isSuperUser(payload.email)) return;
+
   const fp = (() => {
     try { return localStorage.getItem("hs_fp") ?? undefined; } catch { return undefined; }
   })();
+
   const body = JSON.stringify({ ...payload, fingerprint: payload.fingerprint ?? fp });
+
+  // fetch with keepalive:true persists through page navigation and works
+  // reliably through the Replit proxy (sendBeacon does not).
   try {
-    if (navigator.sendBeacon) {
-      const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon(`${BASE}/api/events/card`, blob);
-    } else {
-      void fetch(`${BASE}/api/events/card`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        keepalive: true,
-      });
-    }
+    void fetch(`${BASE}/api/events/card`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true,
+    });
   } catch { /* non-blocking */ }
 }

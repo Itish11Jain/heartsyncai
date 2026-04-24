@@ -101,6 +101,8 @@ router.get("/events/analytics", async (req, res) => {
         /* ── overview metrics ── */
         pool.query(
           `SELECT
+            COUNT(*) FILTER (WHERE event = 'cta_clicked')                                        AS cta_clicks,
+            COUNT(*) FILTER (WHERE event = 'generate_clicked')                                   AS generate_clicks,
             COUNT(*) FILTER (WHERE event = 'card_created')                                       AS cards_created,
             COUNT(*) FILTER (WHERE event = 'card_created' AND is_free = true)                    AS free_cards,
             COUNT(*) FILTER (WHERE event = 'card_created' AND is_free = false)                   AS paid_cards,
