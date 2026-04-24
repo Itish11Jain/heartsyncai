@@ -784,9 +784,25 @@ export default function Home() {
 
             {/* 3. Subtitle + CTA + social proof */}
             <div className="w-full px-1">
-              <p className="text-xs font-semibold mb-5 mt-2 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
+              <p className="text-xs font-semibold mb-4 mt-2 tracking-wide text-center" style={{ color: "rgba(255,215,0,0.6)" }}>
                 Personalised &nbsp;·&nbsp; 100+ Templates &nbsp;·&nbsp; All Occasions
               </p>
+
+              {/* Explainer steps */}
+              <div className="flex items-center justify-center gap-1.5 mb-5 flex-wrap">
+                {[
+                  "Pick who it's for",
+                  "→",
+                  "We write the message",
+                  "→",
+                  "Share the link",
+                ].map((item, i) => (
+                  <span key={i} className="text-xs font-medium" style={{
+                    color: item === "→" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.55)",
+                    letterSpacing: item === "→" ? 0 : "0.01em",
+                  }}>{item}</span>
+                ))}
+              </div>
 
               <div className="relative w-full">
                 <motion.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
@@ -809,7 +825,7 @@ export default function Home() {
                       animate={{ x:["-130%","130%"] }}
                       transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
-                      Try it now for free
+                      Send a card in 20 seconds — Free
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                       </svg>
@@ -851,6 +867,22 @@ export default function Home() {
                 We write the perfect heartfelt message for you. Pick a style. Share in 60 seconds.
               </p>
 
+              {/* Explainer steps */}
+              <div className="flex items-center gap-2 mb-7 flex-wrap">
+                {[
+                  "Pick who it's for",
+                  "→",
+                  "We write the message",
+                  "→",
+                  "Share the link",
+                ].map((item, i) => (
+                  <span key={i} className="text-sm font-medium" style={{
+                    color: item === "→" ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.5)",
+                    letterSpacing: item === "→" ? 0 : "0.01em",
+                  }}>{item}</span>
+                ))}
+              </div>
+
               <div className="mb-10 relative inline-block">
                 <motion.span className="absolute -top-3 left-[8%] text-yellow-300 text-xs pointer-events-none z-10"
                   animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
@@ -872,7 +904,7 @@ export default function Home() {
                       animate={{ x:["-130%","130%"] }}
                       transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
-                      Try it now for free
+                      Send a card in 20 seconds — Free
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                       </svg>
