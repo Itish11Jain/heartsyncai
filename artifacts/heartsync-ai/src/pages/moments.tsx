@@ -239,7 +239,7 @@ export default function Moments() {
 
   function handleShareWhatsApp() {
     const purposeLabel = PURPOSE_OPTIONS.find((p) => p.id === purpose)?.label ?? "";
-    const text = `I made a "${purposeLabel}" card for ${recipientName} using HeartSync AI 💙\n\n"${generatedMessage}"\n\n📲 Download the card and try it at https://heartsyncai.replit.app`;
+    const text = `I made a "${purposeLabel}" card for ${recipientName} using HeartSync AI 💙\n\n"${generatedMessage}"\n\n📲 Download the card and try it at https://heartsync.in`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
