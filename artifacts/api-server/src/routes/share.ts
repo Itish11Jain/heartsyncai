@@ -210,17 +210,17 @@ router.get("/share", (req, res) => {
   <meta property="og:title" content="${escHtml(ogTitle)}"/>
   <meta property="og:description" content="${escHtml(ogDesc)}"/>
   <meta property="og:image" content="${escHtml(ogImageUrl)}"/>
+  <meta property="og:image:secure_url" content="${escHtml(ogImageUrl)}"/>
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
   <meta property="og:image:type" content="image/png"/>
+  <meta property="og:image:alt" content="${escHtml(ogTitle)}"/>
   <meta property="og:url" content="${escHtml(canonicalUrl)}"/>
 
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="${escHtml(ogTitle)}"/>
   <meta name="twitter:description" content="${escHtml(ogDesc)}"/>
   <meta name="twitter:image" content="${escHtml(ogImageUrl)}"/>
-
-  <meta http-equiv="refresh" content="0;url=${escHtml(cardPath)}"/>
 
   <style>
     html,body{margin:0;padding:0;background:#0c030e;min-height:100vh;
@@ -232,6 +232,9 @@ router.get("/share", (req, res) => {
 <body>
   <p>Opening your card\u2026</p>
   <span>HeartSync AI</span>
+  <noscript>
+    <p style="margin-top:24px;"><a href="${escHtml(cardPath)}" style="color:#FFD700;">Tap here to open your card</a></p>
+  </noscript>
   <script>window.location.replace(${JSON.stringify(cardPath)});</script>
 </body>
 </html>`;
