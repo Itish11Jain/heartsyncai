@@ -34,6 +34,7 @@ type Occasion = { occasion: string; cnt: string };
 type Cohort = { cards_used?: string; card_count?: string; users: string };
 type RecentCard = { card_id: string | null; recipient_name: string | null; occasion: string | null; template: string | null; is_free: boolean | null; created_at: string; view_count: string | number };
 type VitalRow = { metric_name: string; samples: number; p50: string | number | null; p75: string | number | null; p90: string | number | null };
+type UtmRow = { source: string; sessions: string | number; cta_users: string | number; card_creators: string | number; cards: string | number; paid_cards: string | number };
 
 type AnalyticsData = {
   overview: Overview;
@@ -43,6 +44,7 @@ type AnalyticsData = {
   signed_up_after_wall: string | number;
   recent_cards: RecentCard[];
   vitals?: VitalRow[];
+  utm_funnel?: UtmRow[];
 };
 
 const VITAL_DESCRIPTIONS: Record<string, string> = {
@@ -232,6 +234,41 @@ export default function Analytics() {
               <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, textAlign: "right" }}>
                 {step.nextEvents !== null ? pct(step.nextEvents, step.events) : "—"}
               </span>
+            </div>
+          ))}
+        </div>
+
+        {/* ── UTM / Source Attribution ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+          Acquisition by Source (UTM)
+        </h2>
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 70px 70px 70px 70px 70px", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Source</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Visitors</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>CTA</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Cards</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Paid</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Conv%</span>
+          </div>
+          {(!data.utm_funnel || data.utm_funnel.length === 0) && (
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 14px" }}>
+              No UTM data yet — share links with <code style={{ color: "#FFD700" }}>?utm_source=meta&utm_campaign=...</code> to start attributing visits.
+            </p>
+          )}
+          {(data.utm_funnel ?? []).map((r, i, arr) => (
+            <div key={r.source + String(i)} style={{ display: "grid", gridTemplateColumns: "1.4fr 70px 70px 70px 70px 70px", padding: "10px 14px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
+              <div>
+                <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600 }}>{r.source}</div>
+                <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, marginTop: 2 }}>
+                  {r.card_creators} unique creator{Number(r.card_creators) === 1 ? "" : "s"}
+                </div>
+              </div>
+              <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "right" }}>{r.sessions}</span>
+              <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 13, textAlign: "right" }}>{r.cta_users}</span>
+              <span style={{ color: "#FFD700", fontWeight: 700, fontSize: 14, textAlign: "right" }}>{r.cards}</span>
+              <span style={{ color: Number(r.paid_cards) > 0 ? "#34d399" : "rgba(255,255,255,0.3)", fontWeight: Number(r.paid_cards) > 0 ? 700 : 400, fontSize: 13, textAlign: "right" }}>{r.paid_cards}</span>
+              <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, textAlign: "right" }}>{pct(r.cards, r.sessions)}</span>
             </div>
           ))}
         </div>

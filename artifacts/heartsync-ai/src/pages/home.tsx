@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { home } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 
@@ -428,6 +429,32 @@ function CardIllustration() {
           ✦
         </motion.div>
       ))}
+
+      {/* Floating cute edge emojis — kept across all phases */}
+      <motion.div
+        animate={{ y: [-6, 6, -6], rotate: [-4, 4, -4] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", top: -18, right: -10, fontSize: 36, filter: "drop-shadow(0 6px 12px rgba(236,72,153,0.45))", zIndex: 40, pointerEvents: "none" }}
+        aria-hidden="true"
+      >
+        💖
+      </motion.div>
+      <motion.div
+        animate={{ y: [4, -4, 4], rotate: [6, -6, 6] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", top: "26%", left: -22, fontSize: 28, filter: "drop-shadow(0 4px 10px rgba(255,215,0,0.5))", zIndex: 40, pointerEvents: "none" }}
+        aria-hidden="true"
+      >
+        ✨
+      </motion.div>
+      <motion.div
+        animate={{ y: [-3, 5, -3], rotate: [-3, 3, -3] }}
+        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", bottom: 36, right: -22, fontSize: 42, filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.55))", zIndex: 40, pointerEvents: "none" }}
+        aria-hidden="true"
+      >
+        🐼
+      </motion.div>
     </div>
   );
 }
@@ -714,6 +741,22 @@ function CardCarousel() {
 
 export default function Home() {
   const guideCta = "/date-guide";
+  const [, navigate] = useLocation();
+  const [heroName, setHeroName] = useState("");
+
+  /** Build the deep-link to /send, optionally pre-filling the recipient name. */
+  const buildSendHref = (name: string): string => {
+    const trimmed = name.trim();
+    if (!trimmed) return "/send";
+    return `/send?to=${encodeURIComponent(trimmed.slice(0, 40))}`;
+  };
+
+  function goToSendWithName() {
+    const trimmed = heroName.trim().slice(0, 40);
+    home.cta();
+    trackEvent({ event: "cta_clicked", recipient_name: trimmed || undefined });
+    navigate(buildSendHref(trimmed));
+  }
 
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get("ref");
@@ -798,9 +841,37 @@ export default function Home() {
               <CardIllustration />
             </div>
 
-            {/* 4. CTA + social proof */}
-            <div className="w-full px-1">
+            {/* 4. Name input → CTA → social proof */}
+            <div className="w-full px-1 flex flex-col gap-2.5">
 
+              {/* Gradient-bordered name input — pink→orange to match CTA */}
+              <div className="flex flex-col gap-1">
+                <div
+                  className="rounded-2xl p-[1.5px]"
+                  style={{
+                    background: "linear-gradient(90deg, hsl(328 86% 59%), hsl(24 95% 53%))",
+                    boxShadow: "0 0 18px rgba(236,72,153,0.18)",
+                  }}
+                >
+                  <Input
+                    type="text"
+                    inputMode="text"
+                    autoComplete="given-name"
+                    enterKeyHint="go"
+                    maxLength={40}
+                    placeholder="Who is the card for?"
+                    aria-label="Recipient's first name"
+                    value={heroName}
+                    onChange={e => setHeroName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); goToSendWithName(); } }}
+                    className="h-13 rounded-[14px] border-0 bg-[#0d0618] text-white placeholder:text-white/35 px-4 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
+                    style={{ height: 52 }}
+                  />
+                </div>
+                <p className="text-[10.5px] text-white/40 pl-2">First name only — Priya, Aryan, Mom...</p>
+              </div>
+
+              {/* Single primary CTA */}
               <div className="relative w-full">
                 <motion.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
                   animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
@@ -812,32 +883,31 @@ export default function Home() {
                   animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
                   transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</motion.span>
                 <Button
-                  asChild
+                  type="button"
                   size="lg"
+                  onClick={goToSendWithName}
                   className="w-full rounded-2xl h-13 text-sm sm:text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
                 >
-                  <Link href="/send" className="flex items-center justify-center gap-2" onClick={() => { home.cta(); trackEvent({ event: "cta_clicked" }); }}>
-                    <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
-                      style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
-                      animate={{ x:["-130%","130%"] }}
-                      transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
-                    <span className="relative z-10 flex items-center gap-2">
-                      Send a card in 20 seconds — Free
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                      </svg>
-                    </span>
-                  </Link>
+                  <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
+                    style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
+                    animate={{ x:["-130%","130%"] }}
+                    transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
+                  <span className="relative z-10 flex items-center gap-2">
+                    Send a free card now!
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </span>
                 </Button>
               </div>
 
-              <div className="flex items-center justify-center gap-3 mt-3" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+              <div className="flex items-center justify-center gap-3 mt-1" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
                 <div className="flex -space-x-1.5">
                   {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
                     <div key={i} className="w-6 h-6 rounded-full border-2 border-background" style={{ background: c }} />
                   ))}
                 </div>
-                <p className="text-xs text-white/30">3,200+ cards sent this month</p>
+                <p className="text-xs text-white/55">3,200+ cards sent this month · 20 seconds, free</p>
               </div>
             </div>
           </div>
@@ -861,7 +931,7 @@ export default function Home() {
               </p>
 
               <p className="text-sm text-white/40 mb-10 leading-relaxed max-w-sm">
-                We write the perfect heartfelt message for you. Pick a style. Share in 60 seconds.
+                We write the perfect heartfelt message for you. Pick a style. Share in 20 seconds.
               </p>
 
               {/* Explainer steps */}
@@ -901,7 +971,7 @@ export default function Home() {
                       animate={{ x:["-130%","130%"] }}
                       transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
                     <span className="relative z-10 flex items-center gap-2">
-                      Send a card in 20 seconds — Free
+                      Send a free card now!
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                       </svg>

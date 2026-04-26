@@ -23,11 +23,18 @@ export default function Send() {
 
   const { usage, loading: usageLoading, incrementUsage, fingerprint, userEmail } = useCardUsage();
 
+  // Recipient name may be deep-linked from the home hero via `?to=...`.
+  // We trim/cap to keep storage and display sane.
+  const initialRecipientName = (() => {
+    const raw = searchParams.get("to") ?? "";
+    return raw.trim().slice(0, 40);
+  })();
+
   const [step, setStep] = useState(1);
   const [dir, setDir] = useState(1);
   const [occasion, setOccasion] = useState(searchParams.get("occasion") ?? "feel_good");
   const [relation, setRelation] = useState(searchParams.get("relation") ?? "");
-  const [recipientName, setRecipientName] = useState("");
+  const [recipientName, setRecipientName] = useState(initialRecipientName);
   const [likes, setLikes] = useState("");
   const [customMsg, setCustomMsg] = useState("");
   const [showGenerating, setShowGenerating] = useState(false);
@@ -294,10 +301,16 @@ export default function Send() {
                 <motion.span className="absolute bottom-0 left-[38%] text-pink-300 text-xs pointer-events-none"
                   animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
                   transition={{ duration:0.75, repeat:Infinity, repeatDelay:3.2, delay:1.8, ease:"easeInOut" }}>✦</motion.span>
-                <h1 className="text-2xl font-bold text-white text-center">What's the occasion?</h1>
+                <h1 className="text-2xl font-bold text-white text-center px-4">
+                  {recipientName.trim() ? (
+                    <>What's the vibe for <span style={{ color: "#FFD700" }}>{recipientName.trim()}</span>?</>
+                  ) : (
+                    <>What's the occasion?</>
+                  )}
+                </h1>
               </div>
               <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
-                Pick the vibe for your card
+                {recipientName.trim() ? "Tap one — we'll write it" : "Pick the vibe for your card"}
               </p>
               <div className="flex flex-col gap-2">
                 {OCCASIONS.map(occ => (

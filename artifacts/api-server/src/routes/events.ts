@@ -62,6 +62,10 @@ const ENSURE_TABLE = `
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS recipient_name TEXT;
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS card_id TEXT;
   CREATE INDEX IF NOT EXISTS hs_card_events_card_id ON hs_card_events(card_id);
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_source TEXT;
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_medium TEXT;
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
+  CREATE INDEX IF NOT EXISTS hs_card_events_utm_source ON hs_card_events(utm_source);
 `;
 
 const ENSURE_VITALS_TABLE = `
@@ -108,6 +112,7 @@ router.post("/events/card", async (req, res) => {
       occasion, template, channel,
       has_likes, used_custom_msg, is_free, from_card_ref,
       recipient_name, card_id,
+      utm_source, utm_medium, utm_campaign,
     } = req.body as Record<string, unknown>;
 
     if (!event || typeof event !== "string") {
@@ -119,11 +124,19 @@ router.post("/events/card", async (req, res) => {
       return res.json({ ok: true, dropped: true });
     }
 
+    /** Cap free-form UTM strings to keep cardinality bounded. */
+    const capUtm = (v: unknown, max: number): string | null => {
+      if (typeof v !== "string") return null;
+      const t = v.trim();
+      return t ? t.slice(0, max) : null;
+    };
+
     await pool.query(
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
-          channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+          channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id,
+          utm_source, utm_medium, utm_campaign)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
         event,
         fingerprint ?? null,
@@ -138,6 +151,9 @@ router.post("/events/card", async (req, res) => {
         from_card_ref ?? null,
         recipient_name ?? null,
         card_id ?? null,
+        capUtm(utm_source, 60),
+        capUtm(utm_medium, 60),
+        capUtm(utm_campaign, 80),
       ],
     );
 
@@ -225,6 +241,7 @@ router.get("/events/analytics", async (req, res) => {
       signedInAfterWall,
       recentCards,
       vitals,
+      utm_funnel,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -324,6 +341,28 @@ router.get("/events/analytics", async (req, res) => {
            GROUP BY metric_name
            ORDER BY metric_name`,
         ),
+
+        /* ── UTM funnel: visits → CTA clicks → cards → paid, by source ──
+         *
+         * "sessions" approximates per-source unique visitors using the
+         * persisted device fingerprint. UTM is captured first-touch on the
+         * client, so every event a fingerprint emits is attributed to the
+         * source that originally brought them. */
+        pool.query(
+          `SELECT
+             COALESCE(NULLIF(utm_source, ''), '(direct)')                                  AS source,
+             COUNT(DISTINCT NULLIF(fingerprint, ''))                                        AS sessions,
+             COUNT(DISTINCT NULLIF(fingerprint, '')) FILTER (WHERE event = 'cta_clicked')   AS cta_users,
+             COUNT(DISTINCT NULLIF(fingerprint, '')) FILTER (WHERE event = 'card_created')  AS card_creators,
+             COUNT(*) FILTER (WHERE event = 'card_created')                                 AS cards,
+             COUNT(*) FILTER (WHERE event = 'card_created' AND is_free = false)             AS paid_cards
+           FROM hs_card_events
+           WHERE ${EXCL}
+           GROUP BY 1
+           ORDER BY sessions DESC NULLS LAST
+           LIMIT 30`,
+          ep,
+        ),
       ]);
 
     return res.json({
@@ -334,6 +373,7 @@ router.get("/events/analytics", async (req, res) => {
       signed_up_after_wall: signedInAfterWall.rows[0]?.count ?? 0,
       recent_cards: recentCards.rows,
       vitals: vitals.rows,
+      utm_funnel: utm_funnel.rows,
     });
   } catch (err) {
     console.error("[events/analytics]", err);
