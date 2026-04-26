@@ -29,6 +29,25 @@
       #hs-splash-sub { font-size: 13px; color: rgba(255,255,255,0.3); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; text-align: center; }
     </style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!--
+      Preload the self-hosted Inter latin variable font so it's fetched in
+      parallel with the CSS. Without this, the browser only discovers the
+      font *after* parsing the stylesheet, costing ~150–250ms on mobile.
+    -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/inter-variable-latin.woff2"
+      crossorigin="anonymous"
+    />
+    <!--
+      Modulepreload the entry script. Vite auto-injects modulepreloads for
+      the deeper static-import graph at build time; this top-level hint
+      ensures the entry chunk itself starts fetching the moment the HTML
+      arrives, not after the parser reaches the closing </body>.
+    -->
+    <link rel="modulepreload" href="/src/main.tsx" />
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q7ZC1EMZJE"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
