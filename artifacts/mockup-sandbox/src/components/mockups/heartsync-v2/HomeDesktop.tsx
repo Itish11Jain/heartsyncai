@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { CardIllustration } from "./CardIllustration";
@@ -54,25 +53,9 @@ export function HomeDesktop() {
             <div className="text-xs font-medium bg-white/10 px-3 py-1.5 rounded-md text-white/80">Share the link</div>
           </div>
 
-          {/* SINGLE CTA BLOCK — gradient-bordered name input + primary CTA */}
-          <div className="w-full max-w-md flex flex-col gap-3 mb-5">
-            <div className="flex flex-col gap-1.5">
-              <div
-                className="rounded-2xl p-[1.5px]"
-                style={{
-                  background: "linear-gradient(90deg, hsl(328 86% 59%), hsl(24 95% 53%))",
-                  boxShadow: "0 0 22px rgba(236,72,153,0.22)",
-                }}
-              >
-                <Input
-                  placeholder="Who is the card for?"
-                  className="rounded-[14px] border-0 bg-[#0d0618] text-white placeholder:text-white/30 px-5 text-xl focus-visible:ring-0 focus-visible:ring-offset-0"
-                  style={{ height: 60 }}
-                />
-              </div>
-              <p className="text-xs text-white/40 pl-2">First name only — Priya, Aryan, Mom...</p>
-            </div>
-            <Button className="h-16 rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-xl border-none shadow-[0_4px_25px_rgba(236,72,153,0.35)] hover:shadow-[0_8px_35px_rgba(236,72,153,0.5)] transition-all hover:-translate-y-0.5 relative overflow-hidden group">
+          {/* SINGLE PRIMARY CTA — name capture happens on mobile hero */}
+          <div className="w-full max-w-md mb-5">
+            <Button className="w-full h-16 rounded-2xl bg-gradient-to-r from-primary to-secondary text-white font-bold text-xl border-none shadow-[0_4px_25px_rgba(236,72,153,0.35)] hover:shadow-[0_8px_35px_rgba(236,72,153,0.5)] transition-all hover:-translate-y-0.5 relative overflow-hidden group">
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
               Send a free card now! →
             </Button>
