@@ -1,0 +1,37 @@
+/* HeartSync AI design tokens — Mumbai Sunset palette extracted from artifacts/heartsync-ai/src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --background: 280 50% 5%;
+  --foreground: 0 0% 98%;
+
+  --border: 280 30% 15%;
+
+  --card: 280 40% 8%;
+  --card-foreground: 0 0% 98%;
+  --card-border: 280 30% 15%;
+
+  --primary: 328 86% 59%;       /* hot pink */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 24 95% 53%;      /* warm orange */
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 280 30% 15%;
+  --muted-foreground: 280 20% 60%;
+
+  --accent: 285 84% 56%;        /* purple-pink */
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 280 30% 15%;
+  --ring: 328 86% 59%;
+
+  --gold: #FFD700;
+  --gold-deep: #FFA500;
+
+  --app-font-sans: 'Inter', sans-serif;
+  --radius: 1rem;
+}
