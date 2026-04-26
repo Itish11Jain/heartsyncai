@@ -290,11 +290,34 @@ export function CardIllustration() {
           key={i}
           animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 2.5 + i * 0.8, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
-          style={{ position: "absolute", ...s, fontSize: s.size }}
+          style={{ position: "absolute", ...s, fontSize: s.size, color: "#FFD700" }}
         >
           ✦
         </motion.div>
       ))}
+
+      {/* Floating cute edge emojis — kept across all phases */}
+      <motion.div
+        animate={{ y: [-6, 6, -6], rotate: [-4, 4, -4] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", top: -18, right: -10, fontSize: 36, filter: "drop-shadow(0 6px 12px rgba(236,72,153,0.45))", zIndex: 40, pointerEvents: "none" }}
+      >
+        💖
+      </motion.div>
+      <motion.div
+        animate={{ y: [4, -4, 4], rotate: [6, -6, 6] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", top: "26%", left: -22, fontSize: 28, filter: "drop-shadow(0 4px 10px rgba(255,215,0,0.5))", zIndex: 40, pointerEvents: "none" }}
+      >
+        ✨
+      </motion.div>
+      <motion.div
+        animate={{ y: [-3, 5, -3], rotate: [-3, 3, -3] }}
+        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "absolute", bottom: 36, right: -22, fontSize: 42, filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.55))", zIndex: 40, pointerEvents: "none" }}
+      >
+        🐼
+      </motion.div>
     </div>
   );
 }
