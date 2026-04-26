@@ -28,9 +28,6 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
-  define: {
-    "import.meta.env.VITE_ADMIN_SECRET": JSON.stringify(process.env["ADMIN_SECRET"] ?? ""),
-  },
   plugins: [
     react(),
     tailwindcss({ optimize: false }),

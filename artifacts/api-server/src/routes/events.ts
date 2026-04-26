@@ -1,12 +1,44 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { pool } from "../lib/db";
 
 const router = Router();
 
 const SUPERUSER_EMAILS = ["jainitisha93@gmail.com"];
-const ADMIN_KEY = process.env["ADMIN_SECRET"] ?? "";
 const EXCL = `(email IS NULL OR email NOT IN (${SUPERUSER_EMAILS.map((_, i) => `$${i + 1}`).join(",")}))`;
 const EXCL_PARAMS = SUPERUSER_EMAILS;
+
+/**
+ * Verifies the request is from a signed-in Clerk user whose primary email
+ * is on the SUPERUSER_EMAILS allowlist. Replaces the previous ADMIN_SECRET
+ * shared-key scheme so no admin credential ever ships in the client bundle.
+ *
+ * Returns true on success; otherwise responds with 401/403 and returns false.
+ */
+async function requireSuperuser(req: Request, res: Response): Promise<boolean> {
+  const auth = getAuth(req);
+  const userId = auth?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "unauthorized" });
+    return false;
+  }
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const email =
+      user.primaryEmailAddress?.emailAddress ??
+      user.emailAddresses?.[0]?.emailAddress ??
+      null;
+    if (!email || !SUPERUSER_EMAILS.includes(email)) {
+      res.status(403).json({ error: "forbidden" });
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[events] requireSuperuser failed", err);
+    res.status(500).json({ error: "auth_lookup_failed" });
+    return false;
+  }
+}
 
 const ENSURE_TABLE = `
   CREATE TABLE IF NOT EXISTS hs_card_events (
@@ -172,13 +204,12 @@ router.post("/events/vitals", async (req, res) => {
 });
 
 /**
- * GET /api/events/analytics?key=ADMIN_SECRET
+ * GET /api/events/analytics
  * Returns aggregated card analytics, excluding superuser.
+ * Auth: Clerk session — caller must be a signed-in superuser email.
  */
 router.get("/events/analytics", async (req, res) => {
-  if (!ADMIN_KEY || req.query["key"] !== ADMIN_KEY) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (!(await requireSuperuser(req, res))) return;
 
   try {
     await pool.query(ENSURE_TABLE);
@@ -306,18 +337,17 @@ router.get("/events/analytics", async (req, res) => {
     });
   } catch (err) {
     console.error("[events/analytics]", err);
-    return res.status(500).json({ error: "internal", detail: String(err) });
+    return res.status(500).json({ error: "internal" });
   }
 });
 
 /**
- * DELETE /api/events/reset?key=ADMIN_SECRET
- * Wipes all analytics + usage data (admin only).
+ * DELETE /api/events/reset
+ * Wipes all analytics + usage data.
+ * Auth: Clerk session — caller must be a signed-in superuser email.
  */
 router.delete("/events/reset", async (req, res) => {
-  if (!ADMIN_KEY || req.query["key"] !== ADMIN_KEY) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (!(await requireSuperuser(req, res))) return;
   try {
     await pool.query("TRUNCATE TABLE hs_card_events RESTART IDENTITY");
     await pool.query("TRUNCATE TABLE hs_card_usage RESTART IDENTITY");
@@ -326,7 +356,8 @@ router.delete("/events/reset", async (req, res) => {
     await pool.query("TRUNCATE TABLE hs_web_vitals RESTART IDENTITY");
     return res.json({ ok: true, message: "All analytics data cleared." });
   } catch (err) {
-    return res.status(500).json({ error: "internal", detail: String(err) });
+    console.error("[events/reset]", err);
+    return res.status(500).json({ error: "internal" });
   }
 });
 

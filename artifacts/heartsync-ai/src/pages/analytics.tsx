@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { useUser } from "@clerk/react";
+import { useAuth, useUser } from "@clerk/react";
 import { useLocation } from "wouter";
 import { SUPERUSER_EMAIL } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_SECRET ?? "";
 
 type Overview = {
   cta_clicks: string;
@@ -119,6 +118,7 @@ function pct(num: string | number, denom: string | number): string {
 
 export default function Analytics() {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [, navigate] = useLocation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -136,19 +136,36 @@ export default function Analytics() {
       navigate("/");
       return;
     }
-    const key = ADMIN_KEY || prompt("Enter admin key:") || "";
-    fetch(`${BASE}/api/events/analytics?key=${encodeURIComponent(key)}`)
-      .then(r => {
-        if (!r.ok) throw new Error(`Analytics API returned ${r.status} — check VITE_ADMIN_SECRET`);
-        return r.json();
-      })
-      .then((d: AnalyticsData) => {
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Not signed in — please reload and sign in again.");
+        const r = await fetch(`${BASE}/api/events/analytics`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) {
+          throw new Error(
+            r.status === 401 || r.status === 403
+              ? `Analytics API ${r.status}: your account is not authorised.`
+              : `Analytics API returned ${r.status}.`,
+          );
+        }
+        const d = (await r.json()) as AnalyticsData;
         if (!d.overview) throw new Error("API response missing overview field");
+        if (cancelled) return;
         setData(d);
         setLoading(false);
-      })
-      .catch(e => { setError(String(e)); setLoading(false); });
-  }, [isLoaded, userEmail, navigate]);
+      } catch (e) {
+        if (cancelled) return;
+        setError(String(e));
+        setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isLoaded, user, userEmail, navigate, getToken]);
 
   if (!isLoaded || loading) {
     return (
