@@ -6,6 +6,7 @@ import { SUPERUSER_EMAIL } from "@/lib/trackEvent";
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 type Overview = {
+  names_entered: string;
   cta_clicks: string;
   generate_clicks: string;
   cards_created: string;
@@ -24,6 +25,7 @@ type Overview = {
   likes_total: string;
   custom_msg_changed: string;
   signed_in_free_cards: string;
+  names_entered_users: string;
   cta_users: string;
   generate_users: string;
   cards_created_users: string;
@@ -215,6 +217,7 @@ export default function Analytics() {
             <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Conv.</span>
           </div>
           {[
+            { label: "Name Entered (Landing)", events: o.names_entered, users: o.names_entered_users, nextEvents: o.cta_clicks,        nextUsers: o.cta_users },
             { label: "Home CTA Clicked",  events: o.cta_clicks,      users: o.cta_users,           nextEvents: o.generate_clicks,   nextUsers: o.generate_users },
             { label: "Generate Clicked",  events: o.generate_clicks,  users: o.generate_users,      nextEvents: o.cards_created,     nextUsers: o.cards_created_users },
             { label: "Card Created",      events: o.cards_created,    users: o.cards_created_users, nextEvents: o.card_views,        nextUsers: o.card_viewed_users },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { HeartPulse } from "lucide-react";
@@ -743,6 +743,21 @@ export default function Home() {
   const guideCta = "/date-guide";
   const [, navigate] = useLocation();
   const [heroName, setHeroName] = useState("");
+  const nameTrackedRef = useRef(false);
+
+  /**
+   * Fire `landing_name_entered` exactly once per page load, the first time the
+   * visitor types a meaningful (≥2 char) recipient name into the hero input.
+   * Lets the funnel measure the gap between landing → typing a name → clicking
+   * the CTA, separately from cta_clicked which fires regardless of input.
+   */
+  function onHeroNameChange(value: string) {
+    setHeroName(value);
+    if (nameTrackedRef.current) return;
+    if (value.trim().length < 2) return;
+    nameTrackedRef.current = true;
+    trackEvent({ event: "landing_name_entered", recipient_name: value.trim().slice(0, 40) });
+  }
 
   /** Build the deep-link to /send, optionally pre-filling the recipient name. */
   const buildSendHref = (name: string): string => {
@@ -869,7 +884,7 @@ export default function Home() {
                     placeholder="Who is the card for?"
                     aria-label="Recipient's first name"
                     value={heroName}
-                    onChange={e => setHeroName(e.target.value)}
+                    onChange={e => onHeroNameChange(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); goToSendWithName(); } }}
                     className="h-13 rounded-[14px] border-0 bg-[#0d0618] text-white placeholder:text-white/65 placeholder:font-medium pl-4 pr-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
                     style={{ height: 52 }}
@@ -924,7 +939,7 @@ export default function Home() {
                     <div key={i} className="w-6 h-6 rounded-full border-2 border-background" style={{ background: c }} />
                   ))}
                 </div>
-                <p className="text-xs text-white/55">3,200+ cards sent this month · 20 seconds, free</p>
+                <p className="text-xs text-white/55">3,200+ cards sent this month</p>
               </div>
             </div>
           </div>

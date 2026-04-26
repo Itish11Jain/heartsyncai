@@ -246,6 +246,7 @@ router.get("/events/analytics", async (req, res) => {
         /* ── overview metrics ── */
         pool.query(
           `SELECT
+            COUNT(*) FILTER (WHERE event = 'landing_name_entered')                               AS names_entered,
             COUNT(*) FILTER (WHERE event = 'cta_clicked')                                        AS cta_clicks,
             COUNT(*) FILTER (WHERE event = 'generate_clicked')                                   AS generate_clicks,
             COUNT(*) FILTER (WHERE event = 'card_created')                                       AS cards_created,
@@ -265,6 +266,7 @@ router.get("/events/analytics", async (req, res) => {
             COUNT(*) FILTER (WHERE event = 'card_created' AND used_custom_msg = true)            AS custom_msg_changed,
             COUNT(*) FILTER (WHERE event = 'card_created' AND clerk_user_id IS NOT NULL
                               AND is_free = true)                                                 AS signed_in_free_cards,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'landing_name_entered') AS names_entered_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'cta_clicked')          AS cta_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'generate_clicked')     AS generate_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_created')         AS cards_created_users,
