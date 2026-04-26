@@ -56,6 +56,13 @@ function summarizeUA(ua: string | undefined): string | null {
   return ua.slice(0, 240);
 }
 
+/** Heuristic bot detection from the User-Agent header. Keeps Web Vitals
+ *  data clean — synthetic crawlers shouldn't pollute P50/P75/P90. */
+const BOT_UA_RE = /bot|crawler|spider|crawling|headless|lighthouse|pingdom|preview|monitor|googlebot|bingbot|yandex|duckduck|baiduspider|facebookexternalhit|slackbot|discordbot|twitterbot|linkedinbot|whatsapp|telegram/i;
+function isBotUA(ua: string | undefined): boolean {
+  return !!ua && BOT_UA_RE.test(ua);
+}
+
 /**
  * POST /api/events/card
  * Records a card analytics event. Superuser emails are silently dropped.
@@ -115,6 +122,11 @@ router.post("/events/card", async (req, res) => {
  */
 router.post("/events/vitals", async (req, res) => {
   try {
+    // Drop bot/crawler/synthetic-monitor traffic so it can't pollute percentiles.
+    if (isBotUA(req.get("user-agent") ?? undefined)) {
+      return res.json({ ok: true, dropped: true });
+    }
+
     await pool.query(ENSURE_VITALS_TABLE);
 
     const body = req.body as Record<string, unknown>;
