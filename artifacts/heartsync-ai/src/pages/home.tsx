@@ -789,7 +789,7 @@ export default function Home() {
 
 
   return (
-    <div className="min-h-screen min-h-[100dvh] md:min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
+    <div className="min-h-screen min-h-[100svh] md:min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
       <PageConfetti />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[55%] h-[55%] rounded-full bg-primary/15 blur-[130px]" />

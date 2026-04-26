@@ -342,7 +342,7 @@ export default function Send() {
 
           {/* Step 2: Relation */}
           {step === 2 && (
-            <motion.div key="step2" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
+            <motion.div key="step2" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full mt-8 md:mt-0">
               <button onClick={() => goTo(1, -1)} className="flex items-center gap-1 text-sm mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>
                 <ChevronLeft size={15} /> Back
               </button>
