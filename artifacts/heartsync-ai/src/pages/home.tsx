@@ -837,21 +837,28 @@ export default function Home() {
             </motion.p>
 
             {/* 3. Card preview — scale(0.72), marginBottom compensates for layout vs visual size gap */}
-            <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -70, width: "100%", display: "flex", justifyContent: "center" }}>
+            <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -95, width: "100%", display: "flex", justifyContent: "center" }}>
               <CardIllustration />
             </div>
 
             {/* 4. Name input → CTA → social proof */}
             <div className="w-full px-1 flex flex-col gap-2.5">
 
-              {/* Gradient-bordered name input — pink→orange to match CTA */}
+              {/* Gradient-bordered name input — pink→orange to match CTA, pulsing glow draws the eye */}
               <div className="flex flex-col gap-1">
-                <div
-                  className="rounded-2xl p-[1.5px]"
+                <motion.div
+                  className="rounded-2xl p-[1.5px] relative"
                   style={{
                     background: "linear-gradient(90deg, hsl(328 86% 59%), hsl(24 95% 53%))",
-                    boxShadow: "0 0 18px rgba(236,72,153,0.18)",
                   }}
+                  animate={{
+                    boxShadow: [
+                      "0 0 14px rgba(236,72,153,0.22)",
+                      "0 0 26px rgba(251,146,60,0.45)",
+                      "0 0 14px rgba(236,72,153,0.22)",
+                    ],
+                  }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   <Input
                     type="text"
@@ -864,10 +871,20 @@ export default function Home() {
                     value={heroName}
                     onChange={e => setHeroName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); goToSendWithName(); } }}
-                    className="h-13 rounded-[14px] border-0 bg-[#0d0618] text-white placeholder:text-white/35 px-4 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="h-13 rounded-[14px] border-0 bg-[#0d0618] text-white placeholder:text-white/65 placeholder:font-medium pl-4 pr-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
                     style={{ height: 52 }}
                   />
-                </div>
+                  {!heroName && (
+                    <motion.span
+                      aria-hidden="true"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-lg pointer-events-none select-none"
+                      animate={{ rotate: [0, -12, 0, -12, 0], scale: [1, 1.08, 1, 1.08, 1] }}
+                      transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
+                    >
+                      ✏️
+                    </motion.span>
+                  )}
+                </motion.div>
                 <p className="text-[10.5px] text-white/40 pl-2">First name only — Priya, Aryan, Mom...</p>
               </div>
 
