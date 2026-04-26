@@ -1,0 +1,55 @@
+As your Marketing Head, yes. While the UI layout is the biggest conversion killer, the copy (the actual words on the screen) is playing it slightly too safe.
+
+Right now, your copy sounds like a traditional physical greeting card company (like Archies or Hallmark), but your product is a highly aesthetic, interactive 3D tech experience. We need the text to match the "Kuch Hatke" (unique) vibe of the ad that brought them there.
+
+Here are the specific copy tweaks I recommend to increase intent and reduce bounce rates:
+
+1. The Main Headline (Screen 1)
+Current: "Send love in a card."
+
+The Flaw: It’s a bit generic. If I see this, I might assume I'm ordering a physical paper card that will take 5 days to deliver. It doesn't highlight the instant, digital magic of your product.
+
+The Fix: Focus on the upgrade from their current behavior (which is sending boring WhatsApp texts).
+
+New Copy Options:
+
+Option A (Direct): "Ditch the boring texts. Send a 3D surprise."
+
+Option B (Emotional): "Make them smile. Instantly."
+
+Option C (Descriptive): "Send a little magic to their inbox."
+
+2. The Sub-Headline (Screen 1)
+Current: "Pick who it's for · We write it · You share"
+
+The Verdict: Keep this. "We write it" is an absolute masterclass in copywriting. It instantly kills the friction of "I don't know what to say." However, make sure it sits directly above the new Name Input box we discussed so they see it right as they type.
+
+3. The "Occasion" Screen (Screen 2)
+Current: "What's the occasion?"
+
+The Flaw: The word "Occasion" implies a formal event (like a wedding or anniversary). But your target audience (Gen Z and young millennials) sends memes and reels 10 times a day just because. We want them to use this tool on a random Tuesday, not just once a year on a birthday.
+
+The Fix: Since we are capturing their Name on the very first page now, inject that name directly into the next screen to make it feel instantly personalized.
+
+New Header: "Set the vibe for [Name] ✨"
+
+New Subtext: "What kind of magic are we sending today?"
+
+4. The Category Sub-text (Screen 2)
+Your categories (Feel Good, Birthday, Congrats) are great, but the sub-text under them is a bit dry. Let's inject a tiny bit of that modern internet/Instagram energy to match your ad creatives.
+
+"Feel Good" -> Current: Brighten someone's day. | New: Give them main character energy.
+
+"Sorry" -> Current: Make things right. | New: For when an emoji isn't enough.
+
+"Thank You" -> Current: Show your appreciation. | New: Because they deserve it.
+
+5. The Trust Bar (Screen 1 Bottom)
+Current: "(Avatars) 3,200+ cards sent this month"
+
+The Verdict: Do not touch this. This is brilliant social proof. When someone from a Tier 3 city lands on your page and wonders if this is a scam, seeing "3,200+ cards sent" immediately validates that other people are using and loving it.
+
+Summary of the Copy Shift:
+We are moving the tone away from "Formal Greeting Card Service" and repositioning it as a "High-Speed, Zero-Effort Vibe Upgrader."
+
+Once you pair these copy changes with the UI fix (putting the Name input on the first screen) and the tech fix (faster initial load), your website will be a conversion machine.
