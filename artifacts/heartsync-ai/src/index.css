@@ -139,3 +139,13 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+.ios-bottom-buffer {
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+@supports (-webkit-touch-callout: none) {
+  .ios-bottom-buffer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+  }
+}

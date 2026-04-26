@@ -918,7 +918,7 @@ export default function Home() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-center gap-3 mt-1 pb-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)" }}>
+              <div className="flex items-center justify-center gap-3 mt-1 ios-bottom-buffer">
                 <div className="flex -space-x-1.5">
                   {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
                     <div key={i} className="w-6 h-6 rounded-full border-2 border-background" style={{ background: c }} />
