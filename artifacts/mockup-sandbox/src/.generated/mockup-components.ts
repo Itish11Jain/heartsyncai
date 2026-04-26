@@ -6,10 +6,10 @@ export const modules: ModuleMap = {
   "./components/mockups/greeting-cards/LottieHearts.tsx": () => import("../components/mockups/greeting-cards/LottieHearts.tsx"),
   "./components/mockups/greeting-cards/UnboxCard.tsx": () => import("../components/mockups/greeting-cards/UnboxCard.tsx"),
   "./components/mockups/greeting-cards/Warm.tsx": () => import("../components/mockups/greeting-cards/Warm.tsx"),
-  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx"),
   "./components/mockups/heartsync-v2/AnalyticsUtmTile.tsx": () => import("../components/mockups/heartsync-v2/AnalyticsUtmTile.tsx"),
   "./components/mockups/heartsync-v2/CardIllustration.tsx": () => import("../components/mockups/heartsync-v2/CardIllustration.tsx"),
   "./components/mockups/heartsync-v2/HomeDesktop.tsx": () => import("../components/mockups/heartsync-v2/HomeDesktop.tsx"),
   "./components/mockups/heartsync-v2/HomeMobile.tsx": () => import("../components/mockups/heartsync-v2/HomeMobile.tsx"),
-  "./components/mockups/heartsync-v2/SendOccasion.tsx": () => import("../components/mockups/heartsync-v2/SendOccasion.tsx")
+  "./components/mockups/heartsync-v2/SendOccasion.tsx": () => import("../components/mockups/heartsync-v2/SendOccasion.tsx"),
+  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx")
 };

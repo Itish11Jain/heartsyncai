@@ -1,6 +1,7 @@
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/inter/wght.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -91,7 +92,7 @@
   --input: 280 30% 15%;
   --ring: 328 86% 59%;
 
-  --app-font-sans: 'Inter', sans-serif;
+  --app-font-sans: 'Inter Variable', 'Inter', sans-serif;
   --app-font-serif: Georgia, serif;
   --app-font-mono: Menlo, monospace;
   --radius: 1rem;

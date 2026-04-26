@@ -1,11 +1,34 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence, LazyMotion, domAnimation, MotionConfig } from "framer-motion";
 import { HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { home } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+
+/**
+ * Lazy-loaded haptics + audio. The full @/lib/audio module is ~21 KB and
+ * eagerly evaluating it on landing slowed first paint, so we inline the
+ * minimal vibrate calls (which is what `home.cta()` / `home.navTap()`
+ * actually do today) and warm-load the rest in the background on first
+ * interaction so it's ready if the visitor leaves the home page.
+ */
+let audioWarmed = false;
+function warmAudio() {
+  if (audioWarmed) return;
+  audioWarmed = true;
+  void import("@/lib/audio").catch(() => { /* ignore — non-critical */ });
+}
+const home = {
+  cta() {
+    try { (navigator as { vibrate?: (p: number | number[]) => boolean }).vibrate?.([15, 10, 15]); } catch { /* ignore */ }
+    warmAudio();
+  },
+  navTap() {
+    try { (navigator as { vibrate?: (p: number | number[]) => boolean }).vibrate?.(5); } catch { /* ignore */ }
+    warmAudio();
+  },
+};
 
 const STEPS = [
   { num: "01", title: "Pick who it's for", desc: "Your partner, friend, date, or spouse. Tell us the relationship." },
@@ -88,14 +111,38 @@ const CONFETTI_PIECES = [
 function PageConfetti() {
   const [fired, setFired] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setFired(true), 200);
-    return () => clearTimeout(t);
+    // Defer until the browser is idle so confetti never blocks LCP.
+    // requestIdleCallback isn't supported in Safari, so we fall back
+    // to a generous timeout. Either way the burst still happens within
+    // ~half a second of paint, preserving the original delight.
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    let idleId: number | null = null;
+    let timerId: number | null = null;
+    if (typeof w.requestIdleCallback === "function") {
+      idleId = w.requestIdleCallback(() => setFired(true), { timeout: 800 });
+    } else {
+      timerId = window.setTimeout(() => setFired(true), 450);
+    }
+    return () => {
+      if (idleId !== null && w.cancelIdleCallback) w.cancelIdleCallback(idleId);
+      if (timerId !== null) clearTimeout(timerId);
+    };
   }, []);
   if (!fired) return null;
+  // Skip on small screens / reduced-motion users — confetti is non-essential
+  // delight, and 86 absolutely-positioned animated divs are expensive on
+  // low-end Android. Trim to the brightest pieces on phones.
+  const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) return null;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 480;
+  const pieces = isMobile ? CONFETTI_PIECES.slice(0, 32) : CONFETTI_PIECES;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, pointerEvents: "none", overflow: "hidden" }}>
-      {CONFETTI_PIECES.map((c, i) => (
-        <motion.div
+      {pieces.map((c, i) => (
+        <m.div
           key={i}
           style={{
             position: "absolute",
@@ -164,7 +211,7 @@ function CardIllustration() {
           { t: "72%", l: "82%", d: 0.8 }, { t: "85%", l: "22%", d: 1.8 },
           { t: "42%", l: "90%", d: 0.2 }, { t: "55%", l: "5%", d: 2.5 },
         ].map((s, i) => (
-          <motion.div
+          <m.div
             key={i}
             animate={{ opacity: [0.1, 0.6, 0.1] }}
             transition={{ duration: 2.2 + i * 0.4, delay: s.d, repeat: Infinity, ease: "easeInOut" }}
@@ -175,7 +222,7 @@ function CardIllustration() {
         {/* ── PHASE 0/1: Golden Envelope ── */}
         <AnimatePresence>
           {(seq === 0 || seq === 1) && (
-            <motion.div
+            <m.div
               key="env"
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -183,13 +230,13 @@ function CardIllustration() {
               style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}
             >
               {/* Pulsating headline */}
-              <motion.p
+              <m.p
                 animate={{ opacity: [0.6, 1, 0.6] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 style={{ fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: "0.06em", textAlign: "center" }}
               >
                 ✨ A Surprise For You! ✨
-              </motion.p>
+              </m.p>
 
               {/* Mini envelope */}
               <div style={{ position: "relative", width: 180, height: 112, filter: "drop-shadow(0 12px 24px rgba(255,165,0,0.4))" }}>
@@ -210,18 +257,18 @@ function CardIllustration() {
                 </div>
                 {/* Flap */}
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "56%", perspective: 400, perspectiveOrigin: "50% 0%", zIndex: 10 }}>
-                  <motion.div
+                  <m.div
                     animate={seq === 1 ? { rotateX: -175 } : { rotateX: 0 }}
                     transition={{ type: "spring", damping: 10, stiffness: 100 }}
                     style={{ width: "100%", height: "100%", transformOrigin: "50% 0%", transformStyle: "preserve-3d", position: "relative" }}
                   >
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(172deg, #E8B800 0%, #D4A000 45%, #C49000 100%)", clipPath: "polygon(0 0, 100% 0, 50% 88%)", borderRadius: "7px 7px 0 0", backfaceVisibility: "hidden" }} />
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, #FFE566 0%, #FFCC00 100%)", clipPath: "polygon(0 0, 100% 0, 50% 88%)", transform: "rotateX(180deg)", backfaceVisibility: "hidden" }} />
-                  </motion.div>
+                  </m.div>
                 </div>
                 {/* Wax seal */}
                 <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 5 }}>
-                  <motion.div
+                  <m.div
                     animate={seq === 1 ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
                     transition={{ duration: 0.3 }}
                     style={{
@@ -234,7 +281,7 @@ function CardIllustration() {
                   >
                     <div style={{ position: "absolute", inset: "12%", borderRadius: "50%", border: "1px solid rgba(255,160,160,0.18)" }} />
                     <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 10, color: "rgba(255,210,210,0.6)", zIndex: 2 }}>H</span>
-                  </motion.div>
+                  </m.div>
                 </div>
               </div>
 
@@ -251,14 +298,14 @@ function CardIllustration() {
                 <div style={{ position: "absolute", left: 4, top: 4, width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg, #FFD700, #FFA500)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>→</div>
                 Slide to unlock →
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* ── PHASE 2: Orbs ── */}
         <AnimatePresence>
           {(seq === 2 || seq === 3) && (
-            <motion.div
+            <m.div
               key="orbs"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -267,19 +314,19 @@ function CardIllustration() {
             >
               {/* Hint label */}
               {seq === 2 && !showBlurb && (
-                <motion.p
+                <m.p
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   style={{ position: "absolute", top: 18, left: 0, right: 0, textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.06em" }}
                 >
                   Tap the orbs! ✨
-                </motion.p>
+                </m.p>
               )}
               {/* Orb blurb bubble — appears when one orb is "tapped" in the preview */}
               <AnimatePresence>
                 {showBlurb && (
-                  <motion.div
+                  <m.div
                     key="blurb"
                     initial={{ scale: 0.8, opacity: 0, y: -6 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -304,7 +351,7 @@ function CardIllustration() {
                     <p style={{ fontSize: 10, color: "rgba(255,255,255,0.88)", fontStyle: "italic", lineHeight: 1.5, margin: 0 }}>
                       "{PREVIEW_BLURB.text}"
                     </p>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
               {/* Orbs */}
@@ -313,7 +360,7 @@ function CardIllustration() {
                   const pos = PREVIEW_ORB_POSITIONS[i];
                   const exploding = seq === 3;
                   return (
-                    <motion.div
+                    <m.div
                       key={i}
                       initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
                       animate={exploding
@@ -335,24 +382,24 @@ function CardIllustration() {
                         marginLeft: -21, marginTop: -21,
                       }}
                     >
-                      <motion.span
+                      <m.span
                         animate={{ y: [-2, 2, -2] }}
                         transition={{ duration: 2 + i * 0.3, repeat: Infinity, ease: "easeInOut" }}
                       >
                         {emoji}
-                      </motion.span>
-                    </motion.div>
+                      </m.span>
+                    </m.div>
                   );
                 })}
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* ── PHASE 3: Final mini card ── */}
         <AnimatePresence>
           {seq === 3 && (
-            <motion.div
+            <m.div
               key="finale"
               initial={{ scale: 0.4, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -390,7 +437,7 @@ function CardIllustration() {
                   const sz = i % 3 === 0 ? 6 : i % 3 === 1 ? 4 : 3;
                   const rot = (i % 2 === 0 ? 1 : -1) * (25 + i * 12);
                   return (
-                    <motion.div
+                    <m.div
                       key={i}
                       initial={{ y: -10, opacity: 0 }}
                       animate={{ y: 80 + (i % 3) * 22, opacity: [0, 1, 1, 0], rotate: rot }}
@@ -400,18 +447,18 @@ function CardIllustration() {
                   );
                 })}
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* Bottom label */}
-        <motion.div
+        <m.div
           animate={{ opacity: [0.3, 0.6, 0.3] }}
           transition={{ duration: 3, repeat: Infinity }}
           style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(255,215,0,0.4)", letterSpacing: "0.1em" }}
         >
           ✦ HeartSync AI
-        </motion.div>
+        </m.div>
       </div>
 
       {/* Floating sparkles around the card */}
@@ -420,41 +467,41 @@ function CardIllustration() {
         { top: "35%", right: "-12%", size: 14, delay: 1.2 },
         { bottom: "-4%", left: "-8%", size: 18, delay: 0.7 },
       ].map((s, i) => (
-        <motion.div
+        <m.div
           key={i}
           animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 2.5 + i * 0.8, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
           style={{ position: "absolute", ...s, fontSize: s.size }}
         >
           ✦
-        </motion.div>
+        </m.div>
       ))}
 
       {/* Floating cute edge emojis — kept across all phases */}
-      <motion.div
+      <m.div
         animate={{ y: [-6, 6, -6], rotate: [-4, 4, -4] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         style={{ position: "absolute", top: -18, right: -10, fontSize: 36, filter: "drop-shadow(0 6px 12px rgba(236,72,153,0.45))", zIndex: 40, pointerEvents: "none" }}
         aria-hidden="true"
       >
         💖
-      </motion.div>
-      <motion.div
+      </m.div>
+      <m.div
         animate={{ y: [4, -4, 4], rotate: [6, -6, 6] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         style={{ position: "absolute", top: "26%", left: -22, fontSize: 28, filter: "drop-shadow(0 4px 10px rgba(255,215,0,0.5))", zIndex: 40, pointerEvents: "none" }}
         aria-hidden="true"
       >
         ✨
-      </motion.div>
-      <motion.div
+      </m.div>
+      <m.div
         animate={{ y: [-3, 5, -3], rotate: [-3, 3, -3] }}
         transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
         style={{ position: "absolute", bottom: 36, right: -22, fontSize: 42, filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.55))", zIndex: 40, pointerEvents: "none" }}
         aria-hidden="true"
       >
         🐼
-      </motion.div>
+      </m.div>
     </div>
   );
 }
@@ -512,7 +559,7 @@ function CosmicCardIllustration() {
           const burst = COSMIC_STAR_BURSTS[i];
           const scattered = seq >= 1;
           return (
-            <motion.div
+            <m.div
               key={i}
               animate={scattered ? {
                 x: burst.x, y: burst.y,
@@ -544,14 +591,14 @@ function CosmicCardIllustration() {
         {/* ── Phase 0: Hold hint ── */}
         <AnimatePresence>
           {seq === 0 && (
-            <motion.div
+            <m.div
               key="hint"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}
             >
-              <motion.div
+              <m.div
                 animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                 style={{
@@ -562,22 +609,22 @@ function CosmicCardIllustration() {
                 }}
               >
                 ✨
-              </motion.div>
-              <motion.p
+              </m.div>
+              <m.p
                 animate={{ opacity: [0.4, 0.85, 0.4] }}
                 transition={{ duration: 1.8, repeat: Infinity }}
                 style={{ fontSize: 11, color: "rgba(200,160,255,0.7)", letterSpacing: "0.08em", textAlign: "center" }}
               >
                 Hold to reveal stars ✦
-              </motion.p>
-            </motion.div>
+              </m.p>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* ── Phase 2–3: Glowing message card ── */}
         <AnimatePresence>
           {seq >= 2 && (
-            <motion.div
+            <m.div
               key="msg"
               initial={{ scale: 0.3, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -604,7 +651,7 @@ function CosmicCardIllustration() {
 
                 <AnimatePresence>
                   {seq === 2 && (
-                    <motion.p
+                    <m.p
                       key="sub2"
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -612,7 +659,7 @@ function CosmicCardIllustration() {
                       style={{ fontSize: 9, color: "rgba(200,160,255,0.55)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}
                     >
                       A message from the stars
-                    </motion.p>
+                    </m.p>
                   )}
                 </AnimatePresence>
 
@@ -621,7 +668,7 @@ function CosmicCardIllustration() {
 
                 <AnimatePresence>
                   {seq === 3 && (
-                    <motion.p
+                    <m.p
                       key="quote"
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -629,7 +676,7 @@ function CosmicCardIllustration() {
                       style={{ fontSize: 10, color: "rgba(220,200,255,0.75)", fontStyle: "italic", fontFamily: "Georgia,serif", lineHeight: 1.6 }}
                     >
                       "You light up my universe."
-                    </motion.p>
+                    </m.p>
                   )}
                 </AnimatePresence>
 
@@ -638,7 +685,7 @@ function CosmicCardIllustration() {
                   { top: "-8%", left: "10%", d: 0 }, { top: "-6%", right: "14%", d: 0.2 },
                   { bottom: "-6%", left: "18%", d: 0.4 }, { bottom: "-8%", right: "8%", d: 0.1 },
                 ].map((p, i) => (
-                  <motion.span
+                  <m.span
                     key={i}
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: [0, 1, 0], scale: [0, 1, 0] }}
@@ -646,21 +693,21 @@ function CosmicCardIllustration() {
                     style={{ position: "absolute", fontSize: 10, ...p }}
                   >
                     ✦
-                  </motion.span>
+                  </m.span>
                 ))}
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
         {/* Bottom label */}
-        <motion.div
+        <m.div
           animate={{ opacity: [0.2, 0.5, 0.2] }}
           transition={{ duration: 3.5, repeat: Infinity }}
           style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(160,100,255,0.4)", letterSpacing: "0.1em" }}
         >
           ✦ HeartSync AI
-        </motion.div>
+        </m.div>
       </div>
 
       {/* Floating sparkles */}
@@ -669,14 +716,14 @@ function CosmicCardIllustration() {
         { top: "28%", right: "-12%", size: 13, delay: 1.0 },
         { bottom: "-5%", right: "-7%", size: 20, delay: 0.2 },
       ].map((s, i) => (
-        <motion.div
+        <m.div
           key={i}
           animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0.9, 0.3] }}
           transition={{ duration: 2.6 + i * 0.7, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
           style={{ position: "absolute", ...s, fontSize: s.size, color: "rgba(160,100,255,0.65)" }}
         >
           ✦
-        </motion.div>
+        </m.div>
       ))}
     </div>
   );
@@ -696,7 +743,7 @@ function CardCarousel() {
       <div className="relative" style={{ width: 288, height: 384 }}>
         <AnimatePresence mode="wait">
           {active === 0 ? (
-            <motion.div
+            <m.div
               key="env"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -704,9 +751,9 @@ function CardCarousel() {
               transition={{ duration: 0.5, ease: "easeInOut" }}
             >
               <CardIllustration />
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div
+            <m.div
               key="cosmic"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -714,7 +761,7 @@ function CardCarousel() {
               transition={{ duration: 0.5, ease: "easeInOut" }}
             >
               <CosmicCardIllustration />
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>
@@ -789,6 +836,8 @@ export default function Home() {
 
 
   return (
+    <LazyMotion features={domAnimation} strict>
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen min-h-[100svh] md:min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
       <PageConfetti />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -816,7 +865,7 @@ export default function Home() {
         </header>
 
         {/* HERO */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
@@ -831,7 +880,7 @@ export default function Home() {
             </h1>
 
             {/* 2. Explainer — above the card, single line with golden shimmer */}
-            <motion.p
+            <m.p
               className="text-xs font-medium mb-5 whitespace-nowrap"
               style={{
                 letterSpacing: "0.01em",
@@ -849,7 +898,7 @@ export default function Home() {
               We write it
               <span style={{ WebkitTextFillColor: "rgba(255,255,255,0.18)", margin: "0 6px" }}>·</span>
               You share
-            </motion.p>
+            </m.p>
 
             {/* 3. Card preview — scale(0.72), marginBottom compensates for layout vs visual size gap */}
             <div style={{ position: "relative", transform: "scale(0.72)", transformOrigin: "top center", marginBottom: -95, width: "100%", display: "flex", justifyContent: "center" }}>
@@ -861,7 +910,7 @@ export default function Home() {
 
               {/* Gradient-bordered name input — pink→orange to match CTA, pulsing glow draws the eye */}
               <div className="flex flex-col gap-1">
-                <motion.div
+                <m.div
                   className="rounded-2xl p-[1.5px] relative"
                   style={{
                     background: "linear-gradient(90deg, hsl(328 86% 59%), hsl(24 95% 53%))",
@@ -890,37 +939,37 @@ export default function Home() {
                     style={{ height: 52 }}
                   />
                   {!heroName && (
-                    <motion.span
+                    <m.span
                       aria-hidden="true"
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-lg pointer-events-none select-none"
                       animate={{ rotate: [0, -12, 0, -12, 0], scale: [1, 1.08, 1, 1.08, 1] }}
                       transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
                     >
                       ✏️
-                    </motion.span>
+                    </m.span>
                   )}
-                </motion.div>
+                </m.div>
                 <p className="text-[10.5px] text-white/40 pl-2">First name only — Priya, Aryan, Mom...</p>
               </div>
 
               {/* Single primary CTA */}
               <div className="relative w-full">
-                <motion.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
+                <m.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
                   animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute -top-3 right-[16%] text-yellow-200 text-sm pointer-events-none z-10"
+                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</m.span>
+                <m.span className="absolute -top-3 right-[16%] text-yellow-200 text-sm pointer-events-none z-10"
                   animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
-                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute -bottom-2 right-[28%] text-pink-300 text-xs pointer-events-none z-10"
+                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</m.span>
+                <m.span className="absolute -bottom-2 right-[28%] text-pink-300 text-xs pointer-events-none z-10"
                   animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</motion.span>
+                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</m.span>
                 <Button
                   type="button"
                   size="lg"
                   onClick={goToSendWithName}
                   className="w-full rounded-2xl h-13 text-sm sm:text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_40px_-10px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
                 >
-                  <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
+                  <m.span className="absolute inset-0 -skew-x-12 pointer-events-none"
                     style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
                     animate={{ x:["-130%","130%"] }}
                     transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
@@ -983,22 +1032,22 @@ export default function Home() {
               </div>
 
               <div className="mb-10 relative inline-block">
-                <motion.span className="absolute -top-3 left-[8%] text-yellow-300 text-xs pointer-events-none z-10"
+                <m.span className="absolute -top-3 left-[8%] text-yellow-300 text-xs pointer-events-none z-10"
                   animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute -top-3 right-[12%] text-yellow-200 text-sm pointer-events-none z-10"
+                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</m.span>
+                <m.span className="absolute -top-3 right-[12%] text-yellow-200 text-sm pointer-events-none z-10"
                   animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
-                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute -bottom-2 right-[22%] text-pink-300 text-xs pointer-events-none z-10"
+                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</m.span>
+                <m.span className="absolute -bottom-2 right-[22%] text-pink-300 text-xs pointer-events-none z-10"
                   animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</motion.span>
+                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</m.span>
                 <Button
                   asChild
                   size="lg"
                   className="rounded-2xl h-14 px-8 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
                 >
                   <Link href="/send" className="flex items-center gap-2" onClick={() => { home.cta(); trackEvent({ event: "cta_clicked" }); }}>
-                    <motion.span className="absolute inset-0 -skew-x-12 pointer-events-none"
+                    <m.span className="absolute inset-0 -skew-x-12 pointer-events-none"
                       style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
                       animate={{ x:["-130%","130%"] }}
                       transition={{ duration:2.8, repeat:Infinity, repeatDelay:0.6, ease:"easeInOut" }} />
@@ -1030,10 +1079,10 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </motion.section>
+        </m.section>
 
         {/* How it works */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.25 }}
@@ -1042,7 +1091,7 @@ export default function Home() {
           <p className="text-white/20 text-xs font-semibold uppercase tracking-[0.2em] text-center mb-10">How it works</p>
           <div className="grid md:grid-cols-3 gap-5">
             {STEPS.map((s, i) => (
-              <motion.div
+              <m.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1055,13 +1104,13 @@ export default function Home() {
                 </div>
                 <h3 className="text-base font-semibold text-white/90 mb-2">{s.title}</h3>
                 <p className="text-sm text-white/40 leading-relaxed">{s.desc}</p>
-              </motion.div>
+              </m.div>
             ))}
           </div>
-        </motion.section>
+        </m.section>
 
         {/* Testimonials */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
@@ -1070,7 +1119,7 @@ export default function Home() {
           <p className="text-white/20 text-xs font-semibold uppercase tracking-[0.2em] text-center mb-8">What people are saying</p>
           <div className="grid md:grid-cols-2 gap-4">
             {TESTIMONIALS.map((t, i) => (
-              <motion.div
+              <m.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1080,13 +1129,13 @@ export default function Home() {
                 <StarRow count={t.stars} />
                 <p className="text-sm text-white/60 leading-relaxed mt-3 mb-3">"{t.quote}"</p>
                 <p className="text-xs text-white/25 font-medium">{t.name}, {t.city}</p>
-              </motion.div>
+              </m.div>
             ))}
           </div>
-        </motion.section>
+        </m.section>
 
         {/* Date Guide — quiet footer mention */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.55 }}
@@ -1104,8 +1153,10 @@ export default function Home() {
               </svg>
             </Link>
           </Button>
-        </motion.section>
+        </m.section>
       </div>
     </div>
+    </MotionConfig>
+    </LazyMotion>
   );
 }
