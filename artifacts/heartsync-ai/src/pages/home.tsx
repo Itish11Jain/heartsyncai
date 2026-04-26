@@ -774,7 +774,7 @@ export default function Home() {
 
 
   return (
-    <div className="min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
+    <div className="min-h-screen min-h-[100dvh] md:min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
       <PageConfetti />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[55%] h-[55%] rounded-full bg-primary/15 blur-[130px]" />
@@ -918,7 +918,7 @@ export default function Home() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-center gap-3 mt-1" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+              <div className="flex items-center justify-center gap-3 mt-1 pb-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)" }}>
                 <div className="flex -space-x-1.5">
                   {["#f472b6","#fb923c","#a78bfa","#34d399","#60a5fa"].map((c, i) => (
                     <div key={i} className="w-6 h-6 rounded-full border-2 border-background" style={{ background: c }} />

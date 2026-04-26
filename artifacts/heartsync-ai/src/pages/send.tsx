@@ -285,7 +285,7 @@ export default function Send() {
         </div>
       </div>
 
-      <div className="w-full flex-1 flex flex-col items-center justify-center px-4 py-2" style={{ maxWidth: 520, minHeight: 0, position: "relative", zIndex: 1 }}>
+      <div className="w-full flex-1 flex flex-col items-center justify-start md:justify-center px-4 pt-3 pb-2 md:py-2" style={{ maxWidth: 520, minHeight: 0, position: "relative", zIndex: 1 }}>
         <AnimatePresence mode="wait" initial={false}>
 
           {/* Step 1: Occasion */}
