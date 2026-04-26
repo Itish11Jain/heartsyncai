@@ -60,6 +60,41 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string): string | undefined {
+          if (!id.includes("node_modules")) return undefined;
+
+          // Auth — lazy-loaded only on /sign-in, /sign-up, /send, /analytics
+          if (id.includes("@clerk/")) return "clerk";
+          // Firebase auth — lazy-loaded only when AuthGate or generate.tsx mount
+          if (id.includes("/firebase/") || id.includes("@firebase/")) return "firebase";
+
+          // Heavy UI libs that benefit from a separate cacheable chunk
+          if (id.includes("framer-motion")) return "motion";
+          if (id.includes("@radix-ui/")) return "radix";
+          if (id.includes("@tanstack/react-query")) return "query";
+          if (id.includes("recharts") || id.includes("d3-")) return "charts";
+          if (id.includes("lottie-")) return "lottie";
+          if (id.includes("html-to-image")) return "html2img";
+          if (id.includes("embla-carousel")) return "embla";
+          if (id.includes("react-day-picker") || id.includes("date-fns")) return "calendar";
+
+          // React + router core — small, shared by every page
+          if (
+            id.includes("/react/") ||
+            id.includes("/react-dom/") ||
+            id.includes("/scheduler/") ||
+            id.includes("/wouter/")
+          ) {
+            return "react-vendor";
+          }
+
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     port,

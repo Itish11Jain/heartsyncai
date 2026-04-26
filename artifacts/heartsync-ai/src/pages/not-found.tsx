@@ -1,7 +1,14 @@
+import { useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 
 export default function NotFound() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const clear = (window as unknown as { __clearHsSplash?: () => void }).__clearHsSplash;
+    if (clear) clear();
+  }, []);
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">

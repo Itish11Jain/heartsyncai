@@ -32,6 +32,30 @@ const ENSURE_TABLE = `
   CREATE INDEX IF NOT EXISTS hs_card_events_card_id ON hs_card_events(card_id);
 `;
 
+const ENSURE_VITALS_TABLE = `
+  CREATE TABLE IF NOT EXISTS hs_web_vitals (
+    id              SERIAL PRIMARY KEY,
+    metric_name     TEXT NOT NULL,
+    value_ms        DOUBLE PRECISION NOT NULL,
+    page_path       TEXT,
+    fingerprint     TEXT,
+    connection_type TEXT,
+    user_agent      TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS hs_web_vitals_metric  ON hs_web_vitals(metric_name);
+  CREATE INDEX IF NOT EXISTS hs_web_vitals_created ON hs_web_vitals(created_at);
+  CREATE INDEX IF NOT EXISTS hs_web_vitals_path    ON hs_web_vitals(page_path);
+`;
+
+const VITAL_NAMES = new Set(["LCP", "FCP", "TTFB", "INP", "CLS"]);
+
+/** Trim long UA strings to a short summary (browser + os only). */
+function summarizeUA(ua: string | undefined): string | null {
+  if (!ua) return null;
+  return ua.slice(0, 240);
+}
+
 /**
  * POST /api/events/card
  * Records a card analytics event. Superuser emails are silently dropped.
@@ -86,6 +110,56 @@ router.post("/events/card", async (req, res) => {
 });
 
 /**
+ * POST /api/events/vitals
+ * Records a Web Vitals metric (LCP, FCP, TTFB, INP, CLS) from a real user session.
+ */
+router.post("/events/vitals", async (req, res) => {
+  try {
+    await pool.query(ENSURE_VITALS_TABLE);
+
+    const body = req.body as Record<string, unknown>;
+    const metric_name = typeof body["metric_name"] === "string" ? body["metric_name"] : "";
+    const value_msRaw = body["value_ms"];
+    const value_ms = typeof value_msRaw === "number" ? value_msRaw : Number(value_msRaw);
+
+    if (!VITAL_NAMES.has(metric_name)) {
+      return res.status(400).json({ error: "unknown metric_name" });
+    }
+    // CLS is unitless and tiny (typically 0–1). Other metrics are ms (cap at 10 min).
+    const upperBound = metric_name === "CLS" ? 100 : 600000;
+    if (!Number.isFinite(value_ms) || value_ms < 0 || value_ms > upperBound) {
+      return res.status(400).json({ error: "invalid value_ms" });
+    }
+
+    // Drop superuser submissions silently (caller may include email)
+    const emailRaw = body["email"];
+    if (typeof emailRaw === "string" && SUPERUSER_EMAILS.includes(emailRaw)) {
+      return res.json({ ok: true, dropped: true });
+    }
+
+    // Cap free-form text inputs to keep cardinality and storage bounded
+    const fingerprint = typeof body["fingerprint"] === "string" ? body["fingerprint"].slice(0, 80) : null;
+    const page_path = typeof body["page_path"] === "string" ? body["page_path"].slice(0, 200) : null;
+    const connection_type = typeof body["connection_type"] === "string"
+      ? body["connection_type"].slice(0, 30)
+      : null;
+    const user_agent = summarizeUA(req.get("user-agent") ?? undefined);
+
+    await pool.query(
+      `INSERT INTO hs_web_vitals
+         (metric_name, value_ms, page_path, fingerprint, connection_type, user_agent)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [metric_name, value_ms, page_path, fingerprint, connection_type, user_agent],
+    );
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[events/vitals]", err);
+    return res.status(500).json({ error: "internal" });
+  }
+});
+
+/**
  * GET /api/events/analytics?key=ADMIN_SECRET
  * Returns aggregated card analytics, excluding superuser.
  */
@@ -96,11 +170,19 @@ router.get("/events/analytics", async (req, res) => {
 
   try {
     await pool.query(ENSURE_TABLE);
+    await pool.query(ENSURE_VITALS_TABLE);
 
     const ep = EXCL_PARAMS;
 
-    const [overview, occasions, userCohorts, anon_cohorts, signedInAfterWall, recentCards] =
-      await Promise.all([
+    const [
+      overview,
+      occasions,
+      userCohorts,
+      anon_cohorts,
+      signedInAfterWall,
+      recentCards,
+      vitals,
+    ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
           `SELECT
@@ -185,6 +267,20 @@ router.get("/events/analytics", async (req, res) => {
            LIMIT 20`,
           ep,
         ),
+
+        /* ── Web Vitals: P50/P75/P90 over the last 24h ── */
+        pool.query(
+          `SELECT
+             metric_name,
+             COUNT(*)::int                                              AS samples,
+             percentile_cont(0.50) WITHIN GROUP (ORDER BY value_ms)     AS p50,
+             percentile_cont(0.75) WITHIN GROUP (ORDER BY value_ms)     AS p75,
+             percentile_cont(0.90) WITHIN GROUP (ORDER BY value_ms)     AS p90
+           FROM hs_web_vitals
+           WHERE created_at > NOW() - INTERVAL '24 hours'
+           GROUP BY metric_name
+           ORDER BY metric_name`,
+        ),
       ]);
 
     return res.json({
@@ -194,6 +290,7 @@ router.get("/events/analytics", async (req, res) => {
       anon_cohorts: anon_cohorts.rows,
       signed_up_after_wall: signedInAfterWall.rows[0]?.count ?? 0,
       recent_cards: recentCards.rows,
+      vitals: vitals.rows,
     });
   } catch (err) {
     console.error("[events/analytics]", err);
@@ -213,6 +310,8 @@ router.delete("/events/reset", async (req, res) => {
     await pool.query("TRUNCATE TABLE hs_card_events RESTART IDENTITY");
     await pool.query("TRUNCATE TABLE hs_card_usage RESTART IDENTITY");
     await pool.query("TRUNCATE TABLE hs_clerk_users RESTART IDENTITY");
+    await pool.query(ENSURE_VITALS_TABLE);
+    await pool.query("TRUNCATE TABLE hs_web_vitals RESTART IDENTITY");
     return res.json({ ok: true, message: "All analytics data cleared." });
   } catch (err) {
     return res.status(500).json({ error: "internal", detail: String(err) });

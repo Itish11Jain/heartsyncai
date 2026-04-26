@@ -34,6 +34,7 @@ type Overview = {
 type Occasion = { occasion: string; cnt: string };
 type Cohort = { cards_used?: string; card_count?: string; users: string };
 type RecentCard = { card_id: string | null; recipient_name: string | null; occasion: string | null; template: string | null; is_free: boolean | null; created_at: string; view_count: string | number };
+type VitalRow = { metric_name: string; samples: number; p50: string | number | null; p75: string | number | null; p90: string | number | null };
 
 type AnalyticsData = {
   overview: Overview;
@@ -42,7 +43,49 @@ type AnalyticsData = {
   anon_cohorts: Cohort[];
   signed_up_after_wall: string | number;
   recent_cards: RecentCard[];
+  vitals?: VitalRow[];
 };
+
+const VITAL_DESCRIPTIONS: Record<string, string> = {
+  LCP: "Largest Contentful Paint",
+  FCP: "First Contentful Paint",
+  TTFB: "Time to First Byte",
+  INP: "Interaction to Next Paint",
+  CLS: "Cumulative Layout Shift",
+};
+
+function fmtMs(v: string | number | null): string {
+  if (v === null) return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  if (n >= 1000) return `${(n / 1000).toFixed(2)}s`;
+  return `${Math.round(n)}ms`;
+}
+
+function fmtCls(v: string | number | null): string {
+  if (v === null) return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n.toFixed(3);
+}
+
+/** Web Vitals "good" thresholds per Google's Core Web Vitals guidance.
+ * Units: LCP/FCP/TTFB/INP are milliseconds; CLS is unitless (the client sends
+ * the raw value such as 0.05). */
+function vitalColor(metric: string, value: number): string {
+  const good: Record<string, [number, number]> = {
+    LCP: [2500, 4000],
+    FCP: [1800, 3000],
+    TTFB: [800, 1800],
+    INP: [200, 500],
+    CLS: [0.1, 0.25],
+  };
+  const t = good[metric];
+  if (!t) return "#FFD700";
+  if (value <= t[0]) return "#34d399"; // green
+  if (value <= t[1]) return "#f59e0b"; // amber
+  return "#ef4444"; // red
+}
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -174,6 +217,44 @@ export default function Analytics() {
               </span>
             </div>
           ))}
+        </div>
+
+        {/* ── Page Load Performance (Web Vitals, last 24h) ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+          Page Load (last 24h)
+        </h2>
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 80px 80px", padding: "8px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Metric</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Samples</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>P50</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>P75</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>P90</span>
+          </div>
+          {(!data.vitals || data.vitals.length === 0) && (
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 16px" }}>
+              No vitals samples yet — they'll appear once real users load the production build.
+            </p>
+          )}
+          {(data.vitals ?? []).map((v, i, arr) => {
+            const isCls = v.metric_name === "CLS";
+            const p75n = Number(v.p75);
+            const color = Number.isFinite(p75n) ? vitalColor(v.metric_name, p75n) : "#FFD700";
+            return (
+              <div key={v.metric_name} style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 80px 80px", padding: "10px 16px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
+                <div>
+                  <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 600 }}>{v.metric_name}</div>
+                  <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 2 }}>
+                    {VITAL_DESCRIPTIONS[v.metric_name] ?? ""}
+                  </div>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, textAlign: "right" }}>{v.samples}</span>
+                <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, textAlign: "right" }}>{isCls ? fmtCls(v.p50) : fmtMs(v.p50)}</span>
+                <span style={{ color, fontSize: 14, fontWeight: 700, textAlign: "right" }}>{isCls ? fmtCls(v.p75) : fmtMs(v.p75)}</span>
+                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, textAlign: "right" }}>{isCls ? fmtCls(v.p90) : fmtMs(v.p90)}</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Cards Created ── */}

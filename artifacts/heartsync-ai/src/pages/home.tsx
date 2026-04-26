@@ -721,6 +721,12 @@ export default function Home() {
       try { localStorage.setItem("hs_from_card", "1"); } catch { /* ignore */ }
       trackEvent({ event: "website_visited_from_card" });
     }
+
+    // Dismiss the branded splash now that the landing page has hydrated.
+    if (typeof window !== "undefined") {
+      const clear = (window as unknown as { __clearHsSplash?: () => void }).__clearHsSplash;
+      if (clear) clear();
+    }
   }, []);
 
 
