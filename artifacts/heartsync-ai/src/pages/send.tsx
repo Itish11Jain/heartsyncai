@@ -838,14 +838,11 @@ export default function Send() {
                               <Check size={11} color="#000" strokeWidth={3} />
                             </div>
                           )}
-                          {/* Locked state — TWO visual cues so the user
-                              cannot possibly miss it:
-                              1. A prominent gold "🔒 ₹29" pill in the top
-                                 corner (much larger than before).
-                              2. A subtle dark veil + centered lock icon
-                                 across the whole card, dimming the artwork
-                                 just enough to read as "locked" without
-                                 hiding the preview entirely. */}
+                          {/* Locked state — kept minimal so the artwork
+                              stays the hero: a subtle dim veil over the
+                              card plus a prominent gold "🔒 ₹29" pill in
+                              the top-right corner. No centered lock glyph
+                              (the veil + pill are enough). */}
                           {!selected && locked && (
                             <>
                               {/* Card-wide dim veil */}
@@ -855,23 +852,6 @@ export default function Send() {
                                   "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%)",
                                 pointerEvents: "none",
                               }} />
-                              {/* Centered big lock glyph (subtle) */}
-                              <div style={{
-                                position: "absolute", inset: 0, zIndex: 4,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                pointerEvents: "none",
-                              }}>
-                                <div style={{
-                                  width: 30, height: 30, borderRadius: 99,
-                                  background: "rgba(0,0,0,0.55)",
-                                  backdropFilter: "blur(4px)",
-                                  border: "1.5px solid rgba(255,215,0,0.55)",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-                                }}>
-                                  <Lock size={15} color="#FFD700" strokeWidth={2.5} />
-                                </div>
-                              </div>
                               {/* Top-right gold price pill */}
                               <div style={{
                                 position: "absolute", top: 5, right: 5, zIndex: 5,
@@ -1042,13 +1022,6 @@ export default function Send() {
                   textAlign: "left",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                  <span style={{ color: "#90EE90", fontSize: 16, lineHeight: 1.2 }}>✓</span>
-                  <div>
-                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Unlimited Envelope cards</div>
-                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Free, forever, no card limit.</div>
-                  </div>
-                </div>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <span style={{ color: "#FFD700", fontSize: 16, lineHeight: 1.2 }}>✦</span>
                   <div>
