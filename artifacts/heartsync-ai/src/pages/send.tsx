@@ -1250,7 +1250,7 @@ export default function Send() {
                       reject — that's why scans were failing. */}
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
                     {(() => {
-                      const UPI_VPA = "8905158970@upi";
+                      const UPI_VPA = "110193250";
                       const amount = paywallPlan === "single" ? 29 : 49;
                       const upiParams = [
                         `pa=${encodeURIComponent(UPI_VPA)}`,
@@ -1295,7 +1295,9 @@ export default function Send() {
                               />
                             </a>
                             <div className="text-left flex-1 min-w-0">
-                              <p className="text-[10px] text-white/35 uppercase tracking-wide mb-0.5">UPI ID</p>
+                              <p className="text-[10px] text-white/45 mb-1 leading-tight">
+                                UPI code of <span className="text-white/70 font-semibold">Itisha</span> — Creator of HeartSync AI
+                              </p>
                               <div className="flex items-center gap-1.5">
                                 <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_VPA}</p>
                                 <button
