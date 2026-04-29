@@ -38,6 +38,7 @@ type RecentCard = { card_id: string | null; recipient_name: string | null; occas
 type VitalRow = { metric_name: string; samples: number; p50: string | number | null; p75: string | number | null; p90: string | number | null };
 type UtmRow = { source: string; sessions: string | number; cta_users: string | number; card_creators: string | number; cards: string | number; paid_cards: string | number };
 type PremiumClickRow = { template: string; clicks: number; unique_customers: number };
+type RecipientCtaFunnel = { clicks: number; unique_clickers: number; cards_after_click: number };
 
 type AnalyticsData = {
   overview: Overview;
@@ -49,6 +50,7 @@ type AnalyticsData = {
   vitals?: VitalRow[];
   utm_funnel?: UtmRow[];
   premium_clicks?: PremiumClickRow[];
+  recipient_cta_funnel?: RecipientCtaFunnel;
   range?: { from: string | null; to: string | null };
 };
 
@@ -566,6 +568,31 @@ export default function Analytics() {
           <Stat label="Paywall Shown" value={o.paywall_shown} />
           <Stat label="Paywall Paid" value={o.paywall_paid} sub={pct(o.paywall_paid, o.paywall_shown) + " paid"} />
         </div>
+
+        {/* ── Recipient CTA → Card Created funnel ──
+         * "Create your own card" sits at the end of every received card.
+         * This block answers: how many recipients tapped it, and how many
+         * of them became creators themselves. Conversion ratios are
+         * computed against unique devices, not raw clicks. */}
+        {(() => {
+          const f = data.recipient_cta_funnel ?? { clicks: 0, unique_clickers: 0, cards_after_click: 0 };
+          return (
+            <>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                Recipient CTA → Card Created
+              </h2>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
+                <Stat label="CTA Clicks" value={f.clicks} sub={"taps on 'Create your own card'"} />
+                <Stat label="Unique Recipients Clicked" value={f.unique_clickers} sub={"distinct devices"} />
+                <Stat
+                  label="Cards Created After Click"
+                  value={f.cards_after_click}
+                  sub={pct(String(f.cards_after_click), String(f.unique_clickers)) + " of clickers converted"}
+                />
+              </div>
+            </>
+          );
+        })()}
 
         {/* ── Premium Card Clicks (per-template breakdown) ──
          * Each row = one premium template (cosmic / crystal / vinyl) and

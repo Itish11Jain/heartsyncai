@@ -1291,6 +1291,15 @@ export default function Card() {
                 </p>
                 <Link href="/send?ref=card">
                   <button
+                    onClick={() => {
+                      // Fires when a recipient taps the "Create your own
+                      // card" CTA on the end of their received card. Lets
+                      // us measure the recipient → creator conversion that
+                      // drives our viral loop. Conversion to an actual
+                      // card_created is computed server-side by joining on
+                      // fingerprint.
+                      trackEvent({ event: "create_own_clicked" });
+                    }}
                     style={{
                       width: "100%", padding: "14px",
                       borderRadius: 14,

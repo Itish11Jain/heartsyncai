@@ -439,6 +439,7 @@ router.get("/events/analytics", async (req, res) => {
       vitals,
       utm_funnel,
       premiumClicks,
+      recipientCtaFunnel,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -572,6 +573,35 @@ router.get("/events/analytics", async (req, res) => {
           params,
         ),
 
+        /* ── Recipient-card "Create your own card" CTA funnel ──
+         * Measures the recipient → creator viral loop:
+         *   - clicks   = total taps on the CTA at the end of a received card
+         *   - users    = distinct devices (fingerprints) that tapped it
+         *   - cards    = how many of those devices then created a card
+         *
+         * The cards-after-click count joins on fingerprint inside the same
+         * date window — a click + a card-create from the same device count
+         * as one conversion. */
+        pool.query(
+          `WITH clickers AS (
+             SELECT DISTINCT fingerprint
+             FROM hs_card_events
+             WHERE event = 'create_own_clicked'
+               AND fingerprint IS NOT NULL AND fingerprint <> ''
+               AND ${whereSql}
+           )
+           SELECT
+             (SELECT COUNT(*)::int FROM hs_card_events
+                WHERE event = 'create_own_clicked' AND ${whereSql})         AS clicks,
+             (SELECT COUNT(*)::int FROM clickers)                           AS unique_clickers,
+             (SELECT COUNT(DISTINCT e.fingerprint)::int
+                FROM hs_card_events e
+                WHERE e.event = 'card_created'
+                  AND e.fingerprint IN (SELECT fingerprint FROM clickers)
+                  AND ${whereSql})                                          AS cards_after_click`,
+          params,
+        ),
+
         /* ── Premium-card click breakdown by template ──
          * `paywall_shown` fires the moment a user taps a premium template
          * card (cosmic / crystal / vinyl) and the paywall opens. We expose:
@@ -607,6 +637,7 @@ router.get("/events/analytics", async (req, res) => {
       vitals: vitals.rows,
       utm_funnel: utm_funnel.rows,
       premium_clicks: premiumClicks.rows,
+      recipient_cta_funnel: recipientCtaFunnel.rows[0] ?? { clicks: 0, unique_clickers: 0, cards_after_click: 0 },
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });
