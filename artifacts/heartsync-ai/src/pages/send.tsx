@@ -154,15 +154,35 @@ export default function Send() {
 
   /* ─── Sign-in transition: dismiss the gate when Clerk reports signed-in ─ */
   const prevSignedIn = useRef<boolean | null>(null);
+  const pendingPremiumAfterSignin = useRef<TemplateId | null>(null);
   useEffect(() => {
     if (!isLoaded) return;
     if (isSignedIn && prevSignedIn.current === false && showSignInGate) {
+      // If the user clicked a premium template before signing in, remember
+      // it so we can route them straight to the paywall after refetch.
+      if (isPremiumTemplate(signInGateContext)) {
+        pendingPremiumAfterSignin.current = signInGateContext;
+      }
       setShowSignInGate(false);
-      // Force a usage refresh so unlocked_templates / signed-in flags update.
       refetchUsage();
     }
     prevSignedIn.current = isSignedIn ?? false;
-  }, [isSignedIn, isLoaded, showSignInGate, refetchUsage]);
+  }, [isSignedIn, isLoaded, showSignInGate, signInGateContext, refetchUsage]);
+
+  /* ─── After post-signin refetch lands, open paywall if still locked. ─── */
+  useEffect(() => {
+    const tpl = pendingPremiumAfterSignin.current;
+    if (!tpl || usageLoading || !usage?.is_signed_in) return;
+    if (usage.is_superuser || usage.unlocked_templates.includes(tpl)) {
+      pendingPremiumAfterSignin.current = null;
+      return;
+    }
+    if (templateGate(usage, tpl) === "paywall") {
+      setSelectedTemplate(tpl);
+      pendingPremiumAfterSignin.current = null;
+      openPaywall();
+    }
+  }, [usage, usageLoading]);
 
   const defaultMsg = (() => {
     if (!occasion || !relation) return "";
