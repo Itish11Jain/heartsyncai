@@ -180,7 +180,12 @@ export default function Send() {
   const initialPaywall = loadPaywallSnapshot();
   const [showPaywall, setShowPaywall] = useState(initialPaywall?.open ?? false);
   const [upiCopied, setUpiCopied] = useState(false);
-  const [paywallPlan, setPaywallPlan] = useState<PaywallPlan>(initialPaywall?.plan ?? "bundle");
+  // Default to "single" (₹29). Bundle is the upsell — promoted with a
+  // "BEST VALUE" badge — but defaulting to bundle was causing accidental
+  // unlock-all when a user paid only ₹29: the backend trusted the
+  // pre-selected plan and unlocked all 3. Defaulting to the smaller
+  // commitment is the safe failure mode; bundle is one tap away.
+  const [paywallPlan, setPaywallPlan] = useState<PaywallPlan>(initialPaywall?.plan ?? "single");
   const [paywallStage, setPaywallStage] = useState<PaywallStage>(initialPaywall?.stage ?? "plan");
   const [paywallUtr, setPaywallUtr] = useState(initialPaywall?.utr ?? "");
   const [paywallUtrError, setPaywallUtrError] = useState("");
@@ -1355,6 +1360,30 @@ export default function Send() {
                       };
                       return (
                         <>
+                          {/* Big locked-in amount banner. Shows EXACTLY what
+                              the user is committing to so they can't pay
+                              the wrong amount and accidentally over- or
+                              under-claim. */}
+                          <div
+                            className="mb-3 rounded-xl px-3 py-2.5 flex items-center justify-between"
+                            style={{
+                              background: "linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,165,0,0.08))",
+                              border: "1.5px solid rgba(255,215,0,0.45)",
+                            }}
+                          >
+                            <div className="text-[11px] text-white/70 leading-tight">
+                              You're paying for
+                              <div className="text-white font-bold text-[13px] leading-tight mt-0.5">
+                                {paywallPlan === "single" ? "1 premium template" : "All 3 premium templates"}
+                              </div>
+                            </div>
+                            <div
+                              className="font-extrabold text-2xl shrink-0 ml-2"
+                              style={{ color: "#FFD700", textShadow: "0 0 12px rgba(255,215,0,0.35)" }}
+                            >
+                              ₹{amount}
+                            </div>
+                          </div>
                           <div className="flex gap-3 items-center mb-4">
                             <a
                               href={upiUri}
@@ -1392,10 +1421,9 @@ export default function Send() {
                                   )}
                                 </button>
                               </div>
-                              <p className="text-xs text-white/50 mt-1">Amount: <span className="text-white font-bold">₹{amount}</span></p>
                               <div className="flex items-center gap-1 mt-1">
                                 <Info className="w-3 h-3 text-white/25 shrink-0" />
-                                <p className="text-[10px] text-white/30">Scan QR, tap it on mobile, or copy UPI ID</p>
+                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹{amount}</span> — scan, tap, or copy ID</p>
                               </div>
                             </div>
                           </div>
