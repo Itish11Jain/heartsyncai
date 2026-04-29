@@ -55,9 +55,7 @@ export async function initDb(): Promise<void> {
       ran_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    -- Grandfather migration: existing users who have actually generated at
-    -- least one card before the premium-template paywall ships keep access
-    -- to all 3 premium templates for free. Runs exactly once.
+    -- Grandfather migration v1 (kept for record; v2 supersedes it).
     DO $$
     BEGIN
       IF NOT EXISTS (
@@ -65,10 +63,27 @@ export async function initDb(): Promise<void> {
       ) THEN
         UPDATE hs_clerk_users
           SET unlocked_templates = ARRAY['cosmic', 'crystal', 'vinyl']
-          WHERE unlocked_templates = '{}'::text[]
-            AND cards_used > 0;
+          WHERE unlocked_templates = '{}'::text[];
         INSERT INTO hs_migrations (name)
           VALUES ('grandfather_template_unlocks_v1')
+          ON CONFLICT (name) DO NOTHING;
+      END IF;
+    END $$;
+
+    -- Grandfather migration v2: catches any signed-in account that pre-dates
+    -- the premium-template paywall and was missed by an earlier narrower
+    -- v1 run (e.g. dev environments where v1 was applied with a filter).
+    -- Idempotent + one-shot via hs_migrations marker.
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM hs_migrations WHERE name = 'grandfather_template_unlocks_v2'
+      ) THEN
+        UPDATE hs_clerk_users
+          SET unlocked_templates = ARRAY['cosmic', 'crystal', 'vinyl']
+          WHERE unlocked_templates = '{}'::text[];
+        INSERT INTO hs_migrations (name)
+          VALUES ('grandfather_template_unlocks_v2')
           ON CONFLICT (name) DO NOTHING;
       END IF;
     END $$;
