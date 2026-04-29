@@ -1250,7 +1250,12 @@ export default function Send() {
                       reject — that's why scans were failing. */}
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
                     {(() => {
-                      const UPI_VPA = "110193250";
+                      // What we SHOW + COPY is the friendly UPI Number
+                      // (Itisha's 9-digit UPI identity). What we encode
+                      // into the QR is the full VPA, because UPI apps
+                      // require name@bank format for QR-pay flows.
+                      const UPI_DISPLAY = "110193250";
+                      const UPI_VPA = "8905158970@upi";
                       const amount = paywallPlan === "single" ? 29 : 49;
                       const upiParams = [
                         `pa=${encodeURIComponent(UPI_VPA)}`,
@@ -1263,12 +1268,12 @@ export default function Send() {
                       const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
                       const handleCopyUpi = async () => {
                         try {
-                          await navigator.clipboard.writeText(UPI_VPA);
+                          await navigator.clipboard.writeText(UPI_DISPLAY);
                         } catch {
                           // Fallback for browsers/iframes that block the
                           // async Clipboard API — use a temporary textarea.
                           const ta = document.createElement("textarea");
-                          ta.value = UPI_VPA;
+                          ta.value = UPI_DISPLAY;
                           ta.setAttribute("readonly", "");
                           ta.style.position = "absolute";
                           ta.style.left = "-9999px";
@@ -1299,7 +1304,7 @@ export default function Send() {
                                 UPI code of <span className="text-white/70 font-semibold">Itisha</span> — Creator of HeartSync AI
                               </p>
                               <div className="flex items-center gap-1.5">
-                                <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_VPA}</p>
+                                <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
                                 <button
                                   type="button"
                                   onClick={handleCopyUpi}
