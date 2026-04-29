@@ -710,8 +710,20 @@ export default function Send() {
               </p>
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
-                    Their name
+                  {/* When the name is empty we brighten the label and pulse a
+                      gold glow around the input so the user immediately
+                      knows this is the first thing to fill in. The cue
+                      disappears the moment they start typing. */}
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{
+                      color: recipientName.trim()
+                        ? "rgba(255,255,255,0.6)"
+                        : "rgba(255,215,0,0.85)",
+                      transition: "color 0.25s ease",
+                    }}
+                  >
+                    {recipientName.trim() ? "Their name" : "👇 Start here — their name"}
                   </label>
                   <Input
                     placeholder="e.g. Rahul, Priya, Aditya…"
@@ -719,12 +731,18 @@ export default function Send() {
                     onChange={e => setRecipientName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
                     autoFocus
+                    className={recipientName.trim() ? undefined : "hs-attention-pulse"}
                     style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1.5px solid rgba(255,255,255,0.12)",
+                      background: recipientName.trim()
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(255,215,0,0.06)",
+                      border: recipientName.trim()
+                        ? "1.5px solid rgba(255,255,255,0.12)"
+                        : "1.5px solid rgba(255,215,0,0.55)",
                       color: "white",
                       fontSize: 16,
                       borderRadius: 12,
+                      transition: "background 0.25s ease",
                     }}
                   />
                 </div>
