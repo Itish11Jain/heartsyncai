@@ -1,60 +1,168 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Lock, Info, ArrowRight, Loader2 } from "lucide-react";
+import { ChevronLeft, Lock, Info, ArrowRight, Loader2, Check, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, useClerk } from "@clerk/react";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
-import { useCardUsage, gateNeeded } from "@/lib/usage";
+import {
+  useCardUsage,
+  templateGate,
+  isPremiumTemplate,
+  type TemplateId,
+} from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
+
+const DRAFT_KEY = "hs_send_draft_v1";
+const DRAFT_TTL_MS = 30 * 60 * 1000; // 30 minutes — long enough for a sign-in detour
+
+interface SendDraft {
+  occasion: string;
+  relation: string;
+  recipientName: string;
+  likes: string;
+  customMsg: string;
+  selectedTemplate: TemplateId;
+  step: number;
+  savedAt: number;
+}
+
+/* ─── Template visual catalog (picker cards) ───────────────────────────── */
+
+interface TemplateMeta {
+  id: TemplateId;
+  name: string;
+  emoji: string;
+  tagline: string;
+  gradient: string;
+  ringColor: string;
+}
+
+const TEMPLATE_CATALOG: TemplateMeta[] = [
+  {
+    id: "envelope",
+    name: "Envelope",
+    emoji: "💌",
+    tagline: "Classic letter, always free",
+    gradient: "linear-gradient(135deg, #5a1030 0%, #2d0618 100%)",
+    ringColor: "rgba(255,176,204,0.6)",
+  },
+  {
+    id: "cosmic",
+    name: "Cosmic",
+    emoji: "✨",
+    tagline: "Stars align just for them",
+    gradient: "linear-gradient(135deg, #0a1a4a 0%, #040c28 100%)",
+    ringColor: "rgba(160,192,255,0.55)",
+  },
+  {
+    id: "crystal",
+    name: "Crystal",
+    emoji: "🔮",
+    tagline: "A glowing crystal vision",
+    gradient: "linear-gradient(135deg, #2a0a5a 0%, #0d0320 100%)",
+    ringColor: "rgba(200,160,255,0.55)",
+  },
+  {
+    id: "vinyl",
+    name: "Vinyl",
+    emoji: "🎵",
+    tagline: "A spinning record dedication",
+    gradient: "linear-gradient(135deg, #3a1a05 0%, #1a0a02 100%)",
+    ringColor: "rgba(255,176,90,0.55)",
+  },
+];
 
 function useSearchParams() {
   if (typeof window === "undefined") return new URLSearchParams();
   return new URLSearchParams(window.location.search);
 }
 
+function loadDraft(): SendDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SendDraft;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > DRAFT_TTL_MS) {
+      localStorage.removeItem(DRAFT_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+}
+
 export default function Send() {
   const searchParams = useSearchParams();
   const { isSignedIn, isLoaded, getToken, userId: clerkUserId } = useAuth();
   const clerk = useClerk();
-  const [, navigate] = useLocation();
 
-  const { usage, loading: usageLoading, incrementUsage, fingerprint, userEmail } = useCardUsage();
+  const { usage, loading: usageLoading, incrementUsage, fingerprint, userEmail, refetch: refetchUsage } = useCardUsage();
 
-  // Recipient name may be deep-linked from the home hero via `?to=...`.
-  // We trim/cap to keep storage and display sane.
   const initialRecipientName = (() => {
     const raw = searchParams.get("to") ?? "";
     return raw.trim().slice(0, 40);
   })();
 
-  const [step, setStep] = useState(1);
+  // Restore draft (e.g. after a Clerk sign-in redirect bounced us back here).
+  const initialDraft = loadDraft();
+
+  const [step, setStep] = useState<number>(initialDraft?.step ?? 1);
   const [dir, setDir] = useState(1);
-  const [occasion, setOccasion] = useState(searchParams.get("occasion") ?? "feel_good");
-  const [relation, setRelation] = useState(searchParams.get("relation") ?? "");
-  const [recipientName, setRecipientName] = useState(initialRecipientName);
-  const [likes, setLikes] = useState("");
-  const [customMsg, setCustomMsg] = useState("");
+  const [occasion, setOccasion] = useState(initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good");
+  const [relation, setRelation] = useState(initialDraft?.relation ?? searchParams.get("relation") ?? "");
+  const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
+  const [likes, setLikes] = useState(initialDraft?.likes ?? "");
+  const [customMsg, setCustomMsg] = useState(initialDraft?.customMsg ?? "");
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>(initialDraft?.selectedTemplate ?? "envelope");
+
   const [showGenerating, setShowGenerating] = useState(false);
   const [genEmojiIdx, setGenEmojiIdx] = useState(0);
   const [showSignInGate, setShowSignInGate] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [cardUtr, setCardUtr] = useState("");
-  const [cardUtrError, setCardUtrError] = useState("");
-  const [cardUtrDone, setCardUtrDone] = useState(false);
-  const [cardUtrLoading, setCardUtrLoading] = useState(false);
+  const [signInGateContext, setSignInGateContext] = useState<TemplateId>("envelope");
 
-  // Track when user transitions from signed-out → signed-in while gate was shown
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallPlan, setPaywallPlan] = useState<"single" | "bundle">("bundle");
+  const [paywallStage, setPaywallStage] = useState<"plan" | "claim" | "done">("plan");
+  const [paywallUtr, setPaywallUtr] = useState("");
+  const [paywallUtrError, setPaywallUtrError] = useState("");
+  const [paywallLoading, setPaywallLoading] = useState(false);
+  const [claimError, setClaimError] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+
+  /* ─── Persist draft on every change ─────────────────────────────────── */
+  useEffect(() => {
+    // Don't bother saving the draft for empty / step-1 unless they've made progress.
+    const meaningful =
+      step > 1 || recipientName.trim().length > 0 || relation.length > 0 || likes.trim().length > 0;
+    if (!meaningful) return;
+    try {
+      const draft: SendDraft = {
+        occasion, relation, recipientName, likes, customMsg, selectedTemplate, step,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch { /* ignore quota */ }
+  }, [occasion, relation, recipientName, likes, customMsg, selectedTemplate, step]);
+
+  /* ─── Sign-in transition: dismiss the gate when Clerk reports signed-in ─ */
   const prevSignedIn = useRef<boolean | null>(null);
   useEffect(() => {
     if (!isLoaded) return;
     if (isSignedIn && prevSignedIn.current === false && showSignInGate) {
       setShowSignInGate(false);
+      // Force a usage refresh so unlocked_templates / signed-in flags update.
+      refetchUsage();
     }
     prevSignedIn.current = isSignedIn ?? false;
-  }, [isSignedIn, isLoaded, showSignInGate]);
+  }, [isSignedIn, isLoaded, showSignInGate, refetchUsage]);
 
   const defaultMsg = (() => {
     if (!occasion || !relation) return "";
@@ -62,42 +170,23 @@ export default function Send() {
     return t.final_message;
   })();
 
+  // Re-seed message when occasion/relation change (but only if user hasn't customised it).
   useEffect(() => {
     if (occasion && relation) {
       const t = getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
-      setCustomMsg(t.final_message);
+      setCustomMsg((current) => {
+        // If empty or matches the previous template's default, replace.
+        return !current.trim() ? t.final_message : current;
+      });
     }
   }, [occasion, relation]);
-
-  useEffect(() => {
-    if (searchParams.get("occasion") && !occasion) setOccasion(searchParams.get("occasion") ?? "");
-    if (searchParams.get("relation") && !relation) setRelation(searchParams.get("relation") ?? "");
-  }, []);
 
   function goTo(nextStep: number, direction: number) {
     setDir(direction);
     setStep(nextStep);
   }
 
-  /** Pick template respecting auth state and vinyl-first-post-signup logic. */
-  function pickTemplate(): string {
-    // Anonymous users only get Envelope or Cosmic
-    if (!isSignedIn) {
-      const anonTemplates = ["envelope", "cosmic", "crystal"];
-      return anonTemplates[Math.floor(Math.random() * anonTemplates.length)];
-    }
-    // First signed-in card: always Vinyl (the premium reveal)
-    const vinylUsed = localStorage.getItem("hs_vinyl_used");
-    if (!vinylUsed) {
-      localStorage.setItem("hs_vinyl_used", "1");
-      return "vinyl";
-    }
-    // Subsequent: rotate all 4
-    const ALL = ["envelope", "cosmic", "vinyl", "crystal"];
-    return ALL[Math.floor(Math.random() * ALL.length)];
-  }
-
-  function buildCardUrl(name: string, msg: string, senderFlag = false, template = "envelope", cardId?: string) {
+  function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string) {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: name, occasion, relation });
     if (likes.trim()) p.set("likes", likes.trim());
@@ -126,69 +215,188 @@ export default function Send() {
     return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
   }
 
-  async function handleCardUtrSubmit() {
-    const trimmed = cardUtr.trim();
+  /* ─── Paywall: submit UTR for ₹29 / ₹49 plan ───────────────────────── */
+  const handlePaywallUtrSubmit = useCallback(async () => {
+    const trimmed = paywallUtr.trim();
     if (!isValidUtr(trimmed)) return;
-    setCardUtrError("");
-    setCardUtrLoading(true);
+    setPaywallUtrError("");
+    setPaywallLoading(true);
     try {
       const token = await getToken();
       const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-      const res = await fetch(`${base}/api/usage/card-pack-utr`, {
+      const res = await fetch(`${base}/api/usage/template-unlock-utr`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ utr: trimmed }),
+        body: JSON.stringify({ utr: trimmed, plan: paywallPlan }),
       });
-      const data = await res.json() as { ok?: boolean; error?: string; message?: string };
+      const data = await res.json() as { ok?: boolean; plan?: string; message?: string };
       if (!res.ok) {
-        setCardUtrError(data.message ?? "Submission failed. Please try again.");
+        setPaywallUtrError(data.message ?? "Submission failed. Please try again.");
+        return;
+      }
+      trackEvent({
+        event: "paywall_paid",
+        fingerprint, email: userEmail ?? undefined, occasion,
+      });
+      await refetchUsage();
+      if (paywallPlan === "bundle") {
+        // All 3 unlocked. Skip claim, go to done.
+        setPaywallStage("done");
       } else {
-        setCardUtrDone(true);
-        trackEvent({ event: "paywall_paid", fingerprint, email: userEmail ?? undefined, occasion });
+        // Single — user must pick one of the 3 to claim.
+        setPaywallStage("claim");
       }
     } catch {
-      setCardUtrError("Submission failed. Please try again.");
+      setPaywallUtrError("Submission failed. Please try again.");
     } finally {
-      setCardUtrLoading(false);
+      setPaywallLoading(false);
     }
+  }, [paywallUtr, paywallPlan, getToken, fingerprint, userEmail, occasion, refetchUsage]);
+
+  /* ─── Paywall: claim the chosen template after a ₹29 payment ───────── */
+  const handleClaimTemplate = useCallback(async (template: TemplateId) => {
+    if (!isPremiumTemplate(template)) return;
+    setClaimError("");
+    setClaimLoading(true);
+    try {
+      const token = await getToken();
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/usage/claim-template`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ template }),
+      });
+      const data = await res.json() as { ok?: boolean; message?: string };
+      if (!res.ok) {
+        setClaimError(data.message ?? "Could not claim template. Please try again.");
+        return;
+      }
+      setSelectedTemplate(template);
+      trackEvent({
+        event: "template_claimed",
+        fingerprint, email: userEmail ?? undefined, occasion, template,
+      });
+      await refetchUsage();
+      setPaywallStage("done");
+    } catch {
+      setClaimError("Could not claim template. Please try again.");
+    } finally {
+      setClaimLoading(false);
+    }
+  }, [getToken, fingerprint, userEmail, occasion, refetchUsage]);
+
+  /* ─── Open paywall in a clean state ────────────────────────────────── */
+  function openPaywall() {
+    setPaywallStage("plan");
+    setPaywallPlan("bundle");
+    setPaywallUtr("");
+    setPaywallUtrError("");
+    setClaimError("");
+    setShowPaywall(true);
+    trackEvent({
+      event: "paywall_shown",
+      fingerprint,
+      email: userEmail ?? undefined,
+      occasion,
+      template: selectedTemplate,
+    });
   }
 
+  function closePaywall() {
+    setShowPaywall(false);
+    // Don't reset stage immediately — user might want to scroll back.
+    setTimeout(() => {
+      setPaywallStage("plan");
+      setPaywallUtr("");
+      setPaywallUtrError("");
+      setClaimError("");
+    }, 350);
+  }
+
+  /* ─── The big one: handle the final generate click ─────────────────── */
   async function handleFinish() {
     if (!recipientName.trim() || showGenerating) return;
 
-    // Track generate button click immediately (before any gates)
     trackEvent({
       event: "generate_clicked",
       fingerprint,
       clerk_user_id: clerkUserId ?? undefined,
       email: userEmail ?? undefined,
       occasion,
+      template: selectedTemplate,
       recipient_name: recipientName.trim() || undefined,
     });
 
-    // Check gate (only after usage has loaded)
     if (!usageLoading) {
-      const gate = gateNeeded(usage);
+      const gate = templateGate(usage, selectedTemplate);
       if (gate === "signin") {
+        setSignInGateContext(selectedTemplate);
         setShowSignInGate(true);
-        trackEvent({ event: "signup_wall_shown", fingerprint, occasion });
+        trackEvent({
+          event: "signup_wall_shown",
+          fingerprint, occasion, template: selectedTemplate,
+        });
         return;
       }
       if (gate === "paywall") {
-        setShowPaywall(true);
-        trackEvent({ event: "paywall_shown", fingerprint, clerk_user_id: isSignedIn ? undefined : undefined, email: userEmail ?? undefined, occasion });
+        openPaywall();
         return;
       }
     }
 
-    // Increment usage server-side before generating
+    // CRITICAL: if the gate let us through ONLY because the user has a
+    // pending (paid-but-unclaimed) single unlock, we must consume that
+    // payment now by calling /usage/claim-template — otherwise the user
+    // would generate a premium card without their entitlement being
+    // recorded, and could repeat the trick on every subsequent card.
+    const needsAutoClaim =
+      isPremiumTemplate(selectedTemplate) &&
+      !!usage &&
+      !usage.is_superuser &&
+      !usage.unlocked_templates.includes(selectedTemplate) &&
+      usage.pending_single_unlocks > 0;
+
+    if (needsAutoClaim) {
+      try {
+        const token = await getToken();
+        const baseApi = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+        const claimRes = await fetch(`${baseApi}/api/usage/claim-template`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ template: selectedTemplate }),
+        });
+        if (!claimRes.ok) {
+          // Claim failed (e.g. payment race-consumed elsewhere) — fall back
+          // to the paywall so the user pays again rather than getting it free.
+          openPaywall();
+          return;
+        }
+        await refetchUsage();
+        trackEvent({
+          event: "template_claimed",
+          fingerprint, email: userEmail ?? undefined, occasion, template: selectedTemplate,
+        });
+      } catch {
+        openPaywall();
+        return;
+      }
+    }
+
     await incrementUsage();
 
-    const template = pickTemplate();
-    const isFree = !usage || usage.is_superuser || (!usage.is_signed_in ? usage.anon_used < 2 : usage.signed_in_used < 2);
+    const isFree =
+      selectedTemplate === "envelope" ||
+      !!usage?.is_superuser ||
+      (usage?.unlocked_templates ?? []).includes(selectedTemplate);
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
 
     const cardId = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
@@ -199,7 +407,7 @@ export default function Send() {
       clerk_user_id: clerkUserId ?? undefined,
       email: userEmail ?? undefined,
       occasion,
-      template,
+      template: selectedTemplate,
       has_likes: likes.trim().length > 0,
       used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
       is_free: isFree,
@@ -208,16 +416,67 @@ export default function Send() {
       card_id: cardId,
     });
 
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, template, cardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId);
+    clearDraft();
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
+
+  /* ─── Sign-in trigger: persist draft + bounce to /sign-in ──────────── */
+  function startSignIn() {
+    // Persist now (the redirect would skip our debounced effect on some browsers).
+    try {
+      const draft: SendDraft = {
+        occasion, relation, recipientName, likes, customMsg, selectedTemplate, step,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch { /* ignore */ }
+    clerk.openSignIn();
+  }
+
+  /* ─── Step 4 picker: clicking a template just selects (gate is on Generate). */
+  function handlePickTemplate(t: TemplateId) {
+    setSelectedTemplate(t);
+    trackEvent({
+      event: "template_selected",
+      fingerprint, email: userEmail ?? undefined, occasion, template: t,
+    });
+  }
+
+  /* ─── UI helpers ────────────────────────────────────────────────────── */
 
   const stepVariants = {
     initial: { opacity: 0, x: dir * 50 },
     animate: { opacity: 1, x: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
     exit: { opacity: 0, x: dir * -50, transition: { duration: 0.2 } },
   };
+
+  // Decide what the bottom Generate button should say based on the current
+  // template choice + auth state. This is the "pre-flight" copy.
+  const generateButtonLabel = (() => {
+    if (usageLoading) return "Loading…";
+    const gate = templateGate(usage, selectedTemplate);
+    if (gate === "signin") {
+      if (selectedTemplate === "envelope") return "Sign in to send another";
+      return "Sign in to unlock";
+    }
+    if (gate === "paywall") return "Unlock to send →";
+    return "✨ Generate Link";
+  })();
+
+  // Whether this template (right now) is locked for this user.
+  function isTemplateLocked(t: TemplateId): boolean {
+    if (usage?.is_superuser) return false;
+    if (t === "envelope") {
+      // Locked for anon users only after their first free Envelope.
+      return !usage?.is_signed_in && (usage?.anon_used ?? 0) >= 1;
+    }
+    if (!usage?.is_signed_in) return true;
+    if ((usage.unlocked_templates ?? []).includes(t)) return false;
+    if ((usage.pending_single_unlocks ?? 0) > 0) return false;
+    return true;
+  }
 
   return (
     <div
@@ -270,11 +529,11 @@ export default function Send() {
           ✨ Create 3D Card
         </span>
         <div className="flex gap-1">
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3, 4].map(i => (
             <div
               key={i}
               style={{
-                width: step >= i ? 20 : 6,
+                width: step >= i ? 18 : 6,
                 height: 4,
                 borderRadius: 99,
                 background: step >= i ? "linear-gradient(90deg, #FFD700, #FFA500)" : "rgba(255,255,255,0.15)",
@@ -285,22 +544,13 @@ export default function Send() {
         </div>
       </div>
 
-      <div className="w-full flex-1 flex flex-col items-center justify-start md:justify-center px-4 pt-3 pb-2 md:py-2" style={{ maxWidth: 520, minHeight: 0, position: "relative", zIndex: 1 }}>
+      <div className="w-full flex-1 flex flex-col items-center justify-start md:justify-center px-4 pt-3 pb-2 md:py-2 overflow-y-auto" style={{ maxWidth: 520, minHeight: 0, position: "relative", zIndex: 1 }}>
         <AnimatePresence mode="wait" initial={false}>
 
           {/* Step 1: Occasion */}
           {step === 1 && (
             <motion.div key="step1" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
               <div className="relative flex justify-center items-center mb-1">
-                <motion.span className="absolute -top-2 left-[8%] text-yellow-300 text-xs pointer-events-none"
-                  animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.85, repeat:Infinity, repeatDelay:2.8, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute -top-1 right-[10%] text-yellow-200 text-sm pointer-events-none"
-                  animate={{ scale:[0,1.0,0], opacity:[0,0.85,0] }}
-                  transition={{ duration:1.0, repeat:Infinity, repeatDelay:2.2, delay:1.1, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute bottom-0 left-[38%] text-pink-300 text-xs pointer-events-none"
-                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.75, repeat:Infinity, repeatDelay:3.2, delay:1.8, ease:"easeInOut" }}>✦</motion.span>
                 <h1 className="text-2xl font-bold text-white text-center px-4">
                   {recipientName.trim() ? (
                     <>What's the vibe for <span style={{ color: "#FFD700" }}>{recipientName.trim()}</span>?</>
@@ -347,15 +597,6 @@ export default function Send() {
                 <ChevronLeft size={15} /> Back
               </button>
               <div className="relative flex justify-center items-center mb-2">
-                <motion.span className="absolute -top-2 left-[14%] text-yellow-300 text-xs pointer-events-none"
-                  animate={{ scale:[0,1.2,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute -top-1 right-[14%] text-yellow-200 text-sm pointer-events-none"
-                  animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
-                  transition={{ duration:1.0, repeat:Infinity, repeatDelay:2.4, delay:1.0, ease:"easeInOut" }}>✦</motion.span>
-                <motion.span className="absolute bottom-0 right-[35%] text-pink-300 text-xs pointer-events-none"
-                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:3.0, delay:1.7, ease:"easeInOut" }}>✦</motion.span>
                 <h1 className="text-2xl font-bold text-white text-center">Who is it for?</h1>
               </div>
               <p className="text-center text-sm mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
@@ -406,7 +647,7 @@ export default function Send() {
                     placeholder="e.g. Rahul, Priya, Aditya…"
                     value={recipientName}
                     onChange={e => setRecipientName(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && recipientName.trim() && handleFinish()}
+                    onKeyDown={e => e.key === "Enter" && recipientName.trim() && goTo(4, 1)}
                     autoFocus
                     style={{
                       background: "rgba(255,255,255,0.06)",
@@ -464,25 +705,146 @@ export default function Send() {
 
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  disabled={!recipientName.trim() || usageLoading || showGenerating}
-                  onClick={handleFinish}
+                  disabled={!recipientName.trim()}
+                  onClick={() => recipientName.trim() && goTo(4, 1)}
                   style={{
                     padding: "16px",
                     borderRadius: 14,
-                    background: recipientName.trim() && !usageLoading
+                    background: recipientName.trim()
                       ? "linear-gradient(135deg, #FFD700, #FFA500)"
                       : "rgba(255,255,255,0.08)",
-                    color: recipientName.trim() && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
+                    color: recipientName.trim() ? "#000" : "rgba(255,255,255,0.3)",
                     fontWeight: 700,
                     fontSize: 16,
-                    cursor: recipientName.trim() && !usageLoading ? "pointer" : "default",
+                    cursor: recipientName.trim() ? "pointer" : "default",
                     border: "none",
                     transition: "all 0.2s",
                   }}
                 >
-                  {usageLoading ? "Loading…" : "✨ Generate Link"}
+                  Pick a template →
                 </motion.button>
               </div>
+            </motion.div>
+          )}
+
+          {/* Step 4: Template picker */}
+          {step === 4 && (
+            <motion.div key="step4" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
+              <button onClick={() => goTo(3, -1)} className="flex items-center gap-1 text-sm mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <ChevronLeft size={15} /> Back
+              </button>
+              <h1 className="text-2xl font-bold text-white text-center mb-1">Pick a template</h1>
+              <p className="text-center text-sm mb-5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Envelope is free forever. Premium ones unlock once, send anytime ✨
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {TEMPLATE_CATALOG.map((tpl) => {
+                  const selected = selectedTemplate === tpl.id;
+                  const locked = isTemplateLocked(tpl.id);
+                  const isPremium = isPremiumTemplate(tpl.id);
+                  return (
+                    <motion.button
+                      key={tpl.id}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => handlePickTemplate(tpl.id)}
+                      data-testid={`template-card-${tpl.id}`}
+                      style={{
+                        position: "relative",
+                        padding: 0,
+                        borderRadius: 18,
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        border: `2px solid ${selected ? "rgba(255,215,0,0.85)" : "rgba(255,255,255,0.08)"}`,
+                        boxShadow: selected ? "0 0 0 3px rgba(255,215,0,0.18), 0 8px 24px rgba(0,0,0,0.45)" : "0 4px 16px rgba(0,0,0,0.3)",
+                        textAlign: "left",
+                        aspectRatio: "3 / 4",
+                        background: tpl.gradient,
+                      }}
+                    >
+                      {/* Glow accent */}
+                      <div style={{
+                        position: "absolute", inset: 0,
+                        background: `radial-gradient(ellipse at 50% 30%, ${tpl.ringColor} 0%, transparent 65%)`,
+                        pointerEvents: "none",
+                      }} />
+
+                      {/* Lock badge or selected check */}
+                      <div style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}>
+                        {selected ? (
+                          <div style={{
+                            width: 26, height: 26, borderRadius: 99,
+                            background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                          }}>
+                            <Check size={14} color="#000" strokeWidth={3} />
+                          </div>
+                        ) : locked ? (
+                          <div style={{
+                            padding: "4px 8px", borderRadius: 99,
+                            background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)",
+                            display: "flex", alignItems: "center", gap: 4,
+                            fontSize: 10, fontWeight: 700, color: "#fff",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                          }}>
+                            <Lock size={9} /> {isPremium ? "₹29" : "Sign in"}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Content */}
+                      <div style={{
+                        position: "relative", zIndex: 1,
+                        height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between",
+                        padding: "16px 14px",
+                      }}>
+                        <div style={{ fontSize: 38, lineHeight: 1 }}>{tpl.emoji}</div>
+                        <div>
+                          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{tpl.name}</div>
+                          <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, lineHeight: 1.35 }}>{tpl.tagline}</div>
+                          <div style={{ marginTop: 6, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                            color: isPremium ? "#FFD700" : "#90EE90",
+                          }}>
+                            {isPremium ? "✦ PREMIUM" : "FREE"}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Bundle hint */}
+              {selectedTemplate !== "envelope" && isTemplateLocked(selectedTemplate) && usage?.is_signed_in && (
+                <p className="text-center text-xs mt-3" style={{ color: "rgba(255,215,0,0.6)" }}>
+                  💡 Tip: ₹49 unlocks all 3 premium templates forever
+                </p>
+              )}
+
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                disabled={!recipientName.trim() || usageLoading || showGenerating}
+                onClick={handleFinish}
+                data-testid="generate-button"
+                style={{
+                  marginTop: 16,
+                  width: "100%",
+                  padding: "16px",
+                  borderRadius: 14,
+                  background: recipientName.trim() && !usageLoading
+                    ? "linear-gradient(135deg, #FFD700, #FFA500)"
+                    : "rgba(255,255,255,0.08)",
+                  color: recipientName.trim() && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: recipientName.trim() && !usageLoading ? "pointer" : "default",
+                  border: "none",
+                  transition: "all 0.2s",
+                }}
+              >
+                {generateButtonLabel}
+              </motion.button>
             </motion.div>
           )}
 
@@ -544,56 +906,70 @@ export default function Send() {
               background: "radial-gradient(ellipse at 50% 30%, #1a0030 0%, #080112 55%, #020008 100%)",
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               padding: "24px", fontFamily: "'Segoe UI', system-ui, sans-serif",
+              overflowY: "auto",
             }}
           >
-            {/* Floating stars */}
-            {[...Array(6)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{ y: [-8, 8, -8], opacity: [0.3, 0.8, 0.3] }}
-                transition={{ duration: 2.5 + i * 0.4, repeat: Infinity, delay: i * 0.3 }}
-                style={{
-                  position: "absolute",
-                  left: `${12 + i * 15}%`,
-                  top: `${15 + (i % 3) * 20}%`,
-                  fontSize: 18 + (i % 3) * 6,
-                  pointerEvents: "none",
-                }}
-              >
-                {["⭐", "✨", "💫", "🌟", "✨", "⭐"][i]}
-              </motion.div>
-            ))}
-
-            <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
-              {/* Icon */}
+            <div style={{ maxWidth: 380, width: "100%", textAlign: "center" }}>
               <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", delay: 0.1 }}
-                style={{ fontSize: 72, marginBottom: 16 }}
+                style={{ fontSize: 64, marginBottom: 12 }}
               >
-                💌
+                {signInGateContext === "envelope" ? "💌" : (TEMPLATE_CATALOG.find(t => t.id === signInGateContext)?.emoji ?? "✨")}
               </motion.div>
 
               <motion.h2
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 8, lineHeight: 1.3 }}
+                style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.3 }}
               >
-                You've sent 2 free cards!
+                {signInGateContext === "envelope"
+                  ? "Sign in for unlimited Envelope cards"
+                  : `Sign in to unlock ${TEMPLATE_CATALOG.find(t => t.id === signInGateContext)?.name ?? "this template"}`}
               </motion.h2>
 
               <motion.p
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", marginBottom: 28, lineHeight: 1.6 }}
+                style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 18, lineHeight: 1.55 }}
               >
-                Sign in with Google to unlock{" "}
-                <span style={{ color: "#FFD700", fontWeight: 700 }}>2 more free cards</span>
-                {" "}— plus your first exclusive Vinyl card ✨
+                {signInGateContext === "envelope"
+                  ? <>You've used your free Envelope card. <span style={{ color: "#90EE90", fontWeight: 700 }}>Signing in unlocks unlimited Envelopes.</span></>
+                  : <>This is a premium template. Sign in first — then unlock it with a one-time UPI payment.</>}
               </motion.p>
+
+              {/* What signup gives you — explicit clarification */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  marginBottom: 20,
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                  <span style={{ color: "#90EE90", fontSize: 16, lineHeight: 1.2 }}>✓</span>
+                  <div>
+                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Unlimited Envelope cards</div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Free, forever, no card limit.</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ color: "#FFD700", fontSize: 16, lineHeight: 1.2 }}>✦</span>
+                  <div>
+                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Premium templates separately</div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Cosmic / Crystal / Vinyl unlock for ₹29 each, or all 3 for ₹49.</div>
+                  </div>
+                </div>
+              </motion.div>
 
               {/* Google sign-in button */}
               <motion.button
@@ -601,22 +977,23 @@ export default function Send() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => clerk.openSignIn()}
+                onClick={startSignIn}
+                data-testid="signin-gate-google"
                 style={{
                   width: "100%",
-                  padding: "15px 20px",
+                  padding: "14px 20px",
                   borderRadius: 14,
                   background: "#fff",
                   color: "#1a1a1a",
                   fontWeight: 700,
-                  fontSize: 16,
+                  fontSize: 15,
                   border: "none",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 12,
-                  marginBottom: 14,
+                  marginBottom: 12,
                   boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
                 }}
               >
@@ -632,16 +1009,16 @@ export default function Send() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.55 }}
-                style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 20 }}
+                transition={{ delay: 0.5 }}
+                style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 14 }}
               >
-                No spam. No hidden fees. Just love. 💛
+                Your card draft is saved — we'll bring you right back.
               </motion.p>
 
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
+                transition={{ delay: 0.55 }}
                 onClick={() => setShowSignInGate(false)}
                 style={{
                   background: "none", border: "none", color: "rgba(255,255,255,0.3)",
@@ -655,7 +1032,7 @@ export default function Send() {
         )}
       </AnimatePresence>
 
-      {/* ════ PAYWALL ════ */}
+      {/* ════ PAYWALL (₹29 single / ₹49 bundle) ════ */}
       <AnimatePresence>
         {showPaywall && (
           <motion.div
@@ -664,85 +1041,176 @@ export default function Send() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.35 }}
-            className="fixed inset-0 z-[90] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center px-6"
+            className="fixed inset-0 z-[90] backdrop-blur-sm flex flex-col items-center justify-start px-4 py-6 overflow-y-auto"
+            style={{ background: "radial-gradient(ellipse at 50% 30%, #1a0030 0%, #080112 55%, #020008 100%)" }}
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="w-full max-w-sm"
+              className="w-full max-w-sm my-auto"
             >
-              {cardUtrDone ? (
+              {paywallStage === "done" ? (
                 <div className="text-center">
                   <div className="text-6xl mb-4">🎉</div>
                   <h2 className="text-2xl font-bold text-white mb-2">You're all set!</h2>
-                  <p className="text-white/60 mb-8 text-sm">10 cards have been added to your account.</p>
+                  <p className="text-white/60 mb-8 text-sm">
+                    {paywallPlan === "bundle"
+                      ? "All 3 premium templates are unlocked on your account — forever."
+                      : `${TEMPLATE_CATALOG.find(t => t.id === selectedTemplate)?.name ?? "Your premium template"} is unlocked on your account — forever.`}
+                  </p>
                   <button
-                    onClick={() => { setShowPaywall(false); setCardUtrDone(false); setCardUtr(""); }}
-                    className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-sm"
+                    onClick={() => { closePaywall(); }}
+                    className="w-full h-12 rounded-xl text-white font-bold text-sm"
+                    style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
+                    data-testid="paywall-done-continue"
                   >
-                    ✨ Continue Sending Cards
+                    ✨ Continue & Generate
                   </button>
+                </div>
+              ) : paywallStage === "claim" ? (
+                <div>
+                  <h1 className="text-2xl font-bold mb-1 text-white text-center">Pick your template</h1>
+                  <p className="text-white/55 mb-5 text-sm text-center">Payment received! Choose which premium template to unlock on your account.</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {TEMPLATE_CATALOG.filter(t => isPremiumTemplate(t.id)).map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        disabled={claimLoading}
+                        onClick={() => handleClaimTemplate(tpl.id)}
+                        data-testid={`claim-${tpl.id}`}
+                        style={{
+                          position: "relative",
+                          padding: "14px 16px",
+                          borderRadius: 16,
+                          background: tpl.gradient,
+                          border: "1.5px solid rgba(255,255,255,0.12)",
+                          textAlign: "left",
+                          cursor: claimLoading ? "default" : "pointer",
+                          opacity: claimLoading ? 0.6 : 1,
+                          display: "flex", alignItems: "center", gap: 14,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div style={{
+                          position: "absolute", inset: 0,
+                          background: `radial-gradient(ellipse at 30% 30%, ${tpl.ringColor} 0%, transparent 70%)`,
+                          pointerEvents: "none",
+                        }} />
+                        <div style={{ fontSize: 32, position: "relative", zIndex: 1 }}>{tpl.emoji}</div>
+                        <div style={{ position: "relative", zIndex: 1, flex: 1 }}>
+                          <div className="text-white font-bold text-base">{tpl.name}</div>
+                          <div className="text-white/55 text-xs">{tpl.tagline}</div>
+                        </div>
+                        <ArrowRight className="text-white/60" size={18} style={{ position: "relative", zIndex: 1 }} />
+                      </button>
+                    ))}
+                  </div>
+                  {claimError && <p className="text-xs text-destructive text-center mt-3">{claimError}</p>}
+                  {claimLoading && <p className="text-xs text-white/45 text-center mt-3 flex items-center justify-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Unlocking…</p>}
                 </div>
               ) : (
                 <>
-                  <h1 className="text-3xl font-bold mb-1 text-white">Get More Cards</h1>
-                  <p className="text-white/60 mb-6 text-sm">Pay via UPI, submit your UTR, and cards are added instantly.</p>
+                  <div className="text-center mb-5">
+                    <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
+                    <h1 className="text-2xl font-bold text-white mb-1">Unlock premium</h1>
+                    <p className="text-white/55 text-sm">Pay once via UPI, your account keeps it forever.</p>
+                  </div>
 
-                  <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl">
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mb-3">
-                        <Lock className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-1">10 Cards for ₹50</h3>
-                      <p className="text-sm text-white/45 mb-6 max-w-xs">
-                        That's ₹5 per card — less than a samosa 🫶
-                      </p>
+                  {/* Plan toggle */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button
+                      onClick={() => setPaywallPlan("single")}
+                      data-testid="plan-single"
+                      style={{
+                        padding: "14px 12px", borderRadius: 14,
+                        background: paywallPlan === "single" ? "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.10))" : "rgba(255,255,255,0.04)",
+                        border: `1.5px solid ${paywallPlan === "single" ? "rgba(255,215,0,0.55)" : "rgba(255,255,255,0.08)"}`,
+                        textAlign: "left", cursor: "pointer",
+                      }}
+                    >
+                      <div className="text-white font-extrabold text-lg leading-tight">₹29</div>
+                      <div className="text-white/55 text-xs">Unlock 1 template</div>
+                      <div className="text-white/35 text-[10px] mt-1">Pick after payment</div>
+                    </button>
+                    <button
+                      onClick={() => setPaywallPlan("bundle")}
+                      data-testid="plan-bundle"
+                      style={{
+                        position: "relative",
+                        padding: "14px 12px", borderRadius: 14,
+                        background: paywallPlan === "bundle" ? "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.10))" : "rgba(255,255,255,0.04)",
+                        border: `1.5px solid ${paywallPlan === "bundle" ? "rgba(255,215,0,0.55)" : "rgba(255,255,255,0.08)"}`,
+                        textAlign: "left", cursor: "pointer",
+                      }}
+                    >
+                      <div style={{
+                        position: "absolute", top: -8, right: 8,
+                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                        color: "#000", fontWeight: 800, fontSize: 9,
+                        padding: "2px 7px", borderRadius: 99, letterSpacing: "0.04em",
+                      }}>BEST VALUE</div>
+                      <div className="text-white font-extrabold text-lg leading-tight">₹49</div>
+                      <div className="text-white/55 text-xs">Unlock all 3</div>
+                      <div className="text-white/35 text-[10px] mt-1">Save ₹38 vs singles</div>
+                    </button>
+                  </div>
 
-                      <div className="flex gap-4 items-center mb-6 w-full">
-                        <div className="bg-white rounded-xl p-2 shadow-lg shrink-0">
-                          <img
-                            src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=8905158970@upi%26pn=HeartSync%20AI%26am=50%26cu=INR%26tn=HeartSync+Cards"
-                            alt="UPI QR Code"
-                            className="w-24 h-24 rounded-lg"
-                          />
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="text-[10px] text-white/35 uppercase tracking-wide mb-1">UPI ID</p>
-                          <p className="font-mono font-bold text-white text-sm">8905158970@upi</p>
-                          <p className="text-xs text-white/35 mt-1.5">Amount: ₹50</p>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Info className="w-3 h-3 text-white/25" />
-                            <p className="text-[10px] text-white/25">Scan QR or copy UPI ID</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="w-full space-y-3">
-                        <Input
-                          placeholder="Paste UTR / Transaction ID"
-                          value={cardUtr}
-                          onChange={(e) => { setCardUtr(e.target.value); setCardUtrError(""); }}
-                          className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
+                  {/* UPI box */}
+                  <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
+                    <div className="flex gap-3 items-center mb-4">
+                      <div className="bg-white rounded-xl p-1.5 shadow-lg shrink-0">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=8905158970@upi&pn=HeartSync%20AI&am=${paywallPlan === "single" ? 29 : 49}&cu=INR&tn=HeartSync+Premium`)}`}
+                          alt={`UPI QR Code ₹${paywallPlan === "single" ? 29 : 49}`}
+                          className="w-20 h-20 rounded-lg"
                         />
-                        {cardUtrError && <p className="text-xs text-destructive text-center">{cardUtrError}</p>}
-                        <button
-                          onClick={handleCardUtrSubmit}
-                          disabled={!isValidUtr(cardUtr) || cardUtrLoading}
-                          className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
-                        >
-                          {cardUtrLoading ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
-                          ) : (
-                            <>Unlock 10 Cards <ArrowRight className="w-4 h-4" /></>
-                          )}
-                        </button>
                       </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className="text-[10px] text-white/35 uppercase tracking-wide mb-0.5">UPI ID</p>
+                        <p className="font-mono font-bold text-white text-sm break-all">8905158970@upi</p>
+                        <p className="text-xs text-white/50 mt-1">Amount: <span className="text-white font-bold">₹{paywallPlan === "single" ? 29 : 49}</span></p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Info className="w-3 h-3 text-white/25 shrink-0" />
+                          <p className="text-[10px] text-white/30">Scan QR or copy UPI ID</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Paste UTR / Transaction ID"
+                        value={paywallUtr}
+                        onChange={(e) => { setPaywallUtr(e.target.value); setPaywallUtrError(""); }}
+                        data-testid="paywall-utr-input"
+                        className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
+                      />
+                      {paywallUtrError && <p className="text-xs text-destructive text-center">{paywallUtrError}</p>}
+                      <button
+                        onClick={handlePaywallUtrSubmit}
+                        disabled={!isValidUtr(paywallUtr) || paywallLoading}
+                        data-testid="paywall-utr-submit"
+                        className="w-full h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                        style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
+                      >
+                        {paywallLoading ? (
+                          <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
+                        ) : (
+                          <>
+                            {paywallPlan === "single" ? "Submit & pick template" : "Submit & unlock all"}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
 
+                  <p className="text-center text-[11px] text-white/35 mt-3">
+                    Account-wide: works on every card you ever send. No subscription.
+                  </p>
+
                   <button
-                    onClick={() => setShowPaywall(false)}
+                    onClick={closePaywall}
                     className="w-full text-center text-xs text-white/30 hover:text-white/50 transition-colors mt-4"
                   >
                     Go back

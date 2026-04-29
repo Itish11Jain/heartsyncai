@@ -29,6 +29,49 @@ export async function initDb(): Promise<void> {
       cards_used INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    -- Per-user account-wide premium template entitlements.
+    -- Default '{}' = no premium templates unlocked.
+    -- Possible values inside the array: 'cosmic', 'crystal', 'vinyl'.
+    ALTER TABLE hs_clerk_users
+      ADD COLUMN IF NOT EXISTS unlocked_templates TEXT[] NOT NULL DEFAULT '{}'::text[];
+
+    -- Records every premium-template payment (₹29 single, ₹49 bundle).
+    -- For 'single', claimed_template starts NULL and is filled when the user
+    -- picks which premium template to unlock after the payment is verified.
+    -- For 'bundle', claimed_template stays NULL (all 3 are unlocked at once).
+    CREATE TABLE IF NOT EXISTS hs_template_unlock_payments (
+      id SERIAL PRIMARY KEY,
+      clerk_user_id TEXT NOT NULL,
+      utr TEXT UNIQUE NOT NULL,
+      plan TEXT NOT NULL CHECK (plan IN ('single', 'bundle')),
+      claimed_template TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_tul_user_idx ON hs_template_unlock_payments(clerk_user_id);
+
+    -- Lightweight migration tracker (one-shot data backfills).
+    CREATE TABLE IF NOT EXISTS hs_migrations (
+      name TEXT PRIMARY KEY,
+      ran_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Grandfather migration: every Clerk user that existed before the
+    -- premium-template paywall ships gets all 3 premium templates unlocked
+    -- for free. Runs exactly once. ON CONFLICT DO NOTHING makes it safe
+    -- against concurrent boots of multiple instances racing the marker insert.
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM hs_migrations WHERE name = 'grandfather_template_unlocks_v1'
+      ) THEN
+        UPDATE hs_clerk_users
+          SET unlocked_templates = ARRAY['cosmic', 'crystal', 'vinyl']
+          WHERE unlocked_templates = '{}'::text[];
+        INSERT INTO hs_migrations (name)
+          VALUES ('grandfather_template_unlocks_v1')
+          ON CONFLICT (name) DO NOTHING;
+      END IF;
+    END $$;
 
     -- Anonymous fingerprint usage tracking (resists incognito via server-side counter)
     CREATE TABLE IF NOT EXISTS hs_card_usage (

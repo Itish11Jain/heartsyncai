@@ -4,6 +4,16 @@ import { SUPERUSER_EMAIL } from "@/lib/trackEvent";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
+/* ─── Template gating ───────────────────────────────────────────────────── */
+
+export type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl";
+export const PREMIUM_TEMPLATES: ReadonlyArray<TemplateId> = ["cosmic", "crystal", "vinyl"];
+export const FREE_TEMPLATE: TemplateId = "envelope";
+
+export function isPremiumTemplate(t: string): t is "cosmic" | "crystal" | "vinyl" {
+  return (PREMIUM_TEMPLATES as readonly string[]).includes(t);
+}
+
 /** Generate a stable browser fingerprint stored in localStorage. */
 function makeFingerprint(): string {
   const stored = localStorage.getItem("hs_fp");
@@ -34,23 +44,50 @@ export interface CardUsage {
   signed_in_used: number;
   is_signed_in: boolean;
   is_superuser: boolean;
+  unlocked_templates: string[];
+  pending_single_unlocks: number;
 }
 
-/** Whether this user can still create a card for free. */
-export function canCreate(usage: CardUsage | null): boolean {
-  if (!usage) return true;
-  if (usage.is_superuser) return true;
-  if (!usage.is_signed_in) return usage.anon_used < 2;
-  return usage.signed_in_used < 2;
-}
-
-/** Which gate to show: "signin" | "paywall" | null */
-export function gateNeeded(usage: CardUsage | null): "signin" | "paywall" | null {
-  if (!usage) return null;
+/**
+ * Decide which gate (if any) is required to send a card with `template`.
+ *  - "signin"  → show sign-in wall (anonymous user hitting their first cap, or
+ *                anonymous user clicking a premium template).
+ *  - "paywall" → signed-in user clicking a premium template they haven't
+ *                unlocked and have no pending single-unlock to claim against.
+ *  - null      → free to proceed.
+ *
+ * Rules in plain English:
+ *   • Envelope (free) — anonymous users get 1 card free, then hit signup.
+ *     Signed-in users get unlimited Envelope cards.
+ *   • Cosmic / Crystal / Vinyl (premium) — anonymous users always hit signup
+ *     (with premium-aware copy). Signed-in users without that template in
+ *     `unlocked_templates` hit the paywall, unless they have a pre-paid
+ *     single unlock waiting to claim.
+ *   • Superuser bypasses everything.
+ */
+export function templateGate(
+  usage: CardUsage | null,
+  template: TemplateId,
+): "signin" | "paywall" | null {
+  if (!usage) return null; // optimistic until we've loaded
   if (usage.is_superuser) return null;
-  if (!usage.is_signed_in && usage.anon_used >= 2) return "signin";
-  if (usage.is_signed_in && usage.signed_in_used >= 2) return "paywall";
-  return null;
+
+  if (template === FREE_TEMPLATE) {
+    if (!usage.is_signed_in && usage.anon_used >= 1) return "signin";
+    return null;
+  }
+
+  // Premium template
+  if (!usage.is_signed_in) return "signin";
+  if (usage.unlocked_templates.includes(template)) return null;
+  // A paid-but-unclaimed single counts as access — the flow will claim it.
+  if (usage.pending_single_unlocks > 0) return null;
+  return "paywall";
+}
+
+/** Quick check used in places that don't care which template (defaults to Envelope). */
+export function canCreate(usage: CardUsage | null): boolean {
+  return templateGate(usage, FREE_TEMPLATE) === null;
 }
 
 export function useCardUsage() {
@@ -78,13 +115,28 @@ export function useCardUsage() {
         { headers }
       );
       if (res.ok) {
-        const data: CardUsage = await res.json();
+        const raw = await res.json() as Partial<CardUsage>;
+        const data: CardUsage = {
+          anon_used: raw.anon_used ?? 0,
+          signed_in_used: raw.signed_in_used ?? 0,
+          is_signed_in: raw.is_signed_in ?? !!isSignedIn,
+          is_superuser: raw.is_superuser ?? false,
+          unlocked_templates: Array.isArray(raw.unlocked_templates) ? raw.unlocked_templates : [],
+          pending_single_unlocks: raw.pending_single_unlocks ?? 0,
+        };
         if (userEmail === SUPERUSER_EMAIL) data.is_superuser = true;
         setUsage(data);
       }
     } catch {
       const isSuperUser = userEmail === SUPERUSER_EMAIL;
-      setUsage({ anon_used: 0, signed_in_used: 0, is_signed_in: !!isSignedIn, is_superuser: isSuperUser });
+      setUsage({
+        anon_used: 0,
+        signed_in_used: 0,
+        is_signed_in: !!isSignedIn,
+        is_superuser: isSuperUser,
+        unlocked_templates: [],
+        pending_single_unlocks: 0,
+      });
     } finally {
       setLoading(false);
     }
