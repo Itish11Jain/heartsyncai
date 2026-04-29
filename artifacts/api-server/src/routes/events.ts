@@ -137,11 +137,6 @@ const ENSURE_TABLE = `
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_medium TEXT;
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
   CREATE INDEX IF NOT EXISTS hs_card_events_utm_source ON hs_card_events(utm_source);
-  -- "source" identifies WHERE an action originated (e.g. which page the
-  -- user clicked "Create your own card" from: recipient_card / cosmic_demo
-  -- / crystal_demo / vinyl_demo). Low cardinality, free-form.
-  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS source TEXT;
-  CREATE INDEX IF NOT EXISTS hs_card_events_source ON hs_card_events(source);
 `;
 
 const ENSURE_VITALS_TABLE = `
@@ -268,7 +263,6 @@ router.post("/events/card", async (req, res) => {
       has_likes, used_custom_msg, is_free, from_card_ref,
       recipient_name, card_id,
       utm_source, utm_medium, utm_campaign,
-      source,
     } = req.body as Record<string, unknown>;
 
     if (!event || typeof event !== "string") {
@@ -293,18 +287,12 @@ router.post("/events/card", async (req, res) => {
       return t ? t.slice(0, max) : null;
     };
 
-    // `source` is intentionally low-cardinality (a small enum of page
-    // identifiers). Cap to 40 chars to defend against arbitrary client
-    // input bloating the column.
-    const sourceClean: string | null =
-      typeof source === "string" && source.trim() ? source.trim().slice(0, 40) : null;
-
     await pool.query(
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
           channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id,
-          utm_source, utm_medium, utm_campaign, source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+          utm_source, utm_medium, utm_campaign)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
         event,
         fingerprint ?? null,
@@ -322,7 +310,6 @@ router.post("/events/card", async (req, res) => {
         capUtm(utm_source, 60),
         capUtm(utm_medium, 60),
         capUtm(utm_campaign, 80),
-        sourceClean,
       ],
     );
 
@@ -452,7 +439,6 @@ router.get("/events/analytics", async (req, res) => {
       vitals,
       utm_funnel,
       premiumClicks,
-      createOwnFunnel,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -586,58 +572,6 @@ router.get("/events/analytics", async (req, res) => {
           params,
         ),
 
-        /* ── "Create your own card" CTA → card-created funnel ──
-         * Tracks how many people who tapped one of the four "Create your
-         * own card" CTAs (recipient_card / cosmic_demo / crystal_demo /
-         * vinyl_demo) actually went on to create a card.
-         *
-         * Conversion definition: a fingerprint that fired BOTH
-         * `create_own_clicked` AND `card_created` inside the date range.
-         * Per-source rows are scoped by the SOURCE OF THE CLICK (we don't
-         * try to attribute the eventual card_created to a specific source
-         * because users sometimes hit several CTAs before converting —
-         * counting them in each source they touched is the honest answer
-         * for "how persuasive was this entry point").
-         *
-         * `cards_after_click` counts unique fingerprints, then a totals row
-         * (source = '__all__') aggregates across every source so the UI
-         * can show overall click→card conversion in one glance. */
-        pool.query(
-          `WITH clicks AS (
-             SELECT source, fingerprint
-             FROM hs_card_events
-             WHERE event = 'create_own_clicked'
-               AND fingerprint IS NOT NULL AND fingerprint <> ''
-               AND ${whereSql}
-           ), creators AS (
-             SELECT DISTINCT fingerprint
-             FROM hs_card_events
-             WHERE event = 'card_created'
-               AND fingerprint IS NOT NULL AND fingerprint <> ''
-               AND ${whereSql}
-           )
-           SELECT
-             COALESCE(c.source, '(unknown)') AS source,
-             COUNT(*)::int                                  AS clicks,
-             COUNT(DISTINCT c.fingerprint)::int             AS unique_clickers,
-             COUNT(DISTINCT c.fingerprint)
-               FILTER (WHERE c.fingerprint IN (SELECT fingerprint FROM creators))::int AS cards_after_click
-           FROM clicks c
-           GROUP BY 1
-           UNION ALL
-           SELECT
-             '__all__'                                      AS source,
-             COUNT(*)::int                                  AS clicks,
-             COUNT(DISTINCT c.fingerprint)::int             AS unique_clickers,
-             COUNT(DISTINCT c.fingerprint)
-               FILTER (WHERE c.fingerprint IN (SELECT fingerprint FROM creators))::int AS cards_after_click
-           FROM clicks c
-           ORDER BY (source = '__all__') DESC, clicks DESC`,
-          // The two `${whereSql}` references both reuse $1, $2, ... — same
-          // params, no duplication needed.
-          params,
-        ),
-
         /* ── Premium-card click breakdown by template ──
          * `paywall_shown` fires the moment a user taps a premium template
          * card (cosmic / crystal / vinyl) and the paywall opens. We expose:
@@ -673,7 +607,6 @@ router.get("/events/analytics", async (req, res) => {
       vitals: vitals.rows,
       utm_funnel: utm_funnel.rows,
       premium_clicks: premiumClicks.rows,
-      create_own_funnel: createOwnFunnel.rows,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });
