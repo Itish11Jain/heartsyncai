@@ -87,17 +87,24 @@ function EnvelopePreview({ size }: { size: number }) {
         borderRadius: "4px 4px 0 0",
       }} />
 
-      {/* Red wax seal in the center, with a soft pulse */}
+      {/* Red wax seal — wrapped in a flex layer that fills the envelope so
+          the seal is *guaranteed* dead-center horizontally AND vertically,
+          regardless of size, sub-pixel rounding, or the flap above it.
+          Flex centering avoids any top:50%/margin math drift. */}
       <div style={{
-        position: "absolute", top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: sealSize, height: sealSize, borderRadius: "50%",
-        background:
-          "radial-gradient(circle at 38% 33%, #A82020, #7A0A0A 58%, #4A0000 92%)",
-        boxShadow:
-          "0 2px 6px rgba(80,0,0,0.6), inset 0 1px 2px rgba(255,140,140,0.2)",
-        animation: "hs-pulse 2.2s ease-in-out infinite",
-      }} />
+        position: "absolute", inset: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        pointerEvents: "none",
+      }}>
+        <div style={{
+          width: sealSize, height: sealSize, borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 38% 33%, #A82020, #7A0A0A 58%, #4A0000 92%)",
+          boxShadow:
+            "0 2px 6px rgba(80,0,0,0.6), inset 0 1px 2px rgba(255,140,140,0.2)",
+          animation: "hs-pulse 2.2s ease-in-out infinite",
+        }} />
+      </div>
     </div>
   );
 }
@@ -179,8 +186,11 @@ function CrystalPreview({ size }: { size: number }) {
         }}
       />
 
-      {/* The crystal ball itself — does NOT rotate (a crystal ball doesn't
-          spin); the highlight stays put while the aura breathes. */}
+      {/* The crystal ball — base gradient stays put (so the orb itself
+          doesn't look like it's wobbling), while an inner *swirling mist*
+          rotates inside, giving the visible "spinning crystal" motion
+          users expect from a magic orb. The fixed top-left specular
+          highlight reads as a stationary external light source. */}
       <div
         style={{
           position: "relative",
@@ -198,7 +208,22 @@ function CrystalPreview({ size }: { size: number }) {
           overflow: "hidden",
         }}
       >
-        {/* Primary specular highlight (top-left) */}
+        {/* Swirling inner mist — clearly off-center so the rotation is
+            visually obvious. 4s period reads as "alive and magical". */}
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          background:
+            "conic-gradient(from 0deg, " +
+            "rgba(220,180,255,0) 0%, " +
+            "rgba(220,180,255,0.45) 18%, " +
+            "rgba(255,255,255,0.18) 32%, " +
+            "rgba(170,120,240,0) 55%, " +
+            "rgba(220,180,255,0.35) 78%, " +
+            "rgba(220,180,255,0) 100%)",
+          mixBlendMode: "screen",
+          animation: "hs-spin 4s linear infinite",
+        }} />
+        {/* Primary specular highlight (top-left) — STATIONARY */}
         <div style={{
           position: "absolute", top: "8%", left: "12%",
           width: "40%", height: "32%", borderRadius: "50%",
@@ -206,18 +231,12 @@ function CrystalPreview({ size }: { size: number }) {
             "radial-gradient(ellipse at 38% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 38%, transparent 68%)",
           transform: "rotate(-18deg)",
         }} />
-        {/* Secondary catch-light (bottom-right) */}
+        {/* Secondary catch-light (bottom-right) — STATIONARY */}
         <div style={{
           position: "absolute", bottom: "16%", right: "16%",
           width: "20%", height: "14%", borderRadius: "50%",
           background:
             "radial-gradient(ellipse, rgba(220,195,255,0.45) 0%, transparent 70%)",
-        }} />
-        {/* Mist veil */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          background:
-            "radial-gradient(circle at 50% 60%, rgba(130,90,210,0.22) 0%, rgba(55,15,120,0.18) 60%, transparent 100%)",
         }} />
       </div>
 
