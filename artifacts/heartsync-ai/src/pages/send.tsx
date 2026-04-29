@@ -114,14 +114,17 @@ export default function Send() {
   // Restore draft (e.g. after a Clerk sign-in redirect bounced us back here).
   const initialDraft = loadDraft();
 
-  const [step, setStep] = useState<number>(initialDraft?.step ?? 1);
+  const [step, setStep] = useState<number>(Math.min(initialDraft?.step ?? 1, 3));
   const [dir, setDir] = useState(1);
   const [occasion, setOccasion] = useState(initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good");
   const [relation, setRelation] = useState(initialDraft?.relation ?? searchParams.get("relation") ?? "");
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
   const [likes, setLikes] = useState(initialDraft?.likes ?? "");
   const [customMsg, setCustomMsg] = useState(initialDraft?.customMsg ?? "");
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>(initialDraft?.selectedTemplate ?? "envelope");
+  // Template selection is intentionally NOT restored from draft — Envelope is always
+  // the predictable default on a fresh load. Selections survive the in-page lifecycle
+  // (signin modal, paywall modal) via React state, which is what matters for the flow.
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("envelope");
 
   const [showGenerating, setShowGenerating] = useState(false);
   const [genEmojiIdx, setGenEmojiIdx] = useState(0);
@@ -451,6 +454,25 @@ export default function Send() {
   }
 
   /* ─── Step 4 picker: select + immediately route locked templates to gate. */
+  // Tracks a tap on a locked template that we couldn't gate immediately
+  // because usage was still loading. The effect below will pick this up
+  // once usage resolves and trigger the right gate (signin or paywall).
+  const pendingGateForTemplate = useRef<TemplateId | null>(null);
+
+  function fireGateFor(t: TemplateId) {
+    const gate = templateGate(usage, t);
+    if (gate === "signin") {
+      setSignInGateContext(t);
+      setShowSignInGate(true);
+      trackEvent({
+        event: "signup_wall_shown",
+        fingerprint, occasion, template: t,
+      });
+    } else if (gate === "paywall") {
+      openPaywall();
+    }
+  }
+
   function handlePickTemplate(t: TemplateId) {
     setSelectedTemplate(t);
     trackEvent({
@@ -460,21 +482,25 @@ export default function Send() {
 
     // If this template is locked for the current user, route them to the
     // appropriate gate immediately rather than waiting until they click
-    // Generate at the end of the wizard.
-    if (!usageLoading) {
-      const gate = templateGate(usage, t);
-      if (gate === "signin") {
-        setSignInGateContext(t);
-        setShowSignInGate(true);
-        trackEvent({
-          event: "signup_wall_shown",
-          fingerprint, occasion, template: t,
-        });
-      } else if (gate === "paywall") {
-        openPaywall();
-      }
+    // Generate at the end of the wizard. If usage is still loading we
+    // defer until the load completes.
+    if (usageLoading) {
+      pendingGateForTemplate.current = t;
+    } else {
+      fireGateFor(t);
     }
   }
+
+  // Drains a deferred gate request once usage finishes loading, so a fast tap
+  // on a premium thumbnail never silently swallows the gate intent.
+  useEffect(() => {
+    if (!usageLoading && pendingGateForTemplate.current) {
+      const t = pendingGateForTemplate.current;
+      pendingGateForTemplate.current = null;
+      fireGateFor(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usageLoading, usage]);
 
   /* ─── UI helpers ────────────────────────────────────────────────────── */
 
@@ -561,7 +587,7 @@ export default function Send() {
           ✨ Create 3D Card
         </span>
         <div className="flex gap-1">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3].map(i => (
             <div
               key={i}
               style={{
@@ -679,7 +705,7 @@ export default function Send() {
                     placeholder="e.g. Rahul, Priya, Aditya…"
                     value={recipientName}
                     onChange={e => setRecipientName(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && recipientName.trim() && goTo(4, 1)}
+                    onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
                     autoFocus
                     style={{
                       background: "rgba(255,255,255,0.06)",
@@ -737,146 +763,122 @@ export default function Send() {
 
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  disabled={!recipientName.trim()}
-                  onClick={() => recipientName.trim() && goTo(4, 1)}
+                  disabled={!recipientName.trim() || usageLoading || showGenerating}
+                  onClick={handleFinish}
+                  data-testid="generate-button"
                   style={{
                     padding: "16px",
                     borderRadius: 14,
-                    background: recipientName.trim()
+                    background: recipientName.trim() && !usageLoading
                       ? "linear-gradient(135deg, #FFD700, #FFA500)"
                       : "rgba(255,255,255,0.08)",
-                    color: recipientName.trim() ? "#000" : "rgba(255,255,255,0.3)",
+                    color: recipientName.trim() && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
                     fontWeight: 700,
                     fontSize: 16,
-                    cursor: recipientName.trim() ? "pointer" : "default",
+                    cursor: recipientName.trim() && !usageLoading ? "pointer" : "default",
                     border: "none",
                     transition: "all 0.2s",
                   }}
                 >
-                  Pick a template →
+                  {generateButtonLabel}
                 </motion.button>
-              </div>
-            </motion.div>
-          )}
 
-          {/* Step 4: Template picker */}
-          {step === 4 && (
-            <motion.div key="step4" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
-              <button onClick={() => goTo(3, -1)} className="flex items-center gap-1 text-sm mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>
-                <ChevronLeft size={15} /> Back
-              </button>
-              <h1 className="text-2xl font-bold text-white text-center mb-1">Pick a template</h1>
-              <p className="text-center text-sm mb-5" style={{ color: "rgba(255,255,255,0.4)" }}>
-                Envelope is free forever. Premium ones unlock once, send anytime ✨
-              </p>
-
-              <div className="grid grid-cols-2 gap-3">
-                {TEMPLATE_CATALOG.map((tpl) => {
-                  const selected = selectedTemplate === tpl.id;
-                  const locked = isTemplateLocked(tpl.id);
-                  const isPremium = isPremiumTemplate(tpl.id);
-                  return (
-                    <motion.button
-                      key={tpl.id}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handlePickTemplate(tpl.id)}
-                      data-testid={`template-card-${tpl.id}`}
-                      style={{
-                        position: "relative",
-                        padding: 0,
-                        borderRadius: 18,
-                        overflow: "hidden",
-                        cursor: "pointer",
-                        border: `2px solid ${selected ? "rgba(255,215,0,0.85)" : "rgba(255,255,255,0.08)"}`,
-                        boxShadow: selected ? "0 0 0 3px rgba(255,215,0,0.18), 0 8px 24px rgba(0,0,0,0.45)" : "0 4px 16px rgba(0,0,0,0.3)",
-                        textAlign: "left",
-                        aspectRatio: "3 / 4",
-                        background: tpl.gradient,
-                      }}
-                    >
-                      {/* Glow accent */}
-                      <div style={{
-                        position: "absolute", inset: 0,
-                        background: `radial-gradient(ellipse at 50% 30%, ${tpl.ringColor} 0%, transparent 65%)`,
-                        pointerEvents: "none",
-                      }} />
-
-                      {/* Lock badge or selected check */}
-                      <div style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}>
-                        {selected ? (
+                {/* Inline template picker — Envelope pre-selected, premium tap → gate. */}
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      Card style
+                    </label>
+                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      Envelope is free forever ✨
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {TEMPLATE_CATALOG.map((tpl) => {
+                      const selected = selectedTemplate === tpl.id;
+                      const locked = isTemplateLocked(tpl.id);
+                      const isPremium = isPremiumTemplate(tpl.id);
+                      return (
+                        <motion.button
+                          key={tpl.id}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handlePickTemplate(tpl.id)}
+                          data-testid={`template-card-${tpl.id}`}
+                          style={{
+                            position: "relative",
+                            padding: 0,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            cursor: "pointer",
+                            border: `2px solid ${selected ? "rgba(255,215,0,0.85)" : "rgba(255,255,255,0.08)"}`,
+                            boxShadow: selected
+                              ? "0 0 0 2px rgba(255,215,0,0.18), 0 4px 14px rgba(0,0,0,0.45)"
+                              : "0 2px 8px rgba(0,0,0,0.3)",
+                            aspectRatio: "3 / 4",
+                            background: tpl.gradient,
+                          }}
+                        >
                           <div style={{
-                            width: 26, height: 26, borderRadius: 99,
-                            background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-                          }}>
-                            <Check size={14} color="#000" strokeWidth={3} />
-                          </div>
-                        ) : locked ? (
+                            position: "absolute", inset: 0,
+                            background: `radial-gradient(ellipse at 50% 30%, ${tpl.ringColor} 0%, transparent 65%)`,
+                            pointerEvents: "none",
+                          }} />
+
+                          {selected && (
+                            <div style={{
+                              position: "absolute", top: 4, right: 4, zIndex: 2,
+                              width: 18, height: 18, borderRadius: 99,
+                              background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+                            }}>
+                              <Check size={11} color="#000" strokeWidth={3} />
+                            </div>
+                          )}
+                          {!selected && locked && (
+                            <div style={{
+                              position: "absolute", top: 4, right: 4, zIndex: 2,
+                              padding: "2px 5px", borderRadius: 99,
+                              background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)",
+                              fontSize: 9, fontWeight: 700, color: "#fff",
+                              border: "1px solid rgba(255,255,255,0.2)",
+                              display: "flex", alignItems: "center", gap: 2,
+                            }}>
+                              <Lock size={8} /> {isPremium ? "₹29" : ""}
+                            </div>
+                          )}
+
                           <div style={{
-                            padding: "4px 8px", borderRadius: 99,
-                            background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)",
-                            display: "flex", alignItems: "center", gap: 4,
-                            fontSize: 10, fontWeight: 700, color: "#fff",
-                            border: "1px solid rgba(255,255,255,0.2)",
+                            position: "relative", zIndex: 1,
+                            height: "100%", display: "flex", flexDirection: "column",
+                            justifyContent: "space-between", alignItems: "center",
+                            padding: "10px 4px 8px",
                           }}>
-                            <Lock size={9} /> {isPremium ? "₹29" : "Sign in"}
+                            <div style={{ fontSize: 24, lineHeight: 1 }}>{tpl.emoji}</div>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ color: "#fff", fontWeight: 700, fontSize: 11, lineHeight: 1.1 }}>
+                                {tpl.name}
+                              </div>
+                              <div style={{
+                                marginTop: 2, fontSize: 8, fontWeight: 700, letterSpacing: "0.05em",
+                                color: isPremium ? "#FFD700" : "#90EE90",
+                              }}>
+                                {isPremium ? "✦ PREMIUM" : "FREE"}
+                              </div>
+                            </div>
                           </div>
-                        ) : null}
-                      </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
 
-                      {/* Content */}
-                      <div style={{
-                        position: "relative", zIndex: 1,
-                        height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between",
-                        padding: "16px 14px",
-                      }}>
-                        <div style={{ fontSize: 38, lineHeight: 1 }}>{tpl.emoji}</div>
-                        <div>
-                          <div style={{ color: "#fff", fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{tpl.name}</div>
-                          <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, lineHeight: 1.35 }}>{tpl.tagline}</div>
-                          <div style={{ marginTop: 6, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
-                            color: isPremium ? "#FFD700" : "#90EE90",
-                          }}>
-                            {isPremium ? "✦ PREMIUM" : "FREE"}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.button>
-                  );
-                })}
+                  {selectedTemplate !== "envelope" && isTemplateLocked(selectedTemplate) && usage?.is_signed_in && (
+                    <p className="text-center text-xs mt-2" style={{ color: "rgba(255,215,0,0.6)" }}>
+                      💡 Tip: ₹49 unlocks all 3 premium templates forever
+                    </p>
+                  )}
+                </div>
               </div>
-
-              {/* Bundle hint */}
-              {selectedTemplate !== "envelope" && isTemplateLocked(selectedTemplate) && usage?.is_signed_in && (
-                <p className="text-center text-xs mt-3" style={{ color: "rgba(255,215,0,0.6)" }}>
-                  💡 Tip: ₹49 unlocks all 3 premium templates forever
-                </p>
-              )}
-
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                disabled={!recipientName.trim() || usageLoading || showGenerating}
-                onClick={handleFinish}
-                data-testid="generate-button"
-                style={{
-                  marginTop: 16,
-                  width: "100%",
-                  padding: "16px",
-                  borderRadius: 14,
-                  background: recipientName.trim() && !usageLoading
-                    ? "linear-gradient(135deg, #FFD700, #FFA500)"
-                    : "rgba(255,255,255,0.08)",
-                  color: recipientName.trim() && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
-                  fontWeight: 700,
-                  fontSize: 16,
-                  cursor: recipientName.trim() && !usageLoading ? "pointer" : "default",
-                  border: "none",
-                  transition: "all 0.2s",
-                }}
-              >
-                {generateButtonLabel}
-              </motion.button>
             </motion.div>
           )}
 
