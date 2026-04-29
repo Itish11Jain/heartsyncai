@@ -190,54 +190,90 @@ function CrystalPreview({ size }: { size: number }) {
         }}
       />
 
-      {/* The crystal ball — rotates around its VERTICAL Y axis (like a
-          spinning globe). Highlights live inside the orb, so they sweep
-          to the back of the orb as it turns, giving real depth. We keep
-          the rotation slow (5s) so it reads as "alive and magical"
-          rather than "spinning fast". */}
+      {/* The crystal ball — STATIC sphere with stationary 3D shading and
+          highlight, while a wide *surface pattern* scrolls horizontally
+          inside it. Because the orb's silhouette + lighting never change,
+          it always reads as a 3D sphere; only the swirling surface moves,
+          which the eye reads as the sphere rotating around its vertical
+          axis. (True rotateY makes the orb visibly flatten into a disk
+          when the face turns sideways — this trick avoids that entirely.) */}
       <div
         style={{
           position: "relative",
           width: ballSize, height: ballSize, borderRadius: "50%",
-          background:
-            "radial-gradient(circle at 32% 28%, " +
-            "rgba(255,255,255,0.95) 0%, " +
-            "rgba(240,225,255,0.78) 12%, " +
-            "rgba(200,165,255,0.55) 32%, " +
-            "rgba(130,80,225,0.5) 58%, " +
-            "rgba(60,18,115,0.78) 84%, " +
-            "rgba(18,4,45,0.95) 100%)",
-          boxShadow:
-            "0 0 14px rgba(150,90,255,0.45), inset 0 0 10px rgba(190,145,255,0.25)",
           overflow: "hidden",
-          transformStyle: "preserve-3d",
-          animation: "hs-spin-y 5s linear infinite",
+          boxShadow:
+            "0 0 14px rgba(150,90,255,0.45), 0 4px 10px rgba(0,0,0,0.45)",
+          // Deep base colour so any gaps in the panning pattern still
+          // read as "inside the orb", not a hole.
+          background: "#1a0440",
         }}
       >
-        {/* Primary specular highlight (top-left) — rotates with the orb */}
+        {/* Scrolling surface pattern — 200% wide, panned -50% over its
+            cycle so the seam at -50% lines up perfectly with the start.
+            The pattern itself is a swirly mauve/violet/white band that
+            mimics swirling mist or galaxy cloud inside the orb. */}
+        <div
+          style={{
+            position: "absolute", top: 0, bottom: 0, left: 0,
+            width: "200%",
+            background:
+              "linear-gradient(90deg, " +
+              "#1a0440 0%, " +
+              "#3d1280 8%, " +
+              "#7a3fcc 15%, " +
+              "#c8a8ff 22%, " +
+              "#7a3fcc 29%, " +
+              "#3d1280 36%, " +
+              "#1a0440 44%, " +
+              "#5a25a0 52%, " +
+              "#a878e8 60%, " +
+              "#5a25a0 68%, " +
+              "#1a0440 76%, " +
+              "#3d1280 83%, " +
+              "#7a3fcc 90%, " +
+              "#c8a8ff 96%, " +
+              // Wrap colour MUST equal the start colour so the loop is
+              // seamless when transform translates from 0 to -50%.
+              "#1a0440 100%)",
+            animation: "hs-pan-x 6s linear infinite",
+          }}
+        />
+
+        {/* STATIC sphere shading — a radial gradient that's bright on the
+            top-left and dark on the bottom-right edges, giving the disc a
+            true bulgy 3D look. Sits ABOVE the panning pattern. */}
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 32% 28%, " +
+            "rgba(255,255,255,0.55) 0%, " +
+            "rgba(255,255,255,0.18) 14%, " +
+            "rgba(255,255,255,0) 38%, " +
+            "rgba(20,5,55,0.45) 78%, " +
+            "rgba(8,2,28,0.85) 100%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* STATIC primary specular highlight (top-left) — fixed in space,
+            like a real light source bouncing off a glass sphere. */}
         <div style={{
           position: "absolute", top: "8%", left: "12%",
-          width: "40%", height: "32%", borderRadius: "50%",
+          width: "38%", height: "28%", borderRadius: "50%",
           background:
-            "radial-gradient(ellipse at 38% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.35) 38%, transparent 68%)",
+            "radial-gradient(ellipse at 38% 32%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.4) 38%, transparent 70%)",
           transform: "rotate(-18deg)",
+          pointerEvents: "none",
         }} />
-        {/* Secondary catch-light (bottom-right) — also rotates with orb */}
+
+        {/* STATIC secondary rim catch-light (bottom-right) — extra cue of
+            curvature so the sphere reads as 3D from any angle. */}
         <div style={{
-          position: "absolute", bottom: "18%", right: "14%",
+          position: "absolute", bottom: "14%", right: "14%",
           width: "22%", height: "14%", borderRadius: "50%",
           background:
             "radial-gradient(ellipse, rgba(230,200,255,0.55) 0%, transparent 70%)",
-        }} />
-        {/* A faint vertical band that rides along the equator — gives
-            extra "I'm spinning" cue when the orb turns. */}
-        <div style={{
-          position: "absolute",
-          top: "10%", bottom: "10%", left: "48%",
-          width: "4%", borderRadius: 99,
-          background:
-            "linear-gradient(180deg, transparent 0%, rgba(220,180,255,0.35) 50%, transparent 100%)",
-          filter: "blur(1px)",
+          pointerEvents: "none",
         }} />
       </div>
 

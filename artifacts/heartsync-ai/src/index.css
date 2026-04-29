@@ -193,12 +193,13 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-/* Vertical-axis (Y) rotation — looks like a globe spinning. Used by the
-   crystal-ball preview so it visibly rotates "around its vertical axis"
-   instead of flat 2D Z-axis spin. Parent must set `perspective`. */
-@keyframes hs-spin-y {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(360deg); }
+/* Horizontal pan — used to scroll a surface pattern across a circular
+   mask, faking a sphere "rotating around its vertical axis" while the
+   sphere's static shading + specular highlight keep the 3D illusion
+   intact. (True rotateY makes the orb visually flatten into a disk.) */
+@keyframes hs-pan-x {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
 }
 @keyframes hs-orb-glow {
   0%, 100% { opacity: 0.55; }
