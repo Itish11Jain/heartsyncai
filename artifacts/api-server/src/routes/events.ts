@@ -391,12 +391,12 @@ router.get("/events/analytics", async (req, res) => {
     }
 
     /**
-     * "Recent cards" view-count subquery: also needs the exclusion filter so
-     * we don't surface views of purged recipient cards. We reuse the same
-     * exclusion clause but reset the param indexes for this subquery, which
-     * is run as its own pool.query().
+     * "Recent cards" view-count subquery shares the exact same filter as the
+     * outer SELECT (same email exclusions, same recipient exclusions, same
+     * date range). Because the placeholders ($1, $2, …) are identical in both
+     * the subquery and the outer WHERE, Postgres lets us bind the params just
+     * once even though they're referenced twice in the SQL.
      */
-    const subFilter = buildEventFilter({ from, to });
 
     const [
       overview,
@@ -492,14 +492,15 @@ router.get("/events/analytics", async (req, res) => {
              SELECT card_id, COUNT(*) AS view_count
              FROM hs_card_events
              WHERE event = 'card_viewed' AND card_id IS NOT NULL
-               AND ${subFilter.whereSql}
+               AND ${whereSql}
              GROUP BY card_id
            ) v ON v.card_id = c.card_id
            WHERE c.event = 'card_created' AND ${whereSql}
            ORDER BY c.created_at DESC
            LIMIT 20`,
-          // Subquery params come first because it appears first in the SQL.
-          [...subFilter.params, ...params],
+          // Same placeholders ($1, $2, …) appear in both subquery and outer
+          // WHERE — Postgres binds each $N once and reuses it everywhere.
+          params,
         ),
 
         /* ── Web Vitals: P50/P75/P90 for the selected range (or last 24h). ── */
