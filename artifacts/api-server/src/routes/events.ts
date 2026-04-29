@@ -5,8 +5,79 @@ import { pool } from "../lib/db";
 const router = Router();
 
 const SUPERUSER_EMAILS = ["jainitisha93@gmail.com"];
-const EXCL = `(email IS NULL OR email NOT IN (${SUPERUSER_EMAILS.map((_, i) => `$${i + 1}`).join(",")}))`;
-const EXCL_PARAMS = SUPERUSER_EMAILS;
+
+/**
+ * Recipient names to exclude from analytics entirely. Matched case-insensitively
+ * on a *whole-word* basis using Postgres regex word boundaries (`\y…\y`).
+ * That means "Itisha", "ITISHA 🌸", and "itisha jain" all match, but innocent
+ * names that merely contain these letters ("Nitisha", "Pratisha") do NOT.
+ *
+ * Two layers of defence:
+ *  1. POST /events/card silently drops new inserts that match.
+ *  2. GET /events/analytics filters them out of every aggregate query.
+ *
+ * On first analytics request after server start, any pre-existing matching
+ * rows are also DELETEd from the database (one-shot, idempotent).
+ */
+const EXCLUDED_RECIPIENT_NAMES = ["itisha"] as const;
+/** Postgres regex patterns ( ~* operator, case-insensitive, word-bounded). */
+const EXCLUDED_RECIPIENT_PATTERNS = EXCLUDED_RECIPIENT_NAMES.map((n) => `\\y${n}\\y`);
+/** Equivalent JS regex for the insert-time guard. */
+const EXCLUDED_RECIPIENT_REGEX = new RegExp(
+  `\\b(?:${EXCLUDED_RECIPIENT_NAMES.join("|")})\\b`,
+  "i",
+);
+
+function isExcludedRecipient(name: unknown): boolean {
+  if (typeof name !== "string") return false;
+  return EXCLUDED_RECIPIENT_REGEX.test(name);
+}
+
+/**
+ * Builds the shared WHERE-fragment + ordered parameter list for every
+ * analytics aggregate query. Combines:
+ *   - superuser email exclusion
+ *   - excluded-recipient-name exclusion
+ *   - optional date range (from/to inclusive of full days)
+ *
+ * Returns a fragment without a leading "WHERE" so callers can splice it
+ * into more complex queries (with extra ANDs).
+ */
+function buildEventFilter(opts: { from?: string | null; to?: string | null } = {}): {
+  whereSql: string;
+  params: string[];
+} {
+  const params: string[] = [];
+  const conds: string[] = [];
+
+  const emailStart = params.length + 1;
+  params.push(...SUPERUSER_EMAILS);
+  conds.push(
+    `(email IS NULL OR email NOT IN (${SUPERUSER_EMAILS.map((_, i) => `$${emailStart + i}`).join(",")}))`,
+  );
+
+  const recipStart = params.length + 1;
+  params.push(...EXCLUDED_RECIPIENT_PATTERNS);
+  // ~* is the case-insensitive regex match. The patterns use Postgres
+  // word-boundary anchors (`\y`) so "Itisha" matches but "Nitisha" does not.
+  conds.push(
+    `(recipient_name IS NULL OR ${EXCLUDED_RECIPIENT_PATTERNS.map(
+      (_, i) => `recipient_name !~* $${recipStart + i}`,
+    ).join(" AND ")})`,
+  );
+
+  if (opts.from) {
+    params.push(opts.from);
+    conds.push(`created_at >= $${params.length}::date`);
+  }
+  if (opts.to) {
+    params.push(opts.to);
+    // Inclusive end-of-day: rows with created_at strictly before midnight of the next day.
+    conds.push(`created_at < ($${params.length}::date + INTERVAL '1 day')`);
+  }
+
+  return { whereSql: conds.join(" AND "), params };
+}
 
 /**
  * Verifies the request is from a signed-in Clerk user whose primary email
@@ -100,8 +171,56 @@ function isBotUA(ua: string | undefined): boolean {
 }
 
 /**
+ * Validates a YYYY-MM-DD date string from a query parameter. Returns the
+ * canonical string on success or null if missing/invalid. Strict validation
+ * prevents SQL date-cast errors and accidental wide-open ranges.
+ */
+function parseDateParam(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const d = new Date(trimmed + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return null;
+  return trimmed;
+}
+
+/**
+ * One-shot purge of pre-existing rows whose recipient_name matches an
+ * excluded pattern. Memoised per process so it only runs once per server
+ * start, which is enough — the POST /events/card handler now silently
+ * drops new matches, so this just cleans up legacy data.
+ */
+let _purgedExcludedRecipients = false;
+async function ensureExcludedRecipientsPurged(): Promise<void> {
+  if (_purgedExcludedRecipients) return;
+  if (EXCLUDED_RECIPIENT_PATTERNS.length === 0) {
+    _purgedExcludedRecipients = true;
+    return;
+  }
+  try {
+    const orClause = EXCLUDED_RECIPIENT_PATTERNS.map(
+      (_, i) => `recipient_name ~* $${i + 1}`,
+    ).join(" OR ");
+    const result = await pool.query(
+      `DELETE FROM hs_card_events
+       WHERE recipient_name IS NOT NULL AND (${orClause})`,
+      EXCLUDED_RECIPIENT_PATTERNS,
+    );
+    if ((result.rowCount ?? 0) > 0) {
+      console.log(
+        `[events] purged ${result.rowCount} excluded-recipient rows from hs_card_events`,
+      );
+    }
+    _purgedExcludedRecipients = true;
+  } catch (err) {
+    console.error("[events] failed to purge excluded recipients", err);
+  }
+}
+
+/**
  * POST /api/events/card
- * Records a card analytics event. Superuser emails are silently dropped.
+ * Records a card analytics event. Superuser emails and excluded recipient
+ * names are silently dropped so they never enter the analytics dataset.
  */
 router.post("/events/card", async (req, res) => {
   try {
@@ -121,6 +240,12 @@ router.post("/events/card", async (req, res) => {
 
     // Silently drop events from superuser
     if (typeof email === "string" && SUPERUSER_EMAILS.includes(email)) {
+      return res.json({ ok: true, dropped: true });
+    }
+
+    // Silently drop events whose recipient name matches an excluded pattern
+    // (e.g. cards addressed to "Itisha"). Keeps analytics free of self-tests.
+    if (isExcludedRecipient(recipient_name)) {
       return res.json({ ok: true, dropped: true });
     }
 
@@ -221,7 +346,12 @@ router.post("/events/vitals", async (req, res) => {
 
 /**
  * GET /api/events/analytics
- * Returns aggregated card analytics, excluding superuser.
+ *
+ * Returns aggregated card analytics, excluding superuser and rows whose
+ * recipient_name matches an excluded pattern. Optionally accepts a date
+ * range via `?from=YYYY-MM-DD&to=YYYY-MM-DD` (both inclusive). Either
+ * endpoint can be omitted for an open-ended range.
+ *
  * Auth: Clerk session — caller must be a signed-in superuser email.
  */
 router.get("/events/analytics", async (req, res) => {
@@ -230,8 +360,43 @@ router.get("/events/analytics", async (req, res) => {
   try {
     await pool.query(ENSURE_TABLE);
     await pool.query(ENSURE_VITALS_TABLE);
+    await ensureExcludedRecipientsPurged();
 
-    const ep = EXCL_PARAMS;
+    const from = parseDateParam(req.query["from"]);
+    const to = parseDateParam(req.query["to"]);
+
+    const filter = buildEventFilter({ from, to });
+    const { whereSql, params } = filter;
+
+    /**
+     * Vitals filter: applies the same date range when supplied; otherwise
+     * defaults to the rolling 24-hour window so the widget keeps working
+     * for the common "what's happening right now?" case.
+     */
+    const vitalsParams: string[] = [];
+    let vitalsWhere: string;
+    if (from || to) {
+      const conds: string[] = [];
+      if (from) {
+        vitalsParams.push(from);
+        conds.push(`created_at >= $${vitalsParams.length}::date`);
+      }
+      if (to) {
+        vitalsParams.push(to);
+        conds.push(`created_at < ($${vitalsParams.length}::date + INTERVAL '1 day')`);
+      }
+      vitalsWhere = conds.join(" AND ");
+    } else {
+      vitalsWhere = `created_at > NOW() - INTERVAL '24 hours'`;
+    }
+
+    /**
+     * "Recent cards" view-count subquery: also needs the exclusion filter so
+     * we don't surface views of purged recipient cards. We reuse the same
+     * exclusion clause but reset the param indexes for this subquery, which
+     * is run as its own pool.query().
+     */
+    const subFilter = buildEventFilter({ from, to });
 
     const [
       overview,
@@ -271,20 +436,23 @@ router.get("/events/analytics", async (req, res) => {
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'generate_clicked')     AS generate_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_created')         AS cards_created_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_viewed')          AS card_viewed_users
-           FROM hs_card_events WHERE ${EXCL}`,
-          ep,
+           FROM hs_card_events WHERE ${whereSql}`,
+          params,
         ),
 
         /* ── occasions ── */
         pool.query(
           `SELECT occasion, COUNT(*) AS cnt
            FROM hs_card_events
-           WHERE event = 'card_created' AND occasion IS NOT NULL AND ${EXCL}
+           WHERE event = 'card_created' AND occasion IS NOT NULL AND ${whereSql}
            GROUP BY occasion ORDER BY cnt DESC`,
-          ep,
+          params,
         ),
 
-        /* ── signed-in user cohorts (1, 2, 3 cards) ── */
+        /* ── signed-in user cohorts (1, 2, 3 cards) ──
+         * hs_clerk_users has no created_at or recipient_name column, so this
+         * query stays scoped to the email exclusion only. It represents
+         * lifetime cohorts, independent of the selected date range. */
         pool.query(
           `SELECT cards_used, COUNT(*) AS users
            FROM hs_clerk_users
@@ -299,21 +467,23 @@ router.get("/events/analytics", async (req, res) => {
              SELECT fingerprint, COUNT(*) AS card_count
              FROM hs_card_events
              WHERE event = 'card_created' AND clerk_user_id IS NULL AND fingerprint IS NOT NULL
-               AND ${EXCL}
+               AND ${whereSql}
              GROUP BY fingerprint
            ) t GROUP BY card_count ORDER BY card_count`,
-          ep,
+          params,
         ),
 
         /* ── unique signed-in users who have created at least one card ── */
         pool.query(
           `SELECT COUNT(DISTINCT clerk_user_id) AS count
            FROM hs_card_events
-           WHERE event = 'card_created' AND clerk_user_id IS NOT NULL AND ${EXCL}`,
-          ep,
+           WHERE event = 'card_created' AND clerk_user_id IS NOT NULL AND ${whereSql}`,
+          params,
         ),
 
-        /* ── recent cards with recipient names and view counts ── */
+        /* ── recent cards with recipient names and view counts ──
+         * The view-count subquery applies the same exclusion + date filter
+         * so we don't include views of cards that no longer pass the filter. */
         pool.query(
           `SELECT c.card_id, c.recipient_name, c.occasion, c.template, c.is_free, c.created_at,
                   COALESCE(v.view_count, 0) AS view_count
@@ -322,15 +492,17 @@ router.get("/events/analytics", async (req, res) => {
              SELECT card_id, COUNT(*) AS view_count
              FROM hs_card_events
              WHERE event = 'card_viewed' AND card_id IS NOT NULL
+               AND ${subFilter.whereSql}
              GROUP BY card_id
            ) v ON v.card_id = c.card_id
-           WHERE c.event = 'card_created' AND ${EXCL}
+           WHERE c.event = 'card_created' AND ${whereSql}
            ORDER BY c.created_at DESC
            LIMIT 20`,
-          ep,
+          // Subquery params come first because it appears first in the SQL.
+          [...subFilter.params, ...params],
         ),
 
-        /* ── Web Vitals: P50/P75/P90 over the last 24h ── */
+        /* ── Web Vitals: P50/P75/P90 for the selected range (or last 24h). ── */
         pool.query(
           `SELECT
              metric_name,
@@ -339,9 +511,10 @@ router.get("/events/analytics", async (req, res) => {
              percentile_cont(0.75) WITHIN GROUP (ORDER BY value_ms)     AS p75,
              percentile_cont(0.90) WITHIN GROUP (ORDER BY value_ms)     AS p90
            FROM hs_web_vitals
-           WHERE created_at > NOW() - INTERVAL '24 hours'
+           WHERE ${vitalsWhere}
            GROUP BY metric_name
            ORDER BY metric_name`,
+          vitalsParams,
         ),
 
         /* ── UTM funnel: visits → CTA clicks → cards → paid, by source ──
@@ -359,11 +532,11 @@ router.get("/events/analytics", async (req, res) => {
              COUNT(*) FILTER (WHERE event = 'card_created')                                 AS cards,
              COUNT(*) FILTER (WHERE event = 'card_created' AND is_free = false)             AS paid_cards
            FROM hs_card_events
-           WHERE ${EXCL}
+           WHERE ${whereSql}
            GROUP BY 1
            ORDER BY sessions DESC NULLS LAST
            LIMIT 30`,
-          ep,
+          params,
         ),
       ]);
 
@@ -376,6 +549,8 @@ router.get("/events/analytics", async (req, res) => {
       recent_cards: recentCards.rows,
       vitals: vitals.rows,
       utm_funnel: utm_funnel.rows,
+      // Echo back the effective range so the UI can show what's selected.
+      range: { from: from ?? null, to: to ?? null },
     });
   } catch (err) {
     console.error("[events/analytics]", err);

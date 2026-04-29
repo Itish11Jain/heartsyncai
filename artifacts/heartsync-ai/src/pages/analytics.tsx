@@ -47,7 +47,51 @@ type AnalyticsData = {
   recent_cards: RecentCard[];
   vitals?: VitalRow[];
   utm_funnel?: UtmRow[];
+  range?: { from: string | null; to: string | null };
 };
+
+/**
+ * Date range chosen by the user. `from` / `to` are YYYY-MM-DD strings (the
+ * API accepts both inclusive). `null` for either side means open-ended on
+ * that side. Both null = "All time".
+ */
+type DateRange = { from: string | null; to: string | null };
+
+/** Returns today's date as a local YYYY-MM-DD string. */
+function todayLocal(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Returns the local YYYY-MM-DD that is `n` days before today (n >= 0). */
+function daysAgoLocal(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+const DATE_PRESETS: { id: string; label: string; build: () => DateRange }[] = [
+  { id: "all",     label: "All time", build: () => ({ from: null, to: null }) },
+  { id: "today",   label: "Today",    build: () => ({ from: todayLocal(), to: todayLocal() }) },
+  { id: "7d",      label: "Last 7 days",  build: () => ({ from: daysAgoLocal(6), to: todayLocal() }) },
+  { id: "30d",     label: "Last 30 days", build: () => ({ from: daysAgoLocal(29), to: todayLocal() }) },
+  { id: "90d",     label: "Last 90 days", build: () => ({ from: daysAgoLocal(89), to: todayLocal() }) },
+];
+
+/** Human-friendly label for the currently active range. */
+function describeRange(range: DateRange): string {
+  if (!range.from && !range.to) return "All time";
+  if (range.from === range.to && range.from === todayLocal()) return "Today";
+  if (range.from && range.to) return `${range.from} → ${range.to}`;
+  if (range.from) return `From ${range.from}`;
+  return `Up to ${range.to ?? ""}`;
+}
 
 const VITAL_DESCRIPTIONS: Record<string, string> = {
   LCP: "Largest Contentful Paint",
@@ -128,6 +172,14 @@ export default function Analytics() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /** Current date filter applied to the dashboard. Defaults to "All time". */
+  const [range, setRange] = useState<DateRange>({ from: null, to: null });
+  /** Which preset (or "custom") is currently selected, for highlighting. */
+  const [activePreset, setActivePreset] = useState<string>("all");
+  /** Drafts for the custom date inputs — only applied when the user clicks Apply. */
+  const [draftFrom, setDraftFrom] = useState<string>("");
+  const [draftTo, setDraftTo] = useState<string>("");
+
   const userEmail = user?.emailAddresses?.[0]?.emailAddress;
 
   useEffect(() => {
@@ -142,11 +194,19 @@ export default function Analytics() {
     }
 
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
         const token = await getToken();
         if (!token) throw new Error("Not signed in — please reload and sign in again.");
-        const r = await fetch(`${BASE}/api/events/analytics`, {
+
+        const qs = new URLSearchParams();
+        if (range.from) qs.set("from", range.from);
+        if (range.to) qs.set("to", range.to);
+        const url = `${BASE}/api/events/analytics${qs.toString() ? "?" + qs.toString() : ""}`;
+
+        const r = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!r.ok) {
@@ -169,7 +229,33 @@ export default function Analytics() {
     })();
 
     return () => { cancelled = true; };
-  }, [isLoaded, user, userEmail, navigate, getToken]);
+  }, [isLoaded, user, userEmail, navigate, getToken, range.from, range.to]);
+
+  /** Apply a quick-preset range and clear any custom-mode drafts. */
+  function applyPreset(presetId: string): void {
+    const preset = DATE_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setActivePreset(presetId);
+    setRange(preset.build());
+  }
+
+  /** Apply the custom date inputs. Validates that at least one is set. */
+  function applyCustom(): void {
+    const from = draftFrom.trim() || null;
+    const to = draftTo.trim() || null;
+    if (!from && !to) {
+      // Treat empty custom as "All time" rather than a no-op.
+      applyPreset("all");
+      return;
+    }
+    if (from && to && from > to) {
+      // Swap to keep the range valid.
+      setRange({ from: to, to: from });
+    } else {
+      setRange({ from, to });
+    }
+    setActivePreset("custom");
+  }
 
   if (!isLoaded || loading) {
     return (
@@ -202,9 +288,140 @@ export default function Analytics() {
     >
       <div style={{ maxWidth: 700, margin: "0 auto" }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: "#FFD700", marginBottom: 4 }}>📊 HeartSync Analytics</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginBottom: 28 }}>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginBottom: 16 }}>
           Excluding superuser · Real users only
         </p>
+
+        {/* ── Date range filter ──
+           Quick presets + custom from/to inputs. Applies to every panel
+           on the page (funnel, UTM, cards, occasions, cohorts, vitals)
+           except the lifetime "Signed-In Cohorts" table. */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,215,0,0.15)",
+            borderRadius: 12,
+            padding: "12px 14px",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+            <span style={{ color: "rgba(255,215,0,0.7)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Date range
+            </span>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
+              Showing: <span style={{ color: "#FFD700", fontWeight: 600 }}>{describeRange(range)}</span>
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: activePreset === "custom" ? 10 : 0 }}>
+            {DATE_PRESETS.map((p) => {
+              const isActive = activePreset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => applyPreset(p.id)}
+                  style={{
+                    background: isActive ? "rgba(255,215,0,0.18)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${isActive ? "rgba(255,215,0,0.5)" : "rgba(255,255,255,0.1)"}`,
+                    color: isActive ? "#FFD700" : "rgba(255,255,255,0.7)",
+                    padding: "5px 12px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              aria-pressed={activePreset === "custom"}
+              onClick={() => {
+                setActivePreset("custom");
+                setDraftFrom(range.from ?? "");
+                setDraftTo(range.to ?? "");
+              }}
+              style={{
+                background: activePreset === "custom" ? "rgba(255,215,0,0.18)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${activePreset === "custom" ? "rgba(255,215,0,0.5)" : "rgba(255,255,255,0.1)"}`,
+                color: activePreset === "custom" ? "#FFD700" : "rgba(255,255,255,0.7)",
+                padding: "5px 12px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Custom…
+            </button>
+          </div>
+          {activePreset === "custom" && (
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, paddingTop: 4 }}>
+              <label style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                From
+                <input
+                  type="date"
+                  value={draftFrom}
+                  max={draftTo || undefined}
+                  onChange={(e) => setDraftFrom(e.target.value)}
+                  style={{
+                    background: "rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(255,215,0,0.2)",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    color: "white",
+                    fontSize: 12,
+                    fontFamily: "inherit",
+                    colorScheme: "dark",
+                  }}
+                />
+              </label>
+              <label style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}>
+                To
+                <input
+                  type="date"
+                  value={draftTo}
+                  min={draftFrom || undefined}
+                  max={todayLocal()}
+                  onChange={(e) => setDraftTo(e.target.value)}
+                  style={{
+                    background: "rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(255,215,0,0.2)",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    color: "white",
+                    fontSize: 12,
+                    fontFamily: "inherit",
+                    colorScheme: "dark",
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={applyCustom}
+                style={{
+                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                  border: "none",
+                  color: "#1a0a2e",
+                  padding: "5px 14px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* ── Conversion Funnel ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Conversion Funnel</h2>
