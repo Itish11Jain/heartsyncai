@@ -160,8 +160,9 @@ function CosmicPreview({ size }: { size: number }) {
 }
 
 /* ─── Crystal: rich crystal-ball orb (multi-stop gradient + highlights)
- * sitting on a small purple pedestal, with a pulsing aura. Closely
- * mirrors the actual /crystal template hero. ───────────────────────── */
+ * sitting on a small purple pedestal, with a pulsing aura. The orb
+ * rotates around its VERTICAL (Y) axis like a spinning globe — the
+ * highlights compress as they swing to the back, giving real 3D feel. */
 function CrystalPreview({ size }: { size: number }) {
   const ballSize = Math.round(size * 0.78);
   return (
@@ -172,6 +173,9 @@ function CrystalPreview({ size }: { size: number }) {
         width: size, height: size,
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
+        // 3D perspective so the Y-axis rotation reads as depth, not just
+        // a horizontal squish. ~220px gives a gentle, believable arc.
+        perspective: 220,
       }}
     >
       {/* Outer aura — soft radial glow, pulsing opacity (no rotation jitter). */}
@@ -186,11 +190,11 @@ function CrystalPreview({ size }: { size: number }) {
         }}
       />
 
-      {/* The crystal ball — base gradient stays put (so the orb itself
-          doesn't look like it's wobbling), while an inner *swirling mist*
-          rotates inside, giving the visible "spinning crystal" motion
-          users expect from a magic orb. The fixed top-left specular
-          highlight reads as a stationary external light source. */}
+      {/* The crystal ball — rotates around its VERTICAL Y axis (like a
+          spinning globe). Highlights live inside the orb, so they sweep
+          to the back of the orb as it turns, giving real depth. We keep
+          the rotation slow (5s) so it reads as "alive and magical"
+          rather than "spinning fast". */}
       <div
         style={{
           position: "relative",
@@ -206,37 +210,34 @@ function CrystalPreview({ size }: { size: number }) {
           boxShadow:
             "0 0 14px rgba(150,90,255,0.45), inset 0 0 10px rgba(190,145,255,0.25)",
           overflow: "hidden",
+          transformStyle: "preserve-3d",
+          animation: "hs-spin-y 5s linear infinite",
         }}
       >
-        {/* Swirling inner mist — clearly off-center so the rotation is
-            visually obvious. 4s period reads as "alive and magical". */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: "50%",
-          background:
-            "conic-gradient(from 0deg, " +
-            "rgba(220,180,255,0) 0%, " +
-            "rgba(220,180,255,0.45) 18%, " +
-            "rgba(255,255,255,0.18) 32%, " +
-            "rgba(170,120,240,0) 55%, " +
-            "rgba(220,180,255,0.35) 78%, " +
-            "rgba(220,180,255,0) 100%)",
-          mixBlendMode: "screen",
-          animation: "hs-spin 4s linear infinite",
-        }} />
-        {/* Primary specular highlight (top-left) — STATIONARY */}
+        {/* Primary specular highlight (top-left) — rotates with the orb */}
         <div style={{
           position: "absolute", top: "8%", left: "12%",
           width: "40%", height: "32%", borderRadius: "50%",
           background:
-            "radial-gradient(ellipse at 38% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 38%, transparent 68%)",
+            "radial-gradient(ellipse at 38% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.35) 38%, transparent 68%)",
           transform: "rotate(-18deg)",
         }} />
-        {/* Secondary catch-light (bottom-right) — STATIONARY */}
+        {/* Secondary catch-light (bottom-right) — also rotates with orb */}
         <div style={{
-          position: "absolute", bottom: "16%", right: "16%",
-          width: "20%", height: "14%", borderRadius: "50%",
+          position: "absolute", bottom: "18%", right: "14%",
+          width: "22%", height: "14%", borderRadius: "50%",
           background:
-            "radial-gradient(ellipse, rgba(220,195,255,0.45) 0%, transparent 70%)",
+            "radial-gradient(ellipse, rgba(230,200,255,0.55) 0%, transparent 70%)",
+        }} />
+        {/* A faint vertical band that rides along the equator — gives
+            extra "I'm spinning" cue when the orb turns. */}
+        <div style={{
+          position: "absolute",
+          top: "10%", bottom: "10%", left: "48%",
+          width: "4%", borderRadius: 99,
+          background:
+            "linear-gradient(180deg, transparent 0%, rgba(220,180,255,0.35) 50%, transparent 100%)",
+          filter: "blur(1px)",
         }} />
       </div>
 

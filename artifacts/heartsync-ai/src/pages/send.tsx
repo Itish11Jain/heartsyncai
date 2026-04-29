@@ -838,17 +838,54 @@ export default function Send() {
                               <Check size={11} color="#000" strokeWidth={3} />
                             </div>
                           )}
+                          {/* Locked state — TWO visual cues so the user
+                              cannot possibly miss it:
+                              1. A prominent gold "🔒 ₹29" pill in the top
+                                 corner (much larger than before).
+                              2. A subtle dark veil + centered lock icon
+                                 across the whole card, dimming the artwork
+                                 just enough to read as "locked" without
+                                 hiding the preview entirely. */}
                           {!selected && locked && (
-                            <div style={{
-                              position: "absolute", top: 4, right: 4, zIndex: 2,
-                              padding: "2px 5px", borderRadius: 99,
-                              background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)",
-                              fontSize: 9, fontWeight: 700, color: "#fff",
-                              border: "1px solid rgba(255,255,255,0.2)",
-                              display: "flex", alignItems: "center", gap: 2,
-                            }}>
-                              <Lock size={8} /> {isPremium ? "₹29" : ""}
-                            </div>
+                            <>
+                              {/* Card-wide dim veil */}
+                              <div style={{
+                                position: "absolute", inset: 0, zIndex: 3,
+                                background:
+                                  "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%)",
+                                pointerEvents: "none",
+                              }} />
+                              {/* Centered big lock glyph (subtle) */}
+                              <div style={{
+                                position: "absolute", inset: 0, zIndex: 4,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                pointerEvents: "none",
+                              }}>
+                                <div style={{
+                                  width: 30, height: 30, borderRadius: 99,
+                                  background: "rgba(0,0,0,0.55)",
+                                  backdropFilter: "blur(4px)",
+                                  border: "1.5px solid rgba(255,215,0,0.55)",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                                }}>
+                                  <Lock size={15} color="#FFD700" strokeWidth={2.5} />
+                                </div>
+                              </div>
+                              {/* Top-right gold price pill */}
+                              <div style={{
+                                position: "absolute", top: 5, right: 5, zIndex: 5,
+                                padding: "3px 7px", borderRadius: 99,
+                                background:
+                                  "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                                fontSize: 10, fontWeight: 800, color: "#1A0A02",
+                                letterSpacing: "0.02em",
+                                display: "flex", alignItems: "center", gap: 3,
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.2) inset",
+                              }}>
+                                <Lock size={10} strokeWidth={3} /> ₹29
+                              </div>
+                            </>
                           )}
 
                           {/* Centered hero graphic — fills the card so it

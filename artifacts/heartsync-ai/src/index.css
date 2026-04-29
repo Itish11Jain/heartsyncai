@@ -193,6 +193,13 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+/* Vertical-axis (Y) rotation — looks like a globe spinning. Used by the
+   crystal-ball preview so it visibly rotates "around its vertical axis"
+   instead of flat 2D Z-axis spin. Parent must set `perspective`. */
+@keyframes hs-spin-y {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
 @keyframes hs-orb-glow {
   0%, 100% { opacity: 0.55; }
   50%      { opacity: 1; }
