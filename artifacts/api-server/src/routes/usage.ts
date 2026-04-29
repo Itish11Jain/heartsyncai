@@ -17,16 +17,7 @@ function validateUtr(value: unknown): value is string {
   return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
 }
 
-/**
- * Check if a UTR has already been used in ANY of our payment tables.
- * Tables we know about: hs_card_utr_submissions, hs_template_unlock_payments,
- * hs_utr_submissions.
- *
- * IMPORTANT: This is a soft pre-check used to give the caller a clean 409 with
- * a friendly message. It is NOT atomic across tables on its own — callers
- * MUST acquire a transaction-scoped advisory lock keyed on the UTR (via
- * `withUtrLock`) before calling this AND before inserting into their table.
- */
+/** Check if a UTR has been used in any of our payment tables. Caller must hold the UTR advisory lock. */
 async function isUtrAlreadyUsed(
   client: { query: typeof pool.query },
   cleanUtr: string,
@@ -41,7 +32,6 @@ async function isUtrAlreadyUsed(
       const r = await client.query(`SELECT 1 FROM ${table} WHERE utr = $1 LIMIT 1`, [cleanUtr]);
       if ((r.rowCount ?? 0) > 0) return true;
     } catch (err) {
-      // Re-throw real DB errors (only swallow "relation does not exist", code 42P01).
       const code = (err as { code?: string } | null)?.code;
       if (code !== "42P01") throw err;
     }
@@ -49,12 +39,7 @@ async function isUtrAlreadyUsed(
   return false;
 }
 
-/**
- * Postgres advisory locks are per-key and per-transaction (`xact_lock` releases
- * automatically on COMMIT/ROLLBACK). We hash the UTR string into a 64-bit key.
- * Two concurrent requests with the same UTR will serialize on this lock,
- * which closes the cross-table check-then-insert race.
- */
+/** Serialize concurrent UTR submissions on a hashed advisory lock + transaction. */
 async function withUtrLock<T>(cleanUtr: string, fn: (client: import("pg").PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
@@ -254,8 +239,6 @@ router.post("/usage/card-pack-utr", async (req, res) => {
     )
   `);
 
-  // Take an advisory lock on the UTR so concurrent submissions
-  // (across both /card-pack-utr AND /template-unlock-utr) are serialized.
   let duplicate = false;
   await withUtrLock(cleanUtr, async (client) => {
     if (await isUtrAlreadyUsed(client, cleanUtr)) {
@@ -266,7 +249,6 @@ router.post("/usage/card-pack-utr", async (req, res) => {
       "INSERT INTO hs_card_utr_submissions (utr, clerk_user_id) VALUES ($1, $2)",
       [cleanUtr, clerkUserId],
     );
-    // Grant 10 more cards by reducing cards_used by 10 (min 0)
     await client.query(
       `INSERT INTO hs_clerk_users (clerk_user_id, cards_used)
        VALUES ($1, 0)
@@ -322,7 +304,6 @@ router.post("/usage/template-unlock-utr", async (req, res) => {
 
   const cleanUtr = (utr as string).trim().toUpperCase();
 
-  // Make sure the user row exists so we can update it inside the lock.
   await pool.query(
     `INSERT INTO hs_clerk_users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING`,
     [clerkUserId],
@@ -331,8 +312,6 @@ router.post("/usage/template-unlock-utr", async (req, res) => {
   let duplicate = false;
   let bundleUnlocked = false;
 
-  // Serialize on the UTR to prevent the same value being inserted into a
-  // sibling table (e.g. /card-pack-utr) concurrently.
   await withUtrLock(cleanUtr, async (client) => {
     if (await isUtrAlreadyUsed(client, cleanUtr)) {
       duplicate = true;
@@ -344,8 +323,6 @@ router.post("/usage/template-unlock-utr", async (req, res) => {
       [clerkUserId, cleanUtr, plan],
     );
     if (plan === "bundle") {
-      // Merge with existing unlocks so a bundle on top of a prior single
-      // unlock is still a no-op (idempotent set semantics).
       await client.query(
         `UPDATE hs_clerk_users
            SET unlocked_templates = ARRAY(
@@ -408,18 +385,10 @@ router.post("/usage/claim-template", async (req, res) => {
     });
   }
 
-  // Race-safe consume + apply, all in one transaction.
-  // Step 1: lock-and-pick a single unclaimed payment with FOR UPDATE
-  //         SKIP LOCKED, so two parallel claim requests can never grab the
-  //         same row.
-  // Step 2: mark it claimed only if it is still unclaimed (defense in depth
-  //         in case another transaction sneaked in).
-  // Step 3: union-merge the template into unlocked_templates.
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Already-unlocked short-circuit (idempotent, no payment consumed).
     const userRow = await client.query<{ unlocked_templates: string[] }>(
       "SELECT unlocked_templates FROM hs_clerk_users WHERE clerk_user_id = $1 FOR UPDATE",
       [clerkUserId],
@@ -434,7 +403,6 @@ router.post("/usage/claim-template", async (req, res) => {
       });
     }
 
-    // Pick + lock the oldest unclaimed single payment.
     const picked = await client.query<{ id: number }>(
       `SELECT id FROM hs_template_unlock_payments
          WHERE clerk_user_id = $1 AND plan = 'single' AND claimed_template IS NULL
@@ -452,8 +420,6 @@ router.post("/usage/claim-template", async (req, res) => {
       });
     }
 
-    // Conditional update — must still be unclaimed (the FOR UPDATE
-    // already enforces it, but we double-check for safety).
     const consumed = await client.query(
       `UPDATE hs_template_unlock_payments
          SET claimed_template = $1
@@ -461,7 +427,6 @@ router.post("/usage/claim-template", async (req, res) => {
       [template, paymentId],
     );
     if ((consumed.rowCount ?? 0) !== 1) {
-      // Should never happen given the lock, but bail safely.
       await client.query("ROLLBACK");
       return res.status(409).json({
         error: "race_condition",

@@ -55,10 +55,9 @@ export async function initDb(): Promise<void> {
       ran_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    -- Grandfather migration: every Clerk user that existed before the
-    -- premium-template paywall ships gets all 3 premium templates unlocked
-    -- for free. Runs exactly once. ON CONFLICT DO NOTHING makes it safe
-    -- against concurrent boots of multiple instances racing the marker insert.
+    -- Grandfather migration: existing users who have actually generated at
+    -- least one card before the premium-template paywall ships keep access
+    -- to all 3 premium templates for free. Runs exactly once.
     DO $$
     BEGIN
       IF NOT EXISTS (
@@ -66,7 +65,8 @@ export async function initDb(): Promise<void> {
       ) THEN
         UPDATE hs_clerk_users
           SET unlocked_templates = ARRAY['cosmic', 'crystal', 'vinyl']
-          WHERE unlocked_templates = '{}'::text[];
+          WHERE unlocked_templates = '{}'::text[]
+            AND cards_used > 0;
         INSERT INTO hs_migrations (name)
           VALUES ('grandfather_template_unlocks_v1')
           ON CONFLICT (name) DO NOTHING;

@@ -350,11 +350,8 @@ export default function Send() {
       }
     }
 
-    // CRITICAL: if the gate let us through ONLY because the user has a
-    // pending (paid-but-unclaimed) single unlock, we must consume that
-    // payment now by calling /usage/claim-template — otherwise the user
-    // would generate a premium card without their entitlement being
-    // recorded, and could repeat the trick on every subsequent card.
+    // If the gate passed only because of a pending single unlock, consume it
+    // now so the entitlement is recorded before the card is generated.
     const needsAutoClaim =
       isPremiumTemplate(selectedTemplate) &&
       !!usage &&
@@ -375,8 +372,6 @@ export default function Send() {
           body: JSON.stringify({ template: selectedTemplate }),
         });
         if (!claimRes.ok) {
-          // Claim failed (e.g. payment race-consumed elsewhere) — fall back
-          // to the paywall so the user pays again rather than getting it free.
           openPaywall();
           return;
         }
@@ -435,13 +430,30 @@ export default function Send() {
     clerk.openSignIn();
   }
 
-  /* ─── Step 4 picker: clicking a template just selects (gate is on Generate). */
+  /* ─── Step 4 picker: select + immediately route locked templates to gate. */
   function handlePickTemplate(t: TemplateId) {
     setSelectedTemplate(t);
     trackEvent({
       event: "template_selected",
       fingerprint, email: userEmail ?? undefined, occasion, template: t,
     });
+
+    // If this template is locked for the current user, route them to the
+    // appropriate gate immediately rather than waiting until they click
+    // Generate at the end of the wizard.
+    if (!usageLoading) {
+      const gate = templateGate(usage, t);
+      if (gate === "signin") {
+        setSignInGateContext(t);
+        setShowSignInGate(true);
+        trackEvent({
+          event: "signup_wall_shown",
+          fingerprint, occasion, template: t,
+        });
+      } else if (gate === "paywall") {
+        openPaywall();
+      }
+    }
   }
 
   /* ─── UI helpers ────────────────────────────────────────────────────── */
