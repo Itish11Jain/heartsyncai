@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Lock, Info, ArrowRight, Loader2, Check, Sparkles } from "lucide-react";
+import { ChevronLeft, Lock, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, useClerk } from "@clerk/react";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
@@ -135,6 +135,7 @@ export default function Send() {
   const [signInGateContext, setSignInGateContext] = useState<TemplateId>("envelope");
 
   const [showPaywall, setShowPaywall] = useState(false);
+  const [upiCopied, setUpiCopied] = useState(false);
   const [paywallPlan, setPaywallPlan] = useState<"single" | "bundle">("bundle");
   const [paywallStage, setPaywallStage] = useState<"plan" | "claim" | "done">("plan");
   const [paywallUtr, setPaywallUtr] = useState("");
@@ -1240,26 +1241,92 @@ export default function Send() {
                     </button>
                   </div>
 
-                  {/* UPI box */}
+                  {/* UPI box.
+                      We build the upi:// URI deterministically with proper
+                      RFC-3986 percent-encoding and a 2-decimal amount, then
+                      pipe that through the QR generator. The previous URI
+                      had `am=29` (no decimals) and `tn=HeartSync+Premium`
+                      (literal `+` rather than `%20`), which some UPI apps
+                      reject — that's why scans were failing. */}
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
-                    <div className="flex gap-3 items-center mb-4">
-                      <div className="bg-white rounded-xl p-1.5 shadow-lg shrink-0">
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=8905158970@upi&pn=HeartSync%20AI&am=${paywallPlan === "single" ? 29 : 49}&cu=INR&tn=HeartSync+Premium`)}`}
-                          alt={`UPI QR Code ₹${paywallPlan === "single" ? 29 : 49}`}
-                          className="w-20 h-20 rounded-lg"
-                        />
-                      </div>
-                      <div className="text-left flex-1 min-w-0">
-                        <p className="text-[10px] text-white/35 uppercase tracking-wide mb-0.5">UPI ID</p>
-                        <p className="font-mono font-bold text-white text-sm break-all">8905158970@upi</p>
-                        <p className="text-xs text-white/50 mt-1">Amount: <span className="text-white font-bold">₹{paywallPlan === "single" ? 29 : 49}</span></p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Info className="w-3 h-3 text-white/25 shrink-0" />
-                          <p className="text-[10px] text-white/30">Scan QR or copy UPI ID</p>
-                        </div>
-                      </div>
-                    </div>
+                    {(() => {
+                      const UPI_VPA = "8905158970@upi";
+                      const amount = paywallPlan === "single" ? 29 : 49;
+                      const upiParams = [
+                        `pa=${encodeURIComponent(UPI_VPA)}`,
+                        `pn=${encodeURIComponent("HeartSync AI")}`,
+                        `am=${amount.toFixed(2)}`,
+                        `cu=INR`,
+                        `tn=${encodeURIComponent("HeartSync Premium")}`,
+                      ].join("&");
+                      const upiUri = `upi://pay?${upiParams}`;
+                      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
+                      const handleCopyUpi = async () => {
+                        try {
+                          await navigator.clipboard.writeText(UPI_VPA);
+                        } catch {
+                          // Fallback for browsers/iframes that block the
+                          // async Clipboard API — use a temporary textarea.
+                          const ta = document.createElement("textarea");
+                          ta.value = UPI_VPA;
+                          ta.setAttribute("readonly", "");
+                          ta.style.position = "absolute";
+                          ta.style.left = "-9999px";
+                          document.body.appendChild(ta);
+                          ta.select();
+                          try { document.execCommand("copy"); } catch { /* ignore */ }
+                          document.body.removeChild(ta);
+                        }
+                        setUpiCopied(true);
+                        window.setTimeout(() => setUpiCopied(false), 1800);
+                      };
+                      return (
+                        <>
+                          <div className="flex gap-3 items-center mb-4">
+                            <a
+                              href={upiUri}
+                              className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block"
+                              title="Tap to open in your UPI app"
+                            >
+                              <img
+                                src={qrSrc}
+                                alt={`UPI QR Code ₹${amount}`}
+                                className="w-24 h-24 rounded-lg"
+                              />
+                            </a>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-[10px] text-white/35 uppercase tracking-wide mb-0.5">UPI ID</p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_VPA}</p>
+                                <button
+                                  type="button"
+                                  onClick={handleCopyUpi}
+                                  data-testid="paywall-upi-copy"
+                                  aria-label={upiCopied ? "Copied" : "Copy UPI ID"}
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors"
+                                  style={{
+                                    background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
+                                    color: upiCopied ? "#4ade80" : "#FFD700",
+                                    border: `1px solid ${upiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
+                                  }}
+                                >
+                                  {upiCopied ? (
+                                    <><Check className="w-3 h-3" /> Copied</>
+                                  ) : (
+                                    <><Copy className="w-3 h-3" /> Copy</>
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-xs text-white/50 mt-1">Amount: <span className="text-white font-bold">₹{amount}</span></p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Info className="w-3 h-3 text-white/25 shrink-0" />
+                                <p className="text-[10px] text-white/30">Scan QR, tap it on mobile, or copy UPI ID</p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     <div className="space-y-2">
                       <Input
