@@ -438,6 +438,7 @@ router.get("/events/analytics", async (req, res) => {
       recentCards,
       vitals,
       utm_funnel,
+      premiumClicks,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -570,6 +571,30 @@ router.get("/events/analytics", async (req, res) => {
            LIMIT 30`,
           params,
         ),
+
+        /* ── Premium-card click breakdown by template ──
+         * `paywall_shown` fires the moment a user taps a premium template
+         * card (cosmic / crystal / vinyl) and the paywall opens. We expose:
+         *   - per-template click count (events) and unique customers
+         *   - total clicks + total unique customers across all premium
+         * so the dashboard can show "X customers clicked premium, broken
+         * down as Y on cosmic, Z on crystal, ...". Templates are kept as
+         * raw event values rather than hard-coding the premium list, so
+         * adding a new premium template later doesn't require a code
+         * change here. */
+        pool.query(
+          `SELECT
+             template,
+             COUNT(*)::int                                          AS clicks,
+             COUNT(DISTINCT NULLIF(fingerprint, ''))::int           AS unique_customers
+           FROM hs_card_events
+           WHERE event = 'paywall_shown'
+             AND template IS NOT NULL AND template <> ''
+             AND ${whereSql}
+           GROUP BY template
+           ORDER BY clicks DESC`,
+          params,
+        ),
       ]);
 
     return res.json({
@@ -581,6 +606,7 @@ router.get("/events/analytics", async (req, res) => {
       recent_cards: recentCards.rows,
       vitals: vitals.rows,
       utm_funnel: utm_funnel.rows,
+      premium_clicks: premiumClicks.rows,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });

@@ -37,6 +37,7 @@ type Cohort = { cards_used?: string; card_count?: string; users: string };
 type RecentCard = { card_id: string | null; recipient_name: string | null; occasion: string | null; template: string | null; is_free: boolean | null; created_at: string; view_count: string | number };
 type VitalRow = { metric_name: string; samples: number; p50: string | number | null; p75: string | number | null; p90: string | number | null };
 type UtmRow = { source: string; sessions: string | number; cta_users: string | number; card_creators: string | number; cards: string | number; paid_cards: string | number };
+type PremiumClickRow = { template: string; clicks: number; unique_customers: number };
 
 type AnalyticsData = {
   overview: Overview;
@@ -47,6 +48,7 @@ type AnalyticsData = {
   recent_cards: RecentCard[];
   vitals?: VitalRow[];
   utm_funnel?: UtmRow[];
+  premium_clicks?: PremiumClickRow[];
   range?: { from: string | null; to: string | null };
 };
 
@@ -564,6 +566,64 @@ export default function Analytics() {
           <Stat label="Paywall Shown" value={o.paywall_shown} />
           <Stat label="Paywall Paid" value={o.paywall_paid} sub={pct(o.paywall_paid, o.paywall_shown) + " paid"} />
         </div>
+
+        {/* ── Premium Card Clicks (per-template breakdown) ──
+         * Each row = one premium template (cosmic / crystal / vinyl) and
+         * how many times it triggered the paywall + how many distinct
+         * customers tapped it. Total clicks may exceed unique customers
+         * because a single user can tap multiple premium cards before
+         * paying (or bouncing). */}
+        {(() => {
+          const rows = data.premium_clicks ?? [];
+          const totalClicks = rows.reduce((sum, r) => sum + Number(r.clicks ?? 0), 0);
+          const totalUnique = rows.reduce((sum, r) => sum + Number(r.unique_customers ?? 0), 0);
+          return (
+            <>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                Premium Card Clicks
+              </h2>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+                <Stat label="Total Premium Clicks" value={totalClicks} sub="all premium templates combined" />
+                <Stat label="Customers Who Clicked" value={totalUnique} sub="sum across templates (may double-count cross-template tappers)" />
+              </div>
+              {rows.length === 0 ? (
+                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginBottom: 24 }}>
+                  No premium-card clicks in this date range yet.
+                </p>
+              ) : (
+                <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 110px", gap: 0, padding: "8px 14px", background: "rgba(255,215,0,0.06)", fontSize: 11, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    <div>Template</div>
+                    <div style={{ textAlign: "right" }}>Clicks</div>
+                    <div style={{ textAlign: "right" }}>Customers</div>
+                  </div>
+                  {rows.map((r, i) => (
+                    <div
+                      key={r.template}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 100px 110px",
+                        gap: 0,
+                        padding: "10px 14px",
+                        borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ color: "rgba(255,255,255,0.85)", fontWeight: 600, textTransform: "capitalize" }}>{r.template}</div>
+                      <div style={{ textAlign: "right", color: "#FFD700", fontWeight: 700 }}>
+                        {r.clicks}
+                        <span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 400, marginLeft: 6 }}>
+                          ({pct(String(r.clicks), String(totalClicks))})
+                        </span>
+                      </div>
+                      <div style={{ textAlign: "right", color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{r.unique_customers}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* ── Engagement ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Engagement</h2>
