@@ -579,13 +579,26 @@ export default function Send() {
         ))}
       </div>
 
-      {/* Header */}
+      {/* Header — single contextual Back button. On steps 2 & 3 it walks
+          one step backward in the wizard; on step 1 it falls back to /
+          (home). This is the only Back affordance — inline backs were
+          removed to keep the form fully on one screen fold. */}
       <div className="w-full flex items-center justify-between px-4 pt-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1 }}>
-        <Link href="/">
-          <button className="flex items-center gap-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+        {step > 1 ? (
+          <button
+            onClick={() => goTo(step - 1, -1)}
+            className="flex items-center gap-1 text-sm"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+          >
             <ChevronLeft size={16} /> Back
           </button>
-        </Link>
+        ) : (
+          <Link href="/">
+            <button className="flex items-center gap-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <ChevronLeft size={16} /> Back
+            </button>
+          </Link>
+        )}
         <span className="text-sm font-semibold" style={{ color: "rgba(255,215,0,0.7)", letterSpacing: "0.04em" }}>
           ✨ Create 3D Card
         </span>
@@ -654,9 +667,6 @@ export default function Send() {
           {/* Step 2: Relation */}
           {step === 2 && (
             <motion.div key="step2" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full mt-8 md:mt-0">
-              <button onClick={() => goTo(1, -1)} className="flex items-center gap-1 text-sm mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>
-                <ChevronLeft size={15} /> Back
-              </button>
               <div className="relative flex justify-center items-center mb-2">
                 <h1 className="text-2xl font-bold text-white text-center">Who is it for?</h1>
               </div>
@@ -692,11 +702,10 @@ export default function Send() {
           {/* Step 3: Name + Likes + Message */}
           {step === 3 && (
             <motion.div key="step3" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
-              <button onClick={() => goTo(2, -1)} className="flex items-center gap-1 text-sm mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>
-                <ChevronLeft size={15} /> Back
-              </button>
-              <h1 className="text-2xl font-bold text-white text-center mb-2">Who's it for?</h1>
-              <p className="text-center text-sm mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
+              {/* Inline Back removed — header Back covers it. Heading +
+                  subtitle margins tightened so the form fits in one fold. */}
+              <h1 className="text-2xl font-bold text-white text-center mb-1">Who's it for?</h1>
+              <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
                 We'll make it feel personal to them ✨
               </p>
               <div className="flex flex-col gap-4">
@@ -721,12 +730,9 @@ export default function Send() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: "rgba(255,215,0,0.75)" }}>
+                  <label className="block text-sm font-medium mb-2" style={{ color: "rgba(255,215,0,0.75)" }}>
                     ✨ What do they love?
                   </label>
-                  <p className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    We'll add a personal orb just for them — travel, pandas, coffee, cricket…
-                  </p>
                   <Input
                     placeholder="e.g. travel, panda, cricket, pink, coffee…"
                     value={likes}
