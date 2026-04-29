@@ -1,113 +1,150 @@
 /**
  * TemplatePreview — small, GPU-accelerated mini previews used in the
- * Send page template picker. Each preview is a handful of <div>/<svg>
- * nodes animated with the keyframes defined in src/index.css.
+ * Send page template picker. Each preview is a faithful, scaled-down
+ * version of the actual template hero (golden envelope, cosmic stars,
+ * crystal orb, vinyl record) — not a generic emoji.
  *
- * Why not import the real template pages? They are full-screen scenes
- * with WebGL/heavy DOM. The picker just needs a recognizable hint of
- * each template, so we render bespoke mini versions instead. This keeps
- * the picker render under a few KB and avoids extra network/CPU work.
+ * Why hand-built mini versions instead of importing the real template
+ * pages? Those are full-screen scenes with WebGL/heavy DOM. The picker
+ * just needs a recognizable hint of each template, so we render bespoke
+ * mini versions — keeps the picker render cheap on low-end Android and
+ * avoids extra network/CPU work.
+ *
+ * All animations are CSS keyframes (defined once in src/index.css) and
+ * only animate transform/opacity so the browser keeps them on the GPU.
  */
 
 type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl";
 
 interface Props {
   id: TemplateId;
+  /** Edge length in px. Defaults to 64 — the picker thumbnail size. */
+  size?: number;
 }
 
-export function TemplatePreview({ id }: Props) {
+export function TemplatePreview({ id, size = 64 }: Props) {
   switch (id) {
-    case "envelope":
-      return <EnvelopePreview />;
-    case "cosmic":
-      return <CosmicPreview />;
-    case "crystal":
-      return <CrystalPreview />;
-    case "vinyl":
-      return <VinylPreview />;
+    case "envelope": return <EnvelopePreview size={size} />;
+    case "cosmic":   return <CosmicPreview   size={size} />;
+    case "crystal":  return <CrystalPreview  size={size} />;
+    case "vinyl":    return <VinylPreview    size={size} />;
   }
 }
 
-/* ─── Envelope: classic letter with a peeking heart, gentle bob. ───── */
-function EnvelopePreview() {
+/* ─── Envelope: golden envelope with closed flap + wax seal, gentle bob.
+ * Matches the homepage golden envelope hero (gold gradient body, darker
+ * triangle inserts, red wax seal). ──────────────────────────────────── */
+function EnvelopePreview({ size }: { size: number }) {
+  // Envelope is wider than tall — keep a 3:2 aspect ratio.
+  const w = size;
+  const h = Math.round(size * 0.66);
+  const sealSize = Math.round(size * 0.26);
   return (
     <div
       className="hs-tpl-anim"
       style={{
         position: "relative",
-        width: 44,
-        height: 32,
+        width: w,
+        height: h,
         animation: "hs-bob 2.6s ease-in-out infinite",
+        filter: "drop-shadow(0 6px 12px rgba(255,165,0,0.35))",
       }}
     >
-      <svg width="44" height="32" viewBox="0 0 44 32" fill="none">
-        {/* Envelope body */}
-        <rect x="1" y="6" width="42" height="25" rx="3"
-          fill="#fff5f7" stroke="#ffb0cc" strokeWidth="1" />
-        {/* Closed flap (triangle) */}
-        <path d="M2 7 L22 21 L42 7" stroke="#ff7aa7" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
-        {/* Heart wax seal */}
-        <g
-          style={{
-            transformOrigin: "22px 18px",
-            animation: "hs-pulse 1.8s ease-in-out infinite",
-          }}
-        >
-          <path
-            d="M22 22 L17.5 17.5 a3 3 0 0 1 4.5 -4 a3 3 0 0 1 4.5 4 Z"
-            fill="#ff3a6e"
-          />
-        </g>
-      </svg>
+      {/* Body */}
+      <div style={{
+        position: "absolute", inset: 0, borderRadius: 4,
+        background:
+          "linear-gradient(145deg, #F5C518 0%, #FFD700 28%, #FFBC00 55%, #E8AA00 80%, #D4960A 100%)",
+        boxShadow: "inset 0 1px 2px rgba(255,255,255,0.3)",
+        overflow: "hidden",
+      }}>
+        {/* Darker side triangles for letter-fold depth */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to right, #C49000, transparent 42%)",
+          clipPath: "polygon(0 100%, 44% 52%, 0 4%)", opacity: 0.55,
+        }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to left, #C49000, transparent 42%)",
+          clipPath: "polygon(100% 100%, 56% 52%, 100% 4%)", opacity: 0.55,
+        }} />
+        {/* Bottom flap shadow */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "#B8870A",
+          clipPath: "polygon(0 100%, 44% 52%, 56% 52%, 100% 100%)",
+          opacity: 0.6,
+        }} />
+      </div>
+
+      {/* Top closed flap (triangle) */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "56%",
+        background:
+          "linear-gradient(172deg, #E8B800 0%, #D4A000 45%, #C49000 100%)",
+        clipPath: "polygon(0 0, 100% 0, 50% 88%)",
+        borderRadius: "4px 4px 0 0",
+      }} />
+
+      {/* Red wax seal in the center, with a soft pulse */}
+      <div style={{
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: sealSize, height: sealSize, borderRadius: "50%",
+        background:
+          "radial-gradient(circle at 38% 33%, #A82020, #7A0A0A 58%, #4A0000 92%)",
+        boxShadow:
+          "0 2px 6px rgba(80,0,0,0.6), inset 0 1px 2px rgba(255,140,140,0.2)",
+        animation: "hs-pulse 2.2s ease-in-out infinite",
+      }} />
     </div>
   );
 }
 
-/* ─── Cosmic: 8 stars twinkling at staggered offsets. ──────────────── */
-function CosmicPreview() {
-  // Hand-placed star coordinates — looks more deliberate than random.
-  const stars: Array<{ x: number; y: number; size: number; delay: number }> = [
-    { x: 8,  y: 6,  size: 2,   delay: 0    },
-    { x: 30, y: 10, size: 3,   delay: 0.4  },
-    { x: 48, y: 4,  size: 2,   delay: 0.9  },
-    { x: 18, y: 22, size: 2.5, delay: 0.2  },
-    { x: 40, y: 26, size: 2,   delay: 0.7  },
-    { x: 56, y: 18, size: 2.5, delay: 1.1  },
-    { x: 4,  y: 28, size: 1.5, delay: 1.3  },
-    { x: 62, y: 32, size: 2,   delay: 0.5  },
+/* ─── Cosmic: drifting twinkling stars over the dark cosmic gradient. */
+function CosmicPreview({ size }: { size: number }) {
+  // Hand-placed star coordinates (relative units 0..1 → multiply by size).
+  const stars: Array<{ x: number; y: number; r: number; delay: number }> = [
+    { x: 0.10, y: 0.18, r: 1.2, delay: 0    },
+    { x: 0.42, y: 0.12, r: 1.6, delay: 0.4  },
+    { x: 0.72, y: 0.08, r: 1.2, delay: 0.9  },
+    { x: 0.22, y: 0.55, r: 1.4, delay: 0.2  },
+    { x: 0.58, y: 0.66, r: 1.2, delay: 0.7  },
+    { x: 0.85, y: 0.42, r: 1.4, delay: 1.1  },
+    { x: 0.06, y: 0.80, r: 0.9, delay: 1.3  },
+    { x: 0.78, y: 0.86, r: 1.2, delay: 0.5  },
   ];
+  const centerR = size * 0.07;
   return (
     <div
       className="hs-tpl-anim"
-      style={{ position: "relative", width: 68, height: 38 }}
+      style={{ position: "relative", width: size, height: size }}
     >
       {stars.map((s, i) => (
         <span
           key={i}
           style={{
             position: "absolute",
-            left: s.x,
-            top: s.y,
-            width: s.size * 2,
-            height: s.size * 2,
+            left: s.x * size, top: s.y * size,
+            width: s.r * 2, height: s.r * 2,
             borderRadius: 99,
-            background: "#ffffff",
+            background: "#fff",
             boxShadow: "0 0 4px rgba(160,192,255,0.9)",
             animation: `hs-twinkle 1.8s ease-in-out ${s.delay}s infinite`,
           }}
         />
       ))}
-      {/* Center "north star" — slightly bigger, slower */}
+      {/* "North star" — bigger, slower */}
       <span
         style={{
           position: "absolute",
-          left: 30,
-          top: 16,
-          width: 6,
-          height: 6,
+          left: size / 2 - centerR, top: size / 2 - centerR,
+          width: centerR * 2, height: centerR * 2,
           borderRadius: 99,
           background: "#fff",
-          boxShadow: "0 0 8px rgba(160,192,255,0.95), 0 0 14px rgba(255,255,255,0.5)",
+          boxShadow:
+            "0 0 8px rgba(160,192,255,0.95), 0 0 14px rgba(255,255,255,0.5)",
           animation: "hs-twinkle 2.6s ease-in-out infinite",
         }}
       />
@@ -115,85 +152,152 @@ function CosmicPreview() {
   );
 }
 
-/* ─── Crystal: glowing orb that rotates slowly with a pulsing aura. ── */
-function CrystalPreview() {
-  return (
-    <div
-      className="hs-tpl-anim"
-      style={{ position: "relative", width: 40, height: 40 }}
-    >
-      {/* Outer halo (pulsing opacity, no rotation = no jitter) */}
-      <div
-        style={{
-          position: "absolute",
-          inset: -4,
-          borderRadius: 99,
-          background:
-            "radial-gradient(circle, rgba(200,160,255,0.55) 0%, transparent 70%)",
-          animation: "hs-orb-glow 2.2s ease-in-out infinite",
-        }}
-      />
-      {/* Orb itself, slowly spinning so the highlight sweeps */}
-      <div
-        style={{
-          position: "relative",
-          width: 40,
-          height: 40,
-          borderRadius: 99,
-          background:
-            "radial-gradient(circle at 35% 32%, #ffffff 0%, #d8b8ff 30%, #6d3acc 75%, #2a0a5a 100%)",
-          boxShadow: "inset -4px -4px 8px rgba(0,0,0,0.35)",
-          animation: "hs-spin 7s linear infinite",
-        }}
-      />
-    </div>
-  );
-}
-
-/* ─── Vinyl: spinning record with grooves and red center label. ───── */
-function VinylPreview() {
+/* ─── Crystal: rich crystal-ball orb (multi-stop gradient + highlights)
+ * sitting on a small purple pedestal, with a pulsing aura. Closely
+ * mirrors the actual /crystal template hero. ───────────────────────── */
+function CrystalPreview({ size }: { size: number }) {
+  const ballSize = Math.round(size * 0.78);
   return (
     <div
       className="hs-tpl-anim"
       style={{
         position: "relative",
-        width: 42,
-        height: 42,
-        borderRadius: 99,
-        // Concentric grooves via repeating gradient
-        background:
-          "repeating-radial-gradient(circle, #1a1a1a 0 1.5px, #0a0a0a 1.5px 3px), radial-gradient(circle, #2a2a2a 0%, #050505 100%)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.5), inset 0 0 6px rgba(0,0,0,0.6)",
-        animation: "hs-spin 3.2s linear infinite",
+        width: size, height: size,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
       }}
     >
-      {/* Red center label */}
+      {/* Outer aura — soft radial glow, pulsing opacity (no rotation jitter). */}
       <div
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 14,
-          height: 14,
+          position: "absolute", inset: -2,
           borderRadius: 99,
-          background: "radial-gradient(circle, #ff5a3a 0%, #b8311a 100%)",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.15)",
+          background:
+            "radial-gradient(circle at 50% 45%, rgba(180,130,255,0.55) 0%, rgba(110,55,200,0.18) 40%, transparent 75%)",
+          animation: "hs-orb-glow 2.6s ease-in-out infinite",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* The crystal ball itself — does NOT rotate (a crystal ball doesn't
+          spin); the highlight stays put while the aura breathes. */}
+      <div
+        style={{
+          position: "relative",
+          width: ballSize, height: ballSize, borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 32% 28%, " +
+            "rgba(255,255,255,0.95) 0%, " +
+            "rgba(240,225,255,0.78) 12%, " +
+            "rgba(200,165,255,0.55) 32%, " +
+            "rgba(130,80,225,0.5) 58%, " +
+            "rgba(60,18,115,0.78) 84%, " +
+            "rgba(18,4,45,0.95) 100%)",
+          boxShadow:
+            "0 0 14px rgba(150,90,255,0.45), inset 0 0 10px rgba(190,145,255,0.25)",
+          overflow: "hidden",
         }}
       >
-        {/* Center spindle hole */}
-        <div
-          style={{
+        {/* Primary specular highlight (top-left) */}
+        <div style={{
+          position: "absolute", top: "8%", left: "12%",
+          width: "40%", height: "32%", borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse at 38% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 38%, transparent 68%)",
+          transform: "rotate(-18deg)",
+        }} />
+        {/* Secondary catch-light (bottom-right) */}
+        <div style={{
+          position: "absolute", bottom: "16%", right: "16%",
+          width: "20%", height: "14%", borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse, rgba(220,195,255,0.45) 0%, transparent 70%)",
+        }} />
+        {/* Mist veil */}
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 50% 60%, rgba(130,90,210,0.22) 0%, rgba(55,15,120,0.18) 60%, transparent 100%)",
+        }} />
+      </div>
+
+      {/* Tiny pedestal under the ball */}
+      <div style={{
+        marginTop: 2,
+        width: size * 0.45, height: 2,
+        borderRadius: 99,
+        background:
+          "linear-gradient(90deg, transparent, rgba(160,120,255,0.55), transparent)",
+      }} />
+    </div>
+  );
+}
+
+/* ─── Vinyl: black record with grooves, golden-brown center label, and
+ * a tonearm hovering over it — matches /vinyl template hero. ─────── */
+function VinylPreview({ size }: { size: number }) {
+  // Grooves at the same relative radii as the real template.
+  const grooves = [0.32, 0.44, 0.56, 0.68, 0.78, 0.88];
+  const labelSize = Math.round(size * 0.27);
+  const spindleSize = Math.max(2, Math.round(size * 0.06));
+  return (
+    <div
+      className="hs-tpl-anim"
+      style={{ position: "relative", width: size, height: size }}
+    >
+      {/* Subtle warm glow halo */}
+      <div style={{
+        position: "absolute", inset: -3, borderRadius: "50%",
+        background:
+          "radial-gradient(circle, rgba(184,118,42,0.18) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+
+      {/* Spinning record */}
+      <div style={{
+        width: size, height: size, borderRadius: "50%",
+        background:
+          "radial-gradient(circle at 50% 50%, #2A2018 0%, #1A1410 35%, #120E0A 55%, #0D0A07 75%, #1A1410 88%, #2A2018 100%)",
+        boxShadow:
+          "0 4px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.04)",
+        position: "relative", overflow: "hidden",
+        animation: "hs-spin 3.2s linear infinite",
+      }}>
+        {/* Concentric grooves */}
+        {grooves.map((r, i) => (
+          <div key={i} style={{
             position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 3,
-            height: 3,
-            borderRadius: 99,
-            background: "#000",
-          }}
-        />
+            top: `${50 - r * 50}%`, left: `${50 - r * 50}%`,
+            right: `${50 - r * 50}%`, bottom: `${50 - r * 50}%`,
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.05)",
+          }} />
+        ))}
+        {/* Sheen highlight */}
+        <div style={{
+          position: "absolute", top: "9%", left: "20%",
+          width: "26%", height: "12%", borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 100%)",
+          transform: "rotate(-30deg)",
+        }} />
+        {/* Warm wooden-tone center label */}
+        <div style={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: labelSize, height: labelSize, borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 38% 32%, #D4924A 0%, #B8762A 45%, #8A5515 80%, #6B3F0D 100%)",
+          boxShadow:
+            "inset 0 1px 3px rgba(255,200,100,0.22), inset 0 -1px 2px rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {/* Spindle hole */}
+          <div style={{
+            width: spindleSize, height: spindleSize, borderRadius: "50%",
+            background: "#1A1410", boxShadow: "0 1px 2px rgba(0,0,0,0.8)",
+          }} />
+        </div>
       </div>
     </div>
   );

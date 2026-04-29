@@ -71,8 +71,10 @@ const TEMPLATE_CATALOG: TemplateMeta[] = [
     name: "Vinyl",
     emoji: "🎵",
     tagline: "A spinning record dedication",
-    gradient: "linear-gradient(135deg, #3a1a05 0%, #1a0a02 100%)",
-    ringColor: "rgba(255,176,90,0.55)",
+    // Warm cream background to mirror the actual vinyl template's
+    // record-store aesthetic. Title text on this card switches to dark.
+    gradient: "linear-gradient(160deg, #F4ECE1 0%, #EDE0CC 50%, #DDD0B0 100%)",
+    ringColor: "rgba(184,118,42,0.6)",
   },
 ];
 
@@ -849,25 +851,36 @@ export default function Send() {
                             </div>
                           )}
 
+                          {/* Centered hero graphic — fills the card so it
+                              reads as a real preview, not a stamp at the top. */}
                           <div style={{
-                            position: "relative", zIndex: 1,
-                            height: "100%", display: "flex", flexDirection: "column",
-                            justifyContent: "space-between", alignItems: "center",
-                            padding: "10px 4px 8px",
+                            position: "absolute", inset: 0, zIndex: 1,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            paddingBottom: 22, // leave room for the title overlay
                           }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 44 }}>
-                              <TemplatePreview id={tpl.id} />
+                            <TemplatePreview id={tpl.id} size={62} />
+                          </div>
+                          {/* Title overlay at the very bottom of the card. */}
+                          <div style={{
+                            position: "absolute", left: 0, right: 0, bottom: 4,
+                            zIndex: 2, textAlign: "center",
+                          }}>
+                            <div style={{
+                              color: tpl.id === "vinyl" ? "#3A2E24" : "#fff",
+                              fontWeight: 700, fontSize: 11, lineHeight: 1.1,
+                              textShadow: tpl.id === "vinyl"
+                                ? "none"
+                                : "0 1px 3px rgba(0,0,0,0.55)",
+                            }}>
+                              {tpl.name}
                             </div>
-                            <div style={{ textAlign: "center" }}>
-                              <div style={{ color: "#fff", fontWeight: 700, fontSize: 11, lineHeight: 1.1 }}>
-                                {tpl.name}
-                              </div>
-                              <div style={{
-                                marginTop: 2, fontSize: 8, fontWeight: 700, letterSpacing: "0.05em",
-                                color: isPremium ? "#FFD700" : "#90EE90",
-                              }}>
-                                {isPremium ? "✦ PREMIUM" : "FREE"}
-                              </div>
+                            <div style={{
+                              marginTop: 1, fontSize: 8, fontWeight: 700, letterSpacing: "0.05em",
+                              color: tpl.id === "vinyl"
+                                ? (isPremium ? "#8A5515" : "#3A6B1A")
+                                : (isPremium ? "#FFD700" : "#90EE90"),
+                            }}>
+                              {isPremium ? "✦ PREMIUM" : "FREE"}
                             </div>
                           </div>
                         </motion.button>
