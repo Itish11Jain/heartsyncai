@@ -19,6 +19,23 @@ const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫
 const DRAFT_KEY = "hs_send_draft_v1";
 const DRAFT_TTL_MS = 30 * 60 * 1000; // 30 minutes — long enough for a sign-in detour
 
+// Paywall state survives a refresh, tab close, or jump out to a UPI app.
+// We persist enough to reopen the modal in exactly the same place so the
+// user can finish entering the UTR after coming back from PhonePe / GPay
+// / Paytm. 1 hour is plenty for a UPI round-trip without leaving stale
+// prompts hanging around for days.
+const PAYWALL_KEY = "hs_paywall_state_v1";
+const PAYWALL_TTL_MS = 60 * 60 * 1000;
+type PaywallStage = "plan" | "claim" | "done";
+type PaywallPlan = "single" | "bundle";
+interface PaywallSnapshot {
+  open: boolean;
+  stage: PaywallStage;
+  plan: PaywallPlan;
+  utr: string;
+  savedAt: number;
+}
+
 interface SendDraft {
   occasion: string;
   relation: string;
@@ -102,6 +119,30 @@ function clearDraft() {
   try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
 }
 
+function loadPaywallSnapshot(): PaywallSnapshot | null {
+  try {
+    const raw = localStorage.getItem(PAYWALL_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PaywallSnapshot;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > PAYWALL_TTL_MS) {
+      localStorage.removeItem(PAYWALL_KEY);
+      return null;
+    }
+    // Don't auto-resurrect a "done" modal — they've already finished.
+    if (parsed.stage === "done") {
+      localStorage.removeItem(PAYWALL_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearPaywallSnapshot() {
+  try { localStorage.removeItem(PAYWALL_KEY); } catch { /* ignore */ }
+}
+
 export default function Send() {
   const searchParams = useSearchParams();
   const { isSignedIn, isLoaded, getToken, userId: clerkUserId } = useAuth();
@@ -134,11 +175,14 @@ export default function Send() {
   const [showSignInGate, setShowSignInGate] = useState(false);
   const [signInGateContext, setSignInGateContext] = useState<TemplateId>("envelope");
 
-  const [showPaywall, setShowPaywall] = useState(false);
+  // Paywall state hydrates from localStorage so a refresh, accidental tab
+  // close, or jump out to a UPI app doesn't wipe the user's progress.
+  const initialPaywall = loadPaywallSnapshot();
+  const [showPaywall, setShowPaywall] = useState(initialPaywall?.open ?? false);
   const [upiCopied, setUpiCopied] = useState(false);
-  const [paywallPlan, setPaywallPlan] = useState<"single" | "bundle">("bundle");
-  const [paywallStage, setPaywallStage] = useState<"plan" | "claim" | "done">("plan");
-  const [paywallUtr, setPaywallUtr] = useState("");
+  const [paywallPlan, setPaywallPlan] = useState<PaywallPlan>(initialPaywall?.plan ?? "bundle");
+  const [paywallStage, setPaywallStage] = useState<PaywallStage>(initialPaywall?.stage ?? "plan");
+  const [paywallUtr, setPaywallUtr] = useState(initialPaywall?.utr ?? "");
   const [paywallUtrError, setPaywallUtrError] = useState("");
   const [paywallLoading, setPaywallLoading] = useState(false);
   const [claimError, setClaimError] = useState("");
@@ -158,6 +202,30 @@ export default function Send() {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore quota */ }
   }, [occasion, relation, recipientName, likes, customMsg, selectedTemplate, step]);
+
+  /* ─── Persist paywall state ─────────────────────────────────────────────
+     The user often taps the QR / Copy → switches to their UPI app → makes
+     payment → comes back. Browsers may discard the tab on memory pressure
+     (especially mobile), so we mirror enough state to localStorage to fully
+     reopen the modal. We also save partial UTR text so they don't have to
+     retype the reference. */
+  useEffect(() => {
+    try {
+      if (showPaywall && paywallStage !== "done") {
+        const snap: PaywallSnapshot = {
+          open: true,
+          stage: paywallStage,
+          plan: paywallPlan,
+          utr: paywallUtr,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(PAYWALL_KEY, JSON.stringify(snap));
+      } else {
+        // Modal closed (or user finished). Don't keep stale snapshot around.
+        clearPaywallSnapshot();
+      }
+    } catch { /* ignore quota */ }
+  }, [showPaywall, paywallStage, paywallPlan, paywallUtr]);
 
   /* ─── Sign-in transition: dismiss the gate when Clerk reports signed-in ─ */
   const prevSignedIn = useRef<boolean | null>(null);

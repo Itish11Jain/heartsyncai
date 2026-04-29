@@ -17,9 +17,18 @@ function validateUtr(value: unknown): value is string {
   return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
 }
 
-/** Check if a UTR has been used in any of our payment tables. Caller must hold the UTR advisory lock. */
+/** Check if a UTR has been used in any of our payment tables. Caller must hold the UTR advisory lock.
+ *
+ * IMPORTANT: in Postgres, ANY error inside a transaction puts the whole
+ * transaction into an aborted state until ROLLBACK — even if the error
+ * is caught in JS. The legacy `hs_utr_submissions` / `hs_card_utr_submissions`
+ * tables don't always exist in fresh deployments, and a 42P01 ("relation
+ * does not exist") aborted the entire UTR-submit transaction, surfacing
+ * as a generic 500 → "Submission failed" on the client.
+ *
+ * Wrap each probe in a SAVEPOINT so a missing-table error is contained. */
 async function isUtrAlreadyUsed(
-  client: { query: typeof pool.query },
+  client: import("pg").PoolClient,
   cleanUtr: string,
 ): Promise<boolean> {
   const tables = [
@@ -28,10 +37,14 @@ async function isUtrAlreadyUsed(
     "hs_utr_submissions",
   ];
   for (const table of tables) {
+    await client.query("SAVEPOINT utr_table_probe");
     try {
       const r = await client.query(`SELECT 1 FROM ${table} WHERE utr = $1 LIMIT 1`, [cleanUtr]);
+      await client.query("RELEASE SAVEPOINT utr_table_probe");
       if ((r.rowCount ?? 0) > 0) return true;
     } catch (err) {
+      // Roll back the savepoint so the surrounding transaction stays usable.
+      await client.query("ROLLBACK TO SAVEPOINT utr_table_probe");
       const code = (err as { code?: string } | null)?.code;
       if (code !== "42P01") throw err;
     }
