@@ -723,7 +723,7 @@ export default function Send() {
                       transition: "color 0.25s ease",
                     }}
                   >
-                    {recipientName.trim() ? "Their name" : "👇 Start here — their name"}
+                    {recipientName.trim() ? "Their name" : "👇 Start here — Their name"}
                   </label>
                   <Input
                     placeholder="e.g. Rahul, Priya, Aditya…"
