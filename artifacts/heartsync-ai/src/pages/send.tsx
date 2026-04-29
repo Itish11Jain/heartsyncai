@@ -12,6 +12,7 @@ import {
   type TemplateId,
 } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
+import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
 
@@ -854,7 +855,9 @@ export default function Send() {
                             justifyContent: "space-between", alignItems: "center",
                             padding: "10px 4px 8px",
                           }}>
-                            <div style={{ fontSize: 24, lineHeight: 1 }}>{tpl.emoji}</div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 44 }}>
+                              <TemplatePreview id={tpl.id} />
+                            </div>
                             <div style={{ textAlign: "center" }}>
                               <div style={{ color: "#fff", fontWeight: 700, fontSize: 11, lineHeight: 1.1 }}>
                                 {tpl.name}

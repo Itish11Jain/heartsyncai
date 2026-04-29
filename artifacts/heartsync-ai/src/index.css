@@ -171,3 +171,36 @@
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
   }
 }
+
+/* ───────────────────────────────────────────────────────────────
+   Template thumbnail micro-animations (GPU-accelerated, transform/
+   opacity only). Used by <TemplatePreview/> on the Send page.
+   Kept tiny so the picker stays cheap on low-end Android.
+   ─────────────────────────────────────────────────────────────── */
+@keyframes hs-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+@keyframes hs-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.12); opacity: 1; }
+}
+@keyframes hs-twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.7); }
+  50%      { opacity: 1;    transform: scale(1.1); }
+}
+@keyframes hs-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes hs-orb-glow {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-tpl-anim,
+  .hs-tpl-anim * {
+    animation: none !important;
+  }
+}

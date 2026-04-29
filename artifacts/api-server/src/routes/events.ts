@@ -157,6 +157,37 @@ const ENSURE_VITALS_TABLE = `
 
 const VITAL_NAMES = new Set(["LCP", "FCP", "TTFB", "INP", "CLS"]);
 
+/**
+ * Run ENSURE_TABLE / ENSURE_VITALS_TABLE *once* per process. The original
+ * code ran the full DDL block on every event POST, and those `ALTER TABLE
+ * … ADD COLUMN IF NOT EXISTS` + `CREATE INDEX IF NOT EXISTS` statements
+ * each take an ACCESS EXCLUSIVE lock. Concurrent requests (e.g. a user
+ * tapping the template picker quickly) would race on those locks and
+ * occasionally deadlock. Memoising the promise eliminates the race and
+ * also removes a lot of redundant catalog work from the hot path.
+ */
+let _eventsTableReady: Promise<void> | null = null;
+function ensureEventsTable(): Promise<void> {
+  if (!_eventsTableReady) {
+    _eventsTableReady = pool.query(ENSURE_TABLE).then(() => undefined).catch((err) => {
+      _eventsTableReady = null; // allow retry on next call if it failed
+      throw err;
+    });
+  }
+  return _eventsTableReady;
+}
+
+let _vitalsTableReady: Promise<void> | null = null;
+function ensureVitalsTable(): Promise<void> {
+  if (!_vitalsTableReady) {
+    _vitalsTableReady = pool.query(ENSURE_VITALS_TABLE).then(() => undefined).catch((err) => {
+      _vitalsTableReady = null;
+      throw err;
+    });
+  }
+  return _vitalsTableReady;
+}
+
 /** Trim long UA strings to a short summary (browser + os only). */
 function summarizeUA(ua: string | undefined): string | null {
   if (!ua) return null;
@@ -224,7 +255,7 @@ async function ensureExcludedRecipientsPurged(): Promise<void> {
  */
 router.post("/events/card", async (req, res) => {
   try {
-    await pool.query(ENSURE_TABLE);
+    await ensureEventsTable();
 
     const {
       event, fingerprint, clerk_user_id, email,
@@ -300,7 +331,7 @@ router.post("/events/vitals", async (req, res) => {
       return res.json({ ok: true, dropped: true });
     }
 
-    await pool.query(ENSURE_VITALS_TABLE);
+    await ensureVitalsTable();
 
     const body = req.body as Record<string, unknown>;
     const metric_name = typeof body["metric_name"] === "string" ? body["metric_name"] : "";
@@ -358,8 +389,8 @@ router.get("/events/analytics", async (req, res) => {
   if (!(await requireSuperuser(req, res))) return;
 
   try {
-    await pool.query(ENSURE_TABLE);
-    await pool.query(ENSURE_VITALS_TABLE);
+    await ensureEventsTable();
+    await ensureVitalsTable();
     await ensureExcludedRecipientsPurged();
 
     const from = parseDateParam(req.query["from"]);

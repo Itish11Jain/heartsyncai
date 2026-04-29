@@ -1006,13 +1006,6 @@ export default function Home() {
           {/* ── Desktop layout (md+): side-by-side ── */}
           <div className="hidden md:grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/8 mb-7">
-                <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                <span className="text-xs font-medium text-primary">2 cards free. Try now.</span>
-              </div>
-
               <h1 className="text-5xl font-extrabold tracking-tight leading-[1.1] mb-4 text-white">
                 Send love in<br />a card.
               </h1>
