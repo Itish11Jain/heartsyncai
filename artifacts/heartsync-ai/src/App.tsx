@@ -1,9 +1,14 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+
+/* Radix UI (TooltipProvider + Toaster) is not needed for the first paint.
+ * Lazy-loading this wrapper removes the 22 KB gzip radix chunk from the
+ * critical modulepreload list so card/crystal/cosmic/vinyl visitors don't
+ * pay for it up-front. The fallback renders AppRoutes directly (no tooltip
+ * context) while the shell loads — the HTML splash hides the transition. */
+const AppShellProvider = lazy(() => import("@/components/AppShellProvider"));
 
 /* Home is the largest page (Framer Motion + confetti + testimonials).
  * Lazy-loading it moves the 123 KB motion chunk out of the critical path
@@ -120,10 +125,15 @@ function App() {
   return (
     <WouterRouter base={basePath}>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AppRoutes />
-          <Toaster />
-        </TooltipProvider>
+        {/* AppShellProvider (Radix TooltipProvider + Toaster) loads lazily.
+            While it fetches, the fallback renders routes without tooltip/toast
+            context — imperceptible because the HTML splash is still covering
+            the viewport. Once the tiny chunk arrives, the full tree mounts. */}
+        <Suspense fallback={<AppRoutes />}>
+          <AppShellProvider>
+            <AppRoutes />
+          </AppShellProvider>
+        </Suspense>
       </QueryClientProvider>
     </WouterRouter>
   );
