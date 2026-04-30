@@ -605,7 +605,7 @@ export default function Send() {
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore */ }
-    clerk.openSignIn();
+    clerk.openSignIn({ redirectUrl: window.location.href });
   }
 
   /* ─── Keep a stable ref to doGenerateCard for the post-signin effect ── */

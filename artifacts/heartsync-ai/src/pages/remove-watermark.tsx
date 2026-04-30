@@ -93,7 +93,7 @@ export default function RemoveWatermark() {
     if (!isValidUtr(bundleUtr)) return;
     if (!cardId) { setBundleUtrError("No card ID — go back to the card and tap Remove again."); return; }
     /* Require sign-in before submitting payment */
-    if (!isSignedIn) { clerk.openSignIn(); return; }
+    if (!isSignedIn) { clerk.openSignIn({ redirectUrl: window.location.href }); return; }
     setBundleUtrError("");
     setBundleLoading(true);
     try {
@@ -139,7 +139,7 @@ export default function RemoveWatermark() {
   const handleWmSubmit = useCallback(async () => {
     if (!isValidUtr(wmUtr) || !cardId) return;
     /* Require sign-in before submitting payment */
-    if (!isSignedIn) { clerk.openSignIn(); return; }
+    if (!isSignedIn) { clerk.openSignIn({ redirectUrl: window.location.href }); return; }
     setWmUtrError("");
     setWmLoading(true);
     try {

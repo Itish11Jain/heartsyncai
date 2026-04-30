@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, useClerk } from "@clerk/react";
 import { dark } from "@clerk/themes";
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
@@ -65,7 +65,15 @@ const clerkAppearance = {
   },
 };
 
+function useRedirectUrl() {
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const raw = params.get("redirect_url");
+  return raw ? decodeURIComponent(raw) : `${basePath}/send`;
+}
+
 function SignInPage() {
+  const redirectUrl = useRedirectUrl();
   return (
     <div
       style={{
@@ -81,13 +89,14 @@ function SignInPage() {
         routing="path"
         path={`${basePath}/sign-in`}
         signUpUrl={`${basePath}/sign-up`}
-        fallbackRedirectUrl={`${basePath}/send`}
+        fallbackRedirectUrl={redirectUrl}
       />
     </div>
   );
 }
 
 function SignUpPage() {
+  const redirectUrl = useRedirectUrl();
   return (
     <div
       style={{
@@ -103,7 +112,7 @@ function SignUpPage() {
         routing="path"
         path={`${basePath}/sign-up`}
         signInUrl={`${basePath}/sign-in`}
-        fallbackRedirectUrl={`${basePath}/send`}
+        fallbackRedirectUrl={redirectUrl}
       />
     </div>
   );
