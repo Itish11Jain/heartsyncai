@@ -452,6 +452,7 @@ router.get("/events/analytics", async (req, res) => {
       utm_funnel,
       premiumClicks,
       recipientCtaFunnel,
+      userCards,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -637,6 +638,20 @@ router.get("/events/analytics", async (req, res) => {
            ORDER BY clicks DESC`,
           params,
         ),
+
+        /* ── Signed-in users: email + cards created ──
+         * Reads from hs_clerk_users (lifetime data, not date-range scoped)
+         * to show every real signed-in user and how many cards they have sent.
+         * Superuser emails are excluded. Ordered by cards_used DESC so the
+         * most active users appear first. */
+        pool.query(
+          `SELECT email, clerk_user_id, cards_used, created_at
+           FROM hs_clerk_users
+           WHERE email IS NOT NULL
+             AND email NOT IN (${SUPERUSER_EMAILS.map((_, i) => `$${i + 1}`).join(",")})
+           ORDER BY cards_used DESC, created_at DESC`,
+          SUPERUSER_EMAILS,
+        ),
       ]);
 
     return res.json({
@@ -650,6 +665,7 @@ router.get("/events/analytics", async (req, res) => {
       utm_funnel: utm_funnel.rows,
       premium_clicks: premiumClicks.rows,
       recipient_cta_funnel: recipientCtaFunnel.rows[0] ?? { clicks: 0, unique_clickers: 0, cards_after_click: 0 },
+      user_cards: userCards.rows,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });

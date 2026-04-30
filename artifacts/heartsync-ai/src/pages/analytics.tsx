@@ -39,6 +39,7 @@ type VitalRow = { metric_name: string; samples: number; p50: string | number | n
 type UtmRow = { source: string; sessions: string | number; cta_users: string | number; card_creators: string | number; cards: string | number; paid_cards: string | number };
 type PremiumClickRow = { template: string; clicks: number; unique_customers: number };
 type RecipientCtaFunnel = { clicks: number; unique_clickers: number; cards_after_click: number };
+type UserCardRow = { email: string; clerk_user_id: string; cards_used: string | number; created_at: string };
 
 type AnalyticsData = {
   overview: Overview;
@@ -51,6 +52,7 @@ type AnalyticsData = {
   utm_funnel?: UtmRow[];
   premium_clicks?: PremiumClickRow[];
   recipient_cta_funnel?: RecipientCtaFunnel;
+  user_cards?: UserCardRow[];
   range?: { from: string | null; to: string | null };
 };
 
@@ -553,13 +555,6 @@ export default function Analytics() {
           <Stat label="Card Views (Recipients)" value={o.card_views} />
         </div>
 
-        {/* ── Referrals ── */}
-        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Viral / Referral</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
-          <Stat label="Site Visits from Card" value={o.website_from_card} />
-          <Stat label="Cards Created via Ref" value={o.created_from_card_ref} sub={pct(o.created_from_card_ref, o.website_from_card) + " of visitors"} />
-        </div>
-
         {/* ── Funnels ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Funnel</h2>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
@@ -729,6 +724,49 @@ export default function Analytics() {
               <span style={{ color: "#FFD700", fontWeight: 700 }}>{r.users} sessions</span>
             </div>
           ))}
+        </div>
+
+        {/* ── Signed-In Users by Cards Created ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+          Signed-In Users by Cards Created
+        </h2>
+        <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 120px", padding: "8px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Email</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Cards</span>
+            <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Joined</span>
+          </div>
+          {(!data.user_cards || data.user_cards.length === 0) ? (
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 16px" }}>No signed-in users yet</p>
+          ) : (
+            data.user_cards.map((r, i) => (
+              <div
+                key={r.clerk_user_id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 90px 120px",
+                  padding: "10px 16px",
+                  borderBottom: i < (data.user_cards ?? []).length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {r.email}
+                </span>
+                <span style={{
+                  color: Number(r.cards_used) >= 3 ? "#f59e0b" : Number(r.cards_used) >= 1 ? "#FFD700" : "rgba(255,255,255,0.4)",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  textAlign: "right",
+                }}>
+                  {r.cards_used}
+                </span>
+                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "right" }}>
+                  {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                </span>
+              </div>
+            ))
+          )}
         </div>
 
         <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 11, textAlign: "center" }}>
