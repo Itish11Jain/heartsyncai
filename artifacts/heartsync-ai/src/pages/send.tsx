@@ -1526,69 +1526,82 @@ export default function Send() {
               ) : (
                 /* ── "choose" stage ── */
                 <div className="p-5">
-                  <div className="text-center mb-4">
+                  <div className="text-center mb-5">
                     <div className="text-3xl mb-2">💌</div>
-                    <h2 className="text-lg font-bold text-white mb-1">Your card is ready to send!</h2>
-                    <p className="text-white/55 text-sm leading-relaxed">
-                      Free forever on Envelope cards. Send clean or let us add a small watermark.
-                    </p>
+                    <h2 className="text-lg font-bold text-white mb-1">Your card is ready to be sent!</h2>
+                    <p className="text-white/50 text-sm">How would you like to send it?</p>
                   </div>
 
-                  {/* Watermark preview pill */}
-                  <div
-                    className="rounded-2xl px-4 py-3 mb-4 flex items-center gap-3"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
-                    <div className="flex-1">
-                      <div className="text-white/45 text-xs leading-tight">Free card includes this badge:</div>
-                      <div
-                        className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold"
-                        style={{
-                          background: "rgba(255,255,255,0.08)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          color: "rgba(255,255,255,0.5)",
-                        }}
-                      >
-                        ✨ Made for free on HeartSync AI
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Option A — Remove watermark ₹29 */}
-                  <button
-                    onClick={() => setWatermarkStage("upi")}
-                    data-testid="watermark-remove-cta"
-                    className="w-full rounded-2xl px-4 py-3.5 mb-3 flex items-center justify-between text-left"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,165,0,0.08))",
-                      border: "1.5px solid rgba(255,215,0,0.45)",
-                    }}
-                  >
-                    <div>
-                      <div className="text-white font-bold text-sm leading-tight">✨ Remove Watermark — ₹29</div>
-                      <div className="text-white/50 text-xs mt-0.5">Clean card · Pay once per card</div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0 ml-3">
-                      <span className="text-yellow-400 font-extrabold text-base">₹29</span>
-                      <ArrowRight size={16} className="text-white/40" />
-                    </div>
-                  </button>
-
-                  {/* Option B — Send free */}
+                  {/* Option 1 — Free with badge */}
                   <button
                     onClick={handleWatermarkFree}
                     data-testid="watermark-send-free"
-                    className="w-full rounded-2xl px-4 py-3 flex items-center justify-between text-left"
+                    className="w-full rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3 text-left"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.07)",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.09)",
                     }}
                   >
-                    <div>
-                      <div className="text-white/75 font-semibold text-sm leading-tight">Send for free with HeartSync watermark</div>
-                      <div className="text-white/35 text-xs mt-0.5">Includes "Made on HeartSync AI" badge</div>
+                    <div className="mt-0.5 text-lg shrink-0">🆓</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white/80 font-semibold text-sm leading-tight">Send for free</div>
+                      <div className="text-white/40 text-xs mt-1 leading-snug">
+                        Your card will include a small badge:
+                      </div>
+                      <div
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+                        style={{
+                          background: "rgba(255,255,255,0.07)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          color: "rgba(255,255,255,0.45)",
+                        }}
+                      >
+                        ✨ Free version from HeartSync AI
+                      </div>
                     </div>
-                    <ArrowRight size={16} className="text-white/25 ml-3 shrink-0" />
+                    <ArrowRight size={15} className="text-white/20 shrink-0 mt-1" />
+                  </button>
+
+                  {/* Option 2 — Remove watermark ₹29 */}
+                  <button
+                    onClick={() => setWatermarkStage("upi")}
+                    data-testid="watermark-remove-cta"
+                    className="w-full rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3 text-left"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255,215,0,0.13), rgba(255,165,0,0.07))",
+                      border: "1.5px solid rgba(255,215,0,0.4)",
+                    }}
+                  >
+                    <div className="mt-0.5 text-lg shrink-0">✨</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm leading-tight">No watermark on this card</div>
+                      <div className="text-white/50 text-xs mt-0.5">Clean card, no badge · One-time ₹29 per card</div>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                      <span className="text-yellow-400 font-extrabold text-sm">₹29</span>
+                      <ArrowRight size={15} className="text-white/35" />
+                    </div>
+                  </button>
+
+                  {/* Option 3 — Unlock all premium templates ₹49 */}
+                  <button
+                    onClick={() => { setShowWatermarkUpsell(false); setShowPaywall(true); }}
+                    data-testid="watermark-bundle-cta"
+                    className="w-full rounded-2xl px-4 py-3.5 flex items-start gap-3 text-left"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(168,85,247,0.18), rgba(236,72,153,0.12))",
+                      border: "1.5px solid rgba(168,85,247,0.4)",
+                    }}
+                  >
+                    <div className="mt-0.5 text-lg shrink-0">👑</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white font-bold text-sm leading-tight">Unlock all premium templates</div>
+                      <div className="text-white/50 text-xs mt-0.5">No watermarks ever · All 4 templates · Yours forever</div>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                      <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹49</span>
+                      <ArrowRight size={15} className="text-purple-300/50" />
+                    </div>
                   </button>
                 </div>
               )}
