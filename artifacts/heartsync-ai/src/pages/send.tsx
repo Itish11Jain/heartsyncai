@@ -1366,13 +1366,13 @@ export default function Send() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[95] backdrop-blur-sm flex flex-col items-center justify-end px-4 pb-6"
+            className="fixed inset-0 z-[95] backdrop-blur-sm flex flex-col items-center justify-center px-4"
             style={{ background: "rgba(4, 0, 14, 0.88)" }}
           >
             <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
               transition={{ type: "spring", stiffness: 340, damping: 30 }}
               className="w-full max-w-sm rounded-3xl overflow-hidden"
               style={{
