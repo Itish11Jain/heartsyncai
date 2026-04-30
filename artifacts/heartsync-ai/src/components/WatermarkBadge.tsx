@@ -36,7 +36,7 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
     <div
       style={{
         position: "fixed",
-        bottom: "max(80px, env(safe-area-inset-bottom, 80px))",
+        bottom: "max(160px, env(safe-area-inset-bottom, 160px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 99999,
@@ -76,11 +76,11 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
       <a
         href={removeHref}
         style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: "rgba(255,255,255,0.55)",
+          fontSize: 14,
+          fontWeight: 700,
+          color: "rgba(255,255,255,0.75)",
           textDecoration: "underline",
-          textDecorationColor: "rgba(255,255,255,0.25)",
+          textDecorationColor: "rgba(255,255,255,0.35)",
           textUnderlineOffset: 3,
           cursor: "pointer",
           letterSpacing: "0.02em",
