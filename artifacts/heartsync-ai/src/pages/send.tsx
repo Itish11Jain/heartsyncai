@@ -122,18 +122,26 @@ function loadPaywallSnapshot(): PaywallSnapshot | null {
   try {
     const raw = localStorage.getItem(PAYWALL_KEY);
     if (!raw) return null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parsed = JSON.parse(raw) as any;
-    if (!parsed?.savedAt || Date.now() - parsed.savedAt > PAYWALL_TTL_MS) {
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const p = parsed as Record<string, unknown>;
+    const savedAt = p.savedAt;
+    const stage = p.stage;
+    if (typeof savedAt !== "number" || Date.now() - savedAt > PAYWALL_TTL_MS) {
       localStorage.removeItem(PAYWALL_KEY);
       return null;
     }
     // Don't auto-resurrect a "done" or "claim" modal (old format) — finished.
-    if (parsed.stage === "done" || parsed.stage === "claim") {
+    if (stage === "done" || stage === "claim") {
       localStorage.removeItem(PAYWALL_KEY);
       return null;
     }
-    return { open: !!parsed.open, stage: "plan", utr: parsed.utr ?? "", savedAt: parsed.savedAt };
+    return {
+      open: !!p.open,
+      stage: "plan",
+      utr: typeof p.utr === "string" ? p.utr : "",
+      savedAt,
+    };
   } catch {
     return null;
   }
@@ -260,7 +268,9 @@ export default function Send() {
     const premiumTpl = pendingPremiumAfterSignin.current;
     if (premiumTpl) {
       if (usage.is_superuser || usage.unlocked_templates.includes(premiumTpl)) {
+        // Template already unlocked — skip paywall and generate directly.
         pendingPremiumAfterSignin.current = null;
+        doGenerateCardRef.current();
         return;
       }
       if (templateGate(usage, premiumTpl) === "paywall") {

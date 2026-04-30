@@ -153,8 +153,13 @@ router.get("/cards/:id", async (req, res) => {
 /**
  * PATCH /api/cards/:id
  * Requires Clerk auth. Caller must own the card (clerk_user_id match).
- * Body: { is_watermarked?: boolean, is_premium?: boolean }
- * Used by ₹49 premium flow to mark a card after template-unlock-utr succeeds.
+ * Body: { is_watermarked?: false, is_premium?: true }
+ * Used by the ₹49 premium flow after template-unlock-utr succeeds.
+ *
+ * Entitlement enforcement:
+ *   is_premium=true  → caller must have ≥1 row in hs_template_unlocks (bundle paid)
+ *   is_watermarked=false → same requirement (bundle paid covers watermark removal)
+ * Downgrades (is_premium=false / is_watermarked=true) are rejected — paid state is permanent.
  */
 router.patch("/cards/:id", async (req, res) => {
   const auth = getAuth(req);
@@ -171,6 +176,17 @@ router.patch("/cards/:id", async (req, res) => {
       is_premium?: unknown;
     };
 
+    // Reject downgrade attempts — paid state is permanent.
+    if (is_premium === false) {
+      res.status(400).json({ error: "downgrade_not_allowed" });
+      return;
+    }
+    if (is_watermarked === true) {
+      res.status(400).json({ error: "downgrade_not_allowed" });
+      return;
+    }
+
+    // Check card ownership.
     const existing = await pool.query(
       "SELECT clerk_user_id FROM hs_cards WHERE id = $1",
       [id],
@@ -184,21 +200,34 @@ router.patch("/cards/:id", async (req, res) => {
       return;
     }
 
+    const wantPremium  = is_premium === true;
+    const wantClean    = is_watermarked === false;
+
+    if (!wantPremium && !wantClean) {
+      res.status(400).json({ error: "nothing_to_update" });
+      return;
+    }
+
+    // Entitlement check — caller must have paid the ₹49 bundle.
+    const unlockRow = await pool.query(
+      "SELECT 1 FROM hs_template_unlocks WHERE clerk_user_id = $1 LIMIT 1",
+      [clerkUserId],
+    );
+    if (unlockRow.rows.length === 0) {
+      res.status(403).json({ error: "payment_required", message: "No bundle payment found for this account." });
+      return;
+    }
+
     const updates: string[] = [];
     const params: unknown[] = [];
 
-    if (typeof is_watermarked === "boolean") {
-      params.push(is_watermarked);
+    if (wantClean) {
+      params.push(false);
       updates.push(`is_watermarked = $${params.length}`);
     }
-    if (typeof is_premium === "boolean") {
-      params.push(is_premium);
+    if (wantPremium) {
+      params.push(true);
       updates.push(`is_premium = $${params.length}`);
-    }
-
-    if (updates.length === 0) {
-      res.status(400).json({ error: "nothing_to_update" });
-      return;
     }
 
     params.push(id);
