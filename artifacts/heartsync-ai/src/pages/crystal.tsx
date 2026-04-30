@@ -16,7 +16,6 @@ import { Link, useSearch } from "wouter";
 import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
 import { trackEvent } from "../lib/trackEvent";
-import WatermarkBadge from "../components/WatermarkBadge";
 
 function useQueryParams() {
   const search = useSearch();
@@ -965,7 +964,6 @@ export default function CrystalCard() {
         </motion.div>
       </Link>
 
-      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "revelation" && !isSender} />
     </div>
   );
 }

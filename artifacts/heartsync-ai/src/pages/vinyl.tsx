@@ -6,7 +6,6 @@ import {
 } from "@/lib/card-templates";
 import { vinyl, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
-import WatermarkBadge from "@/components/WatermarkBadge";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -935,7 +934,6 @@ export default function VinylCard() {
         )}
       </AnimatePresence>
 
-      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "sleeve" && !isSender} />
     </div>
   );
 }

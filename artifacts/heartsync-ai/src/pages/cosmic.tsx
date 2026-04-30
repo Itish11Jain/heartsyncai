@@ -4,7 +4,6 @@ import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
 import { cosmic, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
-import WatermarkBadge from "@/components/WatermarkBadge";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -700,7 +699,6 @@ export default function CosmicCard() {
         </motion.div>
       </Link>
 
-      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "final" && !isSender} />
     </div>
   );
 }
