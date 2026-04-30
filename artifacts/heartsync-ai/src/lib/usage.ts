@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth, useUser } from "@clerk/react";
-import { SUPERUSER_EMAIL } from "@/lib/trackEvent";
+import { isSuperUser } from "@/lib/trackEvent";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -120,16 +120,15 @@ export function useCardUsage() {
           unlocked_templates: Array.isArray(raw.unlocked_templates) ? raw.unlocked_templates : [],
           pending_single_unlocks: raw.pending_single_unlocks ?? 0,
         };
-        if (userEmail === SUPERUSER_EMAIL) data.is_superuser = true;
+        if (isSuperUser(userEmail)) data.is_superuser = true;
         setUsage(data);
       }
     } catch {
-      const isSuperUser = userEmail === SUPERUSER_EMAIL;
       setUsage({
         anon_used: 0,
         signed_in_used: 0,
         is_signed_in: !!isSignedIn,
-        is_superuser: isSuperUser,
+        is_superuser: isSuperUser(userEmail),
         unlocked_templates: [],
         pending_single_unlocks: 0,
       });
@@ -143,7 +142,7 @@ export function useCardUsage() {
   }, [fetchUsage]);
 
   const incrementUsage = useCallback(async () => {
-    if (userEmail === SUPERUSER_EMAIL) return;
+    if (isSuperUser(userEmail)) return;
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (isSignedIn) {

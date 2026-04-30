@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/react";
 import { useLocation } from "wouter";
-import { SUPERUSER_EMAIL } from "@/lib/trackEvent";
+import { isSuperUser } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -192,7 +192,7 @@ export default function Analytics() {
       navigate("/sign-in?redirect_url=/analytics");
       return;
     }
-    if (userEmail !== SUPERUSER_EMAIL) {
+    if (!isSuperUser(userEmail)) {
       navigate("/");
       return;
     }

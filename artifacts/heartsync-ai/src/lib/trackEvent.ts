@@ -17,10 +17,10 @@
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const UTM_KEY = "hs_utm";
 
-export const SUPERUSER_EMAIL = "jainitisha93@gmail.com";
+const SUPERUSER_EMAILS = ["jainitisha93@gmail.com", "itisha.a.jain.93@gmail.com"];
 
 export function isSuperUser(email: string | null | undefined): boolean {
-  return email === SUPERUSER_EMAIL;
+  return !!email && SUPERUSER_EMAILS.includes(email);
 }
 
 type StoredUtm = {

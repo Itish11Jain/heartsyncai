@@ -9,7 +9,7 @@
  * sent at most once per page view.
  */
 
-import { SUPERUSER_EMAIL } from "./trackEvent";
+import { isSuperUser } from "./trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -78,7 +78,7 @@ export function startTrackingVitals(): void {
 
   if (typeof window === "undefined") return;
   if (isLikelyBot()) return;
-  if (getCurrentEmail() === SUPERUSER_EMAIL) return;
+  if (isSuperUser(getCurrentEmail())) return;
 
   // Don't track in dev — only production-built bundles
   if (import.meta.env.DEV) return;

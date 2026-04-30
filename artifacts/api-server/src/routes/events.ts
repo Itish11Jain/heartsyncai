@@ -4,7 +4,7 @@ import { pool } from "../lib/db";
 
 const router = Router();
 
-const SUPERUSER_EMAILS = ["jainitisha93@gmail.com"];
+const SUPERUSER_EMAILS = ["jainitisha93@gmail.com", "itisha.a.jain.93@gmail.com"];
 
 /**
  * Recipient names to exclude from analytics entirely. Matched case-insensitively
