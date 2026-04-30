@@ -965,7 +965,7 @@ export default function CrystalCard() {
         </motion.div>
       </Link>
 
-      <WatermarkBadge id={params.get("id")} />
+      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "revelation"} />
     </div>
   );
 }

@@ -700,7 +700,7 @@ export default function CosmicCard() {
         </motion.div>
       </Link>
 
-      <WatermarkBadge id={params.get("id")} />
+      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "final"} />
     </div>
   );
 }

@@ -1226,8 +1226,8 @@ export default function Send() {
                 <>
                   <div className="text-center mb-5">
                     <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
-                    <h1 className="text-2xl font-bold text-white mb-1">Unlock all premium</h1>
-                    <p className="text-white/55 text-sm">Pay once via UPI — all 3 templates unlocked forever, no watermark.</p>
+                    <h1 className="text-2xl font-bold text-white mb-1">Remove watermark & go premium</h1>
+                    <p className="text-white/55 text-sm">₹49 once — removes watermark & unlocks all 3 premium templates forever.</p>
                   </div>
 
                   {/* Single ₹49 plan card */}
@@ -1240,8 +1240,8 @@ export default function Send() {
                   >
                     <div>
                       <div className="text-white font-extrabold text-xl leading-tight">₹49</div>
-                      <div className="text-white/70 text-xs mt-0.5">Cosmic + Crystal + Vinyl — all 3</div>
-                      <div className="text-white/40 text-[10px] mt-0.5">No watermark · Pay once, use forever</div>
+                      <div className="text-white/70 text-xs mt-0.5">Removes watermark · Unlocks 3 premium templates</div>
+                      <div className="text-white/40 text-[10px] mt-0.5">Cosmic + Crystal + Vinyl · Pay once, yours forever</div>
                     </div>
                     <div
                       style={{
@@ -1507,11 +1507,11 @@ export default function Send() {
                     <p className="text-white/50 text-sm">How would you like to send it?</p>
                   </div>
 
-                  {/* Option 1 (Anchor) — Unlock all premium ₹49 */}
+                  {/* Primary CTA — Remove watermark & unlock all premium ₹49 */}
                   <button
                     onClick={() => { setShowWatermarkUpsell(false); setShowPaywall(true); }}
                     data-testid="watermark-bundle-cta"
-                    className="w-full rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3 text-left"
+                    className="w-full rounded-2xl px-4 py-4 mb-4 flex items-start gap-3 text-left"
                     style={{
                       background: "linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.14))",
                       border: "1.5px solid rgba(168,85,247,0.5)",
@@ -1520,8 +1520,8 @@ export default function Send() {
                   >
                     <div className="mt-0.5 text-lg shrink-0">👑</div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-white font-bold text-sm leading-tight">Unlock all premium templates</div>
-                      <div className="text-white/50 text-xs mt-0.5">No watermarks ever · All 4 templates · Yours forever</div>
+                      <div className="text-white font-bold text-sm leading-tight">Remove watermark & unlock all premium templates</div>
+                      <div className="text-white/50 text-xs mt-1">No badge ever · All 4 templates · Yours forever</div>
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
                       <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹49</span>
@@ -1529,28 +1529,7 @@ export default function Send() {
                     </div>
                   </button>
 
-                  {/* Option 2 (Impulse) — Remove watermark ₹29 */}
-                  <button
-                    onClick={() => setWatermarkStage("upi")}
-                    data-testid="watermark-remove-cta"
-                    className="w-full rounded-2xl px-4 py-3.5 mb-4 flex items-start gap-3 text-left"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(255,215,0,0.13), rgba(255,165,0,0.07))",
-                      border: "1.5px solid rgba(255,215,0,0.4)",
-                    }}
-                  >
-                    <div className="mt-0.5 text-lg shrink-0">✨</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white font-bold text-sm leading-tight">No watermark on this card</div>
-                      <div className="text-white/50 text-xs mt-0.5">Clean card, no badge · One-time ₹29 per card</div>
-                    </div>
-                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
-                      <span className="text-yellow-400 font-extrabold text-sm">₹29</span>
-                      <ArrowRight size={15} className="text-white/35" />
-                    </div>
-                  </button>
-
-                  {/* Option 3 (Downgrade) — Free, plain text link */}
+                  {/* Downgrade — free, plain text link */}
                   <div className="text-center">
                     <button
                       onClick={handleWatermarkFree}

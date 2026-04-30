@@ -9,9 +9,11 @@ interface CardMeta {
 
 interface WatermarkBadgeProps {
   id?: string | null;
+  showRemoveCta?: boolean;
+  hidden?: boolean;
 }
 
-export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
+export default function WatermarkBadge({ id, showRemoveCta = false, hidden = false }: WatermarkBadgeProps) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
       .catch(() => {});
   }, [id]);
 
-  if (!show) return null;
+  if (!show || hidden) return null;
 
   const back = typeof window !== "undefined"
     ? encodeURIComponent(window.location.pathname + window.location.search)
@@ -49,7 +51,7 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
         WebkitUserSelect: "none",
       } as React.CSSProperties}
     >
-      {/* Top: Made for free on HeartSync — main branded pill */}
+      {/* Branded pill */}
       <Link href="/">
         <div
           style={{
@@ -72,22 +74,24 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
         </div>
       </Link>
 
-      {/* Bottom: Remove watermark CTA — subtle link */}
-      <a
-        href={removeHref}
-        style={{
-          fontSize: 14,
-          fontWeight: 700,
-          color: "rgba(255,255,255,0.75)",
-          textDecoration: "underline",
-          textDecorationColor: "rgba(255,255,255,0.35)",
-          textUnderlineOffset: 3,
-          cursor: "pointer",
-          letterSpacing: "0.02em",
-        }}
-      >
-        Remove watermark →
-      </a>
+      {/* Remove CTA — only for the card sender */}
+      {showRemoveCta && (
+        <a
+          href={removeHref}
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "rgba(255,255,255,0.75)",
+            textDecoration: "underline",
+            textDecorationColor: "rgba(255,255,255,0.35)",
+            textUnderlineOffset: 3,
+            cursor: "pointer",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Remove watermark →
+        </a>
+      )}
 
       <style>{`
         @keyframes wm-pulse {
