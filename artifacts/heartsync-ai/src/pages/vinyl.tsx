@@ -935,7 +935,7 @@ export default function VinylCard() {
         )}
       </AnimatePresence>
 
-      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "sleeve"} />
+      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "sleeve" && !isSender} />
     </div>
   );
 }

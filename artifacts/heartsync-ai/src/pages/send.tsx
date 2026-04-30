@@ -1226,8 +1226,8 @@ export default function Send() {
                 <>
                   <div className="text-center mb-5">
                     <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
-                    <h1 className="text-2xl font-bold text-white mb-1">Remove watermark & go premium</h1>
-                    <p className="text-white/55 text-sm">₹49 once — removes watermark & unlocks all 3 premium templates forever.</p>
+                    <h1 className="text-xl font-bold text-white mb-1 leading-tight">Remove Watermark | Go Premium</h1>
+                    <p className="text-white/55 text-sm">One payment of ₹49 — yours forever.</p>
                   </div>
 
                   {/* Single ₹49 plan card */}
@@ -1240,16 +1240,11 @@ export default function Send() {
                   >
                     <div>
                       <div className="text-white font-extrabold text-xl leading-tight">₹49</div>
-                      <div className="text-white/70 text-xs mt-0.5">Removes watermark · Unlocks 3 premium templates</div>
-                      <div className="text-white/40 text-[10px] mt-0.5">Cosmic + Crystal + Vinyl · Pay once, yours forever</div>
+                      <div className="text-white/70 text-xs mt-1.5 flex flex-col gap-1">
+                        <span>✓ Removes watermark</span>
+                        <span>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                        color: "#000", fontWeight: 800, fontSize: 9,
-                        padding: "3px 8px", borderRadius: 99, letterSpacing: "0.04em",
-                      }}
-                    >BEST VALUE</div>
                   </div>
 
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
