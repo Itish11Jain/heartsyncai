@@ -50,20 +50,19 @@ export interface CardUsage {
 
 /**
  * Decide which gate (if any) is required to send a card with `template`.
- *  - "signin"  → show sign-in wall (anonymous user hitting their first cap, or
- *                anonymous user clicking a premium template).
+ *  - "signin"  → show sign-in wall (anonymous user clicking any template).
  *  - "paywall" → signed-in user clicking a premium template they haven't
- *                unlocked and have no pending single-unlock to claim against.
+ *                unlocked via the ₹49 bundle.
  *  - null      → free to proceed.
  *
- * Rules in plain English:
- *   • Envelope (free) — anonymous users get 1 card free, then hit signup.
- *     Signed-in users get unlimited Envelope cards.
- *   • Cosmic / Crystal / Vinyl (premium) — anonymous users always hit signup
- *     (with premium-aware copy). Signed-in users without that template in
- *     `unlocked_templates` hit the paywall, unless they have a pre-paid
- *     single unlock waiting to claim.
+ * Rules (Tollbooth Phase 2):
+ *   • All users must sign in before generating any card link.
+ *   • Envelope (free) — signed-in users get unlimited Envelope cards.
+ *   • Cosmic / Crystal / Vinyl (premium) — signed-in users need ALL THREE
+ *     templates in unlocked_templates (i.e. the ₹49 bundle).
  *   • Superuser bypasses everything.
+ *   • The old single-plan unlock (pending_single_unlocks) is no longer
+ *     accepted as premium access — users on the old plan must pay ₹49.
  */
 export function templateGate(
   usage: CardUsage | null,
@@ -72,16 +71,13 @@ export function templateGate(
   if (!usage) return null; // optimistic until we've loaded
   if (usage.is_superuser) return null;
 
-  if (template === FREE_TEMPLATE) {
-    if (!usage.is_signed_in && usage.anon_used >= 1) return "signin";
-    return null;
-  }
-
-  // Premium template
+  // All users must be signed in to generate any card.
   if (!usage.is_signed_in) return "signin";
+
+  if (template === FREE_TEMPLATE) return null; // Envelope always free for signed-in users
+
+  // Premium template — must have it in unlocked_templates (bundle paid).
   if (usage.unlocked_templates.includes(template)) return null;
-  // A paid-but-unclaimed single counts as access — the flow will claim it.
-  if (usage.pending_single_unlocks > 0) return null;
   return "paywall";
 }
 

@@ -154,12 +154,15 @@ router.get("/cards/:id", async (req, res) => {
  * PATCH /api/cards/:id
  * Requires Clerk auth. Caller must own the card (clerk_user_id match).
  * Body: { is_watermarked?: false, is_premium?: true }
- * Used by the ₹49 premium flow after template-unlock-utr succeeds.
  *
- * Entitlement enforcement:
- *   is_premium=true  → caller must have ≥1 row in hs_template_unlocks (bundle paid)
- *   is_watermarked=false → same requirement (bundle paid covers watermark removal)
- * Downgrades (is_premium=false / is_watermarked=true) are rejected — paid state is permanent.
+ * Entitlement enforcement (server-side, cannot be bypassed):
+ *   is_premium=true  → requires ₹49 bundle: ALL of cosmic/crystal/vinyl in
+ *                      hs_clerk_users.unlocked_templates.
+ *   is_watermarked=false (with is_premium) → same bundle requirement.
+ *   is_watermarked=false (without is_premium) → also accepts per-card ₹29
+ *                      payment in hs_watermark_payments for this card.
+ *
+ * Downgrades (is_premium=false / is_watermarked=true) are always rejected.
  */
 router.patch("/cards/:id", async (req, res) => {
   const auth = getAuth(req);
@@ -177,12 +180,16 @@ router.patch("/cards/:id", async (req, res) => {
     };
 
     // Reject downgrade attempts — paid state is permanent.
-    if (is_premium === false) {
+    if (is_premium === false || is_watermarked === true) {
       res.status(400).json({ error: "downgrade_not_allowed" });
       return;
     }
-    if (is_watermarked === true) {
-      res.status(400).json({ error: "downgrade_not_allowed" });
+
+    const wantPremium = is_premium === true;
+    const wantClean   = is_watermarked === false;
+
+    if (!wantPremium && !wantClean) {
+      res.status(400).json({ error: "nothing_to_update" });
       return;
     }
 
@@ -200,24 +207,34 @@ router.patch("/cards/:id", async (req, res) => {
       return;
     }
 
-    const wantPremium  = is_premium === true;
-    const wantClean    = is_watermarked === false;
-
-    if (!wantPremium && !wantClean) {
-      res.status(400).json({ error: "nothing_to_update" });
-      return;
-    }
-
-    // Entitlement check — caller must have paid the ₹49 bundle.
-    // unlocked_templates is set by /api/usage/template-unlock-utr on success.
-    const entitlementRow = await pool.query<{ unlocked_templates: string[] }>(
+    // Entitlement check.
+    // Bundle path (is_premium=true or is_watermarked=false with is_premium):
+    //   Require ALL of cosmic/crystal/vinyl in unlocked_templates (₹49 bundle paid).
+    // Per-card watermark-only path (is_watermarked=false, no is_premium):
+    //   Accept hs_watermark_payments row for this card OR bundle entitlement.
+    const ALL_PREMIUM = ["cosmic", "crystal", "vinyl"];
+    const userRow = await pool.query<{ unlocked_templates: string[] }>(
       "SELECT unlocked_templates FROM hs_clerk_users WHERE clerk_user_id = $1",
       [clerkUserId],
     );
-    const unlockedTemplates: string[] = entitlementRow.rows[0]?.unlocked_templates ?? [];
-    if (unlockedTemplates.length === 0) {
-      res.status(403).json({ error: "payment_required", message: "No bundle payment found for this account." });
+    const unlocked: string[] = userRow.rows[0]?.unlocked_templates ?? [];
+    const hasBundle = ALL_PREMIUM.every((t) => unlocked.includes(t));
+
+    if (wantPremium && !hasBundle) {
+      res.status(403).json({ error: "payment_required", message: "Bundle payment (₹49) required." });
       return;
+    }
+
+    if (wantClean && !hasBundle) {
+      // Only accept watermark removal if there's a recorded per-card payment.
+      const wmRow = await pool.query(
+        "SELECT 1 FROM hs_watermark_payments WHERE card_id = $1 AND clerk_user_id = $2 LIMIT 1",
+        [id, clerkUserId],
+      );
+      if (wmRow.rows.length === 0) {
+        res.status(403).json({ error: "payment_required", message: "Watermark payment (₹29) not found for this card." });
+        return;
+      }
     }
 
     const updates: string[] = [];
