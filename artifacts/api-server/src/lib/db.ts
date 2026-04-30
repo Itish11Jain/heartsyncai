@@ -125,16 +125,18 @@ export async function initDb(): Promise<void> {
     -- can be looked up later (watermark check, future analytics, etc.)
     CREATE TABLE IF NOT EXISTS hs_cards (
       id              TEXT PRIMARY KEY,
+      clerk_user_id   TEXT,
       template        TEXT,
       occasion        TEXT,
-      relation        TEXT,
       recipient_name  TEXT,
-      msg             TEXT,
-      clerk_user_id   TEXT,
-      fingerprint     TEXT,
+      message_b64     TEXT,
       is_watermarked  BOOLEAN NOT NULL DEFAULT TRUE,
+      is_premium      BOOLEAN NOT NULL DEFAULT FALSE,
       created_at      TIMESTAMPTZ DEFAULT NOW()
     );
+    -- Schema migrations for hs_cards (idempotent)
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS message_b64 TEXT;
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS is_premium BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE INDEX IF NOT EXISTS hs_cards_clerk_idx ON hs_cards(clerk_user_id);
     CREATE INDEX IF NOT EXISTS hs_cards_created_idx ON hs_cards(created_at);
   `);

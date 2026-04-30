@@ -173,7 +173,7 @@ export default function VinylCard() {
   /* ── background music ── */
   useEffect(() => {
     if (!isSender && !isPreview) {
-      const cardId = params.get("cid") ?? undefined;
+      const cardId = params.get("id") ?? undefined;
       trackEvent({ event: "card_viewed", occasion, template: "vinyl", recipient_name: recipientName, card_id: cardId });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -935,7 +935,7 @@ export default function VinylCard() {
         )}
       </AnimatePresence>
 
-      {!isSender && !isPreview && <WatermarkBadge cid={params.get("cid")} />}
+      {!isSender && !isPreview && <WatermarkBadge id={params.get("id")} />}
     </div>
   );
 }

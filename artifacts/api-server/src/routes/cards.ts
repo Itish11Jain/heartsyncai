@@ -25,37 +25,38 @@ async function uniqueId(): Promise<string> {
   throw new Error("Could not generate unique card ID");
 }
 
+/**
+ * POST /api/cards
+ * Requires a valid Clerk session. Creates a card row with is_watermarked=true.
+ * Body: { template, occasion, recipient_name, message_b64 }
+ * Returns: { id }
+ */
 router.post("/cards", async (req, res) => {
-  try {
-    const auth = getAuth(req);
-    const clerkUserId = auth?.userId ?? null;
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
 
-    const {
-      template,
-      occasion,
-      relation,
-      recipient_name,
-      msg,
-      fingerprint,
-      is_watermarked,
-    } = req.body as Record<string, unknown>;
+  if (!clerkUserId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+
+  try {
+    const { template, occasion, recipient_name, message_b64 } =
+      req.body as Record<string, unknown>;
 
     const id = await uniqueId();
 
     await pool.query(
       `INSERT INTO hs_cards
-         (id, template, occasion, relation, recipient_name, msg, clerk_user_id, fingerprint, is_watermarked)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium)
+       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE)`,
       [
         id,
+        clerkUserId,
         typeof template === "string" ? template : null,
         typeof occasion === "string" ? occasion : null,
-        typeof relation === "string" ? relation : null,
         typeof recipient_name === "string" ? recipient_name : null,
-        typeof msg === "string" ? msg : null,
-        clerkUserId,
-        typeof fingerprint === "string" ? fingerprint : null,
-        is_watermarked !== false,
+        typeof message_b64 === "string" ? message_b64 : null,
       ],
     );
 
@@ -66,11 +67,15 @@ router.post("/cards", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/cards/:id
+ * Public — no auth. Returns minimal fields for recipient watermark check.
+ */
 router.get("/cards/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT id, template, occasion, relation, recipient_name, is_watermarked, created_at
+      `SELECT id, is_watermarked, is_premium, template
        FROM hs_cards WHERE id = $1`,
       [id],
     );

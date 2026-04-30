@@ -8,21 +8,21 @@ interface CardMeta {
 }
 
 interface WatermarkBadgeProps {
-  cid?: string | null;
+  id?: string | null;
 }
 
-export default function WatermarkBadge({ cid }: WatermarkBadgeProps) {
+export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    if (!cid) return;
-    fetch(`${BASE}/api/cards/${cid}`)
+    if (!id) return;
+    fetch(`${BASE}/api/cards/${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: CardMeta | null) => {
         if (data?.is_watermarked) setShow(true);
       })
       .catch(() => {});
-  }, [cid]);
+  }, [id]);
 
   if (!show) return null;
 

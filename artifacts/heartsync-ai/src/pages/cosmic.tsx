@@ -136,7 +136,7 @@ export default function CosmicCard() {
   /* ── background music ── */
   useEffect(() => {
     if (isRecipient) {
-      const cardId = params.get("cid") ?? undefined;
+      const cardId = params.get("id") ?? undefined;
       trackEvent({ event: "card_viewed", occasion, template: "cosmic", recipient_name: recipientName, card_id: cardId });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -700,7 +700,7 @@ export default function CosmicCard() {
         </motion.div>
       </Link>
 
-      {isRecipient && <WatermarkBadge cid={params.get("cid")} />}
+      {isRecipient && <WatermarkBadge id={params.get("id")} />}
     </div>
   );
 }

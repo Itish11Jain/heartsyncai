@@ -124,7 +124,7 @@ export default function CrystalCard() {
   useEffect(() => {
     music.start("crystal", occasion);
     if (isRecipient && !isPreview) {
-      const cardId = params.get("cid") ?? undefined;
+      const cardId = params.get("id") ?? undefined;
       trackEvent({ event: "card_viewed", occasion, template: "crystal", recipient_name: recipientName, card_id: cardId });
     }
     return () => music.stop();
@@ -454,7 +454,7 @@ export default function CrystalCard() {
     const msgP = params.get("msg"); if (msgP) p.set("msg", msgP);
     if (likesParam) p.set("likes", likesParam);
     const refP = params.get("ref"); if (refP) p.set("ref", refP);
-    const cidP = params.get("cid"); if (cidP) p.set("cid", cidP);
+    const cidP = params.get("id"); if (cidP) p.set("id", cidP);
     return `${window.location.origin}/api/share?${p.toString()}`;
   }
 
@@ -965,7 +965,7 @@ export default function CrystalCard() {
         </motion.div>
       </Link>
 
-      {isRecipient && <WatermarkBadge cid={params.get("cid")} />}
+      {isRecipient && <WatermarkBadge id={params.get("id")} />}
     </div>
   );
 }

@@ -294,7 +294,7 @@ export default function Send() {
       try { p.set("msg", btoa(unescape(encodeURIComponent(msg.trim())))); } catch { /* ignore */ }
     }
     if (senderFlag) p.set("sender", "1");
-    if (cardId) p.set("cid", cardId);
+    if (cardId) p.set("id", cardId);
     /* Each template uses its own .html file so WhatsApp reads template-specific OG tags */
     if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
     if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
@@ -497,32 +497,30 @@ export default function Send() {
     let cardId: string | undefined;
     try {
       const token = await getToken();
-      const baseApi = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-      const fp = (() => { try { return localStorage.getItem("hs_fp") ?? undefined; } catch { return undefined; } })();
-      const msgEncoded = customMsg.trim() && customMsg.trim() !== defaultMsg
-        ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
-        : null;
-      const cardRes = await fetch(`${baseApi}/api/cards`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          template: selectedTemplate,
-          occasion,
-          relation,
-          recipient_name: recipientName.trim() || undefined,
-          msg: msgEncoded,
-          fingerprint: fp,
-          is_watermarked: !isFree,
-        }),
-      });
-      if (cardRes.ok) {
-        const data = await cardRes.json() as { id?: string };
-        cardId = data.id;
+      if (token) {
+        const baseApi = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+        const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
+          ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
+          : null;
+        const cardRes = await fetch(`${baseApi}/api/cards`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            template: selectedTemplate,
+            occasion,
+            recipient_name: recipientName.trim() || undefined,
+            message_b64,
+          }),
+        });
+        if (cardRes.ok) {
+          const data = await cardRes.json() as { id?: string };
+          cardId = data.id;
+        }
       }
-    } catch { /* non-blocking — fall back to no cid */ }
+    } catch { /* non-blocking — fall back to no id */ }
 
     trackEvent({
       event: "card_created",

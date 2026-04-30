@@ -94,14 +94,13 @@ CREATE UNIQUE INDEX hs_card_usage_fp ON hs_card_usage(fingerprint);
 -- Card storage (Tollbooth Phase 1)
 CREATE TABLE hs_cards (
   id              TEXT PRIMARY KEY,   -- 8-char alphanumeric, server-generated
+  clerk_user_id   TEXT,               -- Clerk user who created the card (required at insert)
   template        TEXT,
   occasion        TEXT,
-  relation        TEXT,
   recipient_name  TEXT,
-  msg             TEXT,               -- base64-encoded custom message (same as URL param)
-  clerk_user_id   TEXT,
-  fingerprint     TEXT,
-  is_watermarked  BOOLEAN NOT NULL DEFAULT TRUE,
+  message_b64     TEXT,               -- base64-encoded custom message (same as ?msg= URL param)
+  is_watermarked  BOOLEAN NOT NULL DEFAULT TRUE,  -- set server-side; Phase 2 flips false after payment
+  is_premium      BOOLEAN NOT NULL DEFAULT FALSE,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
