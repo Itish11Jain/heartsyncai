@@ -1528,9 +1528,9 @@ export default function Send() {
                 <div className="p-5">
                   <div className="text-center mb-4">
                     <div className="text-3xl mb-2">💌</div>
-                    <h2 className="text-lg font-bold text-white mb-1">Your envelope is ready!</h2>
+                    <h2 className="text-lg font-bold text-white mb-1">Your card is ready to send!</h2>
                     <p className="text-white/55 text-sm leading-relaxed">
-                      Envelope cards are free forever. Want to send it clean, or add a small watermark?
+                      Free forever on Envelope cards. Send clean or let us add a small watermark.
                     </p>
                   </div>
 
@@ -1565,7 +1565,7 @@ export default function Send() {
                     }}
                   >
                     <div>
-                      <div className="text-white font-bold text-sm leading-tight">Remove watermark — ₹29</div>
+                      <div className="text-white font-bold text-sm leading-tight">✨ Remove Watermark — ₹29</div>
                       <div className="text-white/50 text-xs mt-0.5">Clean card · Pay once per card</div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-3">
@@ -1585,7 +1585,7 @@ export default function Send() {
                     }}
                   >
                     <div>
-                      <div className="text-white/75 font-semibold text-sm leading-tight">Send for free with watermark</div>
+                      <div className="text-white/75 font-semibold text-sm leading-tight">Send for free with HeartSync watermark</div>
                       <div className="text-white/35 text-xs mt-0.5">Includes "Made on HeartSync AI" badge</div>
                     </div>
                     <ArrowRight size={16} className="text-white/25 ml-3 shrink-0" />

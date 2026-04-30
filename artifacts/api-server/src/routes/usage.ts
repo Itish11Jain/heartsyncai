@@ -284,13 +284,11 @@ router.post("/usage/card-pack-utr", async (req, res) => {
 
 /**
  * POST /api/usage/template-unlock-utr
- * Body: { utr: string, plan: 'single' | 'bundle' }
+ * Body: { utr: string, plan: 'bundle' }
  * Requires Clerk auth.
- *  - plan='single' (₹29): records the payment with claimed_template=NULL.
- *      The user must call /usage/claim-template afterwards to pick which
- *      premium template to unlock.
- *  - plan='bundle' (₹49): records the payment AND immediately adds all 3
- *      premium templates to the user's unlocked_templates list.
+ *  - Only plan='bundle' (₹49) is accepted (Tollbooth Phase 2+).
+ *    Records the payment AND immediately adds all 3 premium templates
+ *    (cosmic, crystal, vinyl) to the user's unlocked_templates list.
  */
 router.post("/usage/template-unlock-utr", async (req, res) => {
   const auth = getAuth(req);
