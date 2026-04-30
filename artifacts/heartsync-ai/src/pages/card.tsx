@@ -1346,7 +1346,7 @@ export default function Card() {
         </motion.div>
       </Link>
 
-      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase !== "finale"} />
+      <WatermarkBadge id={params.get("id")} showRemoveCta={isSender} hidden={phase === "finale" && !isSender} />
     </div>
   );
 }
