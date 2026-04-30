@@ -248,6 +248,13 @@ async function ensureExcludedRecipientsPurged(): Promise<void> {
   }
 }
 
+/** Returns true when the request originates from a dev/staging domain. */
+function isDevRequest(req: Request): boolean {
+  const origin = req.get("origin") ?? req.get("referer") ?? "";
+  return origin.includes(".replit.dev") || origin.includes("janeway.replit.dev") ||
+    origin.includes("localhost") || origin.includes("127.0.0.1");
+}
+
 /**
  * POST /api/events/card
  * Records a card analytics event. Superuser emails and excluded recipient
@@ -255,6 +262,11 @@ async function ensureExcludedRecipientsPurged(): Promise<void> {
  */
 router.post("/events/card", async (req, res) => {
   try {
+    // Silently drop events from dev / staging environments.
+    if (isDevRequest(req)) {
+      return res.json({ ok: true, dropped: true });
+    }
+
     await ensureEventsTable();
 
     const {

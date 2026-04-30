@@ -84,8 +84,17 @@ export type CardEventPayload = {
   utm_campaign?: string;
 };
 
+/** Returns true when running on a non-production origin (Replit dev proxy or localhost). */
+function isDevOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return h === "localhost" || h === "127.0.0.1" || h.endsWith(".replit.dev") || h.endsWith(".janeway.replit.dev");
+}
+
 export function trackEvent(payload: CardEventPayload): void {
   if (isSuperUser(payload.email)) return;
+  // Never send analytics from the dev / staging environment.
+  if (isDevOrigin()) return;
 
   const fp = (() => {
     try { return localStorage.getItem("hs_fp") ?? undefined; } catch { return undefined; }
