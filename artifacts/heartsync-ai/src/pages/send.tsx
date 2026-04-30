@@ -26,12 +26,11 @@ const DRAFT_TTL_MS = 30 * 60 * 1000; // 30 minutes — long enough for a sign-in
 // prompts hanging around for days.
 const PAYWALL_KEY = "hs_paywall_state_v1";
 const PAYWALL_TTL_MS = 60 * 60 * 1000;
-type PaywallStage = "plan" | "claim" | "done";
-type PaywallPlan = "single" | "bundle";
+type PaywallStage = "plan" | "done";
+type WatermarkStage = "choose" | "upi" | "done";
 interface PaywallSnapshot {
   open: boolean;
   stage: PaywallStage;
-  plan: PaywallPlan;
   utr: string;
   savedAt: number;
 }
@@ -123,17 +122,18 @@ function loadPaywallSnapshot(): PaywallSnapshot | null {
   try {
     const raw = localStorage.getItem(PAYWALL_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as PaywallSnapshot;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(raw) as any;
     if (!parsed?.savedAt || Date.now() - parsed.savedAt > PAYWALL_TTL_MS) {
       localStorage.removeItem(PAYWALL_KEY);
       return null;
     }
-    // Don't auto-resurrect a "done" modal — they've already finished.
-    if (parsed.stage === "done") {
+    // Don't auto-resurrect a "done" or "claim" modal (old format) — finished.
+    if (parsed.stage === "done" || parsed.stage === "claim") {
       localStorage.removeItem(PAYWALL_KEY);
       return null;
     }
-    return parsed;
+    return { open: !!parsed.open, stage: "plan", utr: parsed.utr ?? "", savedAt: parsed.savedAt };
   } catch {
     return null;
   }
@@ -180,18 +180,20 @@ export default function Send() {
   const initialPaywall = loadPaywallSnapshot();
   const [showPaywall, setShowPaywall] = useState(initialPaywall?.open ?? false);
   const [upiCopied, setUpiCopied] = useState(false);
-  // Default to "single" (₹29). Bundle is the upsell — promoted with a
-  // "BEST VALUE" badge — but defaulting to bundle was causing accidental
-  // unlock-all when a user paid only ₹29: the backend trusted the
-  // pre-selected plan and unlocked all 3. Defaulting to the smaller
-  // commitment is the safe failure mode; bundle is one tap away.
-  const [paywallPlan, setPaywallPlan] = useState<PaywallPlan>(initialPaywall?.plan ?? "single");
   const [paywallStage, setPaywallStage] = useState<PaywallStage>(initialPaywall?.stage ?? "plan");
   const [paywallUtr, setPaywallUtr] = useState(initialPaywall?.utr ?? "");
   const [paywallUtrError, setPaywallUtrError] = useState("");
   const [paywallLoading, setPaywallLoading] = useState(false);
-  const [claimError, setClaimError] = useState("");
-  const [claimLoading, setClaimLoading] = useState(false);
+  // Pending card ID used by both paywall and watermark upsell to call PATCH /api/cards/:id
+  const [pendingCardId, setPendingCardId] = useState<string | undefined>(undefined);
+
+  // Watermark upsell modal (envelope path after auth)
+  const [showWatermarkUpsell, setShowWatermarkUpsell] = useState(false);
+  const [watermarkStage, setWatermarkStage] = useState<WatermarkStage>("choose");
+  const [watermarkUtr, setWatermarkUtr] = useState("");
+  const [watermarkUtrError, setWatermarkUtrError] = useState("");
+  const [watermarkUtrLoading, setWatermarkUtrLoading] = useState(false);
+  const [watermarkUpiCopied, setWatermarkUpiCopied] = useState(false);
 
   /* ─── Persist draft on every change ─────────────────────────────────── */
   useEffect(() => {
@@ -220,7 +222,6 @@ export default function Send() {
         const snap: PaywallSnapshot = {
           open: true,
           stage: paywallStage,
-          plan: paywallPlan,
           utr: paywallUtr,
           savedAt: Date.now(),
         };
@@ -230,18 +231,21 @@ export default function Send() {
         clearPaywallSnapshot();
       }
     } catch { /* ignore quota */ }
-  }, [showPaywall, paywallStage, paywallPlan, paywallUtr]);
+  }, [showPaywall, paywallStage, paywallUtr]);
 
-  /* ─── Sign-in transition: dismiss the gate when Clerk reports signed-in ─ */
+  /* ─── Sign-in transition: dismiss the gate and queue the next step ─── */
   const prevSignedIn = useRef<boolean | null>(null);
   const pendingPremiumAfterSignin = useRef<TemplateId | null>(null);
+  const pendingEnvelopeAfterSignin = useRef(false);
+
   useEffect(() => {
     if (!isLoaded) return;
     if (isSignedIn && prevSignedIn.current === false && showSignInGate) {
-      // If the user clicked a premium template before signing in, remember
-      // it so we can route them straight to the paywall after refetch.
       if (isPremiumTemplate(signInGateContext)) {
         pendingPremiumAfterSignin.current = signInGateContext;
+      } else {
+        // Envelope path — after usage loads, auto-proceed to doGenerateCard.
+        pendingEnvelopeAfterSignin.current = true;
       }
       setShowSignInGate(false);
       refetchUsage();
@@ -249,19 +253,29 @@ export default function Send() {
     prevSignedIn.current = isSignedIn ?? false;
   }, [isSignedIn, isLoaded, showSignInGate, signInGateContext, refetchUsage]);
 
-  /* ─── After post-signin refetch lands, open paywall if still locked. ─── */
+  /* ─── After post-signin refetch: route to paywall or envelope generate ─ */
   useEffect(() => {
-    const tpl = pendingPremiumAfterSignin.current;
-    if (!tpl || usageLoading || !usage?.is_signed_in) return;
-    if (usage.is_superuser || usage.unlocked_templates.includes(tpl)) {
-      pendingPremiumAfterSignin.current = null;
+    if (usageLoading || !usage?.is_signed_in) return;
+
+    const premiumTpl = pendingPremiumAfterSignin.current;
+    if (premiumTpl) {
+      if (usage.is_superuser || usage.unlocked_templates.includes(premiumTpl)) {
+        pendingPremiumAfterSignin.current = null;
+        return;
+      }
+      if (templateGate(usage, premiumTpl) === "paywall") {
+        setSelectedTemplate(premiumTpl);
+        pendingPremiumAfterSignin.current = null;
+        openPaywall();
+      }
       return;
     }
-    if (templateGate(usage, tpl) === "paywall") {
-      setSelectedTemplate(tpl);
-      pendingPremiumAfterSignin.current = null;
-      openPaywall();
+
+    if (pendingEnvelopeAfterSignin.current) {
+      pendingEnvelopeAfterSignin.current = false;
+      doGenerateCardRef.current();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usage, usageLoading]);
 
   const defaultMsg = (() => {
@@ -315,177 +329,8 @@ export default function Send() {
     return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
   }
 
-  /* ─── Paywall: submit UTR for ₹29 / ₹49 plan ───────────────────────── */
-  const handlePaywallUtrSubmit = useCallback(async () => {
-    const trimmed = paywallUtr.trim();
-    if (!isValidUtr(trimmed)) return;
-    setPaywallUtrError("");
-    setPaywallLoading(true);
-    try {
-      const token = await getToken();
-      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-      const res = await fetch(`${base}/api/usage/template-unlock-utr`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ utr: trimmed, plan: paywallPlan }),
-      });
-      const data = await res.json() as { ok?: boolean; plan?: string; message?: string };
-      if (!res.ok) {
-        setPaywallUtrError(data.message ?? "Submission failed. Please try again.");
-        return;
-      }
-      trackEvent({
-        event: "paywall_paid",
-        fingerprint, email: userEmail ?? undefined, occasion,
-      });
-      await refetchUsage();
-      if (paywallPlan === "bundle") {
-        // All 3 unlocked. Skip claim, go to done.
-        setPaywallStage("done");
-      } else {
-        // Single — user must pick one of the 3 to claim.
-        setPaywallStage("claim");
-      }
-    } catch {
-      setPaywallUtrError("Submission failed. Please try again.");
-    } finally {
-      setPaywallLoading(false);
-    }
-  }, [paywallUtr, paywallPlan, getToken, fingerprint, userEmail, occasion, refetchUsage]);
-
-  /* ─── Paywall: claim the chosen template after a ₹29 payment ───────── */
-  const handleClaimTemplate = useCallback(async (template: TemplateId) => {
-    if (!isPremiumTemplate(template)) return;
-    setClaimError("");
-    setClaimLoading(true);
-    try {
-      const token = await getToken();
-      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-      const res = await fetch(`${base}/api/usage/claim-template`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ template }),
-      });
-      const data = await res.json() as { ok?: boolean; message?: string };
-      if (!res.ok) {
-        setClaimError(data.message ?? "Could not claim template. Please try again.");
-        return;
-      }
-      setSelectedTemplate(template);
-      trackEvent({
-        event: "template_claimed",
-        fingerprint, email: userEmail ?? undefined, occasion, template,
-      });
-      await refetchUsage();
-      setPaywallStage("done");
-    } catch {
-      setClaimError("Could not claim template. Please try again.");
-    } finally {
-      setClaimLoading(false);
-    }
-  }, [getToken, fingerprint, userEmail, occasion, refetchUsage]);
-
-  /* ─── Open paywall in a clean state ────────────────────────────────── */
-  function openPaywall() {
-    setPaywallStage("plan");
-    setPaywallPlan("bundle");
-    setPaywallUtr("");
-    setPaywallUtrError("");
-    setClaimError("");
-    setShowPaywall(true);
-    trackEvent({
-      event: "paywall_shown",
-      fingerprint,
-      email: userEmail ?? undefined,
-      occasion,
-      template: selectedTemplate,
-    });
-  }
-
-  function closePaywall() {
-    setShowPaywall(false);
-    // Don't reset stage immediately — user might want to scroll back.
-    setTimeout(() => {
-      setPaywallStage("plan");
-      setPaywallUtr("");
-      setPaywallUtrError("");
-      setClaimError("");
-    }, 350);
-  }
-
-  /* ─── The big one: handle the final generate click ─────────────────── */
-  async function handleFinish() {
-    if (!recipientName.trim() || showGenerating) return;
-
-    trackEvent({
-      event: "generate_clicked",
-      fingerprint,
-      clerk_user_id: clerkUserId ?? undefined,
-      email: userEmail ?? undefined,
-      occasion,
-      template: selectedTemplate,
-      recipient_name: recipientName.trim() || undefined,
-    });
-
-    if (!usageLoading) {
-      const gate = templateGate(usage, selectedTemplate);
-      if (gate === "signin") {
-        setSignInGateContext(selectedTemplate);
-        setShowSignInGate(true);
-        trackEvent({
-          event: "signup_wall_shown",
-          fingerprint, occasion, template: selectedTemplate,
-        });
-        return;
-      }
-      if (gate === "paywall") {
-        openPaywall();
-        return;
-      }
-    }
-
-    // If the gate passed only because of a pending single unlock, consume it
-    // now so the entitlement is recorded before the card is generated.
-    const needsAutoClaim =
-      isPremiumTemplate(selectedTemplate) &&
-      !!usage &&
-      !usage.is_superuser &&
-      !usage.unlocked_templates.includes(selectedTemplate) &&
-      usage.pending_single_unlocks > 0;
-
-    if (needsAutoClaim) {
-      try {
-        const token = await getToken();
-        const baseApi = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-        const claimRes = await fetch(`${baseApi}/api/usage/claim-template`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ template: selectedTemplate }),
-        });
-        if (!claimRes.ok) {
-          openPaywall();
-          return;
-        }
-        await refetchUsage();
-        trackEvent({
-          event: "template_claimed",
-          fingerprint, email: userEmail ?? undefined, occasion, template: selectedTemplate,
-        });
-      } catch {
-        openPaywall();
-        return;
-      }
-    }
-
+  /* ─── Core card-generation logic (called after auth is confirmed) ──── */
+  const doGenerateCard = useCallback(async () => {
     await incrementUsage();
 
     const isFree =
@@ -498,16 +343,13 @@ export default function Send() {
     try {
       const token = await getToken();
       if (token) {
-        const baseApi = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+        const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
         const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
           ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
           : null;
-        const cardRes = await fetch(`${baseApi}/api/cards`, {
+        const cardRes = await fetch(`${base}/api/cards`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             template: selectedTemplate,
             occasion,
@@ -524,10 +366,8 @@ export default function Send() {
 
     trackEvent({
       event: "card_created",
-      fingerprint,
-      clerk_user_id: clerkUserId ?? undefined,
-      email: userEmail ?? undefined,
-      occasion,
+      fingerprint, clerk_user_id: clerkUserId ?? undefined,
+      email: userEmail ?? undefined, occasion,
       template: selectedTemplate,
       has_likes: likes.trim().length > 0,
       used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
@@ -537,10 +377,209 @@ export default function Send() {
       card_id: cardId,
     });
 
+    if (selectedTemplate === "envelope") {
+      setPendingCardId(cardId);
+      setWatermarkStage("choose");
+      setWatermarkUtr("");
+      setWatermarkUtrError("");
+      setShowWatermarkUpsell(true);
+      return;
+    }
+
+    // Premium + unlocked: redirect
     const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId);
     clearDraft();
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
+  }, [
+    selectedTemplate, usage, customMsg, defaultMsg, occasion, recipientName, likes,
+    fingerprint, clerkUserId, userEmail, incrementUsage, getToken,
+  ]);
+
+  /* ─── Paywall: submit UTR for ₹49 bundle ───────────────────────────── */
+  const handlePaywallUtrSubmit = useCallback(async () => {
+    const trimmed = paywallUtr.trim();
+    if (!isValidUtr(trimmed)) return;
+    setPaywallUtrError("");
+    setPaywallLoading(true);
+    try {
+      const token = await getToken();
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
+      // 1. Unlock all 3 templates on the account
+      const unlockRes = await fetch(`${base}/api/usage/template-unlock-utr`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ utr: trimmed, plan: "bundle" }),
+      });
+      const unlockData = await unlockRes.json() as { ok?: boolean; message?: string };
+      if (!unlockRes.ok) {
+        setPaywallUtrError(unlockData.message ?? "Submission failed. Please try again.");
+        return;
+      }
+
+      trackEvent({ event: "paywall_paid", fingerprint, email: userEmail ?? undefined, occasion });
+      await refetchUsage();
+
+      // 2. Create the card row + mark it premium + watermark-free
+      let cardId: string | undefined;
+      try {
+        if (token) {
+          const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
+            ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
+            : null;
+          const cardRes = await fetch(`${base}/api/cards`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              template: selectedTemplate, occasion,
+              recipient_name: recipientName.trim() || undefined,
+              message_b64,
+            }),
+          });
+          if (cardRes.ok) {
+            const cd = await cardRes.json() as { id?: string };
+            cardId = cd.id;
+            if (cardId) {
+              await fetch(`${base}/api/cards/${cardId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ is_watermarked: false, is_premium: true }),
+              });
+            }
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      setPendingCardId(cardId);
+      setPaywallStage("done");
+    } catch {
+      setPaywallUtrError("Submission failed. Please try again.");
+    } finally {
+      setPaywallLoading(false);
+    }
+  }, [paywallUtr, getToken, fingerprint, userEmail, occasion, refetchUsage,
+      selectedTemplate, customMsg, defaultMsg, recipientName]);
+
+  /* ─── Open paywall in a clean state ────────────────────────────────── */
+  function openPaywall() {
+    setPaywallStage("plan");
+    setPaywallUtr("");
+    setPaywallUtrError("");
+    setShowPaywall(true);
+    trackEvent({
+      event: "paywall_shown",
+      fingerprint,
+      email: userEmail ?? undefined,
+      occasion,
+      template: selectedTemplate,
+    });
+  }
+
+  function closePaywall() {
+    setShowPaywall(false);
+    setTimeout(() => {
+      setPaywallStage("plan");
+      setPaywallUtr("");
+      setPaywallUtrError("");
+    }, 350);
+  }
+
+  /* ─── After paywall payment done: generate and redirect ────────────── */
+  function handlePaywallComplete() {
+    const cardId = pendingCardId;
+    clearDraft();
+    clearPaywallSnapshot();
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId);
+    setShowPaywall(false);
+    setShowGenerating(true);
+    setTimeout(() => { window.location.href = url; }, 1800);
+  }
+
+  /* ─── Watermark upsell: user picks "send free with watermark" ──────── */
+  function handleWatermarkFree() {
+    setShowWatermarkUpsell(false);
+    clearDraft();
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId);
+    setShowGenerating(true);
+    setTimeout(() => { window.location.href = url; }, 1800);
+  }
+
+  /* ─── Watermark upsell: user pays ₹29 to remove watermark ──────────── */
+  const handleWatermarkUtrSubmit = useCallback(async () => {
+    const trimmed = watermarkUtr.trim();
+    if (!isValidUtr(trimmed) || !pendingCardId) return;
+    setWatermarkUtrError("");
+    setWatermarkUtrLoading(true);
+    try {
+      const token = await getToken();
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/cards/${pendingCardId}/remove-watermark`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ utr: trimmed }),
+      });
+      const data = await res.json() as { ok?: boolean; message?: string };
+      if (!res.ok) {
+        setWatermarkUtrError(data.message ?? "Verification failed. Try again.");
+        return;
+      }
+      trackEvent({ event: "watermark_removed", fingerprint, email: userEmail ?? undefined, occasion });
+      setWatermarkStage("done");
+    } catch {
+      setWatermarkUtrError("Submission failed. Please try again.");
+    } finally {
+      setWatermarkUtrLoading(false);
+    }
+  }, [watermarkUtr, pendingCardId, getToken, fingerprint, userEmail, occasion]);
+
+  /* ─── Watermark upsell: after payment done — redirect clean ─────────── */
+  function handleWatermarkComplete() {
+    setShowWatermarkUpsell(false);
+    clearDraft();
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId);
+    setShowGenerating(true);
+    setTimeout(() => { window.location.href = url; }, 1800);
+  }
+
+  /* ─── The big one: handle the final generate click ─────────────────── */
+  async function handleFinish() {
+    if (!recipientName.trim() || showGenerating) return;
+
+    trackEvent({
+      event: "generate_clicked",
+      fingerprint,
+      clerk_user_id: clerkUserId ?? undefined,
+      email: userEmail ?? undefined,
+      occasion,
+      template: selectedTemplate,
+      recipient_name: recipientName.trim() || undefined,
+    });
+
+    // Auth gate fires for EVERYONE at the final step (new: even anonymous first-timers).
+    if (!isSignedIn) {
+      setSignInGateContext(selectedTemplate);
+      setShowSignInGate(true);
+      trackEvent({ event: "signup_wall_shown", fingerprint, occasion, template: selectedTemplate });
+      return;
+    }
+
+    // Premium and still locked → paywall.
+    if (isPremiumTemplate(selectedTemplate) && !usageLoading) {
+      const gate = templateGate(usage, selectedTemplate);
+      if (gate === "paywall") {
+        openPaywall();
+        return;
+      }
+    }
+
+    await doGenerateCard();
   }
 
   /* ─── Sign-in trigger: persist draft + bounce to /sign-in ──────────── */
@@ -556,54 +595,18 @@ export default function Send() {
     clerk.openSignIn();
   }
 
-  /* ─── Step 4 picker: select + immediately route locked templates to gate. */
-  // Tracks a tap on a locked template that we couldn't gate immediately
-  // because usage was still loading. The effect below will pick this up
-  // once usage resolves and trigger the right gate (signin or paywall).
-  const pendingGateForTemplate = useRef<TemplateId | null>(null);
+  /* ─── Keep a stable ref to doGenerateCard for the post-signin effect ── */
+  const doGenerateCardRef = useRef(doGenerateCard);
+  useEffect(() => { doGenerateCardRef.current = doGenerateCard; }, [doGenerateCard]);
 
-  function fireGateFor(t: TemplateId) {
-    const gate = templateGate(usage, t);
-    if (gate === "signin") {
-      setSignInGateContext(t);
-      setShowSignInGate(true);
-      trackEvent({
-        event: "signup_wall_shown",
-        fingerprint, occasion, template: t,
-      });
-    } else if (gate === "paywall") {
-      openPaywall();
-    }
-  }
-
+  /* ─── Template picker: select only — gate fires at Generate, not here ─ */
   function handlePickTemplate(t: TemplateId) {
     setSelectedTemplate(t);
     trackEvent({
       event: "template_selected",
       fingerprint, email: userEmail ?? undefined, occasion, template: t,
     });
-
-    // If this template is locked for the current user, route them to the
-    // appropriate gate immediately rather than waiting until they click
-    // Generate at the end of the wizard. If usage is still loading we
-    // defer until the load completes.
-    if (usageLoading) {
-      pendingGateForTemplate.current = t;
-    } else {
-      fireGateFor(t);
-    }
   }
-
-  // Drains a deferred gate request once usage finishes loading, so a fast tap
-  // on a premium thumbnail never silently swallows the gate intent.
-  useEffect(() => {
-    if (!usageLoading && pendingGateForTemplate.current) {
-      const t = pendingGateForTemplate.current;
-      pendingGateForTemplate.current = null;
-      fireGateFor(t);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usageLoading, usage]);
 
   /* ─── UI helpers ────────────────────────────────────────────────────── */
 
@@ -617,25 +620,21 @@ export default function Send() {
   // template choice + auth state. This is the "pre-flight" copy.
   const generateButtonLabel = (() => {
     if (usageLoading) return "Loading…";
-    const gate = templateGate(usage, selectedTemplate);
-    if (gate === "signin") {
-      if (selectedTemplate === "envelope") return "Sign in to send another";
-      return "Sign in to unlock";
+    // Signed-in + premium + not unlocked → "Unlock" copy
+    if (isSignedIn && isPremiumTemplate(selectedTemplate)) {
+      const gate = templateGate(usage, selectedTemplate);
+      if (gate === "paywall") return "Unlock — ₹49 →";
     }
-    if (gate === "paywall") return "Unlock to send →";
-    return "✨ Generate Link";
+    return "✨ Get shareable link";
   })();
 
-  // Whether this template (right now) is locked for this user.
+  // Whether this premium template has a ₹49 lock badge in the picker.
+  // Envelope is always shown as free; premium shows a lock until unlocked.
   function isTemplateLocked(t: TemplateId): boolean {
     if (usage?.is_superuser) return false;
-    if (t === "envelope") {
-      // Locked for anon users only after their first free Envelope.
-      return !usage?.is_signed_in && (usage?.anon_used ?? 0) >= 1;
-    }
-    if (!usage?.is_signed_in) return true;
-    if ((usage.unlocked_templates ?? []).includes(t)) return false;
-    if ((usage.pending_single_unlocks ?? 0) > 0) return false;
+    if (t === "envelope") return false; // envelope is always free, no lock badge
+    // Premium: locked until the user has it in unlocked_templates
+    if ((usage?.unlocked_templates ?? []).includes(t)) return false;
     return true;
   }
 
@@ -987,7 +986,7 @@ export default function Send() {
                                 display: "flex", alignItems: "center", gap: 3,
                                 boxShadow: "0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.2) inset",
                               }}>
-                                <Lock size={10} strokeWidth={3} /> ₹29
+                                <Lock size={10} strokeWidth={3} /> ₹49
                               </div>
                             </>
                           )}
@@ -1031,7 +1030,7 @@ export default function Send() {
 
                   {selectedTemplate !== "envelope" && isTemplateLocked(selectedTemplate) && usage?.is_signed_in && (
                     <p className="text-center text-xs mt-2" style={{ color: "rgba(255,215,0,0.6)" }}>
-                      💡 Tip: ₹49 unlocks all 3 premium templates forever
+                      💡 Tip: ₹49 unlocks all 3 premium templates + removes watermarks
                     </p>
                   )}
                 </div>
@@ -1116,9 +1115,7 @@ export default function Send() {
                 transition={{ delay: 0.2 }}
                 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.3 }}
               >
-                {signInGateContext === "envelope"
-                  ? "Sign in for unlimited Envelope cards"
-                  : `Sign in to unlock ${TEMPLATE_CATALOG.find(t => t.id === signInGateContext)?.name ?? "this template"}`}
+                Almost there! Sign in to send
               </motion.h2>
 
               <motion.p
@@ -1127,9 +1124,9 @@ export default function Send() {
                 transition={{ delay: 0.3 }}
                 style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 18, lineHeight: 1.55 }}
               >
-                {signInGateContext === "envelope"
-                  ? <>You've used your free Envelope card. <span style={{ color: "#90EE90", fontWeight: 700 }}>Signing in unlocks unlimited Envelopes.</span></>
-                  : <>This is a premium template. Sign in first — then unlock it with a one-time UPI payment.</>}
+                {isPremiumTemplate(signInGateContext)
+                  ? <>Sign in first, then unlock all 3 premium templates for <span style={{ color: "#FFD700", fontWeight: 700 }}>₹49</span>.</>
+                  : <>Sign in to generate your shareable link. <span style={{ color: "#90EE90", fontWeight: 700 }}>Free forever for Envelope cards.</span></>}
               </motion.p>
 
               {/* What signup gives you — explicit clarification */}
@@ -1149,8 +1146,8 @@ export default function Send() {
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <span style={{ color: "#FFD700", fontSize: 16, lineHeight: 1.2 }}>✦</span>
                   <div>
-                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Premium templates separately</div>
-                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Cosmic / Crystal / Vinyl unlock for ₹29 each, or all 3 for ₹49.</div>
+                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Premium templates — one bundle</div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Cosmic / Crystal / Vinyl — all 3 for ₹49, forever.</div>
                   </div>
                 </div>
               </motion.div>
@@ -1194,29 +1191,16 @@ export default function Send() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 14 }}
+                style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}
               >
                 Your card draft is saved — we'll bring you right back.
               </motion.p>
-
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.55 }}
-                onClick={() => setShowSignInGate(false)}
-                style={{
-                  background: "none", border: "none", color: "rgba(255,255,255,0.3)",
-                  fontSize: 13, cursor: "pointer", textDecoration: "underline",
-                }}
-              >
-                Maybe later
-              </motion.button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ════ PAYWALL (₹29 single / ₹49 bundle) ════ */}
+      {/* ════ PAYWALL (₹49 — all templates) ════ */}
       <AnimatePresence>
         {showPaywall && (
           <motion.div
@@ -1239,123 +1223,52 @@ export default function Send() {
                   <div className="text-6xl mb-4">🎉</div>
                   <h2 className="text-2xl font-bold text-white mb-2">You're all set!</h2>
                   <p className="text-white/60 mb-8 text-sm">
-                    {paywallPlan === "bundle"
-                      ? "All 3 premium templates are unlocked on your account — forever."
-                      : `${TEMPLATE_CATALOG.find(t => t.id === selectedTemplate)?.name ?? "Your premium template"} is unlocked on your account — forever.`}
+                    All 3 premium templates are unlocked — forever. Your card is ready to send!
                   </p>
                   <button
-                    onClick={() => { closePaywall(); }}
+                    onClick={handlePaywallComplete}
                     className="w-full h-12 rounded-xl text-white font-bold text-sm"
                     style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
                     data-testid="paywall-done-continue"
                   >
-                    ✨ Continue & Generate
+                    ✨ Generate & Send
                   </button>
-                </div>
-              ) : paywallStage === "claim" ? (
-                <div>
-                  <h1 className="text-2xl font-bold mb-1 text-white text-center">Pick your template</h1>
-                  <p className="text-white/55 mb-5 text-sm text-center">Payment received! Choose which premium template to unlock on your account.</p>
-                  <div className="grid grid-cols-1 gap-3">
-                    {TEMPLATE_CATALOG.filter(t => isPremiumTemplate(t.id)).map((tpl) => (
-                      <button
-                        key={tpl.id}
-                        disabled={claimLoading}
-                        onClick={() => handleClaimTemplate(tpl.id)}
-                        data-testid={`claim-${tpl.id}`}
-                        style={{
-                          position: "relative",
-                          padding: "14px 16px",
-                          borderRadius: 16,
-                          background: tpl.gradient,
-                          border: "1.5px solid rgba(255,255,255,0.12)",
-                          textAlign: "left",
-                          cursor: claimLoading ? "default" : "pointer",
-                          opacity: claimLoading ? 0.6 : 1,
-                          display: "flex", alignItems: "center", gap: 14,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div style={{
-                          position: "absolute", inset: 0,
-                          background: `radial-gradient(ellipse at 30% 30%, ${tpl.ringColor} 0%, transparent 70%)`,
-                          pointerEvents: "none",
-                        }} />
-                        <div style={{ fontSize: 32, position: "relative", zIndex: 1 }}>{tpl.emoji}</div>
-                        <div style={{ position: "relative", zIndex: 1, flex: 1 }}>
-                          <div className="text-white font-bold text-base">{tpl.name}</div>
-                          <div className="text-white/55 text-xs">{tpl.tagline}</div>
-                        </div>
-                        <ArrowRight className="text-white/60" size={18} style={{ position: "relative", zIndex: 1 }} />
-                      </button>
-                    ))}
-                  </div>
-                  {claimError && <p className="text-xs text-destructive text-center mt-3">{claimError}</p>}
-                  {claimLoading && <p className="text-xs text-white/45 text-center mt-3 flex items-center justify-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Unlocking…</p>}
                 </div>
               ) : (
                 <>
                   <div className="text-center mb-5">
                     <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
-                    <h1 className="text-2xl font-bold text-white mb-1">Unlock premium</h1>
-                    <p className="text-white/55 text-sm">Pay once via UPI, your account keeps it forever.</p>
+                    <h1 className="text-2xl font-bold text-white mb-1">Unlock all premium</h1>
+                    <p className="text-white/55 text-sm">Pay once via UPI — all 3 templates unlocked forever, no watermark.</p>
                   </div>
 
-                  {/* Plan toggle */}
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    <button
-                      onClick={() => setPaywallPlan("single")}
-                      data-testid="plan-single"
+                  {/* Single ₹49 plan card */}
+                  <div
+                    className="mb-4 rounded-2xl px-4 py-3 flex items-center justify-between"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.10))",
+                      border: "1.5px solid rgba(255,215,0,0.55)",
+                    }}
+                  >
+                    <div>
+                      <div className="text-white font-extrabold text-xl leading-tight">₹49</div>
+                      <div className="text-white/70 text-xs mt-0.5">Cosmic + Crystal + Vinyl — all 3</div>
+                      <div className="text-white/40 text-[10px] mt-0.5">No watermark · Pay once, use forever</div>
+                    </div>
+                    <div
                       style={{
-                        padding: "14px 12px", borderRadius: 14,
-                        background: paywallPlan === "single" ? "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.10))" : "rgba(255,255,255,0.04)",
-                        border: `1.5px solid ${paywallPlan === "single" ? "rgba(255,215,0,0.55)" : "rgba(255,255,255,0.08)"}`,
-                        textAlign: "left", cursor: "pointer",
-                      }}
-                    >
-                      <div className="text-white font-extrabold text-lg leading-tight">₹29</div>
-                      <div className="text-white/55 text-xs">Unlock 1 template</div>
-                      <div className="text-white/35 text-[10px] mt-1">Pick after payment</div>
-                    </button>
-                    <button
-                      onClick={() => setPaywallPlan("bundle")}
-                      data-testid="plan-bundle"
-                      style={{
-                        position: "relative",
-                        padding: "14px 12px", borderRadius: 14,
-                        background: paywallPlan === "bundle" ? "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.10))" : "rgba(255,255,255,0.04)",
-                        border: `1.5px solid ${paywallPlan === "bundle" ? "rgba(255,215,0,0.55)" : "rgba(255,255,255,0.08)"}`,
-                        textAlign: "left", cursor: "pointer",
-                      }}
-                    >
-                      <div style={{
-                        position: "absolute", top: -8, right: 8,
                         background: "linear-gradient(135deg, #FFD700, #FFA500)",
                         color: "#000", fontWeight: 800, fontSize: 9,
-                        padding: "2px 7px", borderRadius: 99, letterSpacing: "0.04em",
-                      }}>BEST VALUE</div>
-                      <div className="text-white font-extrabold text-lg leading-tight">₹49</div>
-                      <div className="text-white/55 text-xs">Unlock all 3</div>
-                      <div className="text-white/35 text-[10px] mt-1">Save ₹38 vs singles</div>
-                    </button>
+                        padding: "3px 8px", borderRadius: 99, letterSpacing: "0.04em",
+                      }}
+                    >BEST VALUE</div>
                   </div>
 
-                  {/* UPI box.
-                      We build the upi:// URI deterministically with proper
-                      RFC-3986 percent-encoding and a 2-decimal amount, then
-                      pipe that through the QR generator. The previous URI
-                      had `am=29` (no decimals) and `tn=HeartSync+Premium`
-                      (literal `+` rather than `%20`), which some UPI apps
-                      reject — that's why scans were failing. */}
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
                     {(() => {
-                      // What we SHOW + COPY is the friendly UPI Number
-                      // (Itisha's 9-digit UPI identity). What we encode
-                      // into the QR is the full VPA, because UPI apps
-                      // require name@bank format for QR-pay flows.
                       const UPI_DISPLAY = "110193250";
                       const UPI_VPA = "8905158970@upi";
-                      const amount = paywallPlan === "single" ? 29 : 49;
+                      const amount = 49;
                       const upiParams = [
                         `pa=${encodeURIComponent(UPI_VPA)}`,
                         `pn=${encodeURIComponent("HeartSync AI")}`,
@@ -1366,11 +1279,7 @@ export default function Send() {
                       const upiUri = `upi://pay?${upiParams}`;
                       const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
                       const handleCopyUpi = async () => {
-                        try {
-                          await navigator.clipboard.writeText(UPI_DISPLAY);
-                        } catch {
-                          // Fallback for browsers/iframes that block the
-                          // async Clipboard API — use a temporary textarea.
+                        try { await navigator.clipboard.writeText(UPI_DISPLAY); } catch {
                           const ta = document.createElement("textarea");
                           ta.value = UPI_DISPLAY;
                           ta.setAttribute("readonly", "");
@@ -1386,51 +1295,18 @@ export default function Send() {
                       };
                       return (
                         <>
-                          {/* Big locked-in amount banner. Shows EXACTLY what
-                              the user is committing to so they can't pay
-                              the wrong amount and accidentally over- or
-                              under-claim. */}
-                          <div
-                            className="mb-3 rounded-xl px-3 py-2.5 flex items-center justify-between"
-                            style={{
-                              background: "linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,165,0,0.08))",
-                              border: "1.5px solid rgba(255,215,0,0.45)",
-                            }}
-                          >
-                            <div className="text-[11px] text-white/70 leading-tight">
-                              You're paying for
-                              <div className="text-white font-bold text-[13px] leading-tight mt-0.5">
-                                {paywallPlan === "single" ? "1 premium template" : "All 3 premium templates"}
-                              </div>
-                            </div>
-                            <div
-                              className="font-extrabold text-2xl shrink-0 ml-2"
-                              style={{ color: "#FFD700", textShadow: "0 0 12px rgba(255,215,0,0.35)" }}
-                            >
-                              ₹{amount}
-                            </div>
-                          </div>
                           <div className="flex gap-3 items-center mb-4">
-                            <a
-                              href={upiUri}
-                              className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block"
-                              title="Tap to open in your UPI app"
-                            >
-                              <img
-                                src={qrSrc}
-                                alt={`UPI QR Code ₹${amount}`}
-                                className="w-24 h-24 rounded-lg"
-                              />
+                            <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
+                              <img src={qrSrc} alt="UPI QR Code ₹49" className="w-24 h-24 rounded-lg" />
                             </a>
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-[10px] text-white/45 mb-1 leading-tight">
-                                UPI code of <span className="text-white/70 font-semibold">Itisha</span> — Creator of HeartSync AI
+                                UPI of <span className="text-white/70 font-semibold">Itisha</span> — Creator of HeartSync AI
                               </p>
                               <div className="flex items-center gap-1.5">
                                 <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
                                 <button
-                                  type="button"
-                                  onClick={handleCopyUpi}
+                                  type="button" onClick={handleCopyUpi}
                                   data-testid="paywall-upi-copy"
                                   aria-label={upiCopied ? "Copied" : "Copy UPI ID"}
                                   className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors"
@@ -1440,16 +1316,12 @@ export default function Send() {
                                     border: `1px solid ${upiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
                                   }}
                                 >
-                                  {upiCopied ? (
-                                    <><Check className="w-3 h-3" /> Copied</>
-                                  ) : (
-                                    <><Copy className="w-3 h-3" /> Copy</>
-                                  )}
+                                  {upiCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
                                 </button>
                               </div>
                               <div className="flex items-center gap-1 mt-1">
                                 <Info className="w-3 h-3 text-white/25 shrink-0" />
-                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹{amount}</span> — scan, tap, or copy ID</p>
+                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹49</span> — scan, tap, or copy</p>
                               </div>
                             </div>
                           </div>
@@ -1473,14 +1345,9 @@ export default function Send() {
                         className="w-full h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
                         style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
                       >
-                        {paywallLoading ? (
-                          <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
-                        ) : (
-                          <>
-                            {paywallPlan === "single" ? "Submit & pick template" : "Submit & unlock all"}
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
+                        {paywallLoading
+                          ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
+                          : <>Submit & unlock all <ArrowRight className="w-4 h-4" /></>}
                       </button>
                     </div>
                   </div>
@@ -1496,6 +1363,221 @@ export default function Send() {
                     Go back
                   </button>
                 </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════ WATERMARK UPSELL MODAL (envelope path) ════ */}
+      <AnimatePresence>
+        {showWatermarkUpsell && (
+          <motion.div
+            key="watermark-upsell"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[95] backdrop-blur-sm flex flex-col items-center justify-end px-4 pb-6"
+            style={{ background: "rgba(4, 0, 14, 0.88)" }}
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 340, damping: 30 }}
+              className="w-full max-w-sm rounded-3xl overflow-hidden"
+              style={{
+                background: "linear-gradient(170deg, #0e0022 0%, #080118 100%)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                boxShadow: "0 -8px 60px rgba(120,60,255,0.18), 0 0 0 1px rgba(255,255,255,0.06) inset",
+              }}
+            >
+              {watermarkStage === "done" ? (
+                <div className="p-6 text-center">
+                  <div className="text-5xl mb-3">🎉</div>
+                  <h2 className="text-xl font-bold text-white mb-2">Watermark removed!</h2>
+                  <p className="text-white/60 text-sm mb-6">Your card will open clean — no HeartSync branding.</p>
+                  <button
+                    onClick={handleWatermarkComplete}
+                    className="w-full h-12 rounded-2xl font-bold text-sm text-black"
+                    style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)" }}
+                    data-testid="watermark-done-send"
+                  >
+                    ✨ Send clean link
+                  </button>
+                </div>
+              ) : watermarkStage === "upi" ? (
+                <div className="p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <button
+                      onClick={() => setWatermarkStage("choose")}
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    >
+                      <ArrowRight size={14} className="rotate-180 text-white/60" />
+                    </button>
+                    <div>
+                      <div className="text-white font-bold text-base leading-tight">Remove watermark — ₹29</div>
+                      <div className="text-white/40 text-xs">Pay once, yours forever</div>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const UPI_DISPLAY = "110193250";
+                    const UPI_VPA = "8905158970@upi";
+                    const amount = 29;
+                    const upiParams = [
+                      `pa=${encodeURIComponent(UPI_VPA)}`,
+                      `pn=${encodeURIComponent("HeartSync AI")}`,
+                      `am=${amount.toFixed(2)}`,
+                      `cu=INR`,
+                      `tn=${encodeURIComponent("HeartSync Watermark")}`,
+                    ].join("&");
+                    const upiUri = `upi://pay?${upiParams}`;
+                    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(upiUri)}`;
+                    const handleCopyWupi = async () => {
+                      try { await navigator.clipboard.writeText(UPI_DISPLAY); } catch {
+                        const ta = document.createElement("textarea");
+                        ta.value = UPI_DISPLAY; ta.setAttribute("readonly", "");
+                        ta.style.position = "absolute"; ta.style.left = "-9999px";
+                        document.body.appendChild(ta); ta.select();
+                        try { document.execCommand("copy"); } catch { /* ignore */ }
+                        document.body.removeChild(ta);
+                      }
+                      setWatermarkUpiCopied(true);
+                      window.setTimeout(() => setWatermarkUpiCopied(false), 1800);
+                    };
+                    return (
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3">
+                        <div className="flex gap-3 items-center mb-4">
+                          <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
+                            <img src={qrSrc} alt="UPI QR ₹29" className="w-20 h-20 rounded-lg" />
+                          </a>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-white/40 mb-1">UPI of <span className="text-white/65 font-semibold">Itisha</span> — creator</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
+                              <button
+                                type="button" onClick={handleCopyWupi}
+                                data-testid="watermark-upi-copy"
+                                className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+                                style={{
+                                  background: watermarkUpiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
+                                  color: watermarkUpiCopied ? "#4ade80" : "#FFD700",
+                                  border: `1px solid ${watermarkUpiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
+                                }}
+                              >
+                                {watermarkUpiCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1">
+                              <Info className="w-3 h-3 shrink-0" />
+                              Pay <span className="text-white/55 font-semibold ml-0.5">exactly ₹29</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Paste UTR / Transaction ID"
+                            value={watermarkUtr}
+                            onChange={(e) => { setWatermarkUtr(e.target.value); setWatermarkUtrError(""); }}
+                            data-testid="watermark-utr-input"
+                            className="bg-white/5 border-white/10 h-10 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
+                          />
+                          {watermarkUtrError && <p className="text-xs text-destructive text-center">{watermarkUtrError}</p>}
+                          <button
+                            onClick={handleWatermarkUtrSubmit}
+                            disabled={!isValidUtr(watermarkUtr) || watermarkUtrLoading}
+                            data-testid="watermark-utr-submit"
+                            className="w-full h-10 rounded-xl text-black font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                            style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)" }}
+                          >
+                            {watermarkUtrLoading
+                              ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
+                              : <>Verify & remove watermark <ArrowRight className="w-4 h-4" /></>}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    onClick={handleWatermarkFree}
+                    className="w-full text-center text-xs text-white/30 hover:text-white/50 py-2"
+                    data-testid="watermark-send-free"
+                  >
+                    Send for free with watermark instead
+                  </button>
+                </div>
+              ) : (
+                /* ── "choose" stage ── */
+                <div className="p-5">
+                  <div className="text-center mb-4">
+                    <div className="text-3xl mb-2">💌</div>
+                    <h2 className="text-lg font-bold text-white mb-1">Your envelope is ready!</h2>
+                    <p className="text-white/55 text-sm leading-relaxed">
+                      Envelope cards are free forever. Want to send it clean, or add a small watermark?
+                    </p>
+                  </div>
+
+                  {/* Watermark preview pill */}
+                  <div
+                    className="rounded-2xl px-4 py-3 mb-4 flex items-center gap-3"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <div className="flex-1">
+                      <div className="text-white/45 text-xs leading-tight">Free card includes this badge:</div>
+                      <div
+                        className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold"
+                        style={{
+                          background: "rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          color: "rgba(255,255,255,0.5)",
+                        }}
+                      >
+                        ✨ Made for free on HeartSync AI
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Option A — Remove watermark ₹29 */}
+                  <button
+                    onClick={() => setWatermarkStage("upi")}
+                    data-testid="watermark-remove-cta"
+                    className="w-full rounded-2xl px-4 py-3.5 mb-3 flex items-center justify-between text-left"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,165,0,0.08))",
+                      border: "1.5px solid rgba(255,215,0,0.45)",
+                    }}
+                  >
+                    <div>
+                      <div className="text-white font-bold text-sm leading-tight">Remove watermark — ₹29</div>
+                      <div className="text-white/50 text-xs mt-0.5">Clean card · Pay once per card</div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-3">
+                      <span className="text-yellow-400 font-extrabold text-base">₹29</span>
+                      <ArrowRight size={16} className="text-white/40" />
+                    </div>
+                  </button>
+
+                  {/* Option B — Send free */}
+                  <button
+                    onClick={handleWatermarkFree}
+                    data-testid="watermark-send-free"
+                    className="w-full rounded-2xl px-4 py-3 flex items-center justify-between text-left"
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                    }}
+                  >
+                    <div>
+                      <div className="text-white/75 font-semibold text-sm leading-tight">Send for free with watermark</div>
+                      <div className="text-white/35 text-xs mt-0.5">Includes "Made on HeartSync AI" badge</div>
+                    </div>
+                    <ArrowRight size={16} className="text-white/25 ml-3 shrink-0" />
+                  </button>
+                </div>
               )}
             </motion.div>
           </motion.div>

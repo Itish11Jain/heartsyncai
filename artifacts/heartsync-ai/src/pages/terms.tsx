@@ -105,6 +105,14 @@ export default function Terms() {
                 deleted or suspended for a violation of these terms, unused credits will be
                 forfeited.
               </p>
+              <p>
+                <strong className="text-white/75">Animated greeting cards (Moments):</strong>{" "}
+                Envelope-style cards are free to send; they include a "Made on HeartSync AI"
+                watermark badge by default. You may remove the watermark on a per-card basis for a
+                one-time fee of ₹29, or unlock all three premium templates (Cosmic, Crystal, Vinyl)
+                watermark-free with a one-time bundle payment of ₹49. All card payments are
+                non-refundable once the link is generated.
+              </p>
             </Section>
 
             <Section title="7. Acceptable Use">

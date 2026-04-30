@@ -139,5 +139,16 @@ export async function initDb(): Promise<void> {
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS is_premium BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE INDEX IF NOT EXISTS hs_cards_clerk_idx ON hs_cards(clerk_user_id);
     CREATE INDEX IF NOT EXISTS hs_cards_created_idx ON hs_cards(created_at);
+
+    -- Watermark removal payments (₹29 per card, envelope path)
+    CREATE TABLE IF NOT EXISTS hs_watermark_payments (
+      id            SERIAL PRIMARY KEY,
+      clerk_user_id TEXT NOT NULL,
+      card_id       TEXT NOT NULL REFERENCES hs_cards(id),
+      utr           TEXT NOT NULL UNIQUE,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_wm_payments_user_idx ON hs_watermark_payments(clerk_user_id);
+    CREATE INDEX IF NOT EXISTS hs_wm_payments_card_idx ON hs_watermark_payments(card_id);
   `);
 }

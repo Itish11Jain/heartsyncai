@@ -25,12 +25,13 @@ A premium relationship intelligence web app for India. Users describe a first-da
   - `ClerkProvider` wraps entire app in `App.tsx`
   - `/sign-in` and `/sign-up` routes serve branded Clerk widgets
   - Used only for card credit gating (separate from Firebase auth for Date Guide)
-- **Card Freemium System (new)** — layered gating for card creation:
-  - Anonymous: 2 free cards (Envelope + Cosmic only). Tracked server-side by browser fingerprint (`hs_card_usage` table, resists incognito)
-  - After 2 anon cards: sign-in gate overlay → "Continue with Google" → Clerk Google OAuth
-  - Signed-in: 2 more free cards (Vinyl first, then random). Tracked in `hs_clerk_users.cards_used`
-  - After 4 total free cards: ₹50 paywall overlay → `/generate`
-  - Template gating: anon = Envelope/Cosmic only; first post-signup = Vinyl; subsequent = random
+- **Card Freemium System (Tollbooth Phase 2)** — auth gate fires for everyone at final tap:
+  - Auth gate fires for ALL users at "Get shareable link" tap (no "Maybe later")
+  - After sign-in:
+    - Envelope path → WatermarkUpsellModal: "Send free with watermark" OR "Remove watermark — ₹29" (per-card, UTR into hs_watermark_payments)
+    - Premium template (Cosmic/Crystal/Vinyl) → ₹49 bundle paywall (all 3 forever, no plan toggle)
+  - Paywall: UTR → POST /api/usage/template-unlock-utr (plan="bundle") → PATCH /api/cards/:id (is_watermarked=false, is_premium=true) → auto-redirect
+  - Superuser (jainitisha93@gmail.com) bypasses all gates
 - **Credit system (Date Guide)** — 1 free credit on signup; ₹99 via UPI buys 5 more credits
   - Credits tracked server-side in PostgreSQL (`hs_users` table, Firebase-based)
   - All 4 report sections are always fully visible (no per-section locking)
@@ -111,6 +112,15 @@ CREATE TABLE hs_credit_logs (
   reason TEXT NOT NULL,  -- 'free_signup', 'utr_payment', 'report_generated'
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Per-card watermark removal payments (₹29 each)
+CREATE TABLE hs_watermark_payments (
+  id          SERIAL PRIMARY KEY,
+  clerk_user_id TEXT NOT NULL,
+  card_id     TEXT NOT NULL,
+  utr         TEXT NOT NULL UNIQUE,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
 ## API Endpoints
@@ -126,6 +136,8 @@ CREATE TABLE hs_credit_logs (
 | GET | /api/share?t=&to=&... | No | Returns HTML with personalized OG tags + JS redirect to card |
 | POST | /api/cards | Optional Clerk | Store a card row, returns `{ id }` (8-char alphanumeric) |
 | GET | /api/cards/:id | No | Fetch card metadata incl. `is_watermarked` (public) |
+| PATCH | /api/cards/:id | Required Clerk | Update is_watermarked / is_premium on own card |
+| POST | /api/cards/:id/remove-watermark | Required Clerk | Submit ₹29 UTR to remove watermark on an envelope card |
 
 ## WhatsApp OG Image System
 

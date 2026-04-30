@@ -32,6 +32,7 @@ async function isUtrAlreadyUsed(
   cleanUtr: string,
 ): Promise<boolean> {
   const tables = [
+    "hs_watermark_payments",
     "hs_card_utr_submissions",
     "hs_template_unlock_payments",
     "hs_utr_submissions",
@@ -301,10 +302,10 @@ router.post("/usage/template-unlock-utr", async (req, res) => {
   }
 
   const { utr, plan } = req.body as { utr?: unknown; plan?: unknown };
-  if (plan !== "single" && plan !== "bundle") {
+  if (plan !== "bundle") {
     return res.status(400).json({
       error: "validation_error",
-      message: "Invalid plan. Choose ₹29 (single) or ₹49 (bundle).",
+      message: "Invalid plan. Only the ₹49 bundle (all 3 templates) is available.",
     });
   }
   if (!validateUtr(utr)) {
@@ -356,20 +357,11 @@ router.post("/usage/template-unlock-utr", async (req, res) => {
     });
   }
 
-  if (bundleUnlocked) {
-    return res.json({
-      ok: true,
-      plan: "bundle",
-      unlocked_templates: ["cosmic", "crystal", "vinyl"],
-      message: "All 3 premium templates are unlocked on your account.",
-    });
-  }
-
-  // 'single' — frontend must now ask the user which one to claim.
   return res.json({
     ok: true,
-    plan: "single",
-    message: "Payment received. Pick which premium template to unlock.",
+    plan: "bundle",
+    unlocked_templates: ["cosmic", "crystal", "vinyl"],
+    message: "All 3 premium templates are unlocked on your account.",
   });
 });
 

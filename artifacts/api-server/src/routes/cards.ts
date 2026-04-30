@@ -29,6 +29,62 @@ async function uniqueId(): Promise<string> {
   throw new Error("Could not generate unique card ID");
 }
 
+function validateUtr(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const v = value.trim();
+  return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
+}
+
+/**
+ * Check all payment tables for a UTR — prevents a single UTR funding
+ * both a template unlock and a watermark removal.
+ * Uses SAVEPOINTs so a missing-table 42P01 error is contained.
+ */
+async function isUtrAlreadyUsed(
+  client: import("pg").PoolClient,
+  cleanUtr: string,
+): Promise<boolean> {
+  const tables = [
+    "hs_watermark_payments",
+    "hs_template_unlock_payments",
+    "hs_card_utr_submissions",
+    "hs_utr_submissions",
+  ];
+  for (const table of tables) {
+    await client.query("SAVEPOINT utr_probe");
+    try {
+      const r = await client.query(`SELECT 1 FROM ${table} WHERE utr = $1 LIMIT 1`, [cleanUtr]);
+      await client.query("RELEASE SAVEPOINT utr_probe");
+      if ((r.rowCount ?? 0) > 0) return true;
+    } catch (err) {
+      await client.query("ROLLBACK TO SAVEPOINT utr_probe");
+      const code = (err as { code?: string } | null)?.code;
+      if (code !== "42P01") throw err;
+    }
+  }
+  return false;
+}
+
+/** Serialize concurrent UTR submissions via advisory lock + transaction. */
+async function withUtrLock<T>(
+  cleanUtr: string,
+  fn: (client: import("pg").PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [cleanUtr]);
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    try { await client.query("ROLLBACK"); } catch { /* ignore */ }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 /**
  * POST /api/cards
  * Requires a valid Clerk session. Creates a card row with is_watermarked=true.
@@ -90,6 +146,144 @@ router.get("/cards/:id", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error("[cards] GET /cards/:id error", err);
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
+/**
+ * PATCH /api/cards/:id
+ * Requires Clerk auth. Caller must own the card (clerk_user_id match).
+ * Body: { is_watermarked?: boolean, is_premium?: boolean }
+ * Used by ₹49 premium flow to mark a card after template-unlock-utr succeeds.
+ */
+router.patch("/cards/:id", async (req, res) => {
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+  if (!clerkUserId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+    const { is_watermarked, is_premium } = req.body as {
+      is_watermarked?: unknown;
+      is_premium?: unknown;
+    };
+
+    const existing = await pool.query(
+      "SELECT clerk_user_id FROM hs_cards WHERE id = $1",
+      [id],
+    );
+    if (existing.rows.length === 0) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    if (existing.rows[0].clerk_user_id !== clerkUserId) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+
+    const updates: string[] = [];
+    const params: unknown[] = [];
+
+    if (typeof is_watermarked === "boolean") {
+      params.push(is_watermarked);
+      updates.push(`is_watermarked = $${params.length}`);
+    }
+    if (typeof is_premium === "boolean") {
+      params.push(is_premium);
+      updates.push(`is_premium = $${params.length}`);
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ error: "nothing_to_update" });
+      return;
+    }
+
+    params.push(id);
+    await pool.query(
+      `UPDATE hs_cards SET ${updates.join(", ")} WHERE id = $${params.length}`,
+      params,
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[cards] PATCH /cards/:id error", err);
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
+/**
+ * POST /api/cards/:id/remove-watermark
+ * Requires Clerk auth + card ownership.
+ * Body: { utr: string }
+ * Validates the UTR (₹29 watermark removal payment), records it, and sets
+ * is_watermarked=false on the card. Rejects duplicate UTRs.
+ */
+router.post("/cards/:id/remove-watermark", async (req, res) => {
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+  if (!clerkUserId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+
+  const { id } = req.params;
+  const { utr } = req.body as { utr?: unknown };
+
+  if (!validateUtr(utr)) {
+    res.status(400).json({
+      error: "validation_error",
+      message: "Invalid UTR format. Enter the 12-digit UPI reference or bank UTR.",
+    });
+    return;
+  }
+
+  const cleanUtr = (utr as string).trim().toUpperCase();
+
+  try {
+    const existing = await pool.query(
+      "SELECT clerk_user_id FROM hs_cards WHERE id = $1",
+      [id],
+    );
+    if (existing.rows.length === 0) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    if (existing.rows[0].clerk_user_id !== clerkUserId) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+
+    let duplicate = false;
+
+    await withUtrLock(cleanUtr, async (client) => {
+      if (await isUtrAlreadyUsed(client, cleanUtr)) {
+        duplicate = true;
+        return;
+      }
+      await client.query(
+        `INSERT INTO hs_watermark_payments (clerk_user_id, card_id, utr) VALUES ($1, $2, $3)`,
+        [clerkUserId, id, cleanUtr],
+      );
+      await client.query(
+        `UPDATE hs_cards SET is_watermarked = FALSE WHERE id = $1`,
+        [id],
+      );
+    });
+
+    if (duplicate) {
+      res.status(409).json({
+        error: "duplicate_utr",
+        message: "This transaction ID has already been used. Contact support if you think this is a mistake.",
+      });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[cards] POST /cards/:id/remove-watermark error", err);
     res.status(500).json({ error: "internal_error" });
   }
 });
