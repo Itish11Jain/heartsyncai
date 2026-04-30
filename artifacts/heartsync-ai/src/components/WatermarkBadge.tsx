@@ -37,7 +37,7 @@ export default function WatermarkBadge({ id, showRemoveCta = false, hidden = fal
     <div
       style={{
         position: "fixed",
-        bottom: "max(280px, calc(env(safe-area-inset-bottom, 0px) + 260px))",
+        bottom: "max(90px, calc(env(safe-area-inset-bottom, 0px) + 72px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 99999,
