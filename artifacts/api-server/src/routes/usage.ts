@@ -2,7 +2,7 @@ import { Router } from "express";
 import { pool } from "../lib/db";
 import { getAuth } from "@clerk/express";
 
-const SUPERUSER_EMAILS = ["jainitisha93@gmail.com"];
+const SUPERUSER_EMAILS = ["jainitisha93@gmail.com", "itisha.a.jain.93@gmail.com"];
 
 const PREMIUM_TEMPLATES = ["cosmic", "crystal", "vinyl"] as const;
 type PremiumTemplate = (typeof PREMIUM_TEMPLATES)[number];
