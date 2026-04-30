@@ -1580,7 +1580,7 @@ export default function Send() {
                     <button
                       onClick={handleWatermarkFree}
                       data-testid="watermark-send-free"
-                      className="text-white/30 text-xs hover:text-white/50 transition-colors"
+                      className="text-white/50 text-xs hover:text-white/70 transition-colors underline underline-offset-2 decoration-white/20"
                     >
                       Continue with watermark
                     </button>
