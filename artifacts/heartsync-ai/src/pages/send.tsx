@@ -575,6 +575,11 @@ export default function Send() {
       recipient_name: recipientName.trim() || undefined,
     });
 
+    // Wait for Clerk to finish reading the stored session before deciding.
+    // Without this guard, isSignedIn is undefined while Clerk initialises and
+    // a returning logged-in user would incorrectly see the sign-in gate.
+    if (!isLoaded) return;
+
     // Auth gate fires for EVERYONE at the final step (new: even anonymous first-timers).
     if (!isSignedIn) {
       setSignInGateContext(selectedTemplate);
@@ -632,7 +637,7 @@ export default function Send() {
   // Decide what the bottom Generate button should say based on the current
   // template choice + auth state. This is the "pre-flight" copy.
   const generateButtonLabel = (() => {
-    if (usageLoading) return "Loading…";
+    if (!isLoaded || usageLoading) return "Loading…";
     // Signed-in + premium + not unlocked → "Unlock" copy
     if (isSignedIn && isPremiumTemplate(selectedTemplate)) {
       const gate = templateGate(usage, selectedTemplate);
@@ -902,19 +907,19 @@ export default function Send() {
 
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  disabled={!recipientName.trim() || usageLoading || showGenerating}
+                  disabled={!recipientName.trim() || !isLoaded || usageLoading || showGenerating}
                   onClick={handleFinish}
                   data-testid="generate-button"
                   style={{
                     padding: "16px",
                     borderRadius: 14,
-                    background: recipientName.trim() && !usageLoading
+                    background: recipientName.trim() && isLoaded && !usageLoading
                       ? "linear-gradient(135deg, #FFD700, #FFA500)"
                       : "rgba(255,255,255,0.08)",
-                    color: recipientName.trim() && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
+                    color: recipientName.trim() && isLoaded && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
                     fontWeight: 700,
                     fontSize: 16,
-                    cursor: recipientName.trim() && !usageLoading ? "pointer" : "default",
+                    cursor: recipientName.trim() && isLoaded && !usageLoading ? "pointer" : "default",
                     border: "none",
                     transition: "all 0.2s",
                   }}
