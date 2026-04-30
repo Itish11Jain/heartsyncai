@@ -1524,8 +1524,15 @@ export default function Send() {
                     </div>
                   </button>
 
+                  {/* OR divider */}
+                  <div className="flex items-center gap-3 my-1">
+                    <div className="flex-1 h-px bg-white/10" />
+                    <span className="text-white/30 text-xs font-semibold tracking-widest">OR</span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+
                   {/* Downgrade — free, plain text link */}
-                  <div className="text-center">
+                  <div className="text-center mt-1">
                     <button
                       onClick={handleWatermarkFree}
                       data-testid="watermark-send-free"
