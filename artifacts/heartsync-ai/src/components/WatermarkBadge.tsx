@@ -50,6 +50,25 @@ export default function WatermarkBadge({ id, showRemoveCta = false, hidden = fal
         WebkitUserSelect: "none",
       } as React.CSSProperties}
     >
+      {/* Remove CTA — only for the card sender */}
+      {showRemoveCta && (
+        <a
+          href={removeHref}
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "rgba(255,255,255,0.75)",
+            textDecoration: "underline",
+            textDecorationColor: "rgba(255,255,255,0.35)",
+            textUnderlineOffset: 3,
+            cursor: "pointer",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Remove watermark →
+        </a>
+      )}
+
       {/* Branded pill — static, not interactive */}
       <div
         style={{
@@ -70,25 +89,6 @@ export default function WatermarkBadge({ id, showRemoveCta = false, hidden = fal
         </span>
         <span style={{ fontSize: 16 }}>✨</span>
       </div>
-
-      {/* Remove CTA — only for the card sender */}
-      {showRemoveCta && (
-        <a
-          href={removeHref}
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            color: "rgba(255,255,255,0.75)",
-            textDecoration: "underline",
-            textDecorationColor: "rgba(255,255,255,0.35)",
-            textUnderlineOffset: 3,
-            cursor: "pointer",
-            letterSpacing: "0.02em",
-          }}
-        >
-          Remove watermark →
-        </a>
-      )}
 
       <style>{`
         @keyframes wm-pulse {
