@@ -69,7 +69,7 @@ export default function AuthGate({ onSuccess, subtitle, onDismiss }: AuthGatePro
     };
   }, []);
 
-  async function finishAuth(idToken: string, isNewUser: boolean) {
+  async function finishAuth(idToken: string, isNewUser: boolean, userEmail?: string | null) {
     const result = await new Promise<{ sessionToken: string; credits: number; displayName: string }>(
       (resolve, reject) => {
         verifyAuth.mutate(
@@ -81,7 +81,7 @@ export default function AuthGate({ onSuccess, subtitle, onDismiss }: AuthGatePro
         );
       },
     );
-    authStore.login(result.sessionToken, result.displayName, result.credits);
+    authStore.login(result.sessionToken, result.displayName, result.credits, userEmail);
     onSuccess(isNewUser);
   }
 
@@ -105,7 +105,7 @@ export default function AuthGate({ onSuccess, subtitle, onDismiss }: AuthGatePro
         }
       }
       const idToken = await cred.user.getIdToken();
-      await finishAuth(idToken, isNewUser);
+      await finishAuth(idToken, isNewUser, email);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
@@ -146,7 +146,7 @@ export default function AuthGate({ onSuccess, subtitle, onDismiss }: AuthGatePro
       const cred = await confirmationRef.current.confirm(value);
       const isNewUser = getAdditionalUserInfo(cred)?.isNewUser ?? false;
       const idToken = await cred.user.getIdToken();
-      await finishAuth(idToken, isNewUser);
+      await finishAuth(idToken, isNewUser, null);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       setError(getFirebaseErrorMessage(code));
@@ -164,7 +164,7 @@ export default function AuthGate({ onSuccess, subtitle, onDismiss }: AuthGatePro
       const cred = await signInWithPopup(auth, provider);
       const isNewUser = getAdditionalUserInfo(cred)?.isNewUser ?? false;
       const idToken = await cred.user.getIdToken();
-      await finishAuth(idToken, isNewUser);
+      await finishAuth(idToken, isNewUser, cred.user.email);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? "";
       if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {

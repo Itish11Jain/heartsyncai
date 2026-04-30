@@ -3,16 +3,23 @@ const STORAGE_KEY = "heartsync_auth_v1";
 interface AuthState {
   sessionToken: string | null;
   displayName: string | null;
+  email: string | null;
   credits: number;
 }
 
 function load(): AuthState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { sessionToken: null, displayName: null, credits: 0 };
-    return JSON.parse(raw) as AuthState;
+    if (!raw) return { sessionToken: null, displayName: null, email: null, credits: 0 };
+    const parsed = JSON.parse(raw) as Partial<AuthState>;
+    return {
+      sessionToken: parsed.sessionToken ?? null,
+      displayName: parsed.displayName ?? null,
+      email: parsed.email ?? null,
+      credits: parsed.credits ?? 0,
+    };
   } catch {
-    return { sessionToken: null, displayName: null, credits: 0 };
+    return { sessionToken: null, displayName: null, email: null, credits: 0 };
   }
 }
 
@@ -36,13 +43,17 @@ export const authStore = {
   get displayName(): string | null {
     return _state.displayName;
   },
+  get email(): string | null {
+    return _state.email;
+  },
   get credits(): number {
     return _state.credits;
   },
 
-  login(sessionToken: string, displayName: string, credits: number): void {
+  login(sessionToken: string, displayName: string, credits: number, email?: string | null): void {
     _state.sessionToken = sessionToken;
     _state.displayName = displayName;
+    _state.email = email ?? null;
     _state.credits = credits;
     save(_state);
   },
@@ -50,6 +61,7 @@ export const authStore = {
   logout(): void {
     _state.sessionToken = null;
     _state.displayName = null;
+    _state.email = null;
     _state.credits = 0;
     save(_state);
   },

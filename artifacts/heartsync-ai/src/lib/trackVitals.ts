@@ -10,6 +10,7 @@
  */
 
 import { isSuperUser } from "./trackEvent";
+import { authStore } from "./auth-store";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -46,15 +47,8 @@ function getFingerprint(): string | undefined {
   }
 }
 
-function getCurrentEmail(): string | undefined {
-  try {
-    const raw = localStorage.getItem("heartsync_auth_v1");
-    if (!raw) return undefined;
-    const parsed = JSON.parse(raw) as { email?: string };
-    return parsed?.email;
-  } catch {
-    return undefined;
-  }
+function getCurrentEmail(): string | null {
+  return authStore.email;
 }
 
 function send(payload: VitalPayload): void {
