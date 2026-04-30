@@ -1135,35 +1135,10 @@ export default function Send() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 18, lineHeight: 1.55 }}
+                style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 24, lineHeight: 1.55 }}
               >
-                {isPremiumTemplate(signInGateContext)
-                  ? <>Sign in first, then unlock all 3 premium templates for <span style={{ color: "#FFD700", fontWeight: 700 }}>₹49</span>.</>
-                  : <>Sign in to generate your shareable link. <span style={{ color: "#90EE90", fontWeight: 700 }}>Free forever for Envelope cards.</span></>}
+                Sign in to get your shareable link. Your card draft is waiting.
               </motion.p>
-
-              {/* What signup gives you — explicit clarification */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 14,
-                  padding: "14px 16px",
-                  marginBottom: 20,
-                  textAlign: "left",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span style={{ color: "#FFD700", fontSize: 16, lineHeight: 1.2 }}>✦</span>
-                  <div>
-                    <div style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>Premium templates — one bundle</div>
-                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Cosmic / Crystal / Vinyl — all 3 for ₹49, forever.</div>
-                  </div>
-                </div>
-              </motion.div>
 
               {/* Google sign-in button */}
               <motion.button
