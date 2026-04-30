@@ -1,0 +1,68 @@
+PRD: The "Tollbooth" Flow (Auth Gate + Ego Tax Upsell)
+1. Project Overview
+We are overhauling the final step of the card creation funnel (the "Generate Link" button).
+Currently, users can generate free cards without logging in, and the "Maybe later" button on the Auth modal allows them to bypass data capture. We are closing these leaks.
+
+The New Rule: 1. NO links can be generated without a Clerk Authentication.
+2. NO payments can be processed unless the user is Authenticated.
+3. The Free tier must include a friction-based Upsell modal (Ego Tax) immediately after authentication but before link generation.
+
+2. Step-by-Step UI/UX Logic (The Sequence)
+When the user finishes typing their message and clicks the yellow Generate Link button, the application must follow this strict chronological sequence:
+
+STEP 1: The Auth Gate (Clerk)
+Check the user's Clerk session state.
+
+If Logged Out: Trigger the Clerk Sign-In Modal (Google 1-Tap preferred).
+
+CRITICAL: Remove any "Maybe later" or bypass buttons from this flow. They must authenticate to proceed.
+
+Once successfully authenticated, automatically push them to Step 2. Do not make them click "Generate Link" again.
+
+If Logged In: Proceed immediately to Step 2.
+
+STEP 2: The Routing Gate
+Now that the user is guaranteed to be authenticated, check which Card Style they selected:
+
+If Premium Style Selected (Cosmic, Crystal, Vinyl): Trigger the existing Razorpay Payment flow. (Since they are logged in, the payment will safely attach to their account).
+
+If Free Style Selected (Envelope): Proceed to Step 3.
+
+STEP 3: The "Ego Tax" Upsell Modal (Free Tier Only)
+Instead of instantly generating the free link, pop open a new modal: WatermarkUpsellModal.
+
+Header Text: "Your card is ready to send! 💌"
+
+Visual Aid: Show a small preview of the "Made for free on HeartSync ✨" watermark so they know what will be on their card.
+
+Primary Button (Highlighted): "✨ Remove Watermark & Upgrade - ₹29"
+
+Action: Triggers Razorpay. On success, updates DB (is_watermarked: false, is_premium: true), closes modal, and generates link.
+
+Secondary Button (Ghost/Subtle): "Send for free with HeartSync watermark"
+
+Action: Bypasses payment, updates DB (is_watermarked: true), closes modal, and generates link.
+
+3. Database Updates
+Update the schema for the generated card/link to track its monetization state:
+
+Add is_watermarked (Boolean, default: true).
+
+Add is_premium (Boolean, default: false).
+
+Ensure every generated card is strictly tied to the user_id from Clerk.
+
+4. The Recipient View (Framer Motion Constraint)
+When the recipient opens a card URL, the frontend must check the is_watermarked database flag.
+
+If is_watermarked === true: Render a sticky, pill-shaped badge at the bottom-center of the screen.
+
+Text: "Made for free on HeartSync ✨"
+
+Style: Semi-transparent dark background, white text, glassmorphism blur, high z-index.
+
+Link: Clicking it routes to the landing page.
+
+Constraint: Inject this as a fixed HTML overlay absolute-positioned over the canvas. Do NOT let it interfere with the Framer Motion DOM variants or the swipe/hold unboxing physics.
+
+If is_watermarked === false: Render the standard, clean view with zero HeartSync branding.
