@@ -27,13 +27,14 @@ const VinylCard = lazy(() => import("@/pages/vinyl"));
 /* ── Lazy auth-required pages (Clerk) ───────────────────────────────── */
 const Send = lazy(() => import("@/pages/send"));
 const Analytics = lazy(() => import("@/pages/analytics"));
+const RemoveWatermark = lazy(() => import("@/pages/remove-watermark"));
 
 /* ── Lazy Clerk wrapper (loads ~250 KB only when needed) ────────────── */
 const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
 
 /* Routes that need ClerkProvider mounted around them. The check is a
  * prefix match against the URL pathname (after the basePath strip). */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/send", "/analytics"];
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/send", "/analytics", "/remove-watermark"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,
@@ -92,6 +93,7 @@ function AppRoutes() {
           (When Clerk isn't mounted, the user can't be on /send or /analytics anyway.) */}
       <Route path="/send"><L><Send /></L></Route>
       <Route path="/analytics"><L><Analytics /></L></Route>
+      <Route path="/remove-watermark"><L><RemoveWatermark /></L></Route>
 
       <Route component={NotFound} />
     </Switch>
