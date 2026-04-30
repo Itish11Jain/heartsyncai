@@ -1,14 +1,18 @@
 import { Router } from "express";
+import { randomBytes } from "crypto";
 import { getAuth } from "@clerk/express";
 import { pool } from "../lib/db";
 
 const router = Router();
 
+const ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/** Generate a cryptographically random 8-char alphanumeric ID (CSPRNG-backed). */
 function genId(len = 8): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = randomBytes(len * 2); // extra entropy for modulo bias reduction
   let id = "";
   for (let i = 0; i < len; i++) {
-    id += chars[Math.floor(Math.random() * chars.length)];
+    id += ID_CHARS[bytes[i] % ID_CHARS.length];
   }
   return id;
 }

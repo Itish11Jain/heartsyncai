@@ -125,7 +125,7 @@ export async function initDb(): Promise<void> {
     -- can be looked up later (watermark check, future analytics, etc.)
     CREATE TABLE IF NOT EXISTS hs_cards (
       id              TEXT PRIMARY KEY,
-      clerk_user_id   TEXT,
+      clerk_user_id   TEXT,           -- NOT NULL enforced at app layer (POST /api/cards requires Clerk auth)
       template        TEXT,
       occasion        TEXT,
       recipient_name  TEXT,
