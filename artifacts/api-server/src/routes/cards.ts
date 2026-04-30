@@ -209,11 +209,13 @@ router.patch("/cards/:id", async (req, res) => {
     }
 
     // Entitlement check — caller must have paid the ₹49 bundle.
-    const unlockRow = await pool.query(
-      "SELECT 1 FROM hs_template_unlocks WHERE clerk_user_id = $1 LIMIT 1",
+    // unlocked_templates is set by /api/usage/template-unlock-utr on success.
+    const entitlementRow = await pool.query<{ unlocked_templates: string[] }>(
+      "SELECT unlocked_templates FROM hs_clerk_users WHERE clerk_user_id = $1",
       [clerkUserId],
     );
-    if (unlockRow.rows.length === 0) {
+    const unlockedTemplates: string[] = entitlementRow.rows[0]?.unlocked_templates ?? [];
+    if (unlockedTemplates.length === 0) {
       res.status(403).json({ error: "payment_required", message: "No bundle payment found for this account." });
       return;
     }

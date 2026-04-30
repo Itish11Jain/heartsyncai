@@ -436,33 +436,36 @@ export default function Send() {
 
       // 2. Create the card row + mark it premium + watermark-free
       let cardId: string | undefined;
-      try {
-        if (token) {
-          const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
-            ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
-            : null;
-          const cardRes = await fetch(`${base}/api/cards`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              template: selectedTemplate, occasion,
-              recipient_name: recipientName.trim() || undefined,
-              message_b64,
-            }),
-          });
-          if (cardRes.ok) {
-            const cd = await cardRes.json() as { id?: string };
-            cardId = cd.id;
-            if (cardId) {
-              await fetch(`${base}/api/cards/${cardId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ is_watermarked: false, is_premium: true }),
-              });
+      if (token) {
+        const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
+          ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
+          : null;
+        const cardRes = await fetch(`${base}/api/cards`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            template: selectedTemplate, occasion,
+            recipient_name: recipientName.trim() || undefined,
+            message_b64,
+          }),
+        });
+        if (cardRes.ok) {
+          const cd = await cardRes.json() as { id?: string };
+          cardId = cd.id;
+          if (cardId) {
+            const patchRes = await fetch(`${base}/api/cards/${cardId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ is_watermarked: false, is_premium: true }),
+            });
+            if (!patchRes.ok) {
+              const patchData = await patchRes.json().catch(() => ({})) as { message?: string };
+              setPaywallUtrError(patchData.message ?? "Failed to finalize card. Please try again.");
+              return;
             }
           }
         }
-      } catch { /* non-blocking */ }
+      }
 
       setPendingCardId(cardId);
       setPaywallStage("done");
