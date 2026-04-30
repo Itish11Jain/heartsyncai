@@ -700,7 +700,7 @@ export default function CosmicCard() {
         </motion.div>
       </Link>
 
-      {isRecipient && <WatermarkBadge id={params.get("id")} />}
+      <WatermarkBadge id={params.get("id")} />
     </div>
   );
 }

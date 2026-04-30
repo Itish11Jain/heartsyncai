@@ -935,7 +935,7 @@ export default function VinylCard() {
         )}
       </AnimatePresence>
 
-      {!isSender && !isPreview && <WatermarkBadge id={params.get("id")} />}
+      <WatermarkBadge id={params.get("id")} />
     </div>
   );
 }

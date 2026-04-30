@@ -36,42 +36,50 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
     <div
       style={{
         position: "fixed",
-        bottom: "max(20px, env(safe-area-inset-bottom, 20px))",
+        bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 9998,
+        zIndex: 99999,
         display: "flex",
         alignItems: "stretch",
         borderRadius: 999,
         overflow: "hidden",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 2px 8px rgba(168,85,247,0.35)",
+        boxShadow: "0 6px 28px rgba(0,0,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.12) inset, 0 4px 24px rgba(168,85,247,0.5)",
         whiteSpace: "nowrap",
         userSelect: "none",
         WebkitUserSelect: "none",
+        animation: "wm-pulse 3s ease-in-out infinite",
       } as React.CSSProperties}
     >
+      <style>{`
+        @keyframes wm-pulse {
+          0%, 100% { box-shadow: 0 6px 28px rgba(0,0,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.12) inset, 0 4px 24px rgba(168,85,247,0.5); }
+          50%       { box-shadow: 0 6px 28px rgba(0,0,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.18) inset, 0 6px 36px rgba(168,85,247,0.75); }
+        }
+      `}</style>
+
       {/* Left: Made on HeartSync — links to homepage */}
       <Link href="/">
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 5,
-            padding: "9px 14px 9px 16px",
-            background: "linear-gradient(135deg, #6B21A8 0%, #9333EA 50%, #7C3AED 100%)",
+            gap: 6,
+            padding: "11px 16px 11px 20px",
+            background: "linear-gradient(135deg, #5B21B6 0%, #9333EA 55%, #7C3AED 100%)",
             cursor: "pointer",
             textDecoration: "none",
           }}
         >
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "0.02em" }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "0.01em" }}>
             Made on HeartSync
           </span>
-          <span style={{ fontSize: 14 }}>✨</span>
+          <span style={{ fontSize: 16 }}>✨</span>
         </div>
       </Link>
 
       {/* Divider */}
-      <div style={{ width: 1, background: "rgba(255,255,255,0.18)", flexShrink: 0 }} />
+      <div style={{ width: 1, background: "rgba(255,255,255,0.22)", flexShrink: 0 }} />
 
       {/* Right: Remove → CTA */}
       <a
@@ -79,14 +87,14 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 4,
-          padding: "9px 14px 9px 12px",
+          gap: 5,
+          padding: "11px 20px 11px 14px",
           background: "linear-gradient(135deg, #92400E 0%, #D97706 50%, #F59E0B 100%)",
           cursor: "pointer",
           textDecoration: "none",
         }}
       >
-        <span style={{ fontSize: 12, fontWeight: 800, color: "#fff", letterSpacing: "0.03em" }}>
+        <span style={{ fontSize: 14, fontWeight: 900, color: "#fff", letterSpacing: "0.04em" }}>
           Remove watermark →
         </span>
       </a>

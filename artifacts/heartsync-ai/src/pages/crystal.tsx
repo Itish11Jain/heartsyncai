@@ -965,7 +965,7 @@ export default function CrystalCard() {
         </motion.div>
       </Link>
 
-      {isRecipient && <WatermarkBadge id={params.get("id")} />}
+      <WatermarkBadge id={params.get("id")} />
     </div>
   );
 }
