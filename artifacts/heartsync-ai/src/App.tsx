@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
+
+/* Home is the largest page (Framer Motion + confetti + testimonials).
+ * Lazy-loading it moves the 123 KB motion chunk out of the critical path
+ * so /card, /crystal, /cosmic, /vinyl visitors never download it.
+ * The HTML splash screen bridges the tiny extra fetch delay on /. */
+const Home = lazy(() => import("@/pages/home"));
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -75,7 +80,7 @@ function AppRoutes() {
   const switchEl = (
     <Switch>
       {/* Public — instant, no Clerk, no Firebase */}
-      <Route path="/" component={Home} />
+      <Route path="/"><L><Home /></L></Route>
       <Route path="/terms"><L><Terms /></L></Route>
       <Route path="/contact"><L><Contact /></L></Route>
       <Route path="/preview"><L><Preview /></L></Route>
