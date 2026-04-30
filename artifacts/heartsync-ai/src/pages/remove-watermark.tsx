@@ -270,18 +270,18 @@ export default function RemoveWatermark() {
               <div style={{ textAlign: "center", marginBottom: 24 }}>
                 <Sparkles style={{ width: 28, height: 28, color: "#a855f7", margin: "0 auto 8px" }} />
                 <h1 style={{ color: "#fff", fontWeight: 800, fontSize: 20, marginBottom: 6 }}>
-                  Remove watermark from card
+                  Remove Watermark | Go Premium
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
-                  Pay once via UPI — pick the plan that works for you.
+                  One payment of ₹49 — yours forever.
                 </p>
               </div>
 
-              {/* Option 1 — ₹49 bundle */}
+              {/* Single option — ₹49 */}
               <button
                 onClick={() => setStage("bundle-upi")}
                 style={{
-                  width: "100%", marginBottom: 12, padding: "16px", borderRadius: 18,
+                  width: "100%", marginBottom: 16, padding: "16px", borderRadius: 18,
                   background: "linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.14))",
                   border: "1.5px solid rgba(168,85,247,0.55)",
                   boxShadow: "0 0 20px rgba(168,85,247,0.18)",
@@ -291,42 +291,17 @@ export default function RemoveWatermark() {
               >
                 <div style={{ fontSize: 22, marginTop: 2 }}>👑</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 3 }}>
-                    Unlock all premium templates
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
+                    Remove watermark & unlock all premium templates
                   </div>
-                  <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 1.4 }}>
-                    No watermarks ever · Cosmic + Crystal + Vinyl · Yours forever
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Removes watermark</span>
+                    <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 2 }}>
                   <span style={{ color: "#d8b4fe", fontWeight: 800, fontSize: 15 }}>₹49</span>
                   <ArrowRight size={14} color="rgba(216,180,254,0.6)" />
-                </div>
-              </button>
-
-              {/* Option 2 — ₹29 watermark only */}
-              <button
-                onClick={() => setStage("watermark-upi")}
-                style={{
-                  width: "100%", marginBottom: 20, padding: "16px", borderRadius: 18,
-                  background: "linear-gradient(135deg, rgba(255,215,0,0.13), rgba(255,165,0,0.07))",
-                  border: "1.5px solid rgba(255,215,0,0.4)",
-                  cursor: "pointer", textAlign: "left",
-                  display: "flex", alignItems: "flex-start", gap: 12,
-                }}
-              >
-                <div style={{ fontSize: 22, marginTop: 2 }}>✨</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 3 }}>
-                    Remove watermark — this card only
-                  </div>
-                  <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 1.4 }}>
-                    Clean card, no badge · One-time ₹29 per card
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 2 }}>
-                  <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 15 }}>₹29</span>
-                  <ArrowRight size={14} color="rgba(255,215,0,0.5)" />
                 </div>
               </button>
 
@@ -367,14 +342,11 @@ export default function RemoveWatermark() {
               }}>
                 <div>
                   <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>₹49</div>
-                  <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 }}>Cosmic + Crystal + Vinyl — all 3</div>
-                  <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, marginTop: 1 }}>No watermark · Pay once, use forever</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
+                    <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Removes watermark</span>
+                    <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
+                  </div>
                 </div>
-                <div style={{
-                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                  color: "#000", fontWeight: 800, fontSize: 9,
-                  padding: "3px 8px", borderRadius: 99, letterSpacing: "0.04em",
-                }}>BEST VALUE</div>
               </div>
 
               <UpiPaySection
