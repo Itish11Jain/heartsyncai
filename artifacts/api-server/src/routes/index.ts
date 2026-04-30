@@ -8,6 +8,7 @@ import momentRouter from "./moment";
 import usageRouter from "./usage";
 import eventsRouter from "./events";
 import shareRouter from "./share";
+import cardsRouter from "./cards";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(momentRouter);
 router.use(usageRouter);
 router.use(eventsRouter);
 router.use(shareRouter);
+router.use(cardsRouter);
 
 export default router;

@@ -6,6 +6,7 @@ import {
 } from "@/lib/card-templates";
 import { vinyl, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import WatermarkBadge from "@/components/WatermarkBadge";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -933,6 +934,8 @@ export default function VinylCard() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {!isSender && !isPreview && <WatermarkBadge cid={params.get("cid")} />}
     </div>
   );
 }

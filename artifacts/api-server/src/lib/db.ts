@@ -120,5 +120,22 @@ export async function initDb(): Promise<void> {
       message TEXT NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- Card storage: each generated card gets a persistent row so recipients
+    -- can be looked up later (watermark check, future analytics, etc.)
+    CREATE TABLE IF NOT EXISTS hs_cards (
+      id              TEXT PRIMARY KEY,
+      template        TEXT,
+      occasion        TEXT,
+      relation        TEXT,
+      recipient_name  TEXT,
+      msg             TEXT,
+      clerk_user_id   TEXT,
+      fingerprint     TEXT,
+      is_watermarked  BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at      TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_cards_clerk_idx ON hs_cards(clerk_user_id);
+    CREATE INDEX IF NOT EXISTS hs_cards_created_idx ON hs_cards(created_at);
   `);
 }

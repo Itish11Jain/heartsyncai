@@ -91,6 +91,20 @@ CREATE TABLE hs_card_usage (
 );
 CREATE UNIQUE INDEX hs_card_usage_fp ON hs_card_usage(fingerprint);
 
+-- Card storage (Tollbooth Phase 1)
+CREATE TABLE hs_cards (
+  id              TEXT PRIMARY KEY,   -- 8-char alphanumeric, server-generated
+  template        TEXT,
+  occasion        TEXT,
+  relation        TEXT,
+  recipient_name  TEXT,
+  msg             TEXT,               -- base64-encoded custom message (same as URL param)
+  clerk_user_id   TEXT,
+  fingerprint     TEXT,
+  is_watermarked  BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE hs_credit_logs (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES hs_users(id),
@@ -111,6 +125,8 @@ CREATE TABLE hs_credit_logs (
 | GET | /api/healthz | No | Health check |
 | GET | /api/og-image?name= | No | Returns 1200×630 PNG with "Hey, {name}!" for WhatsApp OG image |
 | GET | /api/share?t=&to=&... | No | Returns HTML with personalized OG tags + JS redirect to card |
+| POST | /api/cards | Optional Clerk | Store a card row, returns `{ id }` (8-char alphanumeric) |
+| GET | /api/cards/:id | No | Fetch card metadata incl. `is_watermarked` (public) |
 
 ## WhatsApp OG Image System
 

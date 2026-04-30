@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
 import { cosmic, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import WatermarkBadge from "@/components/WatermarkBadge";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -698,6 +699,8 @@ export default function CosmicCard() {
           ← make your own
         </motion.div>
       </Link>
+
+      {isRecipient && <WatermarkBadge cid={params.get("cid")} />}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
 import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import WatermarkBadge from "@/components/WatermarkBadge";
 import CosmicCard from "@/pages/cosmic";
 import VinylCard from "@/pages/vinyl";
 import CrystalCard from "@/pages/crystal";
@@ -1344,6 +1345,8 @@ export default function Card() {
           ← make your own
         </motion.div>
       </Link>
+
+      {isRecipient && <WatermarkBadge cid={params.get("cid")} />}
     </div>
   );
 }

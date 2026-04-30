@@ -494,7 +494,35 @@ export default function Send() {
       (usage?.unlocked_templates ?? []).includes(selectedTemplate);
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
 
-    const cardId = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
+    let cardId: string | undefined;
+    try {
+      const token = await getToken();
+      const baseApi = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const fp = (() => { try { return localStorage.getItem("hs_fp") ?? undefined; } catch { return undefined; } })();
+      const msgEncoded = customMsg.trim() && customMsg.trim() !== defaultMsg
+        ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
+        : null;
+      const cardRes = await fetch(`${baseApi}/api/cards`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          template: selectedTemplate,
+          occasion,
+          relation,
+          recipient_name: recipientName.trim() || undefined,
+          msg: msgEncoded,
+          fingerprint: fp,
+          is_watermarked: !isFree,
+        }),
+      });
+      if (cardRes.ok) {
+        const data = await cardRes.json() as { id?: string };
+        cardId = data.id;
+      }
+    } catch { /* non-blocking — fall back to no cid */ }
 
     trackEvent({
       event: "card_created",
