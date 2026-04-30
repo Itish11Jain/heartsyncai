@@ -36,68 +36,65 @@ export default function WatermarkBadge({ id }: WatermarkBadgeProps) {
     <div
       style={{
         position: "fixed",
-        bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
+        bottom: "max(80px, env(safe-area-inset-bottom, 80px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 99999,
         display: "flex",
-        alignItems: "stretch",
-        borderRadius: 999,
-        overflow: "hidden",
-        boxShadow: "0 6px 28px rgba(0,0,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.12) inset, 0 4px 24px rgba(168,85,247,0.5)",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
         whiteSpace: "nowrap",
         userSelect: "none",
         WebkitUserSelect: "none",
-        animation: "wm-pulse 3s ease-in-out infinite",
       } as React.CSSProperties}
     >
-      <style>{`
-        @keyframes wm-pulse {
-          0%, 100% { box-shadow: 0 6px 28px rgba(0,0,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.12) inset, 0 4px 24px rgba(168,85,247,0.5); }
-          50%       { box-shadow: 0 6px 28px rgba(0,0,0,0.65), 0 0 0 1.5px rgba(255,255,255,0.18) inset, 0 6px 36px rgba(168,85,247,0.75); }
-        }
-      `}</style>
-
-      {/* Left: Made on HeartSync — links to homepage */}
+      {/* Top: Made for free on HeartSync — main branded pill */}
       <Link href="/">
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            padding: "11px 16px 11px 20px",
+            gap: 7,
+            padding: "12px 22px",
             background: "linear-gradient(135deg, #5B21B6 0%, #9333EA 55%, #7C3AED 100%)",
+            borderRadius: 999,
             cursor: "pointer",
             textDecoration: "none",
+            boxShadow: "0 6px 28px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.12) inset, 0 4px 24px rgba(168,85,247,0.55)",
+            animation: "wm-pulse 3s ease-in-out infinite",
           }}
         >
           <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "0.01em" }}>
-            Made on HeartSync
+            Made for free on HeartSync
           </span>
           <span style={{ fontSize: 16 }}>✨</span>
         </div>
       </Link>
 
-      {/* Divider */}
-      <div style={{ width: 1, background: "rgba(255,255,255,0.22)", flexShrink: 0 }} />
-
-      {/* Right: Remove → CTA */}
+      {/* Bottom: Remove watermark CTA — subtle link */}
       <a
         href={removeHref}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 5,
-          padding: "11px 20px 11px 14px",
-          background: "linear-gradient(135deg, #92400E 0%, #D97706 50%, #F59E0B 100%)",
+          fontSize: 12,
+          fontWeight: 600,
+          color: "rgba(255,255,255,0.55)",
+          textDecoration: "underline",
+          textDecorationColor: "rgba(255,255,255,0.25)",
+          textUnderlineOffset: 3,
           cursor: "pointer",
-          textDecoration: "none",
+          letterSpacing: "0.02em",
         }}
       >
-        <span style={{ fontSize: 14, fontWeight: 900, color: "#fff", letterSpacing: "0.04em" }}>
-          Remove watermark →
-        </span>
+        Remove watermark →
       </a>
+
+      <style>{`
+        @keyframes wm-pulse {
+          0%, 100% { box-shadow: 0 6px 28px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.12) inset, 0 4px 24px rgba(168,85,247,0.55); }
+          50%       { box-shadow: 0 6px 28px rgba(0,0,0,0.55), 0 0 0 1.5px rgba(255,255,255,0.2) inset, 0 6px 36px rgba(168,85,247,0.8); }
+        }
+      `}</style>
     </div>
   );
 }
