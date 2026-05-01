@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Lock, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
+import { ChevronLeft, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, useClerk } from "@clerk/react";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
@@ -622,7 +622,8 @@ export default function Send() {
   // template choice + auth state. This is the "pre-flight" copy.
   const generateButtonLabel = (() => {
     if (!isLoaded || usageLoading) return "Loading…";
-    return "✨ Generate Card";
+    if (selectedTemplate === "envelope") return "Generate Free Card 💌";
+    return "Preview Magic ✨";
   })();
 
   // Whether this premium template has a ₹49 lock badge in the picker.
@@ -972,18 +973,17 @@ export default function Send() {
                                   "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%)",
                                 pointerEvents: "none",
                               }} />
-                              {/* Top-right gold price pill */}
+                              {/* Top-right premium badge — no price to avoid shock */}
                               <div style={{
                                 position: "absolute", top: 5, right: 5, zIndex: 5,
                                 padding: "3px 7px", borderRadius: 99,
-                                background:
-                                  "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                                fontSize: 10, fontWeight: 800, color: "#1A0A02",
-                                letterSpacing: "0.02em",
-                                display: "flex", alignItems: "center", gap: 3,
-                                boxShadow: "0 2px 6px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.2) inset",
+                                background: "rgba(255,255,255,0.10)",
+                                border: "1px solid rgba(255,255,255,0.18)",
+                                fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.75)",
+                                letterSpacing: "0.04em",
+                                backdropFilter: "blur(6px)",
                               }}>
-                                <Lock size={10} strokeWidth={3} /> ₹49
+                                ✨ Premium
                               </div>
                             </>
                           )}
@@ -1027,7 +1027,7 @@ export default function Send() {
 
                   {selectedTemplate !== "envelope" && isTemplateLocked(selectedTemplate) && usage?.is_signed_in && (
                     <p className="text-center text-xs mt-2" style={{ color: "rgba(255,215,0,0.6)" }}>
-                      💡 Tip: ₹49 unlocks all 3 premium templates + removes watermarks
+                      ✨ Preview the magic first — unlock to share
                     </p>
                   )}
                 </div>
