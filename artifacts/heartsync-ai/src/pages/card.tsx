@@ -888,7 +888,9 @@ export default function Card() {
   }, [showSplash]);
 
   function requireSignIn(): boolean {
-    if (!isLoaded || isSignedIn) return false;
+    // Only skip the gate when Clerk has CONFIRMED the user is signed in.
+    // While Clerk is still loading (!isLoaded), treat as anonymous and gate.
+    if (isLoaded && isSignedIn) return false;
     trackEvent({ event: "signup_wall_shown", occasion, template: "envelope" });
     setShowShareGate(true);
     return true;
