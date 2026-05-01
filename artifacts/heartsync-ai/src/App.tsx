@@ -45,9 +45,10 @@ const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
 
 /* Routes that need ClerkProvider mounted around them. The check is a
  * prefix match against the URL pathname (after the basePath strip). */
-/* /card needs Clerk context so the sender's share buttons can gate on auth.
- * Clerk's 250 KB chunk only loads when one of these prefixes is matched. */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/send", "/analytics", "/remove-watermark", "/card", "/crystal", "/cosmic", "/vinyl"];
+/* /card is intentionally absent: Clerk now mounts lazily inside SenderPanel
+ * only when isSender===true. Recipients of the default envelope card never
+ * trigger a Clerk download at all, cutting ~250 KB from their critical path. */
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/send", "/analytics", "/remove-watermark", "/crystal", "/cosmic", "/vinyl"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,
