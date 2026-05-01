@@ -84,7 +84,7 @@ export interface PremiumLockPanelProps {
 }
 
 /* ── Component ─────────────────────────────────────────────────────────── */
-type Phase = "checking" | "locked" | "signin-gate" | "paying" | "done";
+type Phase = "checking" | "locked" | "signin-gate" | "paying" | "done" | "dismissed";
 
 export default function PremiumLockPanel({
   template, occasion, recipientName, locationSearch, onUnlocked,
@@ -101,10 +101,13 @@ export default function PremiumLockPanel({
 
   /* Ref so we never double-fire onUnlocked */
   const unlockedFiredRef = useRef(false);
+  /* Ref so a user-dismissed panel is never auto-re-shown by effects */
+  const dismissedRef = useRef(false);
 
   /* ── Decide initial phase once Clerk + usage are ready ─────────────── */
   useEffect(() => {
     if (!isLoaded || usageLoading) return;
+    if (dismissedRef.current) return;
 
     // Already paid — skip everything
     if (
@@ -131,6 +134,7 @@ export default function PremiumLockPanel({
 
   /* ── After sign-in redirect: Clerk flips isSignedIn → auto paywall ── */
   useEffect(() => {
+    if (dismissedRef.current) return;
     if (phase === "locked" && isSignedIn && isLoaded && !usageLoading) {
       // Refetch usage and use the RETURNED data — avoids stale closure on `usage`.
       refetchUsage().then((fresh) => {
@@ -250,8 +254,9 @@ export default function PremiumLockPanel({
 
   /* ── Render ─────────────────────────────────────────────────────────── */
 
-  if (phase === "checking") return null; // briefly invisible while Clerk + usage load
-  if (phase === "done") return null;     // parent renders share buttons
+  if (phase === "checking")   return null; // briefly invisible while Clerk + usage load
+  if (phase === "done")       return null; // parent renders share buttons
+  if (phase === "dismissed")  return null; // user dismissed, stay on card page
 
   /* Lock screen — anonymous user hasn't tapped Pay yet */
   if (phase === "locked") {
@@ -508,17 +513,8 @@ export default function PremiumLockPanel({
 
           <button
             onClick={() => {
-              if (isSignedIn) {
-                // Signed-in users can't land on "locked" — the effect immediately
-                // bounces them back to "paying". Navigate away instead.
-                if (window.history.length > 1) {
-                  window.history.back();
-                } else {
-                  window.location.href = `${BASE}/send`;
-                }
-              } else {
-                setPhase("locked");
-              }
+              dismissedRef.current = true;
+              setPhase("dismissed");
             }}
             style={{
               display: "block", width: "100%", textAlign: "center",
