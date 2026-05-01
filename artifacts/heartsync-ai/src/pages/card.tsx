@@ -790,6 +790,7 @@ export default function Card() {
   const isSender = params.get("sender") === "1";
   const isPreview = params.get("preview") === "1" || isSender;
   const isRecipient = !isSender && !isPreview;
+  const directShare = params.get("direct_share") === "1";
 
   /* Share URL — /api/share generates a personalised og:image for WhatsApp,
      then JS-redirects recipients to /envelope.html */
@@ -868,6 +869,15 @@ export default function Card() {
     if (typeof window !== "undefined" && (window as any).__clearHsSplash) {
       (window as any).__clearHsSplash();
     }
+  }, []);
+
+  /* Auto-advance sender to finale when direct_share=1 (coming from generate/payment) */
+  useEffect(() => {
+    if (directShare && isSender) {
+      envelope.finale();
+      setPhase("finale");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* Auto-hide recipient splash after 2.2s */
@@ -1293,6 +1303,47 @@ export default function Card() {
                 >
                   {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
                 </motion.button>
+
+                {/* Remove watermark section — inline, always visible to sender on finale */}
+                <div style={{
+                  marginTop: 16,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  background: "rgba(168,85,247,0.08)",
+                  border: "1px solid rgba(168,85,247,0.2)",
+                  textAlign: "center",
+                }}>
+                  <div style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 14px",
+                    background: "linear-gradient(135deg, #5B21B6 0%, #9333EA 55%, #7C3AED 100%)",
+                    borderRadius: 999,
+                    marginBottom: 10,
+                    boxShadow: "0 4px 18px rgba(168,85,247,0.45)",
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>Made for free on HeartSync</span>
+                    <span style={{ fontSize: 14 }}>✨</span>
+                  </div>
+                  <div>
+                    <a
+                      href={`${(import.meta.env.BASE_URL ?? "").replace(/\/$/, "")}/remove-watermark?id=${params.get("id") ?? ""}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "rgba(255,255,255,0.85)",
+                        textDecoration: "underline",
+                        textDecorationColor: "rgba(168,85,247,0.6)",
+                        textUnderlineOffset: 3,
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      Remove watermark →
+                    </a>
+                  </div>
+                </div>
+
                 <div style={{ marginTop: 10, textAlign: "center" }}>
                   <Link href="/send">
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", cursor: "pointer" }}>
@@ -1373,9 +1424,8 @@ export default function Card() {
 
       <WatermarkBadge
         id={params.get("id")}
-        showRemoveCta={isSender && phase === "finale"}
-        prominent={isSender && phase === "finale"}
-        hidden={phase === "finale" && !isSender}
+        showRemoveCta={false}
+        hidden={phase === "finale"}
       />
 
       {/* ── Share gate: sign in before copying / sharing ── */}
@@ -1428,8 +1478,13 @@ export default function Card() {
                 transition={{ delay: 0.34 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => {
+                  const redirectUrl = (() => {
+                    const u = new URL(window.location.href);
+                    u.searchParams.set("direct_share", "1");
+                    return u.toString();
+                  })();
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  clerk.openSignIn({ redirectUrl: window.location.href } as any);
+                  clerk.openSignIn({ redirectUrl } as any);
                 }}
                 style={{
                   width: "100%", padding: "14px 20px", borderRadius: 14,

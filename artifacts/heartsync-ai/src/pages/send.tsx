@@ -299,7 +299,7 @@ export default function Send() {
     setStep(nextStep);
   }
 
-  function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string) {
+  function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string, directShare = false) {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: name, occasion, relation });
     if (likes.trim()) p.set("likes", likes.trim());
@@ -308,6 +308,7 @@ export default function Send() {
     }
     if (senderFlag) p.set("sender", "1");
     if (cardId) p.set("id", cardId);
+    if (directShare) p.set("direct_share", "1");
     /* Each template uses its own .html file so WhatsApp reads template-specific OG tags */
     if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
     if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
@@ -349,7 +350,7 @@ export default function Send() {
         recipient_name: recipientName.trim() || undefined,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, true);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -397,7 +398,7 @@ export default function Send() {
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId, true);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
@@ -505,7 +506,7 @@ export default function Send() {
     const cardId = pendingCardId;
     clearDraft();
     clearPaywallSnapshot();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true);
     setShowPaywall(false);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
@@ -515,7 +516,7 @@ export default function Send() {
   function handleWatermarkFree() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -555,7 +556,7 @@ export default function Send() {
   function handleWatermarkComplete() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -621,7 +622,7 @@ export default function Send() {
   // template choice + auth state. This is the "pre-flight" copy.
   const generateButtonLabel = (() => {
     if (!isLoaded || usageLoading) return "Loading…";
-    return "✨ Generate my card";
+    return "✨ Generate Card";
   })();
 
   // Whether this premium template has a ₹49 lock badge in the picker.
