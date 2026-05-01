@@ -244,16 +244,12 @@ export default function Send() {
   /* ─── Sign-in transition: dismiss the gate and queue the next step ─── */
   const prevSignedIn = useRef<boolean | null>(null);
   const pendingPremiumAfterSignin = useRef<TemplateId | null>(null);
-  const pendingEnvelopeAfterSignin = useRef(false);
 
   useEffect(() => {
     if (!isLoaded) return;
     if (isSignedIn && prevSignedIn.current === false && showSignInGate) {
       if (isPremiumTemplate(signInGateContext)) {
         pendingPremiumAfterSignin.current = signInGateContext;
-      } else {
-        // Envelope path — after usage loads, auto-proceed to doGenerateCard.
-        pendingEnvelopeAfterSignin.current = true;
       }
       setShowSignInGate(false);
       refetchUsage();
@@ -261,14 +257,13 @@ export default function Send() {
     prevSignedIn.current = isSignedIn ?? false;
   }, [isSignedIn, isLoaded, showSignInGate, signInGateContext, refetchUsage]);
 
-  /* ─── After post-signin refetch: route to paywall or envelope generate ─ */
+  /* ─── After post-signin refetch: route to paywall for premium templates ─ */
   useEffect(() => {
     if (usageLoading || !usage?.is_signed_in) return;
 
     const premiumTpl = pendingPremiumAfterSignin.current;
     if (premiumTpl) {
       if (usage.is_superuser || usage.unlocked_templates.includes(premiumTpl)) {
-        // Template already unlocked — skip paywall and generate directly.
         pendingPremiumAfterSignin.current = null;
         doGenerateCardRef.current();
         return;
@@ -278,12 +273,6 @@ export default function Send() {
         pendingPremiumAfterSignin.current = null;
         openPaywall();
       }
-      return;
-    }
-
-    if (pendingEnvelopeAfterSignin.current) {
-      pendingEnvelopeAfterSignin.current = false;
-      doGenerateCardRef.current();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usage, usageLoading]);
@@ -576,27 +565,27 @@ export default function Send() {
     });
 
     // Wait for Clerk to finish reading the stored session before deciding.
-    // Without this guard, isSignedIn is undefined while Clerk initialises and
-    // a returning logged-in user would incorrectly see the sign-in gate.
     if (!isLoaded) return;
 
-    // Auth gate fires for EVERYONE at the final step (new: even anonymous first-timers).
-    if (!isSignedIn) {
-      setSignInGateContext(selectedTemplate);
-      setShowSignInGate(true);
-      trackEvent({ event: "signup_wall_shown", fingerprint, occasion, template: selectedTemplate });
-      return;
-    }
-
-    // Premium and still locked → paywall.
-    if (isPremiumTemplate(selectedTemplate) && !usageLoading) {
-      const gate = templateGate(usage, selectedTemplate);
-      if (gate === "paywall") {
-        openPaywall();
+    // Premium templates still require auth + paywall at generate time.
+    if (isPremiumTemplate(selectedTemplate)) {
+      if (!isSignedIn) {
+        setSignInGateContext(selectedTemplate);
+        setShowSignInGate(true);
+        trackEvent({ event: "signup_wall_shown", fingerprint, occasion, template: selectedTemplate });
         return;
+      }
+      if (!usageLoading) {
+        const gate = templateGate(usage, selectedTemplate);
+        if (gate === "paywall") {
+          openPaywall();
+          return;
+        }
       }
     }
 
+    // Envelope: generate anonymously — signup wall moves to the card page
+    // (fires when the user tries to copy/share the link).
     await doGenerateCard();
   }
 
@@ -610,7 +599,8 @@ export default function Send() {
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore */ }
-    clerk.openSignIn({ redirectUrl: window.location.href });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    clerk.openSignIn({ redirectUrl: window.location.href } as any);
   }
 
   /* ─── Keep a stable ref to doGenerateCard for the post-signin effect ── */
@@ -1133,7 +1123,7 @@ export default function Send() {
                 transition={{ delay: 0.2 }}
                 style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.3 }}
               >
-                Almost there! Sign in to send
+                Sign in to unlock this template
               </motion.h2>
 
               <motion.p
@@ -1142,7 +1132,9 @@ export default function Send() {
                 transition={{ delay: 0.3 }}
                 style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 24, lineHeight: 1.55 }}
               >
-                Sign in to get your shareable link. Your card draft is waiting.
+                {signInGateContext === "envelope"
+                  ? "Sign in to get your shareable link. Your card is ready."
+                  : "Sign in to unlock premium templates. Your card draft is saved."}
               </motion.p>
 
               {/* Google sign-in button */}

@@ -44,7 +44,9 @@ const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
 
 /* Routes that need ClerkProvider mounted around them. The check is a
  * prefix match against the URL pathname (after the basePath strip). */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/send", "/analytics", "/remove-watermark"];
+/* /card needs Clerk context so the sender's share buttons can gate on auth.
+ * Clerk's 250 KB chunk only loads when one of these prefixes is matched. */
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/send", "/analytics", "/remove-watermark", "/card"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,
