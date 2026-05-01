@@ -328,15 +328,35 @@ export default function Send() {
     return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
   }
 
-  /* ─── Core card-generation logic (called after auth is confirmed) ──── */
+  /* ─── Core card-generation logic ───────────────────────────────────── */
   const doGenerateCard = useCallback(async () => {
-    await incrementUsage();
-
-    const isFree =
-      selectedTemplate === "envelope" ||
-      !!usage?.is_superuser ||
-      (usage?.unlocked_templates ?? []).includes(selectedTemplate);
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
+
+    /* ── Premium templates: redirect immediately for preview + pay-wall ─ */
+    /* The card page (crystal/cosmic/vinyl) handles sign-in + paywall.     */
+    /* We do NOT create a DB card or increment usage here — that happens   */
+    /* in PremiumLockPanel after the ₹49 payment is confirmed.             */
+    if (isPremiumTemplate(selectedTemplate)) {
+      trackEvent({
+        event: "card_created",
+        fingerprint, clerk_user_id: clerkUserId ?? undefined,
+        email: userEmail ?? undefined, occasion,
+        template: selectedTemplate,
+        has_likes: likes.trim().length > 0,
+        used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
+        is_free: false,
+        from_card_ref: fromCardRef,
+        recipient_name: recipientName.trim() || undefined,
+      });
+      clearDraft();
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate);
+      setShowGenerating(true);
+      setTimeout(() => { window.location.href = url; }, 1800);
+      return;
+    }
+
+    /* ── Envelope (free template) ───────────────────────────────────── */
+    await incrementUsage();
 
     let cardId: string | undefined;
     try {
@@ -350,7 +370,7 @@ export default function Send() {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            template: selectedTemplate,
+            template: "envelope",
             occasion,
             recipient_name: recipientName.trim() || undefined,
             message_b64,
@@ -367,30 +387,21 @@ export default function Send() {
       event: "card_created",
       fingerprint, clerk_user_id: clerkUserId ?? undefined,
       email: userEmail ?? undefined, occasion,
-      template: selectedTemplate,
+      template: "envelope",
       has_likes: likes.trim().length > 0,
       used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
-      is_free: isFree,
+      is_free: true,
       from_card_ref: fromCardRef,
       recipient_name: recipientName.trim() || undefined,
       card_id: cardId,
     });
 
-    if (selectedTemplate === "envelope") {
-      clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId);
-      setShowGenerating(true);
-      setTimeout(() => { window.location.href = url; }, 1800);
-      return;
-    }
-
-    // Premium + unlocked: redirect
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId);
     clearDraft();
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
-    selectedTemplate, usage, customMsg, defaultMsg, occasion, recipientName, likes,
+    selectedTemplate, customMsg, defaultMsg, occasion, recipientName, likes,
     fingerprint, clerkUserId, userEmail, incrementUsage, getToken,
   ]);
 
@@ -566,25 +577,8 @@ export default function Send() {
     // Wait for Clerk to finish reading the stored session before deciding.
     if (!isLoaded) return;
 
-    // Premium templates still require auth + paywall at generate time.
-    if (isPremiumTemplate(selectedTemplate)) {
-      if (!isSignedIn) {
-        setSignInGateContext(selectedTemplate);
-        setShowSignInGate(true);
-        trackEvent({ event: "signup_wall_shown", fingerprint, occasion, template: selectedTemplate });
-        return;
-      }
-      if (!usageLoading) {
-        const gate = templateGate(usage, selectedTemplate);
-        if (gate === "paywall") {
-          openPaywall();
-          return;
-        }
-      }
-    }
-
-    // Envelope: generate anonymously — signup wall moves to the card page
-    // (fires when the user tries to copy/share the link).
+    // All templates generate immediately with no gate.
+    // Premium card pages handle the sign-in + paywall wall themselves.
     await doGenerateCard();
   }
 
@@ -627,11 +621,6 @@ export default function Send() {
   // template choice + auth state. This is the "pre-flight" copy.
   const generateButtonLabel = (() => {
     if (!isLoaded || usageLoading) return "Loading…";
-    // Signed-in + premium + not unlocked → "Unlock" copy
-    if (isSignedIn && isPremiumTemplate(selectedTemplate)) {
-      const gate = templateGate(usage, selectedTemplate);
-      if (gate === "paywall") return "Unlock — ₹49 →";
-    }
     return "✨ Get shareable link";
   })();
 

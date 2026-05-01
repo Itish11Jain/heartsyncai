@@ -6,6 +6,7 @@ import {
 } from "@/lib/card-templates";
 import { vinyl, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import PremiumLockPanel from "@/components/PremiumLockPanel";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -132,16 +133,6 @@ export default function VinylCard() {
   const titlePrefix = tpl.title_prefix;
   const finalMessage = customMsg ?? tpl.final_message;
 
-  /* Share URL — /api/share generates a personalised og:image for WhatsApp,
-     then JS-redirects recipients to /vinyl.html */
-  const senderShareUrl = (() => {
-    if (typeof window === "undefined") return "";
-    const p = new URLSearchParams(window.location.search);
-    p.delete("sender");
-    p.set("t", "vinyl");
-    return window.location.origin + "/api/share?" + p.toString();
-  })();
-
   /* ── state ── */
   const [phase, setPhase] = useState<VinylPhase>(isPreview ? "sleeve" : "hook");
   const [spinning, setSpinning] = useState(false);
@@ -156,6 +147,20 @@ export default function VinylCard() {
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
   const [recipCopied, setRecipCopied] = useState(false);
+  /* ── Premium unlock ── */
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  /* Share URL — /api/share generates a personalised og:image for WhatsApp,
+     then JS-redirects recipients to /vinyl.html. Updated after unlock. */
+  const buildShareUrl = (cardId?: string) => {
+    if (typeof window === "undefined") return "";
+    const p = new URLSearchParams(window.location.search);
+    p.delete("sender");
+    p.set("t", "vinyl");
+    if (cardId) p.set("id", cardId);
+    return window.location.origin + "/api/share?" + p.toString();
+  };
+  const [senderShareUrl, setSenderShareUrl] = useState(() => buildShareUrl());
 
   /* ── canvas ── */
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -813,71 +818,84 @@ export default function VinylCard() {
 
               {/* Sender share */}
               {isSender && sleeveReady && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                  style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}
-                >
-                  <p style={{
-                    textAlign: "center", fontSize: 13, color: "#8A7060",
-                    marginBottom: 4, fontStyle: "italic",
-                  }}>
-                    Share this mixtape with {recipientName} ♪
-                  </p>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={shareWhatsApp}
-                    style={{
-                      padding: "14px", borderRadius: 14,
-                      background: "linear-gradient(135deg, #25D366, #128C7E)",
-                      color: "#fff", fontWeight: 700, fontSize: 15,
-                      border: "none", cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    }}
+                isUnlocked ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}
                   >
-                    <span style={{ fontSize: 20 }}>📱</span> Send on WhatsApp
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={copySenderLink}
-                    style={{
-                      padding: "13px", borderRadius: 14,
-                      background: senderCopied ? "rgba(184,118,42,0.15)" : "rgba(74,60,49,0.07)",
-                      color: senderCopied ? "#B8762A" : "#4A3C31",
-                      fontWeight: 600, fontSize: 14,
-                      border: `1.5px solid ${senderCopied ? "rgba(184,118,42,0.4)" : "rgba(74,60,49,0.15)"}`,
-                      cursor: "pointer", transition: "all 0.3s",
-                    }}
-                  >
-                    {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={copyForInstagram}
-                    style={{
-                      padding: "13px", borderRadius: 14,
-                      background: senderIgCopied ? "rgba(184,118,42,0.12)" : "rgba(74,60,49,0.05)",
-                      color: senderIgCopied ? "#B8762A" : "#8A7060",
-                      fontWeight: 600, fontSize: 14,
-                      border: `1.5px solid ${senderIgCopied ? "rgba(184,118,42,0.3)" : "rgba(74,60,49,0.1)"}`,
-                      cursor: "pointer", transition: "all 0.3s",
-                    }}
-                  >
-                    {senderIgCopied ? "✓ Copied for Instagram!" : "📸 Copy for Instagram / DM"}
-                  </motion.button>
-                  <Link href="/">
-                    <button style={{
-                      width: "100%", padding: "11px", borderRadius: 14,
-                      background: "transparent",
-                      color: "#A09080", fontWeight: 500, fontSize: 13,
-                      border: "1px solid rgba(74,60,49,0.1)",
-                      cursor: "pointer", marginTop: 4,
+                    <p style={{
+                      textAlign: "center", fontSize: 13, color: "#8A7060",
+                      marginBottom: 4, fontStyle: "italic",
                     }}>
-                      ← Make another card
-                    </button>
-                  </Link>
-                </motion.div>
+                      Share this mixtape with {recipientName} ♪
+                    </p>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={shareWhatsApp}
+                      style={{
+                        padding: "14px", borderRadius: 14,
+                        background: "linear-gradient(135deg, #25D366, #128C7E)",
+                        color: "#fff", fontWeight: 700, fontSize: 15,
+                        border: "none", cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      }}
+                    >
+                      <span style={{ fontSize: 20 }}>📱</span> Send on WhatsApp
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={copySenderLink}
+                      style={{
+                        padding: "13px", borderRadius: 14,
+                        background: senderCopied ? "rgba(184,118,42,0.15)" : "rgba(74,60,49,0.07)",
+                        color: senderCopied ? "#B8762A" : "#4A3C31",
+                        fontWeight: 600, fontSize: 14,
+                        border: `1.5px solid ${senderCopied ? "rgba(184,118,42,0.4)" : "rgba(74,60,49,0.15)"}`,
+                        cursor: "pointer", transition: "all 0.3s",
+                      }}
+                    >
+                      {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={copyForInstagram}
+                      style={{
+                        padding: "13px", borderRadius: 14,
+                        background: senderIgCopied ? "rgba(184,118,42,0.12)" : "rgba(74,60,49,0.05)",
+                        color: senderIgCopied ? "#B8762A" : "#8A7060",
+                        fontWeight: 600, fontSize: 14,
+                        border: `1.5px solid ${senderIgCopied ? "rgba(184,118,42,0.3)" : "rgba(74,60,49,0.1)"}`,
+                        cursor: "pointer", transition: "all 0.3s",
+                      }}
+                    >
+                      {senderIgCopied ? "✓ Copied for Instagram!" : "📸 Copy for Instagram / DM"}
+                    </motion.button>
+                    <Link href="/">
+                      <button style={{
+                        width: "100%", padding: "11px", borderRadius: 14,
+                        background: "transparent",
+                        color: "#A09080", fontWeight: 500, fontSize: 13,
+                        border: "1px solid rgba(74,60,49,0.1)",
+                        cursor: "pointer", marginTop: 4,
+                      }}>
+                        ← Make another card
+                      </button>
+                    </Link>
+                  </motion.div>
+                ) : (
+                  <PremiumLockPanel
+                    template="vinyl"
+                    occasion={occasion}
+                    recipientName={recipientName}
+                    locationSearch={window.location.search}
+                    onUnlocked={(cardId) => {
+                      setSenderShareUrl(buildShareUrl(cardId));
+                      setIsUnlocked(true);
+                    }}
+                  />
+                )
               )}
 
               {/* Recipient CTA */}

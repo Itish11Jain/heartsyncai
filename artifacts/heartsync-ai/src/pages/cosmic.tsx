@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
 import { cosmic, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import PremiumLockPanel from "@/components/PremiumLockPanel";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -100,16 +101,6 @@ export default function CosmicCard() {
   const tpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
   const finalMessage = customMsg ?? tpl.final_message;
 
-  /* Share URL — /api/share generates a personalised og:image for WhatsApp,
-     then JS-redirects recipients to /cosmic.html */
-  const senderShareUrl = (() => {
-    if (typeof window === "undefined") return "";
-    const p = new URLSearchParams(window.location.search);
-    p.delete("sender");
-    p.set("t", "cosmic");
-    return window.location.origin + "/api/share?" + p.toString();
-  })();
-
   /* ── state ── */
   const [phase, setPhase] = useState<CosmicPhase>(isPreview ? "final" : "hook");
   const [stars, setStars] = useState<PlottedStar[]>([]);
@@ -120,6 +111,20 @@ export default function CosmicCard() {
   const [showFlash, setShowFlash] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
+  /* ── Premium unlock ── */
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  /* Share URL — /api/share generates a personalised og:image for WhatsApp,
+     then JS-redirects recipients to /cosmic.html. Updated after unlock. */
+  const buildShareUrl = (cardId?: string) => {
+    if (typeof window === "undefined") return "";
+    const p = new URLSearchParams(window.location.search);
+    p.delete("sender");
+    p.set("t", "cosmic");
+    if (cardId) p.set("id", cardId);
+    return window.location.origin + "/api/share?" + p.toString();
+  };
+  const [senderShareUrl, setSenderShareUrl] = useState(() => buildShareUrl());
 
   /* ── canvas refs ── */
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -621,44 +626,57 @@ export default function CosmicCard() {
 
             {/* ── Sender share panel ── */}
             {isSender && (
-              <motion.div
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, duration: 0.5 }}
-                style={{ width: "min(350px,calc(100vw - 40px))", marginTop: 20 }}
-              >
-                <p style={{ fontSize: 12, color: "rgba(190,170,255,0.4)", textAlign: "center", marginBottom: 12, letterSpacing: "0.06em" }}>
-                  ✦ Share this card
-                </p>
-                <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-                  <button onClick={shareSenderWhatsApp} style={{
-                    flex: 1, padding: "12px 8px", borderRadius: 12,
-                    background: "rgba(37,211,102,0.1)", border: "1.5px solid rgba(37,211,102,0.28)",
-                    color: "rgba(37,211,102,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              isUnlocked ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}
+                  style={{ width: "min(350px,calc(100vw - 40px))", marginTop: 20 }}
+                >
+                  <p style={{ fontSize: 12, color: "rgba(190,170,255,0.4)", textAlign: "center", marginBottom: 12, letterSpacing: "0.06em" }}>
+                    ✦ Share this card
+                  </p>
+                  <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                    <button onClick={shareSenderWhatsApp} style={{
+                      flex: 1, padding: "12px 8px", borderRadius: 12,
+                      background: "rgba(37,211,102,0.1)", border: "1.5px solid rgba(37,211,102,0.28)",
+                      color: "rgba(37,211,102,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    }}>
+                      💬 WhatsApp
+                    </button>
+                    <button onClick={copySenderLinkForInstagram} style={{
+                      flex: 1, padding: "12px 8px", borderRadius: 12,
+                      background: "rgba(200,100,200,0.1)", border: "1.5px solid rgba(200,100,200,0.28)",
+                      color: "rgba(220,140,255,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    }}>
+                      {senderIgCopied ? "✅ Copied!" : "📸 Instagram"}
+                    </button>
+                  </div>
+                  <button onClick={copySenderLink} style={{
+                    width: "100%", padding: "11px", borderRadius: 12,
+                    background: "rgba(255,215,0,0.07)", border: "1.5px solid rgba(255,215,0,0.18)",
+                    color: "rgba(255,215,0,0.7)", fontWeight: 700, fontSize: 13, cursor: "pointer",
                   }}>
-                    💬 WhatsApp
+                    {senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}
                   </button>
-                  <button onClick={copySenderLinkForInstagram} style={{
-                    flex: 1, padding: "12px 8px", borderRadius: 12,
-                    background: "rgba(200,100,200,0.1)", border: "1.5px solid rgba(200,100,200,0.28)",
-                    color: "rgba(220,140,255,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}>
-                    {senderIgCopied ? "✅ Copied!" : "📸 Instagram"}
-                  </button>
-                </div>
-                <button onClick={copySenderLink} style={{
-                  width: "100%", padding: "11px", borderRadius: 12,
-                  background: "rgba(255,215,0,0.07)", border: "1.5px solid rgba(255,215,0,0.18)",
-                  color: "rgba(255,215,0,0.7)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                }}>
-                  {senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}
-                </button>
-                <div style={{ textAlign: "center", marginTop: 14 }}>
-                  <Link href="/send">
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", cursor: "pointer" }}>
-                      Make another card
-                    </span>
-                  </Link>
-                </div>
-              </motion.div>
+                  <div style={{ textAlign: "center", marginTop: 14 }}>
+                    <Link href="/send">
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", cursor: "pointer" }}>
+                        Make another card
+                      </span>
+                    </Link>
+                  </div>
+                </motion.div>
+              ) : (
+                <PremiumLockPanel
+                  template="cosmic"
+                  occasion={occasion}
+                  recipientName={recipientName}
+                  locationSearch={window.location.search}
+                  onUnlocked={(cardId) => {
+                    setSenderShareUrl(buildShareUrl(cardId));
+                    setIsUnlocked(true);
+                  }}
+                />
+              )
             )}
 
             {/* ── Recipient CTA ── */}

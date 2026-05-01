@@ -16,6 +16,7 @@ import { Link, useSearch } from "wouter";
 import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
 import { trackEvent } from "../lib/trackEvent";
+import PremiumLockPanel from "../components/PremiumLockPanel";
 
 function useQueryParams() {
   const search = useSearch();
@@ -105,6 +106,9 @@ export default function CrystalCard() {
   /* ── Share state ── */
   const [senderCopied,   setSenderCopied]   = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
+  /* ── Premium unlock ── */
+  const [isUnlocked,    setIsUnlocked]    = useState(false);
+  const [overrideCardId, setOverrideCardId] = useState<string | undefined>();
 
   /* ── Canvas ── */
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -453,7 +457,8 @@ export default function CrystalCard() {
     const msgP = params.get("msg"); if (msgP) p.set("msg", msgP);
     if (likesParam) p.set("likes", likesParam);
     const refP = params.get("ref"); if (refP) p.set("ref", refP);
-    const cidP = params.get("id"); if (cidP) p.set("id", cidP);
+    const cardId = overrideCardId ?? params.get("id");
+    if (cardId) p.set("id", cardId);
     return `${window.location.origin}/api/share?${p.toString()}`;
   }
 
@@ -894,38 +899,51 @@ export default function CrystalCard() {
 
             {/* Sender share panel */}
             {isSender && (
-              <motion.div
-                initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5, duration: 0.5 }}
-                style={{ width: "min(340px, 90vw)", marginTop: 22 }}
-              >
-                <p style={{ fontSize: 12, color: "rgba(190,160,255,0.35)", textAlign: "center", marginBottom: 12, letterSpacing: "0.08em" }}>
-                  ✦ share this card
-                </p>
-                <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-                  <button onClick={shareSenderWhatsApp} style={{
-                    flex: 1, padding: "12px 8px", borderRadius: 12,
-                    background: "rgba(37,211,102,0.08)", border: "1.5px solid rgba(37,211,102,0.24)",
-                    color: "rgba(37,211,102,0.86)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}>💬 WhatsApp</button>
-                  <button onClick={copySenderLinkForInstagram} style={{
-                    flex: 1, padding: "12px 8px", borderRadius: 12,
-                    background: "rgba(200,100,200,0.08)", border: "1.5px solid rgba(200,100,200,0.24)",
-                    color: "rgba(220,140,255,0.86)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}>{senderIgCopied ? "✅ Copied!" : "📸 Instagram"}</button>
-                </div>
-                <button onClick={copySenderLink} style={{
-                  width: "100%", padding: "11px", borderRadius: 12,
-                  background: "rgba(180,130,255,0.07)", border: "1.5px solid rgba(180,130,255,0.2)",
-                  color: "rgba(200,170,255,0.72)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                }}>{senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}</button>
-                <div style={{ textAlign: "center", marginTop: 14 }}>
-                  <Link href="/send?ref=card">
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.16)", cursor: "pointer" }}>
-                      Make another card
-                    </span>
-                  </Link>
-                </div>
-              </motion.div>
+              isUnlocked ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}
+                  style={{ width: "min(340px, 90vw)", marginTop: 22 }}
+                >
+                  <p style={{ fontSize: 12, color: "rgba(190,160,255,0.35)", textAlign: "center", marginBottom: 12, letterSpacing: "0.08em" }}>
+                    ✦ share this card
+                  </p>
+                  <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                    <button onClick={shareSenderWhatsApp} style={{
+                      flex: 1, padding: "12px 8px", borderRadius: 12,
+                      background: "rgba(37,211,102,0.08)", border: "1.5px solid rgba(37,211,102,0.24)",
+                      color: "rgba(37,211,102,0.86)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    }}>💬 WhatsApp</button>
+                    <button onClick={copySenderLinkForInstagram} style={{
+                      flex: 1, padding: "12px 8px", borderRadius: 12,
+                      background: "rgba(200,100,200,0.08)", border: "1.5px solid rgba(200,100,200,0.24)",
+                      color: "rgba(220,140,255,0.86)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    }}>{senderIgCopied ? "✅ Copied!" : "📸 Instagram"}</button>
+                  </div>
+                  <button onClick={copySenderLink} style={{
+                    width: "100%", padding: "11px", borderRadius: 12,
+                    background: "rgba(180,130,255,0.07)", border: "1.5px solid rgba(180,130,255,0.2)",
+                    color: "rgba(200,170,255,0.72)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  }}>{senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}</button>
+                  <div style={{ textAlign: "center", marginTop: 14 }}>
+                    <Link href="/send?ref=card">
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.16)", cursor: "pointer" }}>
+                        Make another card
+                      </span>
+                    </Link>
+                  </div>
+                </motion.div>
+              ) : (
+                <PremiumLockPanel
+                  template="crystal"
+                  occasion={occasion}
+                  recipientName={recipientName}
+                  locationSearch={window.location.search}
+                  onUnlocked={(cardId) => {
+                    setOverrideCardId(cardId);
+                    setIsUnlocked(true);
+                  }}
+                />
+              )
             )}
 
             {/* Recipient CTA */}
