@@ -350,7 +350,7 @@ export default function Send() {
         recipient_name: recipientName.trim() || undefined,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, true);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -398,7 +398,7 @@ export default function Send() {
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId, true);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
@@ -516,7 +516,7 @@ export default function Send() {
   function handleWatermarkFree() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
