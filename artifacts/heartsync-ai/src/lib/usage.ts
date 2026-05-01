@@ -97,8 +97,8 @@ export function useCardUsage() {
   const [usage, setUsage] = useState<CardUsage | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsage = useCallback(async () => {
-    if (!isLoaded) return;
+  const fetchUsage = useCallback(async (): Promise<CardUsage | null> => {
+    if (!isLoaded) return null;
     try {
       const headers: Record<string, string> = {};
       if (isSignedIn) {
@@ -122,19 +122,23 @@ export function useCardUsage() {
         };
         if (isSuperUser(userEmail)) data.is_superuser = true;
         setUsage(data);
+        return data;
       }
     } catch {
-      setUsage({
+      const fallback: CardUsage = {
         anon_used: 0,
         signed_in_used: 0,
         is_signed_in: !!isSignedIn,
         is_superuser: isSuperUser(userEmail),
         unlocked_templates: [],
         pending_single_unlocks: 0,
-      });
+      };
+      setUsage(fallback);
+      return fallback;
     } finally {
       setLoading(false);
     }
+    return null;
   }, [isSignedIn, isLoaded, fingerprint, getToken, userEmail]);
 
   useEffect(() => {

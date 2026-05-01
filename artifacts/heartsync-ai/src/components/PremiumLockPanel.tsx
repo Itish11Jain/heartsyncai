@@ -132,11 +132,11 @@ export default function PremiumLockPanel({
   /* ── After sign-in redirect: Clerk flips isSignedIn → auto paywall ── */
   useEffect(() => {
     if (phase === "locked" && isSignedIn && isLoaded && !usageLoading) {
-      // Refetch usage (user may have already paid from another device)
-      refetchUsage().then(() => {
+      // Refetch usage and use the RETURNED data — avoids stale closure on `usage`.
+      refetchUsage().then((fresh) => {
         if (
-          usage?.is_superuser ||
-          (usage?.unlocked_templates ?? []).includes(template)
+          fresh?.is_superuser ||
+          (fresh?.unlocked_templates ?? []).includes(template)
         ) {
           if (!unlockedFiredRef.current) {
             unlockedFiredRef.current = true;
