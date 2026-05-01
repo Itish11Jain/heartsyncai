@@ -10,9 +10,10 @@ interface WatermarkBadgeProps {
   id?: string | null;
   showRemoveCta?: boolean;
   hidden?: boolean;
+  prominent?: boolean;
 }
 
-export default function WatermarkBadge({ id, showRemoveCta = false, hidden = false }: WatermarkBadgeProps) {
+export default function WatermarkBadge({ id, showRemoveCta = false, hidden = false, prominent = false }: WatermarkBadgeProps) {
   // When there's no card id (anonymous generation), the card is always
   // watermarked — show the badge immediately without an API call.
   const [apiWatermarked, setApiWatermarked] = useState<boolean | null>(null);
@@ -40,14 +41,16 @@ export default function WatermarkBadge({ id, showRemoveCta = false, hidden = fal
     <div
       style={{
         position: "fixed",
-        bottom: "calc(env(safe-area-inset-bottom, 20px) + 12px)",
+        bottom: prominent
+          ? "calc(env(safe-area-inset-bottom, 20px) + 52px)"
+          : "calc(env(safe-area-inset-bottom, 20px) + 12px)",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 99999,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 8,
+        gap: prominent ? 10 : 8,
         whiteSpace: "nowrap",
         userSelect: "none",
         WebkitUserSelect: "none",
@@ -58,11 +61,11 @@ export default function WatermarkBadge({ id, showRemoveCta = false, hidden = fal
         <a
           href={removeHref}
           style={{
-            fontSize: 14,
+            fontSize: prominent ? 15 : 14,
             fontWeight: 700,
-            color: "rgba(255,255,255,0.75)",
+            color: prominent ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.75)",
             textDecoration: "underline",
-            textDecorationColor: "rgba(255,255,255,0.35)",
+            textDecorationColor: prominent ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.35)",
             textUnderlineOffset: 3,
             cursor: "pointer",
             letterSpacing: "0.02em",

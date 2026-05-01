@@ -621,7 +621,7 @@ export default function Send() {
   // template choice + auth state. This is the "pre-flight" copy.
   const generateButtonLabel = (() => {
     if (!isLoaded || usageLoading) return "Loading…";
-    return "✨ Get shareable link";
+    return "✨ Generate my card";
   })();
 
   // Whether this premium template has a ₹49 lock badge in the picker.
