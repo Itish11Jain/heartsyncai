@@ -262,15 +262,20 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                 transition={{ delay: 0.34 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => {
-                  const redirectUrl = (() => {
+                  /* Build the return URL with direct_share=1 so the page
+                   * starts at the finale screen after Clerk redirects back. */
+                  const returnUrl = (() => {
                     const u = new URL(window.location.href);
                     u.searchParams.set("direct_share", "1");
                     return u.toString();
                   })();
-                  /* `redirectUrl` is a valid Clerk openSignIn option at runtime
-                   * but absent from some Clerk TS definition versions.
-                   * Cast via `unknown` to the narrower type we actually need. */
-                  (clerk.openSignIn as (opts: { redirectUrl: string }) => void)({ redirectUrl });
+                  /* Clerk v6 deprecated `redirectUrl` in favour of
+                   * `forceRedirectUrl` (applied after sign-in AND sign-up,
+                   * including OAuth flows that do a full-page round-trip). */
+                  (clerk.openSignIn as unknown as (opts: {
+                    forceRedirectUrl: string;
+                    afterSignUpUrl: string;
+                  }) => void)({ forceRedirectUrl: returnUrl, afterSignUpUrl: returnUrl });
                 }}
                 style={{
                   width: "100%", padding: "14px 20px", borderRadius: 14,
