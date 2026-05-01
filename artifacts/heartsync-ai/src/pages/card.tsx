@@ -6,6 +6,7 @@ import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templ
 import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import WatermarkBadge from "@/components/WatermarkBadge";
+import WatermarkPaywallModal from "@/components/WatermarkPaywallModal";
 import CosmicCard from "@/pages/cosmic";
 import VinylCard from "@/pages/vinyl";
 import CrystalCard from "@/pages/crystal";
@@ -817,6 +818,8 @@ export default function Card() {
   const { isSignedIn, isLoaded } = useAuth();
   const clerk = useClerk();
   const [showShareGate, setShowShareGate] = useState(false);
+  const [showWatermarkModal, setShowWatermarkModal] = useState(false);
+  const [watermarkRemoved, setWatermarkRemoved] = useState(false);
 
   const skipToFinale = directShare && isSender;
   const [phase, setPhase] = useState<Phase>(skipToFinale ? "finale" : "envelope");
@@ -1298,8 +1301,8 @@ export default function Card() {
                   {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
                 </motion.button>
 
-                {/* Remove watermark section — only when sender is signed in */}
-                {isSignedIn && <div style={{
+                {/* Remove watermark section — only when sender is signed in and watermark not yet removed */}
+                {isSignedIn && !watermarkRemoved && <div style={{
                   marginTop: 16,
                   padding: "12px 14px",
                   borderRadius: 12,
@@ -1321,11 +1324,11 @@ export default function Card() {
                     <span style={{ fontSize: 14 }}>✨</span>
                   </div>
                   <div>
-                    <a
-                      href={`${(import.meta.env.BASE_URL ?? "").replace(/\/$/, "")}/remove-watermark?id=${params.get("id") ?? ""}&back=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                    <button
+                      onClick={() => setShowWatermarkModal(true)}
                       style={{
-                        fontSize: 14,
-                        fontWeight: 700,
+                        background: "none", border: "none", padding: 0, cursor: "pointer",
+                        fontSize: 14, fontWeight: 700,
                         color: "rgba(255,255,255,0.85)",
                         textDecoration: "underline",
                         textDecorationColor: "rgba(168,85,247,0.6)",
@@ -1334,7 +1337,7 @@ export default function Card() {
                       }}
                     >
                       Remove watermark →
-                    </a>
+                    </button>
                   </div>
                 </div>}
 
@@ -1420,7 +1423,7 @@ export default function Card() {
         id={params.get("id")}
         showRemoveCta={false}
         prominent={isSender && isSignedIn && phase === "finale"}
-        hidden={phase === "finale" && !(isSender && isSignedIn)}
+        hidden={watermarkRemoved || (phase === "finale" && !(isSender && isSignedIn))}
       />
 
       {/* ── Share gate: sign in before copying / sharing ── */}
@@ -1513,6 +1516,20 @@ export default function Card() {
               </motion.button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Watermark paywall modal ── */}
+      <AnimatePresence>
+        {showWatermarkModal && (
+          <WatermarkPaywallModal
+            cardId={params.get("id") ?? ""}
+            onClose={() => setShowWatermarkModal(false)}
+            onSuccess={() => {
+              setShowWatermarkModal(false);
+              setWatermarkRemoved(true);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
