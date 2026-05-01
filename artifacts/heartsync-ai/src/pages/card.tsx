@@ -1298,8 +1298,8 @@ export default function Card() {
                   {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
                 </motion.button>
 
-                {/* Remove watermark section — inline, always visible to sender on finale */}
-                <div style={{
+                {/* Remove watermark section — only when sender is signed in */}
+                {isSignedIn && <div style={{
                   marginTop: 16,
                   padding: "12px 14px",
                   borderRadius: 12,
@@ -1336,7 +1336,7 @@ export default function Card() {
                       Remove watermark →
                     </a>
                   </div>
-                </div>
+                </div>}
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
                   <Link href="/send">
@@ -1419,6 +1419,7 @@ export default function Card() {
       <WatermarkBadge
         id={params.get("id")}
         showRemoveCta={false}
+        prominent={isSender && isSignedIn}
         hidden={phase === "finale"}
       />
 
