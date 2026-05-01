@@ -13,14 +13,17 @@ interface WatermarkBadgeProps {
 }
 
 export default function WatermarkBadge({ id, showRemoveCta = false, hidden = false }: WatermarkBadgeProps) {
-  const [show, setShow] = useState(false);
+  // When there's no card id (anonymous generation), the card is always
+  // watermarked — show the badge immediately without an API call.
+  const [apiWatermarked, setApiWatermarked] = useState<boolean | null>(null);
+  const show = !id ? true : apiWatermarked === true;
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) return; // no id → anonymous card, always watermarked (handled above)
     fetch(`${BASE}/api/cards/${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: CardMeta | null) => {
-        if (data?.is_watermarked) setShow(true);
+        setApiWatermarked(data?.is_watermarked ?? false);
       })
       .catch(() => {});
   }, [id]);
@@ -50,8 +53,8 @@ export default function WatermarkBadge({ id, showRemoveCta = false, hidden = fal
         WebkitUserSelect: "none",
       } as React.CSSProperties}
     >
-      {/* Remove CTA — only for the card sender */}
-      {showRemoveCta && (
+      {/* Remove CTA — only for sender with a saved card (anonymous cards have no id) */}
+      {showRemoveCta && !!id && (
         <a
           href={removeHref}
           style={{

@@ -377,11 +377,10 @@ export default function Send() {
     });
 
     if (selectedTemplate === "envelope") {
-      setPendingCardId(cardId);
-      setWatermarkStage("choose");
-      setWatermarkUtr("");
-      setWatermarkUtrError("");
-      setShowWatermarkUpsell(true);
+      clearDraft();
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId);
+      setShowGenerating(true);
+      setTimeout(() => { window.location.href = url; }, 1800);
       return;
     }
 
