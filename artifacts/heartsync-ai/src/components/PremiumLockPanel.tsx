@@ -507,7 +507,19 @@ export default function PremiumLockPanel({
           </p>
 
           <button
-            onClick={() => setPhase("locked")}
+            onClick={() => {
+              if (isSignedIn) {
+                // Signed-in users can't land on "locked" — the effect immediately
+                // bounces them back to "paying". Navigate away instead.
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = `${BASE}/send`;
+                }
+              } else {
+                setPhase("locked");
+              }
+            }}
             style={{
               display: "block", width: "100%", textAlign: "center",
               fontSize: 12, color: "rgba(255,255,255,0.28)",
