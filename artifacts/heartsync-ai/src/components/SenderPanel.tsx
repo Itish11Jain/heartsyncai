@@ -265,8 +265,10 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     u.searchParams.set("direct_share", "1");
                     return u.toString();
                   })();
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  clerk.openSignIn({ redirectUrl } as any);
+                  /* `redirectUrl` is a valid Clerk openSignIn option at runtime
+                   * but absent from some Clerk TS definition versions.
+                   * Cast via `unknown` to the narrower type we actually need. */
+                  (clerk.openSignIn as (opts: { redirectUrl: string }) => void)({ redirectUrl });
                 }}
                 style={{
                   width: "100%", padding: "14px 20px", borderRadius: 14,
