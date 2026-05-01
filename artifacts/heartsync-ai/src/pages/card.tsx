@@ -1419,7 +1419,6 @@ export default function Card() {
       <WatermarkBadge
         id={params.get("id")}
         showRemoveCta={false}
-        prominent={isSender && isSignedIn}
         hidden={phase === "finale"}
       />
 
