@@ -818,8 +818,11 @@ export default function Card() {
   const clerk = useClerk();
   const [showShareGate, setShowShareGate] = useState(false);
 
-  const [phase, setPhase] = useState<Phase>("envelope");
-  const [clickedOrbs, setClickedOrbs] = useState<Set<number>>(new Set());
+  const skipToFinale = directShare && isSender;
+  const [phase, setPhase] = useState<Phase>(skipToFinale ? "finale" : "envelope");
+  const [clickedOrbs, setClickedOrbs] = useState<Set<number>>(() =>
+    skipToFinale ? new Set(orbs.map((_, i) => i)) : new Set()
+  );
   const [activeTooltip, setActiveTooltip] = useState<{ orb: OrbData; key: number } | null>(null);
   const [tooltipKeyCounter, setTooltipKeyCounter] = useState(0);
   const [orbRadius, setOrbRadius] = useState(130);
@@ -869,15 +872,6 @@ export default function Card() {
     if (typeof window !== "undefined" && (window as any).__clearHsSplash) {
       (window as any).__clearHsSplash();
     }
-  }, []);
-
-  /* Auto-advance sender to finale when direct_share=1 (coming from generate/payment) */
-  useEffect(() => {
-    if (directShare && isSender) {
-      envelope.finale();
-      setPhase("finale");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* Auto-hide recipient splash after 2.2s */
