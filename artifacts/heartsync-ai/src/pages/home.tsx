@@ -787,6 +787,38 @@ function CardCarousel() {
   );
 }
 
+const HS_SIGNED_IN_KEY = "hs_clerk_signed_in";
+
+function AuthHeaderButton() {
+  const [isSignedIn, setIsSignedIn] = useState(
+    () => { try { return localStorage.getItem(HS_SIGNED_IN_KEY) === "1"; } catch { return false; } }
+  );
+
+  /* Keep in sync if the flag changes in another tab */
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === HS_SIGNED_IN_KEY) {
+        setIsSignedIn(e.newValue === "1");
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  if (isSignedIn) {
+    return (
+      <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
+        <Link href="/sign-out" onClick={() => home.navTap()}>Sign out</Link>
+      </Button>
+    );
+  }
+  return (
+    <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
+      <Link href="/sign-in" onClick={() => home.navTap()}>Log in</Link>
+    </Button>
+  );
+}
+
 export default function Home() {
   const guideCta = "/date-guide";
   const [, navigate] = useLocation();
@@ -868,9 +900,7 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
-              <Link href="/sign-in" onClick={() => home.navTap()}>Log in</Link>
-            </Button>
+            <AuthHeaderButton />
           </div>
         </header>
 

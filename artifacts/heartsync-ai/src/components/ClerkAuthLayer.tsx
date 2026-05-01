@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, useClerk } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useAuth, useClerk } from "@clerk/react";
 import { dark } from "@clerk/themes";
 import { Switch, Route, useLocation, useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
@@ -137,6 +137,39 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+const HS_SIGNED_IN_KEY = "hs_clerk_signed_in";
+
+/** Writes/clears a localStorage flag so pages outside ClerkProvider
+ *  (e.g. the home page) can react to sign-in state without the full SDK. */
+function SessionSyncer() {
+  const { isSignedIn, isLoaded } = useAuth();
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      if (isSignedIn) {
+        localStorage.setItem(HS_SIGNED_IN_KEY, "1");
+      } else {
+        localStorage.removeItem(HS_SIGNED_IN_KEY);
+      }
+    } catch { /* ignore quota errors */ }
+  }, [isSignedIn, isLoaded]);
+  return null;
+}
+
+/** Clears the Clerk session and bounces the user back to the home page. */
+function SignOutPage() {
+  const { signOut } = useClerk();
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    signOut().then(() => {
+      try { localStorage.removeItem(HS_SIGNED_IN_KEY); } catch { /* ignore */ }
+      setLocation("/");
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 interface ClerkAuthLayerProps {
   children: React.ReactNode;
 }
@@ -155,9 +188,11 @@ export default function ClerkAuthLayer({ children }: ClerkAuthLayerProps) {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <ClerkQueryClientCacheInvalidator />
+      <SessionSyncer />
       <Switch>
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
+        <Route path="/sign-out" component={SignOutPage} />
         <Route>{children}</Route>
       </Switch>
     </ClerkProvider>
