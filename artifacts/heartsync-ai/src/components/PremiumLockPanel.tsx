@@ -256,7 +256,47 @@ export default function PremiumLockPanel({
 
   if (phase === "checking")   return null; // briefly invisible while Clerk + usage load
   if (phase === "done")       return null; // parent renders share buttons
-  if (phase === "dismissed")  return null; // user dismissed, stay on card page
+
+  /* Dismissed — show locked placeholder buttons; clicking re-opens paywall */
+  if (phase === "dismissed") {
+    const reopenPaywall = () => {
+      dismissedRef.current = false;
+      setPhase("paying");
+    };
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        style={{ width: "min(340px, 90vw)", marginTop: 22 }}
+      >
+        <p style={{ fontSize: 12, color: "rgba(190,160,255,0.28)", textAlign: "center", marginBottom: 12, letterSpacing: "0.08em" }}>
+          🔒 unlock to share
+        </p>
+        <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+          <button onClick={reopenPaywall} style={{
+            flex: 1, padding: "12px 8px", borderRadius: 12,
+            background: "rgba(37,211,102,0.04)", border: "1.5px solid rgba(37,211,102,0.14)",
+            color: "rgba(37,211,102,0.45)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>💬 WhatsApp</button>
+          <button onClick={reopenPaywall} style={{
+            flex: 1, padding: "12px 8px", borderRadius: 12,
+            background: "rgba(200,100,200,0.04)", border: "1.5px solid rgba(200,100,200,0.14)",
+            color: "rgba(220,140,255,0.45)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>📸 Instagram</button>
+        </div>
+        <button onClick={reopenPaywall} style={{
+          width: "100%", padding: "11px", borderRadius: 12,
+          background: "rgba(180,130,255,0.04)", border: "1.5px solid rgba(180,130,255,0.14)",
+          color: "rgba(200,170,255,0.45)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+        }}>🔗 Copy Link</button>
+        <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 10, cursor: "pointer" }}
+          onClick={reopenPaywall}>
+          Tap any button to unlock · ₹49 one-time
+        </p>
+      </motion.div>
+    );
+  }
 
   /* Lock screen — anonymous user hasn't tapped Pay yet */
   if (phase === "locked") {
