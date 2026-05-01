@@ -48,12 +48,22 @@
       arrives, not after the parser reaches the closing </body>.
     -->
     <link rel="modulepreload" href="/src/main.tsx" />
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q7ZC1EMZJE"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-Q7ZC1EMZJE');
+      /* Block GA on Replit dev previews and localhost — production only. */
+      (function(){
+        var h = window.location.hostname;
+        var isDev = h === 'localhost' || h === '127.0.0.1' || h.indexOf('.replit.dev') !== -1;
+        if (isDev) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-Q7ZC1EMZJE';
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', 'G-Q7ZC1EMZJE');
+      })();
     </script>
   </head>
   <body>
