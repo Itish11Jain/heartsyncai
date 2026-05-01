@@ -1419,7 +1419,8 @@ export default function Card() {
       <WatermarkBadge
         id={params.get("id")}
         showRemoveCta={false}
-        hidden={phase === "finale"}
+        prominent={isSender && isSignedIn && phase === "finale"}
+        hidden={phase === "finale" && !(isSender && isSignedIn)}
       />
 
       {/* ── Share gate: sign in before copying / sharing ── */}
