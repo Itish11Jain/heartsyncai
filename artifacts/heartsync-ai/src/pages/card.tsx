@@ -1172,7 +1172,10 @@ export default function Card() {
               position: "fixed", inset: 0,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               zIndex: 30,
-              padding: "16px",
+              /* For senders the share panel (~260px) is fixed at the bottom.
+               * Shift the card up by adding equivalent bottom padding so it
+               * never gets covered by the buttons. */
+              padding: isSender ? "16px 16px 280px" : "16px",
               overflowY: "auto",
               gap: 16,
             }}
