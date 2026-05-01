@@ -38,6 +38,7 @@ const VinylCard = lazy(() => import("@/pages/vinyl"));
 const Send = lazy(() => import("@/pages/send"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const RemoveWatermark = lazy(() => import("@/pages/remove-watermark"));
+const Account = lazy(() => import("@/pages/account"));
 
 /* ── Lazy Clerk wrapper (loads ~250 KB only when needed) ────────────── */
 const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
@@ -46,7 +47,7 @@ const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
  * prefix match against the URL pathname (after the basePath strip). */
 /* /card needs Clerk context so the sender's share buttons can gate on auth.
  * Clerk's 250 KB chunk only loads when one of these prefixes is matched. */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/send", "/analytics", "/remove-watermark", "/card", "/crystal", "/cosmic", "/vinyl"];
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/send", "/analytics", "/remove-watermark", "/card", "/crystal", "/cosmic", "/vinyl"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,
@@ -106,6 +107,7 @@ function AppRoutes() {
       <Route path="/send"><L><Send /></L></Route>
       <Route path="/analytics"><L><Analytics /></L></Route>
       <Route path="/remove-watermark"><L><RemoveWatermark /></L></Route>
+      <Route path="/account"><L><Account /></L></Route>
 
       <Route component={NotFound} />
     </Switch>

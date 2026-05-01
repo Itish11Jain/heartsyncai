@@ -86,6 +86,55 @@ async function withUtrLock<T>(
 }
 
 /**
+ * GET /api/clerk/profile
+ * Requires a valid Clerk session.
+ * Returns the signed-in user's plan (free | premium) and their card list.
+ */
+router.get("/clerk/profile", async (req, res) => {
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+  if (!clerkUserId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+
+  try {
+    const ALL_PREMIUM = ["cosmic", "crystal", "vinyl"];
+
+    const [userRow, cardsRow] = await Promise.all([
+      pool.query<{ unlocked_templates: string[] }>(
+        "SELECT unlocked_templates FROM hs_clerk_users WHERE clerk_user_id = $1",
+        [clerkUserId],
+      ),
+      pool.query<{
+        id: string;
+        template: string | null;
+        occasion: string | null;
+        recipient_name: string | null;
+        is_premium: boolean;
+        is_watermarked: boolean;
+        created_at: string;
+      }>(
+        `SELECT id, template, occasion, recipient_name, is_premium, is_watermarked, created_at
+         FROM hs_cards
+         WHERE clerk_user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        [clerkUserId],
+      ),
+    ]);
+
+    const unlocked: string[] = userRow.rows[0]?.unlocked_templates ?? [];
+    const plan = ALL_PREMIUM.every((t) => unlocked.includes(t)) ? "premium" : "free";
+
+    res.json({ plan, cards: cardsRow.rows });
+  } catch (err) {
+    console.error("[cards] GET /clerk/profile error", err);
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
+/**
  * POST /api/cards
  * Requires a valid Clerk session. Creates a card row with is_watermarked=true.
  * Body: { template, occasion, recipient_name, message_b64 }

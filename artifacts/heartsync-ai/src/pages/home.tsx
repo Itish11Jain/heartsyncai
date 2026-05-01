@@ -807,9 +807,14 @@ function AuthHeaderButton() {
 
   if (isSignedIn) {
     return (
-      <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
-        <Link href="/sign-out" onClick={() => home.navTap()}>Sign out</Link>
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button asChild variant="outline" className="rounded-full border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 text-sm px-4 h-auto py-1.5 text-white/70">
+          <Link href="/account" onClick={() => home.navTap()}>My Account</Link>
+        </Button>
+        <Button asChild variant="ghost" className="rounded-full text-sm px-4 h-auto py-1.5 text-white/35 hover:text-white/60 hover:bg-white/5">
+          <Link href="/sign-out" onClick={() => home.navTap()}>Sign out</Link>
+        </Button>
+      </div>
     );
   }
   return (
