@@ -12,6 +12,9 @@ const CosmicCard = lazy(() => import("@/pages/cosmic"));
 const VinylCard = lazy(() => import("@/pages/vinyl"));
 const CrystalCard = lazy(() => import("@/pages/crystal"));
 const SenderPanel = lazy(() => import("@/components/SenderPanel"));
+/* ClerkAuthLayer is lazy so recipients of premium templates never load the Clerk SDK.
+ * It is only mounted when isSender=true (the paywall / PremiumLockPanel needs Clerk). */
+const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
 
 /* ─────────────────────────── helpers ──────────────────────────── */
 
@@ -777,13 +780,27 @@ type Phase = "envelope" | "opening" | "orbs" | "finale";
 
 export default function Card() {
   const params = useQueryParams();
+  /* isSender drives whether we load Clerk (for PremiumLockPanel) or skip it (LCP for recipients). */
+  const isSenderParam = params.get("sender") === "1";
 
-  /* Route to Cosmic template if requested — lazy chunk, only loads for cosmic senders */
-  if (params.get("template") === "cosmic") return <Suspense fallback={null}><CosmicCard /></Suspense>;
-  /* Route to Vinyl template if requested — lazy chunk, only loads for vinyl senders */
-  if (params.get("template") === "vinyl") return <Suspense fallback={null}><VinylCard /></Suspense>;
-  /* Route to Crystal Ball template if requested — lazy chunk, only loads for crystal senders */
-  if (params.get("template") === "crystal") return <Suspense fallback={null}><CrystalCard /></Suspense>;
+  /* Route to Cosmic template if requested — lazy chunk, only loads for cosmic visitors */
+  if (params.get("template") === "cosmic") {
+    const card = <Suspense fallback={null}><CosmicCard /></Suspense>;
+    if (isSenderParam) return <Suspense fallback={null}><ClerkAuthLayer>{card}</ClerkAuthLayer></Suspense>;
+    return card;
+  }
+  /* Route to Vinyl template if requested — lazy chunk, only loads for vinyl visitors */
+  if (params.get("template") === "vinyl") {
+    const card = <Suspense fallback={null}><VinylCard /></Suspense>;
+    if (isSenderParam) return <Suspense fallback={null}><ClerkAuthLayer>{card}</ClerkAuthLayer></Suspense>;
+    return card;
+  }
+  /* Route to Crystal Ball template if requested — lazy chunk, only loads for crystal visitors */
+  if (params.get("template") === "crystal") {
+    const card = <Suspense fallback={null}><CrystalCard /></Suspense>;
+    if (isSenderParam) return <Suspense fallback={null}><ClerkAuthLayer>{card}</ClerkAuthLayer></Suspense>;
+    return card;
+  }
 
   const recipientName = params.get("to") || "Friend";
   const occasion = params.get("occasion") || "thank_you";
