@@ -5,6 +5,7 @@ import { useAuth, useClerk } from "@clerk/react";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
 import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import { useCardUsage } from "@/lib/usage";
 import WatermarkBadge from "@/components/WatermarkBadge";
 import WatermarkPaywallModal from "@/components/WatermarkPaywallModal";
 import CosmicCard from "@/pages/cosmic";
@@ -817,6 +818,8 @@ export default function Card() {
 
   const { isSignedIn, isLoaded } = useAuth();
   const clerk = useClerk();
+  const { usage } = useCardUsage();
+  const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
   const [showShareGate, setShowShareGate] = useState(false);
   const [showWatermarkModal, setShowWatermarkModal] = useState(false);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
@@ -1301,8 +1304,8 @@ export default function Card() {
                   {senderCopied ? "✓ Link Copied!" : "🔗 Copy Link"}
                 </motion.button>
 
-                {/* Remove watermark section — only when sender is signed in and watermark not yet removed */}
-                {isSignedIn && !watermarkRemoved && <div style={{
+                {/* Remove watermark section — only for signed-in non-premium senders */}
+                {isSignedIn && !isPremiumUser && !watermarkRemoved && <div style={{
                   marginTop: 16,
                   padding: "12px 14px",
                   borderRadius: 12,
@@ -1423,7 +1426,7 @@ export default function Card() {
         id={params.get("id")}
         showRemoveCta={false}
         prominent={isSender && isSignedIn && phase === "finale"}
-        hidden={watermarkRemoved || (phase === "finale" && !(isSender && isSignedIn))}
+        hidden={isPremiumUser || watermarkRemoved || (phase === "finale" && !(isSender && isSignedIn))}
       />
 
       {/* ── Share gate: sign in before copying / sharing ── */}
