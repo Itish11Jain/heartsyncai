@@ -88,12 +88,12 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   return (
     <>
-      {/* Watermark badge — visible to all non-premium senders in finale */}
+      {/* Watermark badge — shown in non-finale phases only; finale uses the inline CTA below */}
       <WatermarkBadge
         id={cardId || undefined}
         showRemoveCta={false}
-        prominent={phase === "finale"}
-        hidden={isPremiumUser || watermarkRemoved}
+        prominent={false}
+        hidden={isPremiumUser || watermarkRemoved || phase === "finale"}
       />
 
       {/* ── Sender share panel (finale only) ── */}
