@@ -385,4 +385,69 @@ router.post("/cards/:id/remove-watermark", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/cards/:id/free-watermark-removal
+ * Requires Clerk auth. No payment needed — signing in is sufficient.
+ *
+ * Ownership rules:
+ *   - Card has no owner (created anonymously) → claim it + remove watermark.
+ *   - Card is owned by this user → remove watermark.
+ *   - Card is owned by someone else → 403.
+ */
+router.post("/cards/:id/free-watermark-removal", async (req, res) => {
+  const auth = getAuth(req);
+  const clerkUserId = auth?.userId;
+  if (!clerkUserId) {
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+
+  try {
+    const { id } = req.params;
+
+    const existing = await pool.query<{
+      clerk_user_id: string | null;
+      is_watermarked: boolean;
+    }>(
+      "SELECT clerk_user_id, is_watermarked FROM hs_cards WHERE id = $1",
+      [id],
+    );
+
+    if (existing.rows.length === 0) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+
+    const card = existing.rows[0];
+
+    if (card.clerk_user_id !== null && card.clerk_user_id !== clerkUserId) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+
+    if (!card.is_watermarked) {
+      res.json({ ok: true, already_clean: true });
+      return;
+    }
+
+    if (card.clerk_user_id === null) {
+      /* Anonymous card — claim ownership and remove watermark in one step. */
+      await pool.query(
+        "UPDATE hs_cards SET is_watermarked = FALSE, clerk_user_id = $1 WHERE id = $2",
+        [clerkUserId, id],
+      );
+    } else {
+      await pool.query(
+        "UPDATE hs_cards SET is_watermarked = FALSE WHERE id = $1",
+        [id],
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[cards] POST /cards/:id/free-watermark-removal error", err);
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
 export default router;

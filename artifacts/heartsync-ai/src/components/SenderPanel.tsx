@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useAuth, useClerk } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
 import WatermarkBadge from "@/components/WatermarkBadge";
-import WatermarkPaywallModal from "@/components/WatermarkPaywallModal";
 import ClerkAuthLayer from "@/components/ClerkAuthLayer";
+
+const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 type Phase = "envelope" | "opening" | "orbs" | "finale";
 
@@ -20,34 +21,58 @@ interface SenderPanelProps {
 }
 
 function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, phase }: SenderPanelProps) {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, getToken } = useAuth();
   const clerk = useClerk();
   const { usage } = useCardUsage();
   const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
-  const [showWatermarkModal, setShowWatermarkModal] = useState(false);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
+  const [wmLoading, setWmLoading] = useState(false);
+  const [wmError, setWmError] = useState<string | null>(null);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
 
-  /* After Clerk redirects back with ?open_watermark=1, auto-open the paywall. */
+  /* Call the free-removal API — no payment needed, just auth. */
+  const removeWatermarkFree = useCallback(async () => {
+    if (!cardId) return;
+    setWmLoading(true);
+    setWmError(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BASE}/api/cards/${cardId}/free-watermark-removal`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setWatermarkRemoved(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setWmError(data?.message ?? "Something went wrong. Please try again.");
+      }
+    } catch {
+      setWmError("Network error. Please try again.");
+    } finally {
+      setWmLoading(false);
+    }
+  }, [cardId, getToken]);
+
+  /* After Clerk redirects back with ?open_watermark=1, auto-remove watermark. */
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     const p = new URLSearchParams(window.location.search);
     if (p.get("open_watermark") === "1") {
-      /* Strip the param so a page refresh doesn't re-open the modal. */
       p.delete("open_watermark");
       const clean = window.location.pathname + (p.toString() ? "?" + p.toString() : "");
       window.history.replaceState(null, "", clean);
-      setShowWatermarkModal(true);
+      removeWatermarkFree();
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, removeWatermarkFree]);
 
   function handleRemoveWatermarkClick() {
     if (isLoaded && isSignedIn) {
-      setShowWatermarkModal(true);
+      removeWatermarkFree();
       return;
     }
-    /* Not signed in — sign in first, then come back to open the paywall. */
+    /* Not signed in — sign in first, then return here to auto-remove. */
     const returnUrl = (() => {
       const u = new URL(window.location.href);
       u.searchParams.set("open_watermark", "1");
@@ -176,20 +201,31 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           {/* Remove watermark CTA — visible to all non-premium senders */}
           {!isPremiumUser && !watermarkRemoved && (
             <div style={{ marginTop: 16, textAlign: "center" }}>
+              {wmError && (
+                <p style={{ fontSize: 12, color: "#f87171", marginBottom: 6 }}>{wmError}</p>
+              )}
               <button
                 onClick={handleRemoveWatermarkClick}
+                disabled={wmLoading}
                 style={{
-                  background: "none", border: "none", padding: 0, cursor: "pointer",
+                  background: "none", border: "none", padding: 0,
+                  cursor: wmLoading ? "default" : "pointer",
                   fontSize: 14, fontWeight: 700,
-                  color: "rgba(255,255,255,0.85)",
+                  color: wmLoading ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.85)",
                   textDecoration: "underline",
                   textDecorationColor: "rgba(168,85,247,0.6)",
                   textUnderlineOffset: 3,
                   letterSpacing: "0.02em",
                 }}
               >
-                Remove watermark →
+                {wmLoading ? "Removing…" : "Remove watermark →"}
               </button>
+            </div>
+          )}
+
+          {watermarkRemoved && (
+            <div style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "#4ade80", fontWeight: 600 }}>
+              ✓ Watermark removed!
             </div>
           )}
 
@@ -202,20 +238,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           </div>
         </motion.div>
       )}
-
-      {/* ── Watermark paywall modal ── */}
-      <AnimatePresence>
-        {showWatermarkModal && (
-          <WatermarkPaywallModal
-            cardId={cardId}
-            onClose={() => setShowWatermarkModal(false)}
-            onSuccess={() => {
-              setShowWatermarkModal(false);
-              setWatermarkRemoved(true);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 }
