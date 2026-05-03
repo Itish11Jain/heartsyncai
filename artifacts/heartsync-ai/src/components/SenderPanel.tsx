@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { useAuth } from "@clerk/react";
+import { useAuth, useClerk } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -20,13 +20,44 @@ interface SenderPanelProps {
 }
 
 function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, phase }: SenderPanelProps) {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
+  const clerk = useClerk();
   const { usage } = useCardUsage();
   const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
   const [showWatermarkModal, setShowWatermarkModal] = useState(false);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
+
+  /* After Clerk redirects back with ?open_watermark=1, auto-open the paywall. */
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("open_watermark") === "1") {
+      /* Strip the param so a page refresh doesn't re-open the modal. */
+      p.delete("open_watermark");
+      const clean = window.location.pathname + (p.toString() ? "?" + p.toString() : "");
+      window.history.replaceState(null, "", clean);
+      setShowWatermarkModal(true);
+    }
+  }, [isLoaded, isSignedIn]);
+
+  function handleRemoveWatermarkClick() {
+    if (isLoaded && isSignedIn) {
+      setShowWatermarkModal(true);
+      return;
+    }
+    /* Not signed in — sign in first, then come back to open the paywall. */
+    const returnUrl = (() => {
+      const u = new URL(window.location.href);
+      u.searchParams.set("open_watermark", "1");
+      return u.toString();
+    })();
+    (clerk.openSignIn as unknown as (opts: {
+      forceRedirectUrl: string;
+      afterSignUpUrl: string;
+    }) => void)({ forceRedirectUrl: returnUrl, afterSignUpUrl: returnUrl });
+  }
 
   function shareSenderWhatsApp() {
     envelope.copy();
@@ -57,12 +88,12 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   return (
     <>
-      {/* Watermark badge — computed from auth state */}
+      {/* Watermark badge — visible to all non-premium senders in finale */}
       <WatermarkBadge
         id={cardId || undefined}
         showRemoveCta={false}
-        prominent={isSignedIn === true && phase === "finale"}
-        hidden={isPremiumUser || watermarkRemoved || (phase === "finale" && !isSignedIn)}
+        prominent={phase === "finale"}
+        hidden={isPremiumUser || watermarkRemoved}
       />
 
       {/* ── Sender share panel (finale only) ── */}
@@ -142,14 +173,11 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
             </motion.button>
           </div>
 
-          {/* Remove watermark section — only for signed-in non-premium senders */}
-          {isSignedIn && !isPremiumUser && !watermarkRemoved && (
-            <div style={{
-              marginTop: 16,
-              textAlign: "center",
-            }}>
+          {/* Remove watermark CTA — visible to all non-premium senders */}
+          {!isPremiumUser && !watermarkRemoved && (
+            <div style={{ marginTop: 16, textAlign: "center" }}>
               <button
-                onClick={() => setShowWatermarkModal(true)}
+                onClick={handleRemoveWatermarkClick}
                 style={{
                   background: "none", border: "none", padding: 0, cursor: "pointer",
                   fontSize: 14, fontWeight: 700,
