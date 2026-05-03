@@ -136,7 +136,8 @@ router.get("/clerk/profile", async (req, res) => {
 
 /**
  * POST /api/cards
- * Requires a valid Clerk session. Creates a card row with is_watermarked=true.
+ * Requires a valid Clerk session. Creates a card row.
+ * Signed-in users get is_watermarked=FALSE (sign-in = free watermark removal).
  * Body: { template, occasion, recipient_name, message_b64 }
  * Returns: { id }
  */
@@ -158,7 +159,7 @@ router.post("/cards", async (req, res) => {
     await pool.query(
       `INSERT INTO hs_cards
          (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium)
-       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE)`,
+       VALUES ($1,$2,$3,$4,$5,$6,FALSE,FALSE)`,
       [
         id,
         clerkUserId,

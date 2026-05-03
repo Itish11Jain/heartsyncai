@@ -31,6 +31,16 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
 
+  /* On mount: fetch the card's actual watermark status.
+     If the card was already created clean (signed-in user), hide the CTA. */
+  useEffect(() => {
+    if (!cardId) return;
+    fetch(`${BASE}/api/cards/${cardId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && data.is_watermarked === false) setWatermarkRemoved(true); })
+      .catch(() => { /* ignore */ });
+  }, [cardId]);
+
   /* Call the free-removal API — no payment needed, just auth. */
   const removeWatermarkFree = useCallback(async () => {
     if (!cardId) return;
