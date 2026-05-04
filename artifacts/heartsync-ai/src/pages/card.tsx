@@ -840,7 +840,13 @@ export default function Card() {
   );
   const [activeTooltip, setActiveTooltip] = useState<{ orb: OrbData; key: number } | null>(null);
   const [orbRadius, setOrbRadius] = useState(130);
-  const [showSplash, setShowSplash] = useState(isRecipient);
+  /* Recipients previously saw a 2.2s (later 0.8s) React splash before the
+     envelope appeared. This is now removed: the HTML splash in index.html
+     already shows "Hey, {name}! 💛" from first paint and covers the 1-2s
+     while React mounts, so a second React-layer splash is redundant and
+     was pushing card LCP above 3s. Envelope now appears immediately when
+     React mounts, matching the HTML splash fade-out. */
+  const [showSplash, setShowSplash] = useState(false);
   const [splashEmojiIdx, setSplashEmojiIdx] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);

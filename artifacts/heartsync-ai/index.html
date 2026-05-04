@@ -33,7 +33,15 @@
       */
       #hs-splash-hero {
         display: none;
-        font-size: clamp(32px, 9vw, 44px);
+        /*
+          Must stay LARGER than the React h1 (text-4xl = 2.25rem ≈ 36px) so
+          Chrome keeps this element as the LCP candidate (largest area wins).
+          clamp(32px, 9vw, 44px) evaluates to ~35px on 390px screens — just
+          BELOW 36px — so the React h1 was winning and LCP was recorded at
+          React mount time (~1.5-4s) rather than at FCP (~850ms).
+          Using clamp(44px, 12vw, 60px): 12vw of 390px = 46.8px → always > 36px.
+        */
+        font-size: clamp(44px, 12vw, 60px);
         font-weight: 800;
         color: #ffffff;
         font-family: 'Segoe UI', system-ui, sans-serif;
