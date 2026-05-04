@@ -5,6 +5,7 @@ import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templ
 import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import WatermarkBadge from "@/components/WatermarkBadge";
+import PolaroidFrame from "@/components/PolaroidFrame";
 
 /* Premium templates and sender auth features lazy-load only when needed.
  * Recipients of the default envelope card never download these chunks. */
@@ -775,7 +776,7 @@ function FinalCard({
 
 /* ─────────────────────────── Main Page ────────────────────────── */
 
-type Phase = "envelope" | "opening" | "orbs" | "finale";
+type Phase = "envelope" | "opening" | "polaroid" | "orbs" | "finale";
 
 export default function Card() {
   const params = useQueryParams();
@@ -810,6 +811,11 @@ export default function Card() {
   const isPreview = params.get("preview") === "1" || isSender;
   const isRecipient = !isSender && !isPreview;
   const directShare = params.get("direct_share") === "1";
+  const personalPictureUrl = (() => {
+    const raw = params.get("personalpicture");
+    if (!raw) return null;
+    try { return decodeURIComponent(raw); } catch { return null; }
+  })();
 
   /* Share URL — /api/share generates a personalised og:image for WhatsApp,
      then JS-redirects recipients to /envelope.html */
@@ -981,7 +987,12 @@ export default function Card() {
   function handleUnlock() {
     envelope.open();
     setPhase("opening");
-    setTimeout(() => { setPhase("orbs"); }, 1200);
+    if (personalPictureUrl) {
+      setTimeout(() => { setPhase("polaroid"); }, 1200);
+      setTimeout(() => { setPhase("orbs"); }, 2200);
+    } else {
+      setTimeout(() => { setPhase("orbs"); }, 1200);
+    }
   }
 
   /* Memoized with useCallback + functional setState so React.memo(Orb) works:
@@ -1002,12 +1013,12 @@ export default function Card() {
         setTimeout(() => {
           envelope.finale();
           setPhase("finale");
-          setTimeout(fireConfetti, 800);
+          setTimeout(fireConfetti, personalPictureUrl ? 500 : 800);
         }, 1500);
       }
       return newClicked;
     });
-  }, [orbs, fireEmojiParticles, fireConfetti]);
+  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl]);
 
   const orbPositions = orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;
@@ -1125,6 +1136,13 @@ export default function Card() {
               )}
             </AnimatePresence>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════ PHASE 2.5: Polaroid ════ */}
+      <AnimatePresence>
+        {personalPictureUrl && (phase === "polaroid" || phase === "orbs" || (phase === "finale" && !allClicked)) && (
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
         )}
       </AnimatePresence>
 
