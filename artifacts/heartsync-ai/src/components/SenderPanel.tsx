@@ -562,7 +562,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     "1. Picture of them inside the cards",
                     "2. No watermark on your cards",
                     "3. 10+ Premium templates unlocked",
-                    "4. All these features are yours — Forever (On all cards!)",
+                    "4. All these features — Forever (On all cards!)",
                   ].map((line) => (
                     <div key={line} style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 7, display: "flex", alignItems: "flex-start", gap: 6 }}>
                       {line}
