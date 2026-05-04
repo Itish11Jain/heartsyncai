@@ -143,6 +143,18 @@
         var titleEl = document.getElementById('hs-splash-title');
         var subEl = document.getElementById('hs-splash-sub');
 
+        // Route-specific modulepreload: card-templates (43 KB gzip) is a static
+        // dependency of the card chunk. Preloading it here — synchronously, before
+        // the page even renders — moves its download onto the parallel path so the
+        // browser fetches it alongside react-vendor instead of discovering it 2 hops
+        // later. window.__hsChunks is injected by scripts/inject-preloads.mjs at
+        // build time with the hashed asset filenames.
+        if (isCard && window.__hsChunks && window.__hsChunks.ct) {
+          var l = document.createElement('link');
+          l.rel = 'modulepreload'; l.crossOrigin = ''; l.href = window.__hsChunks.ct;
+          document.head.appendChild(l);
+        }
+
         // Skip splash when sender or preview query params are set (those flows render their own UI fast)
         if ((isCard && (isSender || isPreview))) {
           el.style.display = 'none';
