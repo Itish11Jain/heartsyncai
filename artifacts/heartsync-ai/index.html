@@ -53,12 +53,13 @@
       crossorigin="anonymous"
     />
     <!--
-      Modulepreload the entry script. Vite auto-injects modulepreloads for
-      the deeper static-import graph at build time; this top-level hint
-      ensures the entry chunk itself starts fetching the moment the HTML
-      arrives, not after the parser reaches the closing </body>.
+      Vite auto-injects <link rel="modulepreload"> for the entry chunk and
+      its entire static-import graph at build time (in the built HTML, not
+      the source). A manual hint here pointing to /src/main.tsx would 404
+      in production because the built file has a content-hash name like
+      /assets/index-abc123.js — wasting a round trip on every page load.
+      No manual modulepreload needed; Vite handles it correctly at build time.
     -->
-    <link rel="modulepreload" href="/src/main.tsx" />
     <script>
       /* Block GA on Replit dev previews and localhost — production only. */
       (function(){
@@ -146,10 +147,19 @@
           setTimeout(function () { el.style.display = 'none'; }, 420);
         };
 
-        // Safety fallback — auto-clear after 2s no matter what
+        // Safety fallback — auto-clear after 1s no matter what.
+        // JS typically loads in 600-900ms on Indian WiFi; waiting 2s just
+        // made users stare at the splash unnecessarily when React was ready.
         setTimeout(function () {
           if (window.__clearHsSplash) window.__clearHsSplash();
-        }, 2000);
+        }, 1000);
+
+        // Warm the API server connection immediately so the first real API
+        // call (usage check, card creation) doesn't pay the full TCP+TLS
+        // handshake cost. Low-priority so it never competes with JS loading.
+        try {
+          fetch('/api/healthz', { priority: 'low', cache: 'no-store' }).catch(function(){});
+        } catch(e) {}
       })();
     </script>
     <div id="root"></div>
