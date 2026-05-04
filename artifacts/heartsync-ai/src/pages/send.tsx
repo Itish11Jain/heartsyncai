@@ -1,16 +1,31 @@
-import { useState, useEffect, useRef, useCallback, useTransition, memo, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition, memo, useMemo, lazy, Suspense } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuth, useClerk } from "@clerk/react";
+import { useSendAuth, SendAuthCtx, defaultSendAuth } from "@/contexts/sendAuthContext";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
 import {
-  useCardUsage,
+  useCardUsageWithAuth,
   templateGate,
   isPremiumTemplate,
   type TemplateId,
 } from "@/lib/usage";
+
+/* ── Lazy Clerk bridge — loads concurrently with the form, fills SendAuthCtx ── */
+const LazyClerkBridge = lazy(async () => {
+  const [layerMod, bridgeMod] = await Promise.all([
+    import("@/components/ClerkAuthLayer"),
+    import("@/components/ClerkBridgeForSend"),
+  ]);
+  const Layer = layerMod.default;
+  const Bridge = bridgeMod.default;
+  return {
+    default: function ClerkBridgeWrapper() {
+      return <Layer><Bridge /></Layer>;
+    },
+  };
+});
 import { trackEvent } from "@/lib/trackEvent";
 import { TemplatePreview } from "@/components/template-preview";
 
@@ -271,12 +286,11 @@ function clearPaywallSnapshot() {
   try { localStorage.removeItem(PAYWALL_KEY); } catch { /* ignore */ }
 }
 
-export default function Send() {
+function SendInner() {
   const searchParams = useSearchParams();
-  const { isSignedIn, isLoaded, getToken, userId: clerkUserId } = useAuth();
-  const clerk = useClerk();
+  const { isSignedIn, isLoaded, getToken, clerkUserId, userEmail, openSignIn } = useSendAuth();
 
-  const { usage, loading: usageLoading, incrementUsage, fingerprint, userEmail, refetch: refetchUsage } = useCardUsage();
+  const { usage, loading: usageLoading, incrementUsage, fingerprint, refetch: refetchUsage } = useCardUsageWithAuth({ isLoaded, isSignedIn, getToken, userEmail });
 
   const initialRecipientName = (() => {
     const raw = searchParams.get("to") ?? "";
@@ -731,8 +745,7 @@ export default function Send() {
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore */ }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    clerk.openSignIn({ redirectUrl: window.location.href } as any);
+    openSignIn({ redirectUrl: window.location.href });
   }
 
   /* ─── Keep a stable ref to doGenerateCard for the post-signin effect ── */
@@ -1575,5 +1588,31 @@ export default function Send() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * Public default export.
+ *
+ * Renders the form shell immediately (no ClerkProvider needed) via SendInner.
+ * Concurrently mounts LazyClerkBridge — which loads ClerkAuthLayer + Clerk SDK
+ * in the background — and writes the resolved auth state into SendAuthCtx so
+ * SendInner re-renders with real sign-in status once Clerk is ready (~1–2 s
+ * on a warm cache, without ever blocking the initial paint of the form).
+ */
+export default function Send() {
+  const [authState, setAuthState] = useState(defaultSendAuth);
+  const authCtxValue = useMemo(
+    () => ({ state: authState, update: setAuthState }),
+    [authState],
+  );
+
+  return (
+    <SendAuthCtx.Provider value={authCtxValue}>
+      <SendInner />
+      <Suspense fallback={null}>
+        <LazyClerkBridge />
+      </Suspense>
+    </SendAuthCtx.Provider>
   );
 }

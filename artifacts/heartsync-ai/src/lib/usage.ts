@@ -86,13 +86,30 @@ export function canCreate(usage: CardUsage | null): boolean {
   return templateGate(usage, FREE_TEMPLATE) === null;
 }
 
-export function useCardUsage() {
-  const { isSignedIn, getToken, isLoaded } = useAuth();
-  const { user } = useUser();
+/* ─── Shared auth params type ─────────────────────────────────────────── */
+
+export interface UsageAuthParams {
+  isLoaded: boolean;
+  isSignedIn: boolean | undefined;
+  getToken: () => Promise<string | null>;
+  userEmail: string | null;
+}
+
+/* ─── Core implementation (no Clerk hook calls) ──────────────────────── */
+
+/**
+ * Internal hook: accepts auth state explicitly so it can be used both by
+ * useCardUsage() (with Clerk hooks) and useCardUsageWithAuth() (with context
+ * values from SendAuthCtx, where ClerkProvider may not be mounted yet).
+ */
+function useCardUsageCore(
+  isLoaded: boolean,
+  isSignedIn: boolean | undefined,
+  getToken: () => Promise<string | null>,
+  userEmail: string | null,
+) {
   const fingerprintRef = useRef<string>(makeFingerprint());
   const fingerprint = fingerprintRef.current;
-
-  const userEmail = user?.emailAddresses?.[0]?.emailAddress ?? null;
 
   const [usage, setUsage] = useState<CardUsage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,4 +185,26 @@ export function useCardUsage() {
   }, [isSignedIn, fingerprint, fetchUsage, getToken, userEmail]);
 
   return { usage, loading, fingerprint, incrementUsage, refetch: fetchUsage, userEmail };
+}
+
+/* ─── Public hooks ─────────────────────────────────────────────────────── */
+
+/**
+ * Standard hook for pages that are inside ClerkProvider.
+ * Reads auth state directly from Clerk hooks.
+ */
+export function useCardUsage() {
+  const { isSignedIn, getToken, isLoaded } = useAuth();
+  const { user } = useUser();
+  const userEmail = user?.emailAddresses?.[0]?.emailAddress ?? null;
+  return useCardUsageCore(isLoaded, isSignedIn, getToken, userEmail);
+}
+
+/**
+ * Variant for the Send page, which renders OUTSIDE ClerkProvider for instant
+ * first paint. Auth state comes from SendAuthCtx (safe defaults until Clerk
+ * loads via the background ClerkBridgeForSend component).
+ */
+export function useCardUsageWithAuth(auth: UsageAuthParams) {
+  return useCardUsageCore(auth.isLoaded, auth.isSignedIn, auth.getToken, auth.userEmail);
 }

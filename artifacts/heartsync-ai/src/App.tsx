@@ -47,8 +47,11 @@ const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
  * prefix match against the URL pathname (after the basePath strip). */
 /* /card is intentionally absent: Clerk now mounts lazily inside SenderPanel
  * only when isSender===true. Recipients of the default envelope card never
- * trigger a Clerk download at all, cutting ~250 KB from their critical path. */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/send", "/analytics", "/remove-watermark", "/crystal", "/cosmic", "/vinyl"];
+ * trigger a Clerk download at all, cutting ~250 KB from their critical path.
+ * /send is intentionally absent: Send renders outside ClerkAuthLayer for
+ * instant first paint, and mounts its own lazy ClerkBridgeForSend to get
+ * auth state once Clerk resolves. See src/pages/send.tsx for details. */
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/analytics", "/remove-watermark", "/crystal", "/cosmic", "/vinyl"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,
@@ -102,10 +105,12 @@ function AppRoutes() {
       <Route path="/crystal"><L><CrystalCard /></L></Route>
       <Route path="/cosmic"><L><CosmicCard /></L></Route>
       <Route path="/vinyl"><L><VinylCard /></L></Route>
-
-      {/* Auth-required — only matched when ClerkAuthLayer is mounted around the Switch.
-          (When Clerk isn't mounted, the user can't be on /send or /analytics anyway.) */}
+      {/* /send renders outside ClerkAuthLayer so the form is visible immediately.
+          Clerk is mounted concurrently via ClerkBridgeForSend inside the Send
+          component itself. Auth state is bridged via SendAuthCtx. */}
       <Route path="/send"><L><Send /></L></Route>
+
+      {/* Auth-required — only matched when ClerkAuthLayer is mounted around the Switch. */}
       <Route path="/analytics"><L><Analytics /></L></Route>
       <Route path="/remove-watermark"><L><RemoveWatermark /></L></Route>
       <Route path="/account"><L><Account /></L></Route>
