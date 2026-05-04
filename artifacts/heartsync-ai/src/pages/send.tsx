@@ -359,6 +359,12 @@ export default function Send() {
     /* ── Envelope (free template) ───────────────────────────────────── */
     await incrementUsage();
 
+    /* Generate a client-side tracking ID so card_created and card_viewed
+     * events are always linked — even when the user isn't signed in and
+     * no DB card row is created. For signed-in users the server-assigned
+     * DB id overrides this below (it's used for SenderPanel API calls). */
+    const trackingId = Math.random().toString(36).slice(2, 10);
+
     let cardId: string | undefined;
     try {
       const token = await getToken();
@@ -384,6 +390,11 @@ export default function Send() {
       }
     } catch { /* non-blocking — fall back to no id */ }
 
+    /* Use the DB id for signed-in users (enables SenderPanel API calls);
+     * fall back to the client-generated tracking id for everyone else so
+     * card_created → card_viewed attribution always works in analytics. */
+    const effectiveCardId = cardId ?? trackingId;
+
     trackEvent({
       event: "card_created",
       fingerprint, clerk_user_id: clerkUserId ?? undefined,
@@ -394,11 +405,11 @@ export default function Send() {
       is_free: true,
       from_card_ref: fromCardRef,
       recipient_name: recipientName.trim() || undefined,
-      card_id: cardId,
+      card_id: effectiveCardId,
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", cardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", effectiveCardId);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
