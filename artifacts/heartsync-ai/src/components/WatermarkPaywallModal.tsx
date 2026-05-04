@@ -226,7 +226,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       </span>
                     ))}
                     <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2 }}>
-                      All for ₹49 — pay once
+                      All for ₹49 — pay once, yours forever
                     </span>
                   </div>
 
