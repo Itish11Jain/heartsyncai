@@ -999,8 +999,8 @@ export default function Card() {
     envelope.open();
     setPhase("opening");
     if (personalPictureUrl) {
-      setTimeout(() => { setPhase("polaroid"); }, 300);
-      setTimeout(() => { setPhase("orbs"); }, 1500);
+      setTimeout(() => { setPhase("polaroid"); }, 800);
+      setTimeout(() => { setPhase("orbs"); }, 2100);
     } else {
       setTimeout(() => { setPhase("orbs"); }, 1200);
     }
@@ -1102,7 +1102,7 @@ export default function Card() {
             key="envelope-scene"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: "100vh", transition: { duration: 0.55, ease: "easeIn", delay: 0.55 } }}
+            exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.45, ease: "easeIn" } }}
             style={{
               position: "fixed", inset: 0,
               display: "flex", flexDirection: "column",
