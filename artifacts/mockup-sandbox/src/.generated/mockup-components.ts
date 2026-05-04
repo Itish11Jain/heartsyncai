@@ -11,5 +11,7 @@ export const modules: ModuleMap = {
   "./components/mockups/heartsync-v2/HomeDesktop.tsx": () => import("../components/mockups/heartsync-v2/HomeDesktop.tsx"),
   "./components/mockups/heartsync-v2/HomeMobile.tsx": () => import("../components/mockups/heartsync-v2/HomeMobile.tsx"),
   "./components/mockups/heartsync-v2/SendOccasion.tsx": () => import("../components/mockups/heartsync-v2/SendOccasion.tsx"),
-  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx")
+  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx"),
+  "./components/mockups/share-panel/ShareBadge.tsx": () => import("../components/mockups/share-panel/ShareBadge.tsx"),
+  "./components/mockups/share-panel/ShareClean.tsx": () => import("../components/mockups/share-panel/ShareClean.tsx")
 };
