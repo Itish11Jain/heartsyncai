@@ -135,6 +135,7 @@
         var path = window.location.pathname;
         var isCard = path === '/card' || path.endsWith('/card');
         var isHome = path === '/' || path === '';
+        var isSend = path === '/send' || path.endsWith('/send');
         var isSender = p.get('sender') === '1';
         var isPreview = p.get('preview') === '1';
         var el = document.getElementById('hs-splash');
@@ -143,16 +144,27 @@
         var titleEl = document.getElementById('hs-splash-title');
         var subEl = document.getElementById('hs-splash-sub');
 
-        // Route-specific modulepreload: card-templates (43 KB gzip) is a static
-        // dependency of the card chunk. Preloading it here — synchronously, before
-        // the page even renders — moves its download onto the parallel path so the
-        // browser fetches it alongside react-vendor instead of discovering it 2 hops
-        // later. window.__hsChunks is injected by scripts/inject-preloads.mjs at
-        // build time with the hashed asset filenames.
-        if (isCard && window.__hsChunks && window.__hsChunks.ct) {
-          var l = document.createElement('link');
-          l.rel = 'modulepreload'; l.crossOrigin = ''; l.href = window.__hsChunks.ct;
-          document.head.appendChild(l);
+        // Route-specific modulepreloads injected from window.__hsChunks.
+        // window.__hsChunks is written by scripts/inject-preloads.mjs at build time
+        // with content-hashed asset filenames. Injecting these here — before any JS
+        // runs — lets the browser fetch them in parallel with react-vendor instead of
+        // discovering them 2-4 hops later via sequential lazy() resolution.
+        //
+        // /card needs: ct (card-templates, 43 KB gzip).
+        // /send needs: ct + ck (clerk, 88 KB) + cal (ClerkAuthLayer) + sd (send page).
+        // Without /send preloads the waterfall is 4 × 300 ms Indian RTT = ~1.2 s wasted
+        // BEFORE the Clerk chunk even starts downloading.
+        if (window.__hsChunks) {
+          var chunks = window.__hsChunks;
+          var toPreload = isCard ? ['ct'] : isSend ? ['ct', 'ck', 'cal', 'sd'] : [];
+          for (var ci = 0; ci < toPreload.length; ci++) {
+            var href = chunks[toPreload[ci]];
+            if (href) {
+              var l = document.createElement('link');
+              l.rel = 'modulepreload'; l.crossOrigin = ''; l.href = href;
+              document.head.appendChild(l);
+            }
+          }
         }
 
         // Skip splash when sender or preview query params are set (those flows render their own UI fast)
@@ -182,8 +194,19 @@
           heroEl.style.display = 'block';
           titleEl.style.display = 'none';
           subEl.textContent = 'Personalised cards for every occasion \u2728';
+        } else if (isSend) {
+          emojis = ['\uD83D\uDC8C', '\u2728', '\uD83D\uDC96', '\uD83C\uDF38', '\uD83D\uDCAB', '\uD83E\uDD70', '\uD83D\uDC9E', '\uD83C\uDF1F'];
+          // LCP: show a large hero heading from HTML so the browser records it as
+          // the LCP element at FCP time (~900 ms) instead of at React mount time.
+          // Without this, the LCP candidate is the form heading which only appears
+          // after ClerkAuthLayer + clerk (88 KB) + send + card-templates all load —
+          // a 4-hop waterfall that puts LCP at 6-7 s on Indian 4G.
+          heroEl.textContent = 'Create a card \uD83D\uDC8C';
+          heroEl.style.display = 'block';
+          titleEl.style.display = 'none';
+          subEl.textContent = 'Make someone\u2019s day special \u2728';
         } else {
-          // /send, /sign-in, /analytics and all other routes — generic branded splash
+          // /sign-in, /analytics and all other routes — generic branded splash
           emojis = ['\uD83D\uDC9B', '\u2728', '\uD83D\uDC96', '\uD83C\uDF38', '\uD83D\uDCAB', '\uD83E\uDD70', '\uD83D\uDC9E', '\uD83C\uDF1F'];
           titleEl.textContent = 'HeartSync AI';
           subEl.textContent = 'Loading your love language\u2026';
@@ -207,12 +230,17 @@
           setTimeout(function () { el.style.display = 'none'; }, 420);
         };
 
-        // Safety fallback — auto-clear after 1s no matter what.
-        // JS typically loads in 600-900ms on Indian WiFi; waiting 2s just
-        // made users stare at the splash unnecessarily when React was ready.
+        // Safety fallback — auto-clear after the route-appropriate delay.
+        // /send: keep the splash visible for up to 8 s so the "Create a card 💌"
+        //   hero heading (our LCP candidate) stays on screen while the Clerk +
+        //   send + card-templates chunks download. React's SplashClearer clears
+        //   it sooner once the form renders (typically 1.5-3 s with preloads).
+        //   Without a long timeout, the splash would clear at 1 s leaving a blank
+        //   screen for several more seconds while Clerk finishes loading.
+        // All other routes: 1 s is enough — React mounts well before then.
         setTimeout(function () {
           if (window.__clearHsSplash) window.__clearHsSplash();
-        }, 1000);
+        }, isSend ? 8000 : 1000);
 
         // Warm the API server connection immediately so the first real API
         // call (usage check, card creation) doesn't pay the full TCP+TLS

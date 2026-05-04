@@ -115,10 +115,17 @@ function AppRoutes() {
   );
 
   if (needsClerk) {
+    /* SplashClearer is intentionally NOT placed here.
+     * If we put it at this level it fires as soon as the ClerkAuthLayer chunk
+     * resolves — BEFORE the inner page chunk (e.g. send) has rendered — leaving
+     * a blank screen for the remaining download time.  Each page is wrapped in
+     * L() which has its own SplashClearer that fires only after the page itself
+     * mounts.  Combined with the 8 s safety auto-clear in index.html (for /send)
+     * this guarantees the "Create a card 💌" hero heading stays visible until
+     * the form is actually ready, keeping the splash as our LCP candidate. */
     return (
       <Suspense fallback={<SuspenseFallback />}>
         <ClerkAuthLayer>{switchEl}</ClerkAuthLayer>
-        <SplashClearer />
       </Suspense>
     );
   }

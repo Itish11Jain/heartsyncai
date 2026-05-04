@@ -18,6 +18,11 @@
  *   Card page is even worse:
  *   index.js → card → card-templates + motion = ~900 ms wasted
  *
+ *   Send page waterfall (the worst — 4 hops):
+ *   index.js → ClerkAuthLayer → clerk (88 KB static dep)
+ *            → send → card-templates
+ *   = ~1,200 ms wasted in RTTs alone, plus Clerk SDK download time
+ *
  * With modulepreload on these chunks the browser starts ALL downloads the
  * moment it parses the <head>, in parallel with react-vendor (already
  * preloaded by Vite). By the time JS executes and lazy() resolves, every
@@ -31,7 +36,10 @@
  *
  * ROUTE-SPECIFIC PRELOADS  (injected via window.__hsChunks so the inline
  *   body script can create <link rel="modulepreload"> only for the right route)
- *   card-templates  — 43 KB gzip; only /card and /send need this
+ *   ct  = card-templates  — 43 KB gzip; needed by /card and /send
+ *   ck  = clerk           — 88 KB gzip; needed by /send (ClerkAuthLayer static dep)
+ *   cal = ClerkAuthLayer  —  4 KB gzip; lazy wrapper for auth routes
+ *   sd  = send            — 43 KB gzip; the card-builder page
  */
 
 import { readFileSync, writeFileSync, readdirSync } from 'fs';
@@ -57,7 +65,20 @@ const universalFiles = universalPrefixes.map(p => find(p)).filter(Boolean);
 if (cardChunk) universalFiles.push(cardChunk);
 
 // ── Route-specific (injected as window.__hsChunks) ────────────────────────
-const cardTemplatesFile = find('card-templates');
+// ct  = card-templates  (needed by /card route-specific preload AND /send)
+// ck  = clerk           (Clerk SDK — 88 KB, static dep of ClerkAuthLayer)
+// cal = ClerkAuthLayer  (lazy auth wrapper; needed by /send, /sign-in, etc.)
+// sd  = send            (card-builder page chunk)
+const cardTemplatesFile  = find('card-templates');
+const clerkFile          = find('clerk');
+const clerkAuthLayerFile = find('ClerkAuthLayer');
+const sendFile           = find('send');
+
+const hsChunks = {};
+if (cardTemplatesFile)  hsChunks.ct  = `/assets/${cardTemplatesFile}`;
+if (clerkFile)          hsChunks.ck  = `/assets/${clerkFile}`;
+if (clerkAuthLayerFile) hsChunks.cal = `/assets/${clerkAuthLayerFile}`;
+if (sendFile)           hsChunks.sd  = `/assets/${sendFile}`;
 
 // ── Build the HTML insertion ──────────────────────────────────────────────
 const lines = [
@@ -70,9 +91,9 @@ for (const file of universalFiles) {
 }
 
 // Expose hashed filenames to the inline body script so it can add
-// route-specific preloads (e.g. card-templates only for /card visitors).
-if (cardTemplatesFile) {
-  lines.push(`    <script>window.__hsChunks={ct:"/assets/${cardTemplatesFile}"}</script>`);
+// route-specific preloads (e.g. card-templates for /card, all auth chunks for /send).
+if (Object.keys(hsChunks).length > 0) {
+  lines.push(`    <script>window.__hsChunks=${JSON.stringify(hsChunks)}</script>`);
 }
 
 const insertion = lines.join('\n');
@@ -95,5 +116,5 @@ writeFileSync(htmlPath, html);
 
 console.log('\ninjected modulepreload hints into dist/public/index.html:');
 for (const f of universalFiles) console.log(`  universal  /assets/${f}`);
-if (cardTemplatesFile) console.log(`  __hsChunks /assets/${cardTemplatesFile}  (route-specific via inline script)`);
+for (const [k, v] of Object.entries(hsChunks)) console.log(`  __hsChunks[${k}] ${v}  (route-specific via inline script)`);
 console.log();
