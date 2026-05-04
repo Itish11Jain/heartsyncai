@@ -190,51 +190,37 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         }
       }
 
-      // Account not found — create and send verification code.
-      // IMPORTANT: In Clerk 6 with signals, clerk.client.signUp is a signal-wrapped
-      // object that does NOT expose prepareEmailAddressVerification. We must reach the
-      // raw underlying SignUpResource via multiple fallback paths.
-      type RawSignUp = {
-        create: (p: object) => Promise<unknown>;
-        prepareEmailAddressVerification: (p: object) => Promise<unknown>;
-      };
-      // Try every known path to the raw SignUpResource
-      const clerkAnyObj = clerk as unknown as {
-        client?: { signUp?: RawSignUp };
-        __client?: { signUp?: RawSignUp };
-      };
-      const signUpAnyObj = signUp as unknown as {
-        __internal_toJSON?: () => unknown;
-        _raw?: RawSignUp;
-        resource?: RawSignUp;
-      };
-      const rawSU: RawSignUp | undefined =
-        clerkAnyObj.client?.signUp?.prepareEmailAddressVerification
-          ? (clerkAnyObj.client.signUp as RawSignUp)
-          : clerkAnyObj.__client?.signUp?.prepareEmailAddressVerification
-            ? (clerkAnyObj.__client.signUp as RawSignUp)
-            : signUpAnyObj._raw?.prepareEmailAddressVerification
-              ? signUpAnyObj._raw
-              : signUpAnyObj.resource?.prepareEmailAddressVerification
-                ? signUpAnyObj.resource
-                : undefined;
+      // Account not found — create sign-up, then send OTP.
+      // CRITICAL: Clerk replaces clerk.client.signUp with a NEW instance after create().
+      // We must re-read it AFTER create() — reading before and caching = stale reference.
+      type ClerkWithClient = { client?: { signUp?: Record<string, unknown> } };
+      const getSignUpResource = () =>
+        (clerk as unknown as ClerkWithClient).client?.signUp as
+          | { prepareEmailAddressVerification: (p: object) => Promise<unknown> }
+          | undefined;
 
-      if (rawSU?.create && rawSU?.prepareEmailAddressVerification) {
-        // Best path: raw resource — create + explicitly send OTP
-        await rawSU.create({ emailAddress: email });
-        await rawSU.prepareEmailAddressVerification({ strategy: "email_code" });
+      console.log("[HeartSync] signUp: calling create for", email);
+      await (signUp as unknown as { create: (p: object) => Promise<unknown> })
+        .create({ emailAddress: email });
+
+      // Re-read AFTER create() — Clerk now has the live SignUpResource
+      const freshSU = getSignUpResource();
+      console.log("[HeartSync] signUp: after create, freshSU keys:", Object.keys(
+        (clerk as unknown as ClerkWithClient).client?.signUp ?? {}
+      ));
+      console.log("[HeartSync] signUp: prepareEmailAddressVerification?",
+        typeof freshSU?.prepareEmailAddressVerification);
+
+      if (typeof freshSU?.prepareEmailAddressVerification === "function") {
+        console.log("[HeartSync] signUp: calling prepareEmailAddressVerification");
+        await freshSU.prepareEmailAddressVerification({ strategy: "email_code" });
+        console.log("[HeartSync] signUp: prepareEmailAddressVerification done — email sent");
       } else {
-        // Fallback: signal wrapper create, then every possible send path
-        await (signUp as unknown as { create: (p: object) => Promise<unknown> })
-          .create({ emailAddress: email });
-        // After create(), try clerk.client.signUp again (it should now be populated)
-        const freshRawSU = (clerk as unknown as { client?: { signUp?: RawSignUp } }).client?.signUp;
-        if (freshRawSU?.prepareEmailAddressVerification) {
-          await freshRawSU.prepareEmailAddressVerification({ strategy: "email_code" });
-        } else {
-          await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
-            .verifications.sendEmailCode();
-        }
+        // Fallback: signal proxy's verifications.sendEmailCode
+        console.log("[HeartSync] signUp: prepareEmailAddressVerification not found, using signal proxy sendEmailCode");
+        await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
+          .verifications.sendEmailCode();
+        console.log("[HeartSync] signUp: sendEmailCode done");
       }
       authFlowRef.current = "signUp";
       setSignInStep("otp");
