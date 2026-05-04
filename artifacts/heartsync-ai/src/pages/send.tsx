@@ -727,7 +727,17 @@ function SendInner() {
     // For the envelope (free) template, require sign-in before generating a
     // card link. Premium card pages (cosmic/crystal/vinyl) redirect immediately
     // and handle their own auth + paywall flows inside PremiumLockPanel.
+    //
+    // IMPORTANT: templateGate() returns null when usage===null (optimistic).
+    // We must not evaluate the gate until auth AND usage have both resolved,
+    // otherwise an unauthenticated user can slip through the sign-in wall
+    // during the async window while Clerk/usage is still loading.
     if (!isPremiumTemplate(selectedTemplate)) {
+      if (!isLoaded || usageLoading || !usage) {
+        // Clerk or usage not yet resolved — bail silently.
+        // The usageLoading shimmer skeleton is already visible to the user.
+        return;
+      }
       const gate = templateGate(usage, selectedTemplate);
       if (gate === "signin") {
         setSignInGateContext(selectedTemplate);
