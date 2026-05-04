@@ -177,6 +177,10 @@
    opacity only). Used by <TemplatePreview/> on the Send page.
    Kept tiny so the picker stays cheap on low-end Android.
    ─────────────────────────────────────────────────────────────── */
+@keyframes hs-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 @keyframes hs-bob {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-3px); }

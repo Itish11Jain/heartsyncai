@@ -11,7 +11,7 @@ import { SendAuthCtx } from "@/contexts/sendAuthContext";
  */
 export default function ClerkBridgeForSend() {
   const { isLoaded, isSignedIn, getToken, userId } = useAuth();
-  const clerk = useClerk();
+  const { openSignIn } = useClerk();
   const { user } = useUser();
   const { update } = useContext(SendAuthCtx);
 
@@ -20,12 +20,11 @@ export default function ClerkBridgeForSend() {
       isLoaded,
       isSignedIn,
       getToken,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      openSignIn: (opts) => clerk.openSignIn(opts as any),
+      openSignIn,
       clerkUserId: userId,
       userEmail: user?.emailAddresses?.[0]?.emailAddress ?? null,
     });
-  }, [isLoaded, isSignedIn, getToken, clerk, userId, user, update]);
+  }, [isLoaded, isSignedIn, getToken, openSignIn, userId, user, update]);
 
   return null;
 }

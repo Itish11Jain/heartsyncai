@@ -724,14 +724,18 @@ function SendInner() {
       recipient_name: recipientName.trim() || undefined,
     });
 
-    // By the time the user fills in recipient name across the 3-step wizard,
-    // Clerk has had ample time to load. If by some chance it hasn't (e.g.
-    // the user rushed through on a very fast device with a cached session),
-    // we proceed anyway — doGenerateCard safely handles a null token by
-    // generating the card without a DB record (using a client-side tracking ID).
+    // For the envelope (free) template, require sign-in before generating a
+    // card link. Premium card pages (cosmic/crystal/vinyl) redirect immediately
+    // and handle their own auth + paywall flows inside PremiumLockPanel.
+    if (!isPremiumTemplate(selectedTemplate)) {
+      const gate = templateGate(usage, selectedTemplate);
+      if (gate === "signin") {
+        setSignInGateContext(selectedTemplate);
+        setShowSignInGate(true);
+        return;
+      }
+    }
 
-    // All templates generate immediately with no gate.
-    // Premium card pages handle the sign-in + paywall wall themselves.
     await doGenerateCard();
   }
 
@@ -745,7 +749,7 @@ function SendInner() {
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore */ }
-    openSignIn({ redirectUrl: window.location.href });
+    openSignIn({ fallbackRedirectUrl: window.location.href });
   }
 
   /* ─── Keep a stable ref to doGenerateCard for the post-signin effect ── */
@@ -1079,7 +1083,22 @@ function SendInner() {
                     onPick={handlePickTemplate}
                   />
 
-                  {selectedTemplate !== "envelope" && lockedTemplateIds.has(selectedTemplate) && usage?.is_signed_in && (
+                  {/* Usage/plan loading skeleton — shown while Clerk resolves */}
+                  {usageLoading && (
+                    <div
+                      aria-label="Checking your plan…"
+                      className="mt-2 mx-auto rounded-lg"
+                      style={{
+                        height: 20,
+                        width: "60%",
+                        background: "linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%)",
+                        backgroundSize: "200% 100%",
+                        animation: "hs-shimmer 1.4s infinite",
+                      }}
+                    />
+                  )}
+
+                  {!usageLoading && selectedTemplate !== "envelope" && lockedTemplateIds.has(selectedTemplate) && usage?.is_signed_in && (
                     <p className="text-center text-xs mt-2" style={{ color: "rgba(255,215,0,0.6)" }}>
                       ✨ Preview the magic first — unlock to share
                     </p>

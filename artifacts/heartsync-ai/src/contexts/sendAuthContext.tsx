@@ -1,10 +1,14 @@
 import { createContext, useContext } from "react";
+import type { useClerk } from "@clerk/react";
+
+/** Matches Clerk's openSignIn signature exactly — no casts needed downstream. */
+type ClerkOpenSignIn = ReturnType<typeof useClerk>["openSignIn"];
 
 export interface SendAuthState {
   isLoaded: boolean;
   isSignedIn: boolean | undefined;
   getToken: () => Promise<string | null>;
-  openSignIn: (opts?: Record<string, unknown>) => void;
+  openSignIn: ClerkOpenSignIn;
   clerkUserId: string | null | undefined;
   userEmail: string | null;
 }
