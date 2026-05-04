@@ -200,28 +200,28 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     try {
       if (authFlowRef.current === "signIn") {
         if (!signIn) return;
-        const { error } = await signIn.emailCode.verifyCode({ code });
-        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
-        if (signIn.status === "complete" && signIn.createdSessionId) {
-          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: signIn.createdSessionId });
+        // Use resource API — returns result with .status + .createdSessionId directly
+        const result = await (signIn as unknown as {
+          attemptFirstFactor: (p: { strategy: string; code: string }) => Promise<{ status: string; createdSessionId: string | null }>;
+        }).attemptFirstFactor({ strategy: "email_code", code });
+        if (result?.status === "complete" && result?.createdSessionId) {
+          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: result.createdSessionId });
           completeAuth();
+        } else {
+          setSignInError("Sign-in couldn't complete. Please try again.");
         }
       } else {
         if (!signUp) return;
-        type VE = { verifyEmailCode: (p: { code: string }) => Promise<{ error: { longMessage?: string; message: string } | null }> };
-        const { error } = await (signUp.verifications as unknown as VE).verifyEmailCode({ code });
-        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
-
-        // Finalize if not yet complete (required by Clerk 6.x signal API)
-        if (signUp.status !== "complete") {
-          type Fin = { finalize: () => Promise<{ error: { longMessage?: string; message: string } | null }> };
-          const { error: finalizeErr } = await (signUp as unknown as Fin).finalize();
-          if (finalizeErr) { setSignInError(finalizeErr.longMessage ?? finalizeErr.message ?? "Couldn't complete sign-up."); return; }
-        }
-
-        if (signUp.status === "complete" && signUp.createdSessionId) {
-          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: signUp.createdSessionId });
+        // Use resource API — returns result with .status + .createdSessionId directly
+        // Avoids stale-closure reads of the hook value after async operation
+        const result = await (signUp as unknown as {
+          attemptEmailAddressVerification: (p: { code: string }) => Promise<{ status: string; createdSessionId: string | null }>;
+        }).attemptEmailAddressVerification({ code });
+        if (result?.status === "complete" && result?.createdSessionId) {
+          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: result.createdSessionId });
           completeAuth();
+        } else {
+          setSignInError("Sign-up couldn't complete. Please try again.");
         }
       }
     } catch (err: unknown) {

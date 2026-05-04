@@ -536,7 +536,7 @@ const Orb = memo(function Orb({
   onClick: (idx: number, rect: DOMRect) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const orbSize = "min(72px, 18vw)";
+  const orbSize = "min(64px, 15vw)";
 
   const handleClick = () => {
     if (clicked || !ref.current) return;
@@ -581,7 +581,7 @@ const Orb = memo(function Orb({
           ? "none"
           : "0 8px 32px rgba(255,165,0,0.2), inset 0 1px 2px rgba(255,255,255,0.15)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "min(32px, 8vw)",
+        fontSize: "min(28px, 7vw)",
         cursor: clicked ? "default" : "pointer",
         zIndex: 25,
         userSelect: "none",
@@ -884,7 +884,7 @@ export default function Card() {
     const update = () => {
       setOrbRadius(
         personalPictureUrl
-          ? Math.min(210, window.innerWidth * 0.40)
+          ? Math.min(190, window.innerWidth * 0.36)
           : Math.min(115, window.innerWidth * 0.27)
       );
     };
