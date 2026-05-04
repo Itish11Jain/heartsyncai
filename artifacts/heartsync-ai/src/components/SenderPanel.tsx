@@ -190,17 +190,51 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         }
       }
 
-      // Account not found — create and send verification code
-      await (signUp as unknown as { create: (p: object) => Promise<unknown> })
-        .create({ emailAddress: email });
-      // Use classic resource API (clerk.client.signUp) to prepare verification —
-      // more reliable than the signal wrapper's verifications.sendEmailCode()
-      const clerkClientAny = clerk as unknown as { client?: { signUp?: { prepareEmailAddressVerification: (p: object) => Promise<unknown> } } };
-      if (clerkClientAny.client?.signUp?.prepareEmailAddressVerification) {
-        await clerkClientAny.client.signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      // Account not found — create and send verification code.
+      // IMPORTANT: In Clerk 6 with signals, clerk.client.signUp is a signal-wrapped
+      // object that does NOT expose prepareEmailAddressVerification. We must reach the
+      // raw underlying SignUpResource via multiple fallback paths.
+      type RawSignUp = {
+        create: (p: object) => Promise<unknown>;
+        prepareEmailAddressVerification: (p: object) => Promise<unknown>;
+      };
+      // Try every known path to the raw SignUpResource
+      const clerkAnyObj = clerk as unknown as {
+        client?: { signUp?: RawSignUp };
+        __client?: { signUp?: RawSignUp };
+      };
+      const signUpAnyObj = signUp as unknown as {
+        __internal_toJSON?: () => unknown;
+        _raw?: RawSignUp;
+        resource?: RawSignUp;
+      };
+      const rawSU: RawSignUp | undefined =
+        clerkAnyObj.client?.signUp?.prepareEmailAddressVerification
+          ? (clerkAnyObj.client.signUp as RawSignUp)
+          : clerkAnyObj.__client?.signUp?.prepareEmailAddressVerification
+            ? (clerkAnyObj.__client.signUp as RawSignUp)
+            : signUpAnyObj._raw?.prepareEmailAddressVerification
+              ? signUpAnyObj._raw
+              : signUpAnyObj.resource?.prepareEmailAddressVerification
+                ? signUpAnyObj.resource
+                : undefined;
+
+      if (rawSU?.create && rawSU?.prepareEmailAddressVerification) {
+        // Best path: raw resource — create + explicitly send OTP
+        await rawSU.create({ emailAddress: email });
+        await rawSU.prepareEmailAddressVerification({ strategy: "email_code" });
       } else {
-        await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
-          .verifications.sendEmailCode();
+        // Fallback: signal wrapper create, then every possible send path
+        await (signUp as unknown as { create: (p: object) => Promise<unknown> })
+          .create({ emailAddress: email });
+        // After create(), try clerk.client.signUp again (it should now be populated)
+        const freshRawSU = (clerk as unknown as { client?: { signUp?: RawSignUp } }).client?.signUp;
+        if (freshRawSU?.prepareEmailAddressVerification) {
+          await freshRawSU.prepareEmailAddressVerification({ strategy: "email_code" });
+        } else {
+          await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
+            .verifications.sendEmailCode();
+        }
       }
       authFlowRef.current = "signUp";
       setSignInStep("otp");
