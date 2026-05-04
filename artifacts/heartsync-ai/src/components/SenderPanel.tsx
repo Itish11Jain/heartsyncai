@@ -198,27 +198,28 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setSignInError(null);
     const code = signInOtp.trim();
     try {
+      type ClerkClient = { signIn?: { status: string; createdSessionId: string | null }; signUp?: { status: string; createdSessionId: string | null } };
       if (authFlowRef.current === "signIn") {
         if (!signIn) return;
-        // Use resource API — returns result with .status + .createdSessionId directly
-        const result = await (signIn as unknown as {
-          attemptFirstFactor: (p: { strategy: string; code: string }) => Promise<{ status: string; createdSessionId: string | null }>;
-        }).attemptFirstFactor({ strategy: "email_code", code });
-        if (result?.status === "complete" && result?.createdSessionId) {
-          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: result.createdSessionId });
+        // Signal API — same flow as sendCode; read session from clerk.client (always fresh, no stale closure)
+        const { error } = await signIn.emailCode.verifyCode({ code });
+        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
+        const fresh = (clerk as unknown as { client: ClerkClient }).client?.signIn;
+        if (fresh?.status === "complete" && fresh?.createdSessionId) {
+          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: fresh.createdSessionId });
           completeAuth();
         } else {
           setSignInError("Sign-in couldn't complete. Please try again.");
         }
       } else {
         if (!signUp) return;
-        // Use resource API — returns result with .status + .createdSessionId directly
-        // Avoids stale-closure reads of the hook value after async operation
-        const result = await (signUp as unknown as {
-          attemptEmailAddressVerification: (p: { code: string }) => Promise<{ status: string; createdSessionId: string | null }>;
-        }).attemptEmailAddressVerification({ code });
-        if (result?.status === "complete" && result?.createdSessionId) {
-          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: result.createdSessionId });
+        // Signal API — same flow as sendEmailCode; read session from clerk.client (always fresh)
+        type VE = { verifyEmailCode: (p: { code: string }) => Promise<{ error: { longMessage?: string; message: string } | null }> };
+        const { error } = await (signUp.verifications as unknown as VE).verifyEmailCode({ code });
+        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
+        const fresh = (clerk as unknown as { client: ClerkClient }).client?.signUp;
+        if (fresh?.status === "complete" && fresh?.createdSessionId) {
+          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: fresh.createdSessionId });
           completeAuth();
         } else {
           setSignInError("Sign-up couldn't complete. Please try again.");
