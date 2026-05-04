@@ -14,19 +14,21 @@ interface WatermarkBadgeProps {
 }
 
 export default function WatermarkBadge({ id, showRemoveCta = false, hidden = false, prominent = false }: WatermarkBadgeProps) {
-  // When there's no card id (anonymous generation), the card is always
-  // watermarked — show the badge immediately without an API call.
-  const [apiWatermarked, setApiWatermarked] = useState<boolean | null>(null);
-  const show = !id ? true : apiWatermarked === true;
+  // Optimistic default: assume watermarked until the API confirms otherwise.
+  // Badge shows immediately on mount — it only disappears if the API explicitly
+  // returns is_watermarked: false. Slow or failed fetches leave it visible,
+  // which is correct since free cards are always watermarked.
+  const [apiWatermarked, setApiWatermarked] = useState<boolean | null>(true);
+  const show = !id ? true : apiWatermarked !== false;
 
   useEffect(() => {
     if (!id) return; // no id → anonymous card, always watermarked (handled above)
     fetch(`${BASE}/api/cards/${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: CardMeta | null) => {
-        setApiWatermarked(data?.is_watermarked ?? false);
+        setApiWatermarked(data?.is_watermarked ?? true);
       })
-      .catch(() => {});
+      .catch(() => { /* fetch failed — leave optimistic true so badge stays visible */ });
   }, [id]);
 
   if (!show || hidden) return null;

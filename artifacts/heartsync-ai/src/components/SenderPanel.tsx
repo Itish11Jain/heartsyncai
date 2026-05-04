@@ -65,7 +65,15 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }, [cardId, getToken]);
 
-  /* After Clerk redirects back with ?open_watermark=1, auto-remove watermark. */
+  /* Auto-remove watermark for any signed-in user — no button tap needed.
+     Fires as soon as Clerk confirms the session is loaded and active. */
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !cardId || watermarkRemoved) return;
+    removeWatermarkFree();
+  }, [isLoaded, isSignedIn, cardId, watermarkRemoved, removeWatermarkFree]);
+
+  /* After Clerk redirects back with ?open_watermark=1, just clean the URL.
+     Actual removal is handled by the auto-remove effect above. */
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     const p = new URLSearchParams(window.location.search);
@@ -73,9 +81,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       p.delete("open_watermark");
       const clean = window.location.pathname + (p.toString() ? "?" + p.toString() : "");
       window.history.replaceState(null, "", clean);
-      removeWatermarkFree();
     }
-  }, [isLoaded, isSignedIn, removeWatermarkFree]);
+  }, [isLoaded, isSignedIn]);
 
   function handleRemoveWatermarkClick() {
     if (isLoaded && isSignedIn) {
