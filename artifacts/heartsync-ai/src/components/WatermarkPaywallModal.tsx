@@ -218,15 +218,15 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     borderRadius: 12,
                   }}>
                     {(mode === "photo"
-                      ? ["📸 Photo in card", "🚫 No watermark", "✨ All templates", "♾️ Forever"]
-                      : ["🚫 No watermark", "✨ All templates", "📸 Photo in card", "♾️ Forever"]
+                      ? ["📸 Photo in card", "🚫 No watermark", "✨ All templates"]
+                      : ["🚫 No watermark", "✨ All templates", "📸 Photo in card"]
                     ).map((item) => (
                       <span key={item} style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap" }}>
                         {item}
                       </span>
                     ))}
                     <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2 }}>
-                      All for ₹49 — pay once, yours forever
+                      All for ₹49 — pay once
                     </span>
                   </div>
 
