@@ -806,9 +806,8 @@ function SendInner() {
     exit: { opacity: 0, x: dir * -50, transition: { duration: 0.2 } },
   };
 
-  // CTA label: surface the "pay later" promise whenever a premium or photo card is being made.
   const generateButtonLabel = (() => {
-    if (uploadedPhotoUrl || isPremiumTemplate(selectedTemplate)) return "Preview first & Pay later ✨";
+    if (uploadedPhotoUrl || isPremiumTemplate(selectedTemplate)) return "Preview Magic ✨";
     return "Generate Free Card 💌";
   })();
 
