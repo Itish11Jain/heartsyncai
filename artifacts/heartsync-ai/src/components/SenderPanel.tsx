@@ -188,11 +188,18 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         }
       }
 
-      // Account not found — create and send verification code (Clerk 6 signal API)
+      // Account not found — create and send verification code
       await (signUp as unknown as { create: (p: object) => Promise<unknown> })
         .create({ emailAddress: email });
-      await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
-        .verifications.sendEmailCode();
+      // Use classic resource API (clerk.client.signUp) to prepare verification —
+      // more reliable than the signal wrapper's verifications.sendEmailCode()
+      const clerkClientAny = clerk as unknown as { client?: { signUp?: { prepareEmailAddressVerification: (p: object) => Promise<unknown> } } };
+      if (clerkClientAny.client?.signUp?.prepareEmailAddressVerification) {
+        await clerkClientAny.client.signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      } else {
+        await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
+          .verifications.sendEmailCode();
+      }
       authFlowRef.current = "signUp";
       setSignInStep("otp");
     } catch (err: unknown) {
@@ -207,45 +214,70 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setSignInLoading(true);
     setSignInError(null);
     const code = signInOtp.trim();
-    // If verifyCode succeeds, keep the spinner alive — completeAuth() is called
-    // either immediately (if we have a sessionId) or by the isSignedIn useEffect
-    // (when Clerk auto-activates). Only stop loading on a real error (thrown).
     let stopLoading = false;
     try {
-      const clerkAny = clerk as unknown as { client?: { signIn?: { createdSessionId?: string }; signUp?: { createdSessionId?: string }; sessions?: Array<{ id: string }> } };
+      type ClerkAny = { client?: { signIn?: { createdSessionId?: string | null }; signUp?: { createdSessionId?: string | null }; sessions?: Array<{ id: string }> }; session?: { id: string } };
+      const clerkAny = clerk as unknown as ClerkAny;
+
+      const findSessionId = (resultSessionId?: string | null) =>
+        resultSessionId
+        ?? clerkAny.client?.signIn?.createdSessionId
+        ?? clerkAny.client?.signUp?.createdSessionId
+        ?? clerkAny.client?.sessions?.[0]?.id
+        ?? clerkAny.session?.id
+        ?? null;
+
+      const activateSession = async (sid: string) => {
+        await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sid });
+        completeAuth();
+      };
+
+      // Poll until Clerk populates the session (up to ~4 seconds)
+      const waitForSession = async (immediateId: string | null | undefined): Promise<boolean> => {
+        let sid = findSessionId(immediateId);
+        if (sid) { await activateSession(sid); return true; }
+        for (let i = 0; i < 8; i++) {
+          await new Promise(r => setTimeout(r, 500));
+          sid = findSessionId(immediateId);
+          if (sid) { await activateSession(sid); return true; }
+        }
+        return false;
+      };
+
       if (authFlowRef.current === "signIn") {
-        // Clerk 6 signal API: emailCode.verifyCode() is the correct verify path.
-        // Returns { error } (signal pattern) on success — not the full SignInResource.
-        const result = await (signIn as unknown as {
-          emailCode: { verifyCode: (p: object) => Promise<{ createdSessionId?: string | null }> }
-        }).emailCode.verifyCode({ code });
-        // Try every available source for the session ID
-        const sessionId = result?.createdSessionId
-          ?? clerkAny.client?.signIn?.createdSessionId
-          ?? clerkAny.client?.sessions?.[0]?.id;
-        if (sessionId) {
-          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sessionId });
-          completeAuth();
+        // Prefer classic resource API: attemptFirstFactor is stable across Clerk versions
+        type SignInClassic = { attemptFirstFactor: (p: object) => Promise<{ createdSessionId?: string | null }> };
+        const signInClassic = clerkAny.client?.signIn as unknown as SignInClassic | undefined;
+        let result: { createdSessionId?: string | null } | undefined;
+        if (signInClassic?.attemptFirstFactor) {
+          result = await signInClassic.attemptFirstFactor({ strategy: "email_code", code });
+        } else {
+          result = await (signIn as unknown as {
+            emailCode: { verifyCode: (p: object) => Promise<{ createdSessionId?: string | null }> }
+          }).emailCode.verifyCode({ code });
         }
-        // else: no sessionId yet — Clerk is auto-activating; the isSignedIn
-        // useEffect below will call completeAuth() once isSignedIn flips.
-        // Spinner keeps running so the user sees progress.
+        await waitForSession(result?.createdSessionId);
       } else {
-        // Clerk 6 signal API: verifications.verifyEmailCode() for sign-up
-        const result = await (signUp as unknown as {
-          verifications: { verifyEmailCode: (p: object) => Promise<{ createdSessionId?: string | null }> }
-        }).verifications.verifyEmailCode({ code });
-        const sessionId = result?.createdSessionId
-          ?? clerkAny.client?.signUp?.createdSessionId
-          ?? clerkAny.client?.sessions?.[0]?.id;
-        if (sessionId) {
-          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sessionId });
-          completeAuth();
+        // Prefer classic resource API: attemptEmailAddressVerification is stable
+        type SignUpClassic = { createdSessionId?: string | null; attemptEmailAddressVerification: (p: object) => Promise<{ createdSessionId?: string | null }> };
+        const signUpClassic = clerkAny.client?.signUp as unknown as SignUpClassic | undefined;
+        let result: { createdSessionId?: string | null } | undefined;
+        if (signUpClassic?.attemptEmailAddressVerification) {
+          result = await signUpClassic.attemptEmailAddressVerification({ code });
+        } else {
+          const signUpAny = signUp as unknown as {
+            createdSessionId?: string | null;
+            verifications: { verifyEmailCode: (p: object) => Promise<{ createdSessionId?: string | null }> }
+          };
+          result = await signUpAny.verifications.verifyEmailCode({ code });
         }
-        // else: wait for isSignedIn useEffect (same as sign-in above)
+        const found = await waitForSession(result?.createdSessionId ?? signUpClassic?.createdSessionId);
+        if (!found) {
+          stopLoading = true;
+          setSignInError("Verified! But session didn't activate — please refresh the page and sign in.");
+        }
       }
     } catch (err: unknown) {
-      // Real Clerk errors: wrong code, expired, rate-limited, etc.
       console.error("[HeartSync] OTP verify error:", err);
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
       setSignInError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Wrong code — please try again.");
