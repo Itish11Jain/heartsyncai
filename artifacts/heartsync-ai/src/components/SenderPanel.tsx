@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { useAuth, useClerk, useSignIn } from "@clerk/react";
+import { useAuth, useClerk, useSignIn, useSignUp } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -26,6 +26,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const clerk = useClerk();
   const { signIn } = useSignIn();
+  const { signUp } = useSignUp();
+  const authFlowRef = useRef<"signIn" | "signUp">("signIn");
   const { usage } = useCardUsage();
   const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
@@ -141,16 +143,47 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setShowSignIn(true);
   }
 
+  function completeAuth() {
+    setShowSignIn(false);
+    const action = pendingSignInActionRef.current;
+    pendingSignInActionRef.current = null;
+    if (action === "paywall") {
+      setShowBundlePaywall(true);
+    } else if (action === "watermark") {
+      void removeWatermarkFree();
+    }
+  }
+
   async function handleSignInEmailSubmit() {
     if (!signIn) return;
     setSignInLoading(true);
     setSignInError(null);
+    const email = signInEmail.trim();
     try {
-      const { error } = await signIn.emailCode.sendCode({ emailAddress: signInEmail.trim() });
-      if (error) {
-        setSignInError(error.longMessage ?? error.message ?? "Couldn't send code. Check email and retry.");
+      // Try sign-in first (existing account)
+      const { error: signInErr } = await signIn.emailCode.sendCode({ emailAddress: email });
+      if (!signInErr) {
+        authFlowRef.current = "signIn";
+        setSignInStep("otp");
         return;
       }
+
+      // Fall back to sign-up (new account)
+      if (!signUp) {
+        setSignInError(signInErr.longMessage ?? signInErr.message ?? "Couldn't send code. Check your email and try again.");
+        return;
+      }
+      const { error: createErr } = await signUp.create({ emailAddress: email });
+      if (createErr) {
+        setSignInError(createErr.longMessage ?? createErr.message ?? "Couldn't create account. Check your email and try again.");
+        return;
+      }
+      const { error: sendErr } = await (signUp.verifications as { sendEmailCode: () => Promise<{ error: { longMessage?: string; message: string } | null }> }).sendEmailCode();
+      if (sendErr) {
+        setSignInError(sendErr.longMessage ?? sendErr.message ?? "Couldn't send code. Please try again.");
+        return;
+      }
+      authFlowRef.current = "signUp";
       setSignInStep("otp");
     } catch (err: unknown) {
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
@@ -161,24 +194,25 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   }
 
   async function handleSignInOtpSubmit() {
-    if (!signIn) return;
     setSignInLoading(true);
     setSignInError(null);
+    const code = signInOtp.trim();
     try {
-      const { error } = await signIn.emailCode.verifyCode({ code: signInOtp.trim() });
-      if (error) {
-        setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again.");
-        return;
-      }
-      if (signIn.status === "complete" && signIn.createdSessionId) {
-        await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: signIn.createdSessionId });
-        setShowSignIn(false);
-        const action = pendingSignInActionRef.current;
-        pendingSignInActionRef.current = null;
-        if (action === "paywall") {
-          setShowBundlePaywall(true);
-        } else if (action === "watermark") {
-          void removeWatermarkFree();
+      if (authFlowRef.current === "signIn") {
+        if (!signIn) return;
+        const { error } = await signIn.emailCode.verifyCode({ code });
+        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
+        if (signIn.status === "complete" && signIn.createdSessionId) {
+          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: signIn.createdSessionId });
+          completeAuth();
+        }
+      } else {
+        if (!signUp) return;
+        const { error } = await (signUp.verifications as { verifyEmailCode: (p: { code: string }) => Promise<{ error: { longMessage?: string; message: string } | null }> }).verifyEmailCode({ code });
+        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
+        if (signUp.status === "complete" && signUp.createdSessionId) {
+          await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: signUp.createdSessionId });
+          completeAuth();
         }
       }
     } catch (err: unknown) {
