@@ -46,9 +46,10 @@ interface Props {
   cardId: string;
   onClose: () => void;
   onSuccess: () => void;
+  mode?: "photo" | "watermark";
 }
 
-export default function WatermarkPaywallModal({ cardId, onClose, onSuccess }: Props) {
+export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode = "watermark" }: Props) {
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const clerk = useClerk();
 
@@ -163,7 +164,9 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess }: Pr
                 }}
               >←</button>
               <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, lineHeight: 1.2 }}>Remove watermark</div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, lineHeight: 1.2 }}>
+                  {mode === "photo" ? "Share with the photo included" : "Remove watermark"}
+                </div>
                 <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 }}>
                   Pay via UPI · instant unlock
                 </div>
@@ -209,7 +212,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess }: Pr
                   <div style={{ textAlign: "center", marginBottom: 20 }}>
                     <Sparkles style={{ width: 26, height: 26, color: "#a855f7", margin: "0 auto 8px" }} />
                     <h1 style={{ color: "#fff", fontWeight: 800, fontSize: 19, marginBottom: 6 }}>
-                      Remove Watermark · Go Premium
+                      {mode === "photo" ? "Share with the photo included" : "Remove Watermark · Go Premium"}
                     </h1>
                     <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
                       One payment of ₹49 — yours forever.

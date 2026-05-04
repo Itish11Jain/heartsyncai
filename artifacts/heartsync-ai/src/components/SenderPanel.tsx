@@ -757,6 +757,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       <AnimatePresence>
         {showBundlePaywall && (
           <WatermarkPaywallModal
+            mode="photo"
             cardId={cardId}
             onClose={() => { setShowBundlePaywall(false); pendingShareTypeRef.current = null; }}
             onSuccess={handleBundlePaywallSuccess}
