@@ -712,7 +712,7 @@ export default function CosmicCard() {
       {/* ══ Polaroid photo ══ */}
       <AnimatePresence>
         {personalPictureUrl && (phase === "spawning" || phase === "tapping") && (
-          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={false} />
         )}
       </AnimatePresence>
 

@@ -961,7 +961,7 @@ export default function VinylCard() {
       {/* ══ Polaroid photo ══ */}
       <AnimatePresence>
         {personalPictureUrl && (phase === "dropping" || phase === "playing") && (
-          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={false} />
         )}
       </AnimatePresence>
 

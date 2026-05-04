@@ -884,7 +884,7 @@ export default function Card() {
     const update = () => {
       setOrbRadius(
         personalPictureUrl
-          ? Math.min(188, window.innerWidth * 0.46)
+          ? Math.min(230, window.innerWidth * 0.55)
           : Math.min(115, window.innerWidth * 0.27)
       );
     };
@@ -1102,7 +1102,7 @@ export default function Card() {
             key="envelope-scene"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.45, ease: "easeIn" } }}
+            exit={{ x: "-110vw", opacity: 0, transition: { duration: 0.45, ease: "easeIn" } }}
             style={{
               position: "fixed", inset: 0,
               display: "flex", flexDirection: "column",
@@ -1153,7 +1153,7 @@ export default function Card() {
       {/* ════ PHASE 2.5: Polaroid ════ */}
       <AnimatePresence>
         {personalPictureUrl && (phase === "polaroid" || phase === "orbs" || (phase === "finale" && !allClicked)) && (
-          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={phase === "orbs" || (phase === "finale" && !allClicked)} />
         )}
       </AnimatePresence>
 

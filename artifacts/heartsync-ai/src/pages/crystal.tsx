@@ -977,7 +977,7 @@ export default function CrystalCard() {
       {/* ══ Polaroid photo ══ */}
       <AnimatePresence>
         {personalPictureUrl && (phase === "clearing" || phase === "visions") && (
-          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={false} />
         )}
       </AnimatePresence>
 

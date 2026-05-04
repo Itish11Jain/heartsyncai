@@ -1,29 +1,49 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 
-interface PolaroidFrameProps {
+const FRAMED_W = 200;
+const FRAMED_H = 260;
+
+interface Props {
   src: string;
+  isFramed: boolean;
 }
 
-export default function PolaroidFrame({ src }: PolaroidFrameProps) {
+export default function PolaroidFrame({ src, isFramed }: Props) {
   const [loaded, setLoaded] = useState(false);
+  const [revealing, setRevealing] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  const sketchW = typeof window !== "undefined" ? Math.min(280, window.innerWidth * 0.75) : 260;
+  const sketchH = sketchW * 1.28;
+
+  const w = isFramed ? FRAMED_W : sketchW;
+  const h = isFramed ? FRAMED_H : sketchH;
+
+  // Catch cached images that fire load before React attaches onLoad
   useEffect(() => {
-    // For cached images: browser fires `load` before React attaches onLoad, so
-    // we check .complete after mount to catch that case.
     if (imgRef.current?.complete && (imgRef.current.naturalWidth ?? 1) > 0) {
       setLoaded(true);
     }
   }, []);
 
+  // Begin sketch reveal shortly after image is ready
+  useEffect(() => {
+    if (!loaded || isFramed) return;
+    const t = setTimeout(() => setRevealing(true), 60);
+    return () => clearTimeout(t);
+  }, [loaded, isFramed]);
+
   return (
     <motion.div
-      key="polaroid"
-      initial={{ scale: 0.05, opacity: 0 }}
-      animate={loaded ? { scale: 1, opacity: 1 } : { scale: 0.05, opacity: 0 }}
-      exit={{ scale: 0.7, opacity: 0, transition: { duration: 0.3 } }}
-      transition={{ type: "spring", damping: 18, stiffness: 200 }}
+      initial={{ opacity: 0, width: w, height: h }}
+      animate={{ opacity: loaded ? 1 : 0, width: w, height: h }}
+      exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.3 } }}
+      transition={{
+        opacity: { duration: 0.2 },
+        width: { type: "spring", damping: 24, stiffness: 180 },
+        height: { type: "spring", damping: 24, stiffness: 180 },
+      }}
       style={{
         position: "fixed",
         top: "50%",
@@ -32,87 +52,97 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
         y: "-50%",
         zIndex: 30,
         pointerEvents: "none",
-        width: 220,
-        height: 220,
       }}
     >
-      {/* Outer glow pulse */}
-      <motion.div
-        animate={{ opacity: [0.35, 0.85, 0.35], scale: [0.97, 1.03, 0.97] }}
-        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-        style={{
-          position: "absolute",
-          inset: -16,
-          borderRadius: "50%",
-          border: "10px solid rgba(255,200,0,0.45)",
-          filter: "blur(6px)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Rotating arc — primary */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 7, ease: "linear" }}
-        style={{
-          position: "absolute",
-          inset: -8,
-          borderRadius: "50%",
-          border: "5px solid transparent",
-          borderTopColor: "rgba(255,220,0,1)",
-          borderRightColor: "rgba(255,165,0,0.55)",
-          borderBottomColor: "rgba(255,200,0,0.08)",
-          borderLeftColor: "rgba(255,165,0,0.35)",
-          pointerEvents: "none",
-          filter: "drop-shadow(0 0 6px rgba(255,210,0,0.9))",
-        }}
-      />
-
-      {/* Rotating arc — counter, slower */}
-      <motion.div
-        animate={{ rotate: -360 }}
-        transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
-        style={{
-          position: "absolute",
-          inset: -5,
-          borderRadius: "50%",
-          border: "3px solid transparent",
-          borderTopColor: "rgba(255,200,0,0.0)",
-          borderRightColor: "rgba(255,215,0,0.7)",
-          borderBottomColor: "rgba(255,165,0,0.15)",
-          borderLeftColor: "rgba(255,215,0,0.0)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Static white ring */}
-      <div
-        style={{
-          position: "absolute",
-          inset: -2,
-          borderRadius: "50%",
-          border: "3px solid rgba(255,255,255,0.9)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Photo circle */}
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: "50%",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          ref={imgRef}
-          src={src}
-          alt="Personal photo"
-          onLoad={() => setLoaded(true)}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
+      {/* Photo container — overflow hidden clips the image */}
+      <div style={{ width: "100%", height: "100%", overflow: "hidden", borderRadius: 6, position: "relative" }}>
+        <motion.div
+          initial={{ clipPath: isFramed ? "inset(0% 0% 0% 0%)" : "inset(0% 0% 100% 0%)" }}
+          animate={{ clipPath: (revealing || isFramed) ? "inset(0% 0% 0% 0%)" : "inset(0% 0% 100% 0%)" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          style={{ width: "100%", height: "100%" }}
+        >
+          <img
+            ref={imgRef}
+            src={src}
+            alt="photo"
+            onLoad={() => setLoaded(true)}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              filter: isFramed ? "none" : "grayscale(1) contrast(2.1) brightness(1.18)",
+              transition: "filter 0.8s ease",
+            }}
+          />
+        </motion.div>
       </div>
+
+      {/* ✏️ Pen — sibling of photo container so it's NOT clipped */}
+      {!isFramed && loaded && (
+        <motion.div
+          initial={{ y: -16, opacity: 1 }}
+          animate={{ y: revealing ? h : -16, opacity: revealing ? 0 : 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 0,
+            transform: "translateX(-50%)",
+            fontSize: 30,
+            lineHeight: 1,
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        >
+          ✏️
+        </motion.div>
+      )}
+
+      {/* Animated SVG border — draws around the framed rectangle */}
+      {isFramed && (
+        <motion.svg
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.1 }}
+          style={{
+            position: "absolute",
+            top: -5,
+            left: -5,
+            overflow: "visible",
+            pointerEvents: "none",
+            zIndex: 5,
+          }}
+          width={FRAMED_W + 10}
+          height={FRAMED_H + 10}
+        >
+          {/* White border — draws itself */}
+          <motion.rect
+            x={3} y={3}
+            width={FRAMED_W + 4} height={FRAMED_H + 4}
+            rx={8} ry={8}
+            fill="none"
+            stroke="rgba(255,255,255,0.9)"
+            strokeWidth={2}
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.25 }}
+          />
+          {/* Purple glow outline behind the white one */}
+          <motion.rect
+            x={3} y={3}
+            width={FRAMED_W + 4} height={FRAMED_H + 4}
+            rx={8} ry={8}
+            fill="none"
+            stroke="rgba(168,85,247,0.35)"
+            strokeWidth={5}
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.3 }}
+          />
+        </motion.svg>
+      )}
     </motion.div>
   );
 }
