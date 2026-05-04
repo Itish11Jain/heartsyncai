@@ -231,16 +231,16 @@
         };
 
         // Safety fallback — auto-clear after the route-appropriate delay.
-        // /send: keep the splash visible for up to 8 s so the "Create a card 💌"
-        //   hero heading (our LCP candidate) stays on screen while the Clerk +
-        //   send + card-templates chunks download. React's SplashClearer clears
-        //   it sooner once the form renders (typically 1.5-3 s with preloads).
-        //   Without a long timeout, the splash would clear at 1 s leaving a blank
-        //   screen for several more seconds while Clerk finishes loading.
+        // /send: keep the splash visible for up to 3 s. With chunk preloads the
+        //   form renders in ~1.5-2 s on Indian 4G; React's SplashClearer clears
+        //   it sooner once the Send component mounts. The 3 s cap ensures users
+        //   never stare at the splash on a slow connection without seeing the form.
+        //   Without any cap the 1 s default caused a blank screen while Clerk's
+        //   88 KB chunk finished downloading after the splash cleared early.
         // All other routes: 1 s is enough — React mounts well before then.
         setTimeout(function () {
           if (window.__clearHsSplash) window.__clearHsSplash();
-        }, isSend ? 8000 : 1000);
+        }, isSend ? 3000 : 1000);
 
         // Warm the API server connection immediately so the first real API
         // call (usage check, card creation) doesn't pay the full TCP+TLS

@@ -710,8 +710,11 @@ export default function Send() {
       recipient_name: recipientName.trim() || undefined,
     });
 
-    // Wait for Clerk to finish reading the stored session before deciding.
-    if (!isLoaded) return;
+    // By the time the user fills in recipient name across the 3-step wizard,
+    // Clerk has had ample time to load. If by some chance it hasn't (e.g.
+    // the user rushed through on a very fast device with a cached session),
+    // we proceed anyway — doGenerateCard safely handles a null token by
+    // generating the card without a DB record (using a client-side tracking ID).
 
     // All templates generate immediately with no gate.
     // Premium card pages handle the sign-in + paywall wall themselves.
@@ -768,9 +771,9 @@ export default function Send() {
   };
 
   // Decide what the bottom Generate button should say based on the current
-  // template choice + auth state. This is the "pre-flight" copy.
+  // template choice. No longer gated on Clerk isLoaded / usageLoading so
+  // the button is always gold and labelled once the form renders.
   const generateButtonLabel = (() => {
-    if (!isLoaded || usageLoading) return "Loading…";
     if (selectedTemplate === "envelope") return "Generate Free Card 💌";
     return "Preview Magic ✨";
   })();
@@ -1026,19 +1029,19 @@ export default function Send() {
 
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  disabled={!recipientName.trim() || !isLoaded || usageLoading || showGenerating}
+                  disabled={!recipientName.trim() || showGenerating}
                   onClick={handleFinish}
                   data-testid="generate-button"
                   style={{
                     padding: "16px",
                     borderRadius: 14,
-                    background: recipientName.trim() && isLoaded && !usageLoading
+                    background: recipientName.trim()
                       ? "linear-gradient(135deg, #FFD700, #FFA500)"
                       : "rgba(255,255,255,0.08)",
-                    color: recipientName.trim() && isLoaded && !usageLoading ? "#000" : "rgba(255,255,255,0.3)",
+                    color: recipientName.trim() ? "#000" : "rgba(255,255,255,0.3)",
                     fontWeight: 700,
                     fontSize: 16,
-                    cursor: recipientName.trim() && isLoaded && !usageLoading ? "pointer" : "default",
+                    cursor: recipientName.trim() ? "pointer" : "default",
                     border: "none",
                     transition: "all 0.2s",
                   }}
