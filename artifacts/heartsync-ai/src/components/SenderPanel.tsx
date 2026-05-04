@@ -160,6 +160,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
      called manually from the OTP handler. */
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !showSignIn) return;
+    setSignInLoading(false);
     completeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn, showSignIn]);
@@ -206,40 +207,51 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setSignInLoading(true);
     setSignInError(null);
     const code = signInOtp.trim();
+    // If verifyCode succeeds, keep the spinner alive — completeAuth() is called
+    // either immediately (if we have a sessionId) or by the isSignedIn useEffect
+    // (when Clerk auto-activates). Only stop loading on a real error (thrown).
+    let stopLoading = false;
     try {
+      const clerkAny = clerk as unknown as { client?: { signIn?: { createdSessionId?: string }; signUp?: { createdSessionId?: string }; sessions?: Array<{ id: string }> } };
       if (authFlowRef.current === "signIn") {
-        // Clerk 6 signal API: emailCode.verifyCode() — the only correct verify path
+        // Clerk 6 signal API: emailCode.verifyCode() is the correct verify path.
+        // Returns { error } (signal pattern) on success — not the full SignInResource.
         const result = await (signIn as unknown as {
-          emailCode: { verifyCode: (p: object) => Promise<{ status: string; createdSessionId: string | null }> }
+          emailCode: { verifyCode: (p: object) => Promise<{ createdSessionId?: string | null }> }
         }).emailCode.verifyCode({ code });
+        // Try every available source for the session ID
         const sessionId = result?.createdSessionId
-          ?? (clerk as unknown as { client?: { signIn?: { createdSessionId?: string } } }).client?.signIn?.createdSessionId;
+          ?? clerkAny.client?.signIn?.createdSessionId
+          ?? clerkAny.client?.sessions?.[0]?.id;
         if (sessionId) {
           await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sessionId });
           completeAuth();
-        } else {
-          setSignInError("Sign-in couldn't complete. Please try again.");
         }
+        // else: no sessionId yet — Clerk is auto-activating; the isSignedIn
+        // useEffect below will call completeAuth() once isSignedIn flips.
+        // Spinner keeps running so the user sees progress.
       } else {
-        // Clerk 6 signal API: verifications.verifyEmailCode() — the only correct verify path
+        // Clerk 6 signal API: verifications.verifyEmailCode() for sign-up
         const result = await (signUp as unknown as {
-          verifications: { verifyEmailCode: (p: object) => Promise<{ status: string; createdSessionId: string | null }> }
+          verifications: { verifyEmailCode: (p: object) => Promise<{ createdSessionId?: string | null }> }
         }).verifications.verifyEmailCode({ code });
         const sessionId = result?.createdSessionId
-          ?? (clerk as unknown as { client?: { signUp?: { createdSessionId?: string } } }).client?.signUp?.createdSessionId;
+          ?? clerkAny.client?.signUp?.createdSessionId
+          ?? clerkAny.client?.sessions?.[0]?.id;
         if (sessionId) {
           await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sessionId });
           completeAuth();
-        } else {
-          setSignInError("Sign-up couldn't complete. Please try again.");
         }
+        // else: wait for isSignedIn useEffect (same as sign-in above)
       }
     } catch (err: unknown) {
+      // Real Clerk errors: wrong code, expired, rate-limited, etc.
       console.error("[HeartSync] OTP verify error:", err);
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
       setSignInError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Wrong code — please try again.");
+      stopLoading = true;
     } finally {
-      setSignInLoading(false);
+      if (stopLoading) setSignInLoading(false);
     }
   }
 
