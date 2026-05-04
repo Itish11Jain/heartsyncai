@@ -6,7 +6,13 @@ interface PolaroidFrameProps {
 }
 
 export default function PolaroidFrame({ src }: PolaroidFrameProps) {
-  const [loaded, setLoaded] = useState(false);
+  // Start as loaded if the browser already has it cached (from preload in card.tsx)
+  const [loaded, setLoaded] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const probe = new Image();
+    probe.src = src;
+    return probe.complete;
+  });
 
   return (
     <motion.div
@@ -30,7 +36,7 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
       {/* Outer glow pulse */}
       <motion.div
         animate={{ opacity: [0.35, 0.85, 0.35], scale: [0.97, 1.03, 0.97] }}
-        transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
         style={{
           position: "absolute",
           inset: -16,
@@ -44,7 +50,7 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
       {/* Rotating arc — primary */}
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 2.8, ease: "linear" }}
+        transition={{ repeat: Infinity, duration: 7, ease: "linear" }}
         style={{
           position: "absolute",
           inset: -8,
@@ -62,7 +68,7 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
       {/* Rotating arc — counter, slower */}
       <motion.div
         animate={{ rotate: -360 }}
-        transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
+        transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
         style={{
           position: "absolute",
           inset: -5,

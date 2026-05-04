@@ -1000,7 +1000,7 @@ export default function Card() {
     setPhase("opening");
     if (personalPictureUrl) {
       setTimeout(() => { setPhase("polaroid"); }, 400);
-      setTimeout(() => { setPhase("orbs"); }, 1600);
+      setTimeout(() => { setPhase("orbs"); }, 2000);
     } else {
       setTimeout(() => { setPhase("orbs"); }, 1200);
     }
