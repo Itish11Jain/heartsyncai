@@ -151,9 +151,8 @@ export default function PolaroidFrame({ src }: Props) {
             height: "100%",
             objectFit: "cover",
             display: "block",
-            // Instant appearance — no fade-in delay
             opacity: imgLoaded ? 1 : 0,
-            transition: "none",
+            transition: "opacity 0.6s ease",
           }}
         />
       </div>
