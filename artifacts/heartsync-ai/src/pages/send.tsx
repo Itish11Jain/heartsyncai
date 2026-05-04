@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition, memo, useMemo } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
@@ -93,6 +93,126 @@ const TEMPLATE_CATALOG: TemplateMeta[] = [
     ringColor: "rgba(184,118,42,0.6)",
   },
 ];
+
+/* ─── Memoized template picker grid ───────────────────────────────────────
+   Extracted from Send so that keystrokes in recipient-name / likes / message
+   inputs don't re-render all 4 template cards.  React.memo skips re-renders
+   as long as selectedTemplate, lockedTemplateIds, and onPick are stable.
+   lockedTemplateIds is computed via useMemo in Send; onPick is useCallback. */
+
+interface TemplatePickerProps {
+  selectedTemplate: TemplateId;
+  lockedTemplateIds: ReadonlySet<TemplateId>;
+  onPick: (t: TemplateId) => void;
+}
+
+const TemplatePicker = memo(function TemplatePicker({
+  selectedTemplate,
+  lockedTemplateIds,
+  onPick,
+}: TemplatePickerProps) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {TEMPLATE_CATALOG.map((tpl) => {
+        const selected = selectedTemplate === tpl.id;
+        const locked = lockedTemplateIds.has(tpl.id);
+        const isPremium = isPremiumTemplate(tpl.id);
+        return (
+          <motion.button
+            key={tpl.id}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => onPick(tpl.id)}
+            data-testid={`template-card-${tpl.id}`}
+            style={{
+              position: "relative",
+              padding: 0,
+              borderRadius: 12,
+              overflow: "hidden",
+              cursor: "pointer",
+              border: `2px solid ${selected ? "rgba(255,215,0,0.85)" : "rgba(255,255,255,0.08)"}`,
+              boxShadow: selected
+                ? "0 0 0 2px rgba(255,215,0,0.18), 0 4px 14px rgba(0,0,0,0.45)"
+                : "0 2px 8px rgba(0,0,0,0.3)",
+              aspectRatio: "3 / 4",
+              background: tpl.gradient,
+            }}
+          >
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `radial-gradient(ellipse at 50% 30%, ${tpl.ringColor} 0%, transparent 65%)`,
+              pointerEvents: "none",
+            }} />
+
+            {selected && (
+              <div style={{
+                position: "absolute", top: 4, right: 4, zIndex: 2,
+                width: 18, height: 18, borderRadius: 99,
+                background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+              }}>
+                <Check size={11} color="#000" strokeWidth={3} />
+              </div>
+            )}
+
+            {!selected && locked && (
+              <>
+                <div style={{
+                  position: "absolute", inset: 0, zIndex: 3,
+                  background:
+                    "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%)",
+                  pointerEvents: "none",
+                }} />
+                <div style={{
+                  position: "absolute", top: 5, right: 5, zIndex: 5,
+                  padding: "3px 7px", borderRadius: 99,
+                  background: "rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.75)",
+                  letterSpacing: "0.04em",
+                  backdropFilter: "blur(6px)",
+                }}>
+                  ✨ Premium
+                </div>
+              </>
+            )}
+
+            <div style={{
+              position: "absolute", inset: 0, zIndex: 1,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              paddingBottom: 22,
+            }}>
+              <TemplatePreview id={tpl.id} size={62} />
+            </div>
+
+            <div style={{
+              position: "absolute", left: 0, right: 0, bottom: 4,
+              zIndex: 2, textAlign: "center",
+            }}>
+              <div style={{
+                color: tpl.id === "vinyl" ? "#3A2E24" : "#fff",
+                fontWeight: 700, fontSize: 11, lineHeight: 1.1,
+                textShadow: tpl.id === "vinyl"
+                  ? "none"
+                  : "0 1px 3px rgba(0,0,0,0.55)",
+              }}>
+                {tpl.name}
+              </div>
+              <div style={{
+                marginTop: 1, fontSize: 8, fontWeight: 700, letterSpacing: "0.05em",
+                color: tpl.id === "vinyl"
+                  ? (isPremium ? "#8A5515" : "#3A6B1A")
+                  : (isPremium ? "#FFD700" : "#90EE90"),
+              }}>
+                {isPremium ? "✦ PREMIUM" : "FREE"}
+              </div>
+            </div>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+});
 
 function useSearchParams() {
   if (typeof window === "undefined") return new URLSearchParams();
@@ -616,14 +736,28 @@ export default function Send() {
   const doGenerateCardRef = useRef(doGenerateCard);
   useEffect(() => { doGenerateCardRef.current = doGenerateCard; }, [doGenerateCard]);
 
-  /* ─── Template picker: select only — gate fires at Generate, not here ─ */
-  function handlePickTemplate(t: TemplateId) {
+  /* ─── Template picker: select only — gate fires at Generate, not here ─
+     useCallback so the reference is stable across parent re-renders; this
+     lets React.memo(TemplatePicker) skip re-renders on every keystroke. */
+  const handlePickTemplate = useCallback((t: TemplateId) => {
     setSelectedTemplate(t);
     trackEvent({
       event: "template_selected",
       fingerprint, email: userEmail ?? undefined, occasion, template: t,
     });
-  }
+  }, [fingerprint, userEmail, occasion]);
+
+  /* Stable set of locked template IDs — avoids recreating the Set on every
+     render; TemplatePicker receives this as a stable prop. */
+  const lockedTemplateIds = useMemo<ReadonlySet<TemplateId>>(() => {
+    if (usage?.is_superuser) return new Set<TemplateId>();
+    const unlocked = usage?.unlocked_templates ?? [];
+    return new Set<TemplateId>(
+      TEMPLATE_CATALOG
+        .filter(t => t.id !== "envelope" && !unlocked.includes(t.id))
+        .map(t => t.id)
+    );
+  }, [usage?.is_superuser, usage?.unlocked_templates]);
 
   /* ─── UI helpers ────────────────────────────────────────────────────── */
 
@@ -640,16 +774,6 @@ export default function Send() {
     if (selectedTemplate === "envelope") return "Generate Free Card 💌";
     return "Preview Magic ✨";
   })();
-
-  // Whether this premium template has a ₹49 lock badge in the picker.
-  // Envelope is always shown as free; premium shows a lock until unlocked.
-  function isTemplateLocked(t: TemplateId): boolean {
-    if (usage?.is_superuser) return false;
-    if (t === "envelope") return false; // envelope is always free, no lock badge
-    // Premium: locked until the user has it in unlocked_templates
-    if ((usage?.unlocked_templates ?? []).includes(t)) return false;
-    return true;
-  }
 
   return (
     <div
@@ -922,7 +1046,8 @@ export default function Send() {
                   {generateButtonLabel}
                 </motion.button>
 
-                {/* Inline template picker — Envelope pre-selected, premium tap → gate. */}
+                {/* Template picker — extracted into React.memo(TemplatePicker) to
+                    prevent re-renders on every recipient-name / likes keystroke */}
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
@@ -932,115 +1057,13 @@ export default function Send() {
                       Envelope is free forever ✨
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {TEMPLATE_CATALOG.map((tpl) => {
-                      const selected = selectedTemplate === tpl.id;
-                      const locked = isTemplateLocked(tpl.id);
-                      const isPremium = isPremiumTemplate(tpl.id);
-                      return (
-                        <motion.button
-                          key={tpl.id}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => handlePickTemplate(tpl.id)}
-                          data-testid={`template-card-${tpl.id}`}
-                          style={{
-                            position: "relative",
-                            padding: 0,
-                            borderRadius: 12,
-                            overflow: "hidden",
-                            cursor: "pointer",
-                            border: `2px solid ${selected ? "rgba(255,215,0,0.85)" : "rgba(255,255,255,0.08)"}`,
-                            boxShadow: selected
-                              ? "0 0 0 2px rgba(255,215,0,0.18), 0 4px 14px rgba(0,0,0,0.45)"
-                              : "0 2px 8px rgba(0,0,0,0.3)",
-                            aspectRatio: "3 / 4",
-                            background: tpl.gradient,
-                          }}
-                        >
-                          <div style={{
-                            position: "absolute", inset: 0,
-                            background: `radial-gradient(ellipse at 50% 30%, ${tpl.ringColor} 0%, transparent 65%)`,
-                            pointerEvents: "none",
-                          }} />
+                  <TemplatePicker
+                    selectedTemplate={selectedTemplate}
+                    lockedTemplateIds={lockedTemplateIds}
+                    onPick={handlePickTemplate}
+                  />
 
-                          {selected && (
-                            <div style={{
-                              position: "absolute", top: 4, right: 4, zIndex: 2,
-                              width: 18, height: 18, borderRadius: 99,
-                              background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
-                            }}>
-                              <Check size={11} color="#000" strokeWidth={3} />
-                            </div>
-                          )}
-                          {/* Locked state — kept minimal so the artwork
-                              stays the hero: a subtle dim veil over the
-                              card plus a prominent gold "🔒 ₹29" pill in
-                              the top-right corner. No centered lock glyph
-                              (the veil + pill are enough). */}
-                          {!selected && locked && (
-                            <>
-                              {/* Card-wide dim veil */}
-                              <div style={{
-                                position: "absolute", inset: 0, zIndex: 3,
-                                background:
-                                  "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%)",
-                                pointerEvents: "none",
-                              }} />
-                              {/* Top-right premium badge — no price to avoid shock */}
-                              <div style={{
-                                position: "absolute", top: 5, right: 5, zIndex: 5,
-                                padding: "3px 7px", borderRadius: 99,
-                                background: "rgba(255,255,255,0.10)",
-                                border: "1px solid rgba(255,255,255,0.18)",
-                                fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.75)",
-                                letterSpacing: "0.04em",
-                                backdropFilter: "blur(6px)",
-                              }}>
-                                ✨ Premium
-                              </div>
-                            </>
-                          )}
-
-                          {/* Centered hero graphic — fills the card so it
-                              reads as a real preview, not a stamp at the top. */}
-                          <div style={{
-                            position: "absolute", inset: 0, zIndex: 1,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            paddingBottom: 22, // leave room for the title overlay
-                          }}>
-                            <TemplatePreview id={tpl.id} size={62} />
-                          </div>
-                          {/* Title overlay at the very bottom of the card. */}
-                          <div style={{
-                            position: "absolute", left: 0, right: 0, bottom: 4,
-                            zIndex: 2, textAlign: "center",
-                          }}>
-                            <div style={{
-                              color: tpl.id === "vinyl" ? "#3A2E24" : "#fff",
-                              fontWeight: 700, fontSize: 11, lineHeight: 1.1,
-                              textShadow: tpl.id === "vinyl"
-                                ? "none"
-                                : "0 1px 3px rgba(0,0,0,0.55)",
-                            }}>
-                              {tpl.name}
-                            </div>
-                            <div style={{
-                              marginTop: 1, fontSize: 8, fontWeight: 700, letterSpacing: "0.05em",
-                              color: tpl.id === "vinyl"
-                                ? (isPremium ? "#8A5515" : "#3A6B1A")
-                                : (isPremium ? "#FFD700" : "#90EE90"),
-                            }}>
-                              {isPremium ? "✦ PREMIUM" : "FREE"}
-                            </div>
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-
-                  {selectedTemplate !== "envelope" && isTemplateLocked(selectedTemplate) && usage?.is_signed_in && (
+                  {selectedTemplate !== "envelope" && lockedTemplateIds.has(selectedTemplate) && usage?.is_signed_in && (
                     <p className="text-center text-xs mt-2" style={{ color: "rgba(255,215,0,0.6)" }}>
                       ✨ Preview the magic first — unlock to share
                     </p>
