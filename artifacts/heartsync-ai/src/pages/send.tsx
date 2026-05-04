@@ -310,7 +310,7 @@ function SendInner() {
   // Template selection is intentionally NOT restored from draft — Envelope is always
   // the predictable default on a fresh load. Selections survive the in-page lifecycle
   // (signin modal, paywall modal) via React state, which is what matters for the flow.
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("envelope");
+  const [selectedTemplate] = useState<TemplateId>("envelope");
 
   const [showGenerating, setShowGenerating] = useState(false);
   const [genEmojiIdx, setGenEmojiIdx] = useState(0);
@@ -410,7 +410,6 @@ function SendInner() {
         return;
       }
       if (templateGate(usage, premiumTpl) === "paywall") {
-        setSelectedTemplate(premiumTpl);
         pendingPremiumAfterSignin.current = null;
         openPaywall();
       }
@@ -784,16 +783,8 @@ function SendInner() {
   const doGenerateCardRef = useRef(doGenerateCard);
   useEffect(() => { doGenerateCardRef.current = doGenerateCard; }, [doGenerateCard]);
 
-  /* ─── Template picker: select only — gate fires at Generate, not here ─
-     useCallback so the reference is stable across parent re-renders; this
-     lets React.memo(TemplatePicker) skip re-renders on every keystroke. */
-  const handlePickTemplate = useCallback((t: TemplateId) => {
-    setSelectedTemplate(t);
-    trackEvent({
-      event: "template_selected",
-      fingerprint, email: userEmail ?? undefined, occasion, template: t,
-    });
-  }, [fingerprint, userEmail, occasion]);
+  /* ─── Template picker hidden — always envelope ─ */
+  const handlePickTemplate = useCallback((_t: TemplateId) => {}, []);
 
   /* Stable set of locked template IDs — avoids recreating the Set on every
      render; TemplatePicker receives this as a stable prop. */
@@ -1179,44 +1170,7 @@ function SendInner() {
                   {generateButtonLabel}
                 </motion.button>
 
-                {/* Template picker — extracted into React.memo(TemplatePicker) to
-                    prevent re-renders on every recipient-name / likes keystroke */}
-                <div className="mt-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
-                      Card style
-                    </label>
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                      Envelope is free forever ✨
-                    </span>
-                  </div>
-                  <TemplatePicker
-                    selectedTemplate={selectedTemplate}
-                    lockedTemplateIds={lockedTemplateIds}
-                    onPick={handlePickTemplate}
-                  />
-
-                  {/* Usage/plan loading skeleton — shown while Clerk resolves */}
-                  {usageLoading && (
-                    <div
-                      aria-label="Checking your plan…"
-                      className="mt-2 mx-auto rounded-lg"
-                      style={{
-                        height: 20,
-                        width: "60%",
-                        background: "linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%)",
-                        backgroundSize: "200% 100%",
-                        animation: "hs-shimmer 1.4s infinite",
-                      }}
-                    />
-                  )}
-
-                  {!usageLoading && selectedTemplate !== "envelope" && lockedTemplateIds.has(selectedTemplate) && usage?.is_signed_in && (
-                    <p className="text-center text-xs mt-2" style={{ color: "rgba(255,215,0,0.6)" }}>
-                      ✨ Preview the magic first — unlock to share
-                    </p>
-                  )}
-                </div>
+                {/* Template picker hidden — always creates envelope card */}
               </div>
             </motion.div>
           )}
