@@ -457,7 +457,7 @@ export default function PremiumLockPanel({
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 4, lineHeight: 1.6 }}>
                 <div>✓ Unlocks Crystal, Cosmic &amp; Vinyl — forever</div>
                 <div>✓ No watermark · No subscription</div>
-                <div>✓ Secret Polaroid photo in your card</div>
+                <div>✓ Add a picture of them in your card</div>
               </div>
             </div>
           </div>

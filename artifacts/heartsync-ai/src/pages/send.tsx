@@ -316,6 +316,7 @@ function SendInner() {
   const [genEmojiIdx, setGenEmojiIdx] = useState(0);
   const [showSignInGate, setShowSignInGate] = useState(false);
   const [signInGateContext, setSignInGateContext] = useState<TemplateId>("envelope");
+  const [gateEmail, setGateEmail] = useState("");
 
   // Paywall state hydrates from localStorage so a refresh, accidental tab
   // close, or jump out to a UPI app doesn't wipe the user's progress.
@@ -759,33 +760,12 @@ function SendInner() {
       recipient_name: recipientName.trim() || undefined,
     });
 
-    // For the envelope (free) template, require sign-in before generating a
-    // card link. Premium card pages (cosmic/crystal/vinyl) redirect immediately
-    // and handle their own auth + paywall flows inside PremiumLockPanel.
-    //
-    // IMPORTANT: templateGate() returns null when usage===null (optimistic).
-    // We must not evaluate the gate until auth AND usage have both resolved,
-    // otherwise an unauthenticated user can slip through the sign-in wall
-    // during the async window while Clerk/usage is still loading.
-    if (!isPremiumTemplate(selectedTemplate)) {
-      if (!isLoaded || usageLoading || !usage) {
-        // Clerk or usage not yet resolved — bail silently.
-        // The usageLoading shimmer skeleton is already visible to the user.
-        return;
-      }
-      const gate = templateGate(usage, selectedTemplate);
-      if (gate === "signin") {
-        setSignInGateContext(selectedTemplate);
-        setShowSignInGate(true);
-        return;
-      }
-    }
-
+    // No sign-in wall at generate time — users preview first, then sign in / pay at share time.
     await doGenerateCard();
   }
 
   /* ─── Sign-in trigger: persist draft + bounce to /sign-in ──────────── */
-  function startSignIn() {
+  function startSignIn(emailAddress?: string) {
     // Persist now (the redirect would skip our debounced effect on some browsers).
     try {
       const draft: SendDraft = {
@@ -794,7 +774,10 @@ function SendInner() {
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore */ }
-    openSignIn({ fallbackRedirectUrl: window.location.href });
+    openSignIn({
+      initialValues: emailAddress ? { emailAddress } : undefined,
+      fallbackRedirectUrl: window.location.href,
+    });
   }
 
   /* ─── Keep a stable ref to doGenerateCard for the post-signin effect ── */
@@ -832,18 +815,10 @@ function SendInner() {
     exit: { opacity: 0, x: dir * -50, transition: { duration: 0.2 } },
   };
 
-  // Whether auth+usage have resolved enough to evaluate the gate safely.
-  const authReady = !isPremiumTemplate(selectedTemplate)
-    ? (isLoaded && !usageLoading && !!usage)
-    : true; // premium pages handle their own gate; no wait needed
-
-  // Button label — shows a brief "Checking sign-in…" microstate while
-  // auth/usage is still loading, so the user understands a click will work
-  // shortly rather than perceiving the button as broken.
+  // CTA label: surface the "pay later" promise whenever a premium or photo card is being made.
   const generateButtonLabel = (() => {
-    if (!authReady && recipientName.trim()) return "Checking sign-in…";
-    if (selectedTemplate === "envelope") return "Generate Free Card 💌";
-    return "Preview Magic ✨";
+    if (uploadedPhotoUrl || isPremiumTemplate(selectedTemplate)) return "Preview first & Pay later ✨";
+    return "Generate Free Card 💌";
   })();
 
   return (
@@ -1104,11 +1079,16 @@ function SendInner() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,215,0,0.75)" }}>
-                      📸 Secret Polaroid Photo
+                      📸 Add a picture of them
                     </label>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,215,0,0.45)", letterSpacing: "0.06em" }}>
-                      INCLUDED IN ₹49
-                    </span>
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "rgba(255,215,0,0.45)", letterSpacing: "0.06em" }}>
+                        INCLUDED IN PREMIUM ₹49
+                      </span>
+                      <span style={{ display: "block", fontSize: 9, color: "rgba(255,215,0,0.3)", marginTop: 2 }}>
+                        Pay when you share
+                      </span>
+                    </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     {/* Thumbnail or upload placeholder */}
@@ -1131,7 +1111,7 @@ function SendInner() {
                       {photoPreviewSrc && !photoUploading && uploadedPhotoUrl ? (
                         <div>
                           <p style={{ fontSize: 11, color: "#4ade80", fontWeight: 600, marginBottom: 4 }}>
-                            ✓ Photo ready — will animate out of the card
+                            ✓ Photo ready
                           </p>
                           <button
                             type="button"
@@ -1187,9 +1167,7 @@ function SendInner() {
                     borderRadius: 14,
                     background: !recipientName.trim()
                       ? "rgba(255,255,255,0.08)"
-                      : !authReady
-                        ? "linear-gradient(135deg, rgba(255,215,0,0.55), rgba(255,165,0,0.55))"
-                        : "linear-gradient(135deg, #FFD700, #FFA500)",
+                      : "linear-gradient(135deg, #FFD700, #FFA500)",
                     color: recipientName.trim() ? "#000" : "rgba(255,255,255,0.3)",
                     fontWeight: 700,
                     fontSize: 16,
@@ -1304,12 +1282,12 @@ function SendInner() {
               overflowY: "auto",
             }}
           >
-            <div style={{ maxWidth: 380, width: "100%", textAlign: "center" }}>
+            <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
               <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", delay: 0.1 }}
-                style={{ fontSize: 64, marginBottom: 12 }}
+                style={{ fontSize: 56, marginBottom: 12 }}
               >
                 {signInGateContext === "envelope" ? "💌" : (TEMPLATE_CATALOG.find(t => t.id === signInGateContext)?.emoji ?? "✨")}
               </motion.div>
@@ -1318,49 +1296,86 @@ function SendInner() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 10, lineHeight: 1.3 }}
+                style={{ fontSize: 21, fontWeight: 800, color: "#fff", marginBottom: 8, lineHeight: 1.3 }}
               >
-                Sign in to unlock this template
+                Sign in to share your card
               </motion.h2>
 
               <motion.p
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 24, lineHeight: 1.55 }}
+                style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 24, lineHeight: 1.55 }}
               >
-                {signInGateContext === "envelope"
-                  ? "Sign in to get your shareable link. Your card is ready."
-                  : "Sign in to unlock premium templates. Your card draft is saved."}
+                Your card is ready — sign in to get your shareable link.
               </motion.p>
 
-              {/* Google sign-in button */}
-              <motion.button
+              {/* ── Option 1: Email + OTP ── */}
+              <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.35 }}
+                style={{ marginBottom: 12 }}
+              >
+                <form
+                  onSubmit={(e) => { e.preventDefault(); startSignIn(gateEmail.trim() || undefined); }}
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={gateEmail}
+                    onChange={(e) => setGateEmail(e.target.value)}
+                    style={{
+                      width: "100%", padding: "13px 16px", borderRadius: 12,
+                      background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.15)",
+                      color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    data-testid="signin-gate-email"
+                    style={{
+                      width: "100%", padding: "13px 20px", borderRadius: 12,
+                      background: "linear-gradient(135deg, #a855f7, #ec4899)",
+                      color: "#fff", fontWeight: 700, fontSize: 14,
+                      border: "none", cursor: "pointer",
+                    }}
+                  >
+                    Continue with Email & OTP
+                  </button>
+                </form>
+              </motion.div>
+
+              {/* ── Divider ── */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
+                style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}
+              >
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>or</span>
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+              </motion.div>
+
+              {/* ── Option 2: Google ── */}
+              <motion.button
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.45 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={startSignIn}
+                onClick={() => startSignIn()}
                 data-testid="signin-gate-google"
                 style={{
-                  width: "100%",
-                  padding: "14px 20px",
-                  borderRadius: 14,
-                  background: "#fff",
-                  color: "#1a1a1a",
-                  fontWeight: 700,
-                  fontSize: 15,
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 12,
-                  marginBottom: 12,
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+                  width: "100%", padding: "13px 20px", borderRadius: 12,
+                  background: "#fff", color: "#1a1a1a",
+                  fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  marginBottom: 16, boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
@@ -1372,8 +1387,8 @@ function SendInner() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}
+                transition={{ delay: 0.55 }}
+                style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}
               >
                 Your card draft is saved — we'll bring you right back.
               </motion.p>
