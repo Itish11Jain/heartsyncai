@@ -235,6 +235,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess }: Pr
                       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                         <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Removes watermark</span>
                         <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Unlocks Cosmic, Crystal, Vinyl</span>
+                        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Secret Polaroid photo in your card</span>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 2 }}>
@@ -283,6 +284,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess }: Pr
                       <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
                         <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Removes watermark</span>
                         <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Unlocks premium templates</span>
+                        <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Secret Polaroid photo in your card</span>
                       </div>
                     </div>
                   </div>

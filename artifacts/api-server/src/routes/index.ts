@@ -9,6 +9,7 @@ import usageRouter from "./usage";
 import eventsRouter from "./events";
 import shareRouter from "./share";
 import cardsRouter from "./cards";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(usageRouter);
 router.use(eventsRouter);
 router.use(shareRouter);
 router.use(cardsRouter);
+router.use(uploadRouter);
 
 export default router;

@@ -337,6 +337,12 @@ function SendInner() {
   const [watermarkUtrLoading, setWatermarkUtrLoading] = useState(false);
   const [watermarkUpiCopied, setWatermarkUpiCopied] = useState(false);
 
+  // Photo upload state
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+
   /* ─── Persist draft on every change ─────────────────────────────────── */
   useEffect(() => {
     // Don't bother saving the draft for empty / step-1 unless they've made progress.
@@ -437,7 +443,7 @@ function SendInner() {
     });
   }
 
-  function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string, directShare = false) {
+  function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string, directShare = false, personalPictureUrl?: string) {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: name, occasion, relation });
     if (likes.trim()) p.set("likes", likes.trim());
@@ -447,11 +453,38 @@ function SendInner() {
     if (senderFlag) p.set("sender", "1");
     if (cardId) p.set("id", cardId);
     if (directShare) p.set("direct_share", "1");
+    if (personalPictureUrl) p.set("personalpicture", personalPictureUrl);
     /* Each template uses its own .html file so WhatsApp reads template-specific OG tags */
     if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
     if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
     if (template === "vinyl")   return `${base}/vinyl.html?${p.toString()}`;
     return `${base}/envelope.html?${p.toString()}`;
+  }
+
+  async function handlePhotoSelect(file: File) {
+    setPhotoUploadError(null);
+    setPhotoPreviewSrc(URL.createObjectURL(file));
+    setPhotoUploading(true);
+    setUploadedPhotoUrl(null);
+    try {
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const fd = new FormData();
+      fd.append("photo", file);
+      const res = await fetch(`${base}/api/upload/photo`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        setPhotoUploadError(d.error ?? "Upload failed. Please try again.");
+        setPhotoPreviewSrc(null);
+        return;
+      }
+      const data = await res.json() as { url?: string };
+      if (data.url) setUploadedPhotoUrl(data.url);
+    } catch {
+      setPhotoUploadError("Upload failed. Please try again.");
+      setPhotoPreviewSrc(null);
+    } finally {
+      setPhotoUploading(false);
+    }
   }
 
   useEffect(() => {
@@ -547,12 +580,12 @@ function SendInner() {
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", effectiveCardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", effectiveCardId, false, uploadedPhotoUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
     selectedTemplate, customMsg, defaultMsg, occasion, recipientName, likes,
-    fingerprint, clerkUserId, userEmail, incrementUsage, getToken,
+    fingerprint, clerkUserId, userEmail, incrementUsage, getToken, uploadedPhotoUrl,
   ]);
 
   /* ─── Paywall: submit UTR for ₹49 bundle ───────────────────────────── */
@@ -655,7 +688,7 @@ function SendInner() {
     const cardId = pendingCardId;
     clearDraft();
     clearPaywallSnapshot();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, uploadedPhotoUrl ?? undefined);
     setShowPaywall(false);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
@@ -665,7 +698,7 @@ function SendInner() {
   function handleWatermarkFree() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, uploadedPhotoUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -705,7 +738,7 @@ function SendInner() {
   function handleWatermarkComplete() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, uploadedPhotoUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -1058,6 +1091,88 @@ function SendInner() {
                       lineHeight: 1.6,
                     }}
                   />
+                </div>
+
+                {/* ── Photo upload (premium feature) ── */}
+                <div style={{
+                  borderRadius: 14,
+                  border: "1.5px solid rgba(255,215,0,0.18)",
+                  background: "rgba(255,215,0,0.04)",
+                  padding: "12px 14px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,215,0,0.75)" }}>
+                      📸 Secret Polaroid Photo
+                    </label>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,215,0,0.45)", letterSpacing: "0.06em" }}>
+                      INCLUDED IN ₹49
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {/* Thumbnail or upload placeholder */}
+                    <div style={{
+                      width: 58, height: 58, borderRadius: 10, flexShrink: 0,
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1.5px dashed rgba(255,255,255,0.18)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      overflow: "hidden", position: "relative",
+                    }}>
+                      {photoUploading ? (
+                        <Loader2 size={20} style={{ color: "rgba(255,215,0,0.7)", animation: "spin 1s linear infinite" }} />
+                      ) : photoPreviewSrc ? (
+                        <img src={photoPreviewSrc} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ fontSize: 22 }}>🖼️</span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {photoPreviewSrc && !photoUploading && uploadedPhotoUrl ? (
+                        <div>
+                          <p style={{ fontSize: 11, color: "#4ade80", fontWeight: 600, marginBottom: 4 }}>
+                            ✓ Photo ready — will animate out of the card
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => { setUploadedPhotoUrl(null); setPhotoPreviewSrc(null); setPhotoUploadError(null); }}
+                            style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                          >
+                            Remove photo
+                          </button>
+                        </div>
+                      ) : (
+                        <label style={{ cursor: "pointer" }}>
+                          <span style={{
+                            display: "inline-block", padding: "7px 14px", borderRadius: 8,
+                            background: "rgba(255,215,0,0.1)",
+                            border: "1px solid rgba(255,215,0,0.3)",
+                            fontSize: 12, fontWeight: 700, color: "rgba(255,215,0,0.8)",
+                            cursor: photoUploading ? "default" : "pointer",
+                          }}>
+                            {photoUploading ? "Uploading…" : "Choose photo"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            disabled={photoUploading}
+                            style={{ display: "none" }}
+                            onChange={e => {
+                              const f = e.target.files?.[0];
+                              if (f) void handlePhotoSelect(f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      )}
+                      {photoUploadError && (
+                        <p style={{ fontSize: 11, color: "#f87171", marginTop: 4 }}>{photoUploadError}</p>
+                      )}
+                      {!photoPreviewSrc && !photoUploading && (
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>
+                          JPEG · PNG · WebP · max 5 MB
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <motion.button

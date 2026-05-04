@@ -1,16 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { useAuth, useClerk } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
 import WatermarkBadge from "@/components/WatermarkBadge";
+import WatermarkPaywallModal from "@/components/WatermarkPaywallModal";
 import ClerkAuthLayer from "@/components/ClerkAuthLayer";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 type Phase = "envelope" | "opening" | "orbs" | "finale";
+type ShareType = "whatsapp" | "instagram" | "link";
 
 interface SenderPanelProps {
   senderShareUrl: string;
@@ -31,6 +33,25 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [waCopied, setWaCopied] = useState(false);
   const [igCopied, setIgCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Photo paywall state
+  const [showPhotoPaywall, setShowPhotoPaywall] = useState(false);
+  const [showBundlePaywall, setShowBundlePaywall] = useState(false);
+  const pendingShareTypeRef = useRef<ShareType | null>(null);
+
+  // Detect if the card URL has a personal picture param
+  const hasPhoto = (() => {
+    try { return new URLSearchParams(window.location.search).has("personalpicture"); } catch { return false; }
+  })();
+
+  // Share URL with personalpicture stripped (for "share without photo" option)
+  const shareUrlWithoutPhoto = (() => {
+    try {
+      const u = new URL(senderShareUrl);
+      u.searchParams.delete("personalpicture");
+      return u.toString();
+    } catch { return senderShareUrl; }
+  })();
 
   /* On mount: fetch the card's actual watermark status. */
   useEffect(() => {
@@ -56,7 +77,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         setWatermarkRemoved(true);
       } else {
         const data = await res.json().catch(() => ({}));
-        setWmError(data?.message ?? "Something went wrong. Please try again.");
+        setWmError((data as { message?: string })?.message ?? "Something went wrong. Please try again.");
       }
     } catch {
       setWmError("Network error. Please try again.");
@@ -65,15 +86,13 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }, [cardId, getToken]);
 
-  /* Auto-remove watermark for any signed-in user — no button tap needed.
-     Fires as soon as Clerk confirms the session is loaded and active. */
+  /* Auto-remove watermark for any signed-in user. */
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !cardId || watermarkRemoved) return;
     removeWatermarkFree();
   }, [isLoaded, isSignedIn, cardId, watermarkRemoved, removeWatermarkFree]);
 
-  /* After Clerk redirects back with ?open_watermark=1, just clean the URL.
-     Actual removal is handled by the auto-remove effect above. */
+  /* After Clerk redirect with ?open_watermark=1, clean the URL. */
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     const p = new URLSearchParams(window.location.search);
@@ -100,39 +119,73 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }) => void)({ forceRedirectUrl: returnUrl, afterSignUpUrl: returnUrl });
   }
 
-  function shareSenderWhatsApp() {
+  /**
+   * Intercepts a share action to check for the photo gate.
+   * If photo is present and user hasn't paid → show photo paywall.
+   * Otherwise execute the action immediately.
+   */
+  function gatedShare(type: ShareType, action: () => void) {
+    if (hasPhoto && !isPremiumUser) {
+      pendingShareTypeRef.current = type;
+      setShowPhotoPaywall(true);
+      return;
+    }
+    action();
+  }
+
+  function shareSenderWhatsApp(url: string = senderShareUrl) {
     envelope.copy();
     trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "envelope" });
     setWaCopied(true);
     setTimeout(() => setWaCopied(false), 2500);
-    const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
+    const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
-  async function shareInstagram() {
+  async function shareInstagram(url: string = senderShareUrl) {
     envelope.copy();
     trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope" });
     try {
-      await navigator.clipboard.writeText(senderShareUrl);
+      await navigator.clipboard.writeText(url);
       setIgCopied(true);
       setTimeout(() => setIgCopied(false), 2500);
     } catch { /* ignore */ }
     setTimeout(() => window.open("https://www.instagram.com", "_blank"), 300);
   }
 
-  async function copySenderLink() {
+  async function copySenderLink(url: string = senderShareUrl) {
     envelope.copy();
     trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope" });
     try {
-      await navigator.clipboard.writeText(senderShareUrl);
+      await navigator.clipboard.writeText(url);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2500);
     } catch { /* ignore */ }
   }
 
+  /* Dispatch the "share without photo" action */
+  function executeShareWithoutPhoto() {
+    const type = pendingShareTypeRef.current;
+    pendingShareTypeRef.current = null;
+    setShowPhotoPaywall(false);
+    if (type === "whatsapp") shareSenderWhatsApp(shareUrlWithoutPhoto);
+    else if (type === "instagram") void shareInstagram(shareUrlWithoutPhoto);
+    else void copySenderLink(shareUrlWithoutPhoto);
+  }
+
+  /* After bundle payment succeeds: close paywall, fire pending share action WITH photo */
+  function handleBundlePaywallSuccess() {
+    setShowBundlePaywall(false);
+    const type = pendingShareTypeRef.current;
+    pendingShareTypeRef.current = null;
+    if (type === "whatsapp") shareSenderWhatsApp(senderShareUrl);
+    else if (type === "instagram") void shareInstagram(senderShareUrl);
+    else if (type === "link") void copySenderLink(senderShareUrl);
+  }
+
   return (
     <>
-      {/* Watermark badge — always visible to non-premium senders */}
+      {/* Watermark badge */}
       <WatermarkBadge
         id={cardId || undefined}
         showRemoveCta={false}
@@ -179,7 +232,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               {/* WhatsApp */}
               <motion.button
                 whileTap={{ scale: 0.90 }}
-                onClick={shareSenderWhatsApp}
+                onClick={() => gatedShare("whatsapp", () => shareSenderWhatsApp())}
                 style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0 }}
               >
                 <div style={{
@@ -201,7 +254,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               {/* Instagram */}
               <motion.button
                 whileTap={{ scale: 0.90 }}
-                onClick={shareInstagram}
+                onClick={() => gatedShare("instagram", () => void shareInstagram())}
                 style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0 }}
               >
                 <div style={{
@@ -223,7 +276,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               {/* Copy Link */}
               <motion.button
                 whileTap={{ scale: 0.90 }}
-                onClick={copySenderLink}
+                onClick={() => gatedShare("link", () => void copySenderLink())}
                 style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0 }}
               >
                 <div style={{
@@ -289,6 +342,98 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           </div>
         </motion.div>
       )}
+
+      {/* ── Photo paywall intercept modal ── */}
+      <AnimatePresence>
+        {showPhotoPaywall && (
+          <motion.div
+            key="photo-paywall-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 10001,
+              background: "rgba(0,0,0,0.8)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 20px",
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowPhotoPaywall(false); pendingShareTypeRef.current = null; } }}
+          >
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 8 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              style={{
+                width: "100%", maxWidth: 360,
+                background: "radial-gradient(ellipse at 50% 0%, #1e0044 0%, #0c000e 70%)",
+                border: "1px solid rgba(168,85,247,0.3)",
+                borderRadius: 24,
+                padding: "28px 22px 24px",
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+              }}
+            >
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: 42, marginBottom: 10 }}>📸</div>
+                <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 20, marginBottom: 8 }}>
+                  Share with your photo
+                </h2>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
+                  Pay ₹49 to include your personal Polaroid photo in the shared link — or share without it for free.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowPhotoPaywall(false);
+                  setShowBundlePaywall(true);
+                }}
+                style={{
+                  width: "100%", padding: "14px 16px", borderRadius: 14,
+                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                  border: "none", color: "#000",
+                  fontWeight: 800, fontSize: 15, cursor: "pointer",
+                  marginBottom: 10,
+                }}
+              >
+                ✨ Unlock with ₹49 bundle
+              </button>
+
+              <button
+                onClick={executeShareWithoutPhoto}
+                style={{
+                  width: "100%", padding: "12px", borderRadius: 12,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13, cursor: "pointer",
+                  marginBottom: 12,
+                }}
+              >
+                Share without photo
+              </button>
+
+              <button
+                onClick={() => { setShowPhotoPaywall(false); pendingShareTypeRef.current = null; }}
+                style={{ display: "block", width: "100%", textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bundle paywall modal ── */}
+      <AnimatePresence>
+        {showBundlePaywall && (
+          <WatermarkPaywallModal
+            cardId={cardId}
+            onClose={() => { setShowBundlePaywall(false); pendingShareTypeRef.current = null; }}
+            onSuccess={handleBundlePaywallSuccess}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

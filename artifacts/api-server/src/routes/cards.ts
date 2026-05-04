@@ -151,15 +151,15 @@ router.post("/cards", async (req, res) => {
   }
 
   try {
-    const { template, occasion, recipient_name, message_b64 } =
+    const { template, occasion, recipient_name, message_b64, photo_url } =
       req.body as Record<string, unknown>;
 
     const id = await uniqueId();
 
     await pool.query(
       `INSERT INTO hs_cards
-         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium)
-       VALUES ($1,$2,$3,$4,$5,$6,FALSE,FALSE)`,
+         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url)
+       VALUES ($1,$2,$3,$4,$5,$6,FALSE,FALSE,$7)`,
       [
         id,
         clerkUserId,
@@ -167,6 +167,7 @@ router.post("/cards", async (req, res) => {
         typeof occasion === "string" ? occasion : null,
         typeof recipient_name === "string" ? recipient_name : null,
         typeof message_b64 === "string" ? message_b64 : null,
+        typeof photo_url === "string" ? photo_url : null,
       ],
     );
 
@@ -185,7 +186,7 @@ router.get("/cards/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT id, is_watermarked, is_premium, template
+      `SELECT id, is_watermarked, is_premium, template, photo_url
        FROM hs_cards WHERE id = $1`,
       [id],
     );
