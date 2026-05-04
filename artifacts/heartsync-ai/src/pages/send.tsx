@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
@@ -294,9 +294,13 @@ export default function Send() {
     }
   }, [occasion, relation]);
 
+  const [, startTransition] = useTransition();
+
   function goTo(nextStep: number, direction: number) {
-    setDir(direction);
-    setStep(nextStep);
+    startTransition(() => {
+      setDir(direction);
+      setStep(nextStep);
+    });
   }
 
   function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string, directShare = false) {

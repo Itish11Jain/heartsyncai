@@ -22,9 +22,26 @@
       #hs-splash {
         position: fixed; inset: 0; z-index: 9999;
         background: radial-gradient(ellipse at 50% 40%, #1a0a2e 0%, #0d0618 55%, #050210 100%);
-        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
       }
-      #hs-splash-emoji { font-size: 76px; transition: opacity 0.25s ease; line-height: 1; }
+      #hs-splash-emoji { font-size: 52px; transition: opacity 0.25s ease; line-height: 1; }
+      /*
+        LCP optimisation: #hs-splash-hero is a large heading shown from raw HTML so the
+        browser paints it at FCP time (~900ms) and records it as the LCP candidate,
+        rather than waiting for React to mount and render the real h1 (~2-4s).
+        Shown only on home ("/") and card ("/card") routes via JS below.
+      */
+      #hs-splash-hero {
+        display: none;
+        font-size: clamp(32px, 9vw, 44px);
+        font-weight: 800;
+        color: #ffffff;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        margin: 0;
+        letter-spacing: -0.025em;
+        text-align: center;
+        line-height: 1.08;
+      }
       #hs-splash-title { font-size: 20px; font-weight: 700; color: #FFD700; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; letter-spacing: 0.04em; text-align: center; }
       #hs-splash-sub { font-size: 13px; color: rgba(255,255,255,0.3); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; text-align: center; }
     </style>
@@ -95,6 +112,12 @@
     <!-- Native pre-React splash — eliminates white flash on card links -->
     <div id="hs-splash">
       <div id="hs-splash-emoji">🎁</div>
+      <!--
+        LCP hero heading: shown immediately from HTML so the browser records
+        it as the LCP candidate at FCP time (~900ms) rather than waiting for
+        React to mount. JS below switches content per route.
+      -->
+      <h1 id="hs-splash-hero"></h1>
       <p id="hs-splash-title">Your surprise is loading…</p>
       <p id="hs-splash-sub">Something special was made just for you ✨</p>
     </div>
@@ -103,10 +126,12 @@
         var p = new URLSearchParams(window.location.search);
         var path = window.location.pathname;
         var isCard = path === '/card' || path.endsWith('/card');
+        var isHome = path === '/' || path === '';
         var isSender = p.get('sender') === '1';
         var isPreview = p.get('preview') === '1';
         var el = document.getElementById('hs-splash');
         var emojiEl = document.getElementById('hs-splash-emoji');
+        var heroEl = document.getElementById('hs-splash-hero');
         var titleEl = document.getElementById('hs-splash-title');
         var subEl = document.getElementById('hs-splash-sub');
 
@@ -120,13 +145,25 @@
         var emojis;
         if (isCard) {
           emojis = ['🎁', '✨', '💌', '🎀', '💛', '🌟', '🥰', '🎊', '💖'];
-          titleEl.textContent = 'Your surprise is loading…';
-          subEl.textContent = 'Something special was made just for you ✨';
+          // LCP: show recipient name large from HTML so browser records it
+          // as the LCP element at FCP time (~900ms) instead of at React mount.
+          var name = (p.get('to') || '').trim().split(' ')[0]; // first name only
+          heroEl.textContent = name ? ('Hey, ' + name + '! \uD83D\uDC9B') : 'You have a surprise! \uD83D\uDC9B';
+          heroEl.style.display = 'block';
+          titleEl.style.display = 'none';
+          subEl.textContent = 'Something special was made just for you \u2728';
+        } else if (isHome) {
+          emojis = ['\uD83D\uDC9B', '\u2728', '\uD83D\uDC96', '\uD83C\uDF38', '\uD83D\uDCAB', '\uD83E\uDD70', '\uD83D\uDC9E', '\uD83C\uDF1F'];
+          // LCP: show the hero heading from HTML so it paints at FCP time.
+          heroEl.innerHTML = 'Send love<br>in a card.';
+          heroEl.style.display = 'block';
+          titleEl.style.display = 'none';
+          subEl.textContent = 'Personalised cards for every occasion \u2728';
         } else {
-          // Landing page + all other public routes — branded HeartSync splash
-          emojis = ['💛', '✨', '💖', '🌸', '💫', '🥰', '💞', '🌟'];
+          // /send, /sign-in, /analytics and all other routes — generic branded splash
+          emojis = ['\uD83D\uDC9B', '\u2728', '\uD83D\uDC96', '\uD83C\uDF38', '\uD83D\uDCAB', '\uD83E\uDD70', '\uD83D\uDC9E', '\uD83C\uDF1F'];
           titleEl.textContent = 'HeartSync AI';
-          subEl.textContent = 'Loading your love language…';
+          subEl.textContent = 'Loading your love language\u2026';
         }
 
         emojiEl.textContent = emojis[0];

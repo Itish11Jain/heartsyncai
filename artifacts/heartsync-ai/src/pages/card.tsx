@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, lazy, Suspense, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
@@ -519,7 +519,7 @@ function GoldenEnvelope({
 
 /* ─────────────────────────── Orb ───────────────────────────────── */
 
-function Orb({
+const Orb = memo(function Orb({
   orb,
   index,
   x,
@@ -598,11 +598,11 @@ function Orb({
       {clicked && <span>{orb.emoji}</span>}
     </motion.div>
   );
-}
+});
 
 /* ─────────────────────────── OrbTooltip ───────────────────────── */
 
-function OrbTooltip({ orb, tooltipKey }: { orb: OrbData; tooltipKey: number }) {
+function OrbTooltip({ orb }: { orb: OrbData }) {
   return (
     /* Pinned below the status bar — well above the orb ring which lives near vertical centre */
     <div
@@ -619,7 +619,6 @@ function OrbTooltip({ orb, tooltipKey }: { orb: OrbData; tooltipKey: number }) {
       }}
     >
       <motion.div
-        key={tooltipKey}
         initial={{ scale: 0.8, opacity: 0, y: -12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.85, opacity: 0, y: -8 }}
@@ -840,7 +839,6 @@ export default function Card() {
     skipToFinale ? new Set(orbs.map((_, i) => i)) : new Set()
   );
   const [activeTooltip, setActiveTooltip] = useState<{ orb: OrbData; key: number } | null>(null);
-  const [tooltipKeyCounter, setTooltipKeyCounter] = useState(0);
   const [orbRadius, setOrbRadius] = useState(130);
   const [showSplash, setShowSplash] = useState(isRecipient);
   const [splashEmojiIdx, setSplashEmojiIdx] = useState(0);
@@ -879,10 +877,13 @@ export default function Card() {
     }
   }, []);
 
-  /* Auto-hide recipient splash after 2.2s */
+  /* Auto-hide recipient splash after 0.8s.
+   * Reduced from 2.2s — the long wait was delaying LCP on the card page by
+   * ~1.4s because the GoldenEnvelope (the true LCP element) was hidden until
+   * the splash cleared. 800ms still feels like a meaningful reveal pause. */
   useEffect(() => {
     if (!showSplash) return;
-    const t = setTimeout(() => setShowSplash(false), 2200);
+    const t = setTimeout(() => setShowSplash(false), 800);
     return () => clearTimeout(t);
   }, []);
 
@@ -977,7 +978,9 @@ export default function Card() {
     setTimeout(() => { setPhase("orbs"); }, 1200);
   }
 
-  function handleOrbClick(idx: number, rect: DOMRect) {
+  /* Memoized with useCallback + functional setState so React.memo(Orb) works:
+   * sibling orbs won't re-render when a different orb is tapped. */
+  const handleOrbClick = useCallback((idx: number, rect: DOMRect) => {
     const orb = orbs[idx];
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -985,21 +988,20 @@ export default function Card() {
     envelope.orbTap();
     fireEmojiParticles(cx, cy, orb.emoji);
 
-    const newKey = tooltipKeyCounter + 1;
-    setTooltipKeyCounter(newKey);
-    setActiveTooltip({ orb, key: newKey });
+    setActiveTooltip(prev => ({ orb, key: (prev?.key ?? 0) + 1 }));
 
-    const newClicked = new Set(clickedOrbs).add(idx);
-    setClickedOrbs(newClicked);
-
-    if (newClicked.size === orbs.length) {
-      setTimeout(() => {
-        envelope.finale();
-        setPhase("finale");
-        setTimeout(fireConfetti, 800);
-      }, 1500);
-    }
-  }
+    setClickedOrbs(prev => {
+      const newClicked = new Set(prev).add(idx);
+      if (newClicked.size === orbs.length) {
+        setTimeout(() => {
+          envelope.finale();
+          setPhase("finale");
+          setTimeout(fireConfetti, 800);
+        }, 1500);
+      }
+      return newClicked;
+    });
+  }, [orbs, fireEmojiParticles, fireConfetti]);
 
   const orbPositions = orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;
@@ -1141,7 +1143,7 @@ export default function Card() {
                     x={phase === "finale" && allClicked ? finaleOffset.x : pos.x}
                     y={phase === "finale" && allClicked ? finaleOffset.y : pos.y}
                     clicked={clickedOrbs.has(i)}
-                    onClick={phase === "orbs" ? handleOrbClick : () => {}}
+                    onClick={handleOrbClick}
                   />
                 );
               })}
@@ -1170,7 +1172,7 @@ export default function Card() {
 
             <AnimatePresence>
               {activeTooltip && phase === "orbs" && (
-                <OrbTooltip key={activeTooltip.key} orb={activeTooltip.orb} tooltipKey={activeTooltip.key} />
+                <OrbTooltip key={activeTooltip.key} orb={activeTooltip.orb} />
               )}
             </AnimatePresence>
           </motion.div>
