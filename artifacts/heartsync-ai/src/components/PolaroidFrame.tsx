@@ -107,19 +107,39 @@ export default function PolaroidFrame({ src }: Props) {
           position: "relative",
         }}
       >
-        {/* Shimmer sweep — hidden once image is ready */}
+        {/* Shimmer sweep + cute loader — hidden once image is ready */}
         {!imgLoaded && (
-          <motion.div
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.12) 50%, transparent 100%)",
-              pointerEvents: "none",
-              zIndex: 1,
-            }}
-          />
+          <>
+            <motion.div
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.12) 50%, transparent 100%)",
+                pointerEvents: "none",
+                zIndex: 1,
+              }}
+            />
+            {/* Heartbeat loader */}
+            <motion.div
+              animate={{ scale: [1, 1.28, 1, 1.14, 1] }}
+              transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut", times: [0, 0.18, 0.4, 0.6, 1] }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 2,
+                pointerEvents: "none",
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 38, lineHeight: 1, filter: "drop-shadow(0 0 8px rgba(255,80,120,0.7))" }}>❤️</span>
+            </motion.div>
+          </>
         )}
         <img
           ref={imgRef}
