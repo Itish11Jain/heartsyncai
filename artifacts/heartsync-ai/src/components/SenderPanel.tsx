@@ -28,10 +28,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const authFlowRef = useRef<"signIn" | "signUp">("signIn");
-  type SignInRes = { attemptFirstFactor: (p: object) => Promise<{ status: string; createdSessionId: string | null }> };
-  type SignUpRes = { attemptEmailAddressVerification: (p: object) => Promise<{ status: string; createdSessionId: string | null }> };
-  const signInResRef = useRef<SignInRes | null>(null);
-  const signUpResRef = useRef<SignUpRes | null>(null);
   const { usage } = useCardUsage();
   const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
@@ -158,34 +154,44 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }
 
+  /* Safety net: when Clerk marks the user as signed-in while the modal is
+     open, close the modal and execute the pending action. This covers the case
+     where setActive() triggers an isSignedIn change before completeAuth() is
+     called manually from the OTP handler. */
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !showSignIn) return;
+    completeAuth();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn, showSignIn]);
+
   async function handleSignInEmailSubmit() {
     if (!signIn || !signUp) return;
     setSignInLoading(true);
     setSignInError(null);
     const email = signInEmail.trim();
     try {
-      // Try sign-in first — resource API creates attempt + sends code in one call
+      // Try sign-in first — create() sends the email code in one call (Clerk 6 signal API)
       try {
-        signInResRef.current = await (signIn as unknown as { create: (p: object) => Promise<SignInRes> })
+        await (signIn as unknown as { create: (p: object) => Promise<unknown> })
           .create({ strategy: "email_code", identifier: email });
         authFlowRef.current = "signIn";
         setSignInStep("otp");
         return;
       } catch (signInErr: unknown) {
-        // Only fall through to sign-up if account doesn't exist
+        // Only fall through to sign-up if the account doesn't exist yet
         const se = signInErr as { errors?: Array<{ code?: string; longMessage?: string; message: string }> };
-        const code = se.errors?.[0]?.code ?? "";
-        if (code !== "form_identifier_not_found" && code !== "user_not_found") {
+        const errCode = se.errors?.[0]?.code ?? "";
+        if (errCode !== "form_identifier_not_found" && errCode !== "user_not_found") {
           setSignInError(se.errors?.[0]?.longMessage ?? se.errors?.[0]?.message ?? "Couldn't send code. Check your email and try again.");
           return;
         }
       }
 
-      // Account not found — create new account and send OTP
-      signUpResRef.current = await (signUp as unknown as { create: (p: object) => Promise<SignUpRes> })
+      // Account not found — create and send verification code (Clerk 6 signal API)
+      await (signUp as unknown as { create: (p: object) => Promise<unknown> })
         .create({ emailAddress: email });
-      await (signUpResRef.current as unknown as { prepareEmailAddressVerification: (p: object) => Promise<unknown> })
-        .prepareEmailAddressVerification({ strategy: "email_code" });
+      await (signUp as unknown as { verifications: { sendEmailCode: () => Promise<unknown> } })
+        .verifications.sendEmailCode();
       authFlowRef.current = "signUp";
       setSignInStep("otp");
     } catch (err: unknown) {
@@ -202,27 +208,34 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     const code = signInOtp.trim();
     try {
       if (authFlowRef.current === "signIn") {
-        // Use stored resource directly — avoids stale hook state
-        const res = signInResRef.current ?? (signIn as unknown as SignInRes);
-        const result = await res.attemptFirstFactor({ strategy: "email_code", code });
-        if (result?.status === "complete" && result?.createdSessionId) {
-          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: result.createdSessionId });
+        // Clerk 6 signal API: emailCode.verifyCode() — the only correct verify path
+        const result = await (signIn as unknown as {
+          emailCode: { verifyCode: (p: object) => Promise<{ status: string; createdSessionId: string | null }> }
+        }).emailCode.verifyCode({ code });
+        const sessionId = result?.createdSessionId
+          ?? (clerk as unknown as { client?: { signIn?: { createdSessionId?: string } } }).client?.signIn?.createdSessionId;
+        if (sessionId) {
+          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sessionId });
           completeAuth();
         } else {
           setSignInError("Sign-in couldn't complete. Please try again.");
         }
       } else {
-        // Use stored resource directly — avoids stale hook state
-        const res = signUpResRef.current ?? (signUp as unknown as SignUpRes);
-        const result = await res.attemptEmailAddressVerification({ code });
-        if (result?.status === "complete" && result?.createdSessionId) {
-          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: result.createdSessionId });
+        // Clerk 6 signal API: verifications.verifyEmailCode() — the only correct verify path
+        const result = await (signUp as unknown as {
+          verifications: { verifyEmailCode: (p: object) => Promise<{ status: string; createdSessionId: string | null }> }
+        }).verifications.verifyEmailCode({ code });
+        const sessionId = result?.createdSessionId
+          ?? (clerk as unknown as { client?: { signUp?: { createdSessionId?: string } } }).client?.signUp?.createdSessionId;
+        if (sessionId) {
+          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sessionId });
           completeAuth();
         } else {
           setSignInError("Sign-up couldn't complete. Please try again.");
         }
       }
     } catch (err: unknown) {
+      console.error("[HeartSync] OTP verify error:", err);
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
       setSignInError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Wrong code — please try again.");
     } finally {
