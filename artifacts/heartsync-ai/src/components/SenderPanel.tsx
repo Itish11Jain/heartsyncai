@@ -155,34 +155,33 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   }
 
   async function handleSignInEmailSubmit() {
-    if (!signIn) return;
+    if (!signIn || !signUp) return;
     setSignInLoading(true);
     setSignInError(null);
     const email = signInEmail.trim();
     try {
-      // Try sign-in first (existing account)
-      const { error: signInErr } = await signIn.emailCode.sendCode({ emailAddress: email });
-      if (!signInErr) {
+      // Try sign-in first — resource API creates attempt + sends code in one call
+      try {
+        await (signIn as unknown as { create: (p: object) => Promise<unknown> })
+          .create({ strategy: "email_code", identifier: email });
         authFlowRef.current = "signIn";
         setSignInStep("otp");
         return;
+      } catch (signInErr: unknown) {
+        // Only fall through to sign-up if account doesn't exist
+        const se = signInErr as { errors?: Array<{ code?: string; longMessage?: string; message: string }> };
+        const code = se.errors?.[0]?.code ?? "";
+        if (code !== "form_identifier_not_found" && code !== "user_not_found") {
+          setSignInError(se.errors?.[0]?.longMessage ?? se.errors?.[0]?.message ?? "Couldn't send code. Check your email and try again.");
+          return;
+        }
       }
 
-      // Fall back to sign-up (new account)
-      if (!signUp) {
-        setSignInError(signInErr.longMessage ?? signInErr.message ?? "Couldn't send code. Check your email and try again.");
-        return;
-      }
-      const { error: createErr } = await signUp.create({ emailAddress: email });
-      if (createErr) {
-        setSignInError(createErr.longMessage ?? createErr.message ?? "Couldn't create account. Check your email and try again.");
-        return;
-      }
-      const { error: sendErr } = await (signUp.verifications as { sendEmailCode: () => Promise<{ error: { longMessage?: string; message: string } | null }> }).sendEmailCode();
-      if (sendErr) {
-        setSignInError(sendErr.longMessage ?? sendErr.message ?? "Couldn't send code. Please try again.");
-        return;
-      }
+      // Account not found — create new account and send OTP
+      await (signUp as unknown as { create: (p: object) => Promise<unknown> })
+        .create({ emailAddress: email });
+      await (signUp as unknown as { prepareEmailAddressVerification: (p: object) => Promise<unknown> })
+        .prepareEmailAddressVerification({ strategy: "email_code" });
       authFlowRef.current = "signUp";
       setSignInStep("otp");
     } catch (err: unknown) {
@@ -198,28 +197,26 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setSignInError(null);
     const code = signInOtp.trim();
     try {
-      type ClerkClient = { signIn?: { status: string; createdSessionId: string | null }; signUp?: { status: string; createdSessionId: string | null } };
       if (authFlowRef.current === "signIn") {
         if (!signIn) return;
-        // Signal API — same flow as sendCode; read session from clerk.client (always fresh, no stale closure)
-        const { error } = await signIn.emailCode.verifyCode({ code });
-        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
-        const fresh = (clerk as unknown as { client: ClerkClient }).client?.signIn;
-        if (fresh?.status === "complete" && fresh?.createdSessionId) {
-          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: fresh.createdSessionId });
+        // Resource API — returns result directly with status + createdSessionId
+        const result = await (signIn as unknown as {
+          attemptFirstFactor: (p: object) => Promise<{ status: string; createdSessionId: string | null }>;
+        }).attemptFirstFactor({ strategy: "email_code", code });
+        if (result?.status === "complete" && result?.createdSessionId) {
+          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: result.createdSessionId });
           completeAuth();
         } else {
           setSignInError("Sign-in couldn't complete. Please try again.");
         }
       } else {
         if (!signUp) return;
-        // Signal API — same flow as sendEmailCode; read session from clerk.client (always fresh)
-        type VE = { verifyEmailCode: (p: { code: string }) => Promise<{ error: { longMessage?: string; message: string } | null }> };
-        const { error } = await (signUp.verifications as unknown as VE).verifyEmailCode({ code });
-        if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
-        const fresh = (clerk as unknown as { client: ClerkClient }).client?.signUp;
-        if (fresh?.status === "complete" && fresh?.createdSessionId) {
-          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: fresh.createdSessionId });
+        // Resource API — returns result directly with status + createdSessionId
+        const result = await (signUp as unknown as {
+          attemptEmailAddressVerification: (p: object) => Promise<{ status: string; createdSessionId: string | null }>;
+        }).attemptEmailAddressVerification({ code });
+        if (result?.status === "complete" && result?.createdSessionId) {
+          await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: result.createdSessionId });
           completeAuth();
         } else {
           setSignInError("Sign-up couldn't complete. Please try again.");
