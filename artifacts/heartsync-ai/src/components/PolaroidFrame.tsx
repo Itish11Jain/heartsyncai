@@ -23,22 +23,19 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
         y: "-50%",
         zIndex: 30,
         pointerEvents: "none",
-        background: "#fff",
-        padding: "10px 10px 36px",
-        borderRadius: 3,
-        boxShadow: "0 10px 50px rgba(0,0,0,0.5)",
-        width: 200,
+        width: 210,
+        height: 210,
+        borderRadius: "50%",
+        overflow: "hidden",
+        boxShadow: "0 0 0 4px rgba(255,255,255,0.9), 0 0 0 8px rgba(168,85,247,0.5), 0 8px 40px rgba(0,0,0,0.55), 0 0 60px rgba(168,85,247,0.25)",
       }}
     >
       <img
         src={src}
         alt="Personal photo"
         onLoad={() => setLoaded(true)}
-        style={{ width: "100%", height: 180, objectFit: "cover", display: "block" }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
       />
-      <p style={{ textAlign: "center", fontSize: 11, color: "#888", margin: "8px 0 0", fontFamily: "serif" }}>
-        Made with 💌
-      </p>
     </motion.div>
   );
 }
