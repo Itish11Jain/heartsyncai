@@ -797,10 +797,16 @@ function SendInner() {
     exit: { opacity: 0, x: dir * -50, transition: { duration: 0.2 } },
   };
 
-  // Decide what the bottom Generate button should say based on the current
-  // template choice. No longer gated on Clerk isLoaded / usageLoading so
-  // the button is always gold and labelled once the form renders.
+  // Whether auth+usage have resolved enough to evaluate the gate safely.
+  const authReady = !isPremiumTemplate(selectedTemplate)
+    ? (isLoaded && !usageLoading && !!usage)
+    : true; // premium pages handle their own gate; no wait needed
+
+  // Button label — shows a brief "Checking sign-in…" microstate while
+  // auth/usage is still loading, so the user understands a click will work
+  // shortly rather than perceiving the button as broken.
   const generateButtonLabel = (() => {
+    if (!authReady && recipientName.trim()) return "Checking sign-in…";
     if (selectedTemplate === "envelope") return "Generate Free Card 💌";
     return "Preview Magic ✨";
   })();
@@ -1062,9 +1068,11 @@ function SendInner() {
                   style={{
                     padding: "16px",
                     borderRadius: 14,
-                    background: recipientName.trim()
-                      ? "linear-gradient(135deg, #FFD700, #FFA500)"
-                      : "rgba(255,255,255,0.08)",
+                    background: !recipientName.trim()
+                      ? "rgba(255,255,255,0.08)"
+                      : !authReady
+                        ? "linear-gradient(135deg, rgba(255,215,0,0.55), rgba(255,165,0,0.55))"
+                        : "linear-gradient(135deg, #FFD700, #FFA500)",
                     color: recipientName.trim() ? "#000" : "rgba(255,255,255,0.3)",
                     fontWeight: 700,
                     fontSize: 16,
