@@ -23,19 +23,86 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
         y: "-50%",
         zIndex: 30,
         pointerEvents: "none",
-        width: 210,
-        height: 210,
-        borderRadius: "50%",
-        overflow: "hidden",
-        boxShadow: "0 0 0 4px rgba(255,255,255,0.9), 0 0 0 8px rgba(168,85,247,0.5), 0 8px 40px rgba(0,0,0,0.55), 0 0 60px rgba(168,85,247,0.25)",
+        width: 220,
+        height: 220,
       }}
     >
-      <img
-        src={src}
-        alt="Personal photo"
-        onLoad={() => setLoaded(true)}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      {/* Outer glow pulse */}
+      <motion.div
+        animate={{ opacity: [0.35, 0.85, 0.35], scale: [0.97, 1.03, 0.97] }}
+        transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          inset: -16,
+          borderRadius: "50%",
+          border: "10px solid rgba(255,200,0,0.45)",
+          filter: "blur(6px)",
+          pointerEvents: "none",
+        }}
       />
+
+      {/* Rotating arc — primary */}
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 2.8, ease: "linear" }}
+        style={{
+          position: "absolute",
+          inset: -8,
+          borderRadius: "50%",
+          border: "5px solid transparent",
+          borderTopColor: "rgba(255,220,0,1)",
+          borderRightColor: "rgba(255,165,0,0.55)",
+          borderBottomColor: "rgba(255,200,0,0.08)",
+          borderLeftColor: "rgba(255,165,0,0.35)",
+          pointerEvents: "none",
+          filter: "drop-shadow(0 0 6px rgba(255,210,0,0.9))",
+        }}
+      />
+
+      {/* Rotating arc — counter, slower */}
+      <motion.div
+        animate={{ rotate: -360 }}
+        transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
+        style={{
+          position: "absolute",
+          inset: -5,
+          borderRadius: "50%",
+          border: "3px solid transparent",
+          borderTopColor: "rgba(255,200,0,0.0)",
+          borderRightColor: "rgba(255,215,0,0.7)",
+          borderBottomColor: "rgba(255,165,0,0.15)",
+          borderLeftColor: "rgba(255,215,0,0.0)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Static white ring */}
+      <div
+        style={{
+          position: "absolute",
+          inset: -2,
+          borderRadius: "50%",
+          border: "3px solid rgba(255,255,255,0.9)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Photo circle */}
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: "50%",
+          overflow: "hidden",
+        }}
+      >
+        <img
+          src={src}
+          alt="Personal photo"
+          onLoad={() => setLoaded(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      </div>
     </motion.div>
   );
 }

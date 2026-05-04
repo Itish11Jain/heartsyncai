@@ -999,8 +999,8 @@ export default function Card() {
     envelope.open();
     setPhase("opening");
     if (personalPictureUrl) {
-      setTimeout(() => { setPhase("polaroid"); }, 800);
-      setTimeout(() => { setPhase("orbs"); }, 2100);
+      setTimeout(() => { setPhase("polaroid"); }, 400);
+      setTimeout(() => { setPhase("orbs"); }, 1600);
     } else {
       setTimeout(() => { setPhase("orbs"); }, 1200);
     }
