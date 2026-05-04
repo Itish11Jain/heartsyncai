@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 
 interface PolaroidFrameProps {
@@ -6,13 +6,16 @@ interface PolaroidFrameProps {
 }
 
 export default function PolaroidFrame({ src }: PolaroidFrameProps) {
-  // Start as loaded if the browser already has it cached (from preload in card.tsx)
-  const [loaded, setLoaded] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const probe = new Image();
-    probe.src = src;
-    return probe.complete;
-  });
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    // For cached images: browser fires `load` before React attaches onLoad, so
+    // we check .complete after mount to catch that case.
+    if (imgRef.current?.complete && (imgRef.current.naturalWidth ?? 1) > 0) {
+      setLoaded(true);
+    }
+  }, []);
 
   return (
     <motion.div
@@ -103,6 +106,7 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
         }}
       >
         <img
+          ref={imgRef}
           src={src}
           alt="Personal photo"
           onLoad={() => setLoaded(true)}
