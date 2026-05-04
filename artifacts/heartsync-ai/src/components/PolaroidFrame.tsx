@@ -18,6 +18,7 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
         left: "50%",
         x: "-50%",
         zIndex: 30,
+        pointerEvents: "none",
         background: "#fff",
         padding: "10px 10px 36px",
         borderRadius: 3,

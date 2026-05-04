@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import PolaroidFrame from "@/components/PolaroidFrame";
 import { Link } from "wouter";
 import {
   getVinylTemplate, getVinylFallback,
@@ -128,6 +129,11 @@ export default function VinylCard() {
   })();
   const isSender = params.get("sender") === "1";
   const isPreview = params.get("preview") === "1";
+  const personalPictureUrl = (() => {
+    const raw = params.get("personalpicture");
+    if (!raw) return null;
+    try { return decodeURIComponent(raw); } catch { return null; }
+  })();
 
   const tpl = getVinylTemplate(occasion, relation) ?? getVinylFallback(occasion);
   const titlePrefix = tpl.title_prefix;
@@ -949,6 +955,13 @@ export default function VinylCard() {
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ Polaroid photo ══ */}
+      <AnimatePresence>
+        {personalPictureUrl && (phase === "dropping" || phase === "playing") && (
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
         )}
       </AnimatePresence>
 

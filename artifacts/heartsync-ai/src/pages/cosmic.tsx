@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import PolaroidFrame from "@/components/PolaroidFrame";
 import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
 import { cosmic, music } from "@/lib/audio";
@@ -97,6 +98,11 @@ export default function CosmicCard() {
   const isSender = params.get("sender") === "1";
   const isPreview = params.get("preview") === "1";
   const isRecipient = !isSender && !isPreview;
+  const personalPictureUrl = (() => {
+    const raw = params.get("personalpicture");
+    if (!raw) return null;
+    try { return decodeURIComponent(raw); } catch { return null; }
+  })();
 
   const tpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
   const finalMessage = customMsg ?? tpl.final_message;
@@ -700,6 +706,13 @@ export default function CosmicCard() {
               </motion.div>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ Polaroid photo ══ */}
+      <AnimatePresence>
+        {personalPictureUrl && (phase === "spawning" || phase === "tapping") && (
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
         )}
       </AnimatePresence>
 

@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import PolaroidFrame from "@/components/PolaroidFrame";
 import { Link, useSearch } from "wouter";
 import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
@@ -46,6 +47,11 @@ export default function CrystalCard() {
   const likesParam    = params.get("likes")    || "";
   const isPreview     = params.get("preview")  === "1";
   const isSender      = params.get("sender")   === "1";
+  const personalPictureUrl = (() => {
+    const raw = params.get("personalpicture");
+    if (!raw) return null;
+    try { return decodeURIComponent(raw); } catch { return null; }
+  })();
   const isRecipient   = !isSender;
 
   const tpl = getCrystalTemplate(occasion, relation) ?? getCrystalFallback(occasion);
@@ -965,6 +971,13 @@ export default function CrystalCard() {
               </motion.div>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══ Polaroid photo ══ */}
+      <AnimatePresence>
+        {personalPictureUrl && (phase === "clearing" || phase === "visions") && (
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} />
         )}
       </AnimatePresence>
 
