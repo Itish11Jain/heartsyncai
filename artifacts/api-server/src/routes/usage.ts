@@ -14,7 +14,7 @@ function isPremiumTemplate(v: unknown): v is PremiumTemplate {
 function validateUtr(value: unknown): value is string {
   if (typeof value !== "string") return false;
   const v = value.trim();
-  return /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
+  return /^\d{4}$/.test(v) || /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
 }
 
 /** Check if a UTR has been used in any of our payment tables. Caller must hold the UTR advisory lock.

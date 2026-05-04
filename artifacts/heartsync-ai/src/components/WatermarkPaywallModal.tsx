@@ -1,46 +1,23 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, useClerk } from "@clerk/react";
-import { ArrowRight, Check, Copy, Info, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-const UPI_DISPLAY = "110193250";
-const UPI_VPA = "8905158970@upi";
+const UPI_DEEP_LINK = "upi://pay?pa=8905158970@ptyes&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+
+function qrUrl(size = 240) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(UPI_DEEP_LINK)}`;
+}
 
 function isValidUtr(v: string) {
   const t = v.trim();
-  return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
+  return /^\d{4}$/.test(t);
 }
 
-function makeUpiUri(amount: number, note: string) {
-  return `upi://pay?pa=${encodeURIComponent(UPI_VPA)}&pn=${encodeURIComponent("HeartSync AI")}&am=${amount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(note)}`;
-}
-
-function qrUrl(upiUri: string, size = 220) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=6&data=${encodeURIComponent(upiUri)}`;
-}
-
-async function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "absolute";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); } catch { /* ignore */ }
-    document.body.removeChild(ta);
-  }
-  setCopied(true);
-  setTimeout(() => setCopied(false), 1800);
-}
-
-type Stage = "paying" | "done-bundle" | "done-watermark";
+type Stage = "paying" | "utr" | "done-bundle" | "done-watermark";
 
 interface Props {
   cardId: string;
@@ -58,16 +35,13 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
   const [bundleUtr, setBundleUtr] = useState("");
   const [bundleUtrError, setBundleUtrError] = useState("");
   const [bundleLoading, setBundleLoading] = useState(false);
-  const [bundleUpiCopied, setBundleUpiCopied] = useState(false);
 
-  /* Auto-close to success after showing confirmation */
   useEffect(() => {
     if (stage !== "done-bundle" && stage !== "done-watermark") return;
     const t = setTimeout(() => onSuccess(), 2000);
     return () => clearTimeout(t);
   }, [stage, onSuccess]);
 
-  /* Prevent body scroll while modal is open */
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -77,7 +51,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
   const handleBundleSubmit = useCallback(async () => {
     if (!isValidUtr(bundleUtr)) return;
     if (!cardId) { setBundleUtrError("No card ID — close and try again from the card page."); return; }
-    if (!isSignedIn) { clerk.openSignIn({ redirectUrl: window.location.href }); return; }
+    if (!isSignedIn) { clerk.openSignIn({ redirectUrl: window.location.href } as Parameters<typeof clerk.openSignIn>[0]); return; }
     setBundleUtrError("");
     setBundleLoading(true);
     try {
@@ -118,8 +92,6 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
     }
   }, [bundleUtr, cardId, isSignedIn, getToken, clerk]);
 
-  const bundleUpiUri = makeUpiUri(49, "HeartSync Premium");
-
   return (
     <div
       style={{
@@ -154,7 +126,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <button
-                onClick={onClose}
+                onClick={stage === "utr" ? () => setStage("paying") : onClose}
                 style={{
                   width: 34, height: 34, borderRadius: "50%",
                   border: "1px solid rgba(255,255,255,0.12)",
@@ -203,16 +175,16 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                 </motion.div>
               )}
 
-              {/* Single paying screen */}
+              {/* Step 1: Pay */}
               {stage === "paying" && (
                 <motion.div key="paying"
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
+                  exit={{ opacity: 0, x: -24 }}
                 >
-                  {/* Compact benefits strip */}
+                  {/* Benefits strip */}
                   <div style={{
                     display: "flex", flexWrap: "wrap", gap: "6px 10px",
-                    marginBottom: 16, padding: "10px 14px",
+                    marginBottom: 20, padding: "10px 14px",
                     background: "rgba(168,85,247,0.08)",
                     border: "1px solid rgba(168,85,247,0.2)",
                     borderRadius: 12,
@@ -230,19 +202,113 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     </span>
                   </div>
 
-                  <UpiPaySection
-                    upiUri={bundleUpiUri}
-                    amount={49}
-                    utrValue={bundleUtr}
-                    onUtrChange={(v) => { setBundleUtr(v); setBundleUtrError(""); }}
-                    utrError={bundleUtrError}
-                    loading={bundleLoading}
-                    upiCopied={bundleUpiCopied}
-                    onCopyUpi={() => copyToClipboard(UPI_DISPLAY, setBundleUpiCopied)}
-                    onSubmit={handleBundleSubmit}
-                    qrSrc={qrUrl(bundleUpiUri, 220)}
-                    submitLabel={isSignedIn ? "Submit & unlock" : "Sign in to pay →"}
-                  />
+                  {/* QR code */}
+                  <div style={{ textAlign: "center", marginBottom: 20 }}>
+                    <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+                      Scan with any UPI app
+                    </p>
+                    <a
+                      href={UPI_DEEP_LINK}
+                      style={{
+                        display: "inline-block",
+                        background: "#fff", borderRadius: 16, padding: 10,
+                        boxShadow: "0 4px 24px rgba(168,85,247,0.25)",
+                      }}
+                    >
+                      <img
+                        src={qrUrl(200)}
+                        alt="UPI QR ₹49"
+                        style={{ width: 200, height: 200, borderRadius: 8, display: "block" }}
+                      />
+                    </a>
+                    <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 10, marginTop: 8 }}>
+                      UPI of <span style={{ color: "rgba(255,255,255,0.45)" }}>Itisha</span> — Creator of HeartSync AI
+                    </p>
+                  </div>
+
+                  {/* Pay Now CTA */}
+                  <a
+                    href={UPI_DEEP_LINK}
+                    onClick={() => setTimeout(() => setStage("utr"), 600)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", height: 52, borderRadius: 14,
+                      background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                      color: "#000", fontWeight: 800, fontSize: 16,
+                      textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
+                    }}
+                  >
+                    Pay ₹49 Now <ArrowRight style={{ width: 18, height: 18 }} />
+                  </a>
+
+                  <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>
+                    Opens your UPI app automatically
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Step 2: Enter last 4 digits */}
+              {stage === "utr" && (
+                <motion.div key="utr"
+                  initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div style={{ textAlign: "center", marginBottom: 24 }}>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>💸</div>
+                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+                      Payment done? Almost there!
+                    </h2>
+                    <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.55 }}>
+                      Enter the <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>last 4 digits</span> of your payment reference number to confirm.
+                    </p>
+                  </div>
+
+                  <div style={{
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+                    borderRadius: 18, padding: "18px 16px",
+                    display: "flex", flexDirection: "column", gap: 10,
+                  }}>
+                    <Input
+                      placeholder="e.g. 4 2 8 7"
+                      value={bundleUtr}
+                      maxLength={4}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        setBundleUtr(v);
+                        setBundleUtrError("");
+                      }}
+                      className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
+                    />
+
+                    {bundleUtrError && (
+                      <p style={{ color: "#f87171", fontSize: 12, textAlign: "center", margin: 0 }}>{bundleUtrError}</p>
+                    )}
+
+                    <button
+                      onClick={handleBundleSubmit}
+                      disabled={!isValidUtr(bundleUtr) || bundleLoading}
+                      style={{
+                        width: "100%", height: 48, borderRadius: 12,
+                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                        color: "#000", fontWeight: 700, fontSize: 15, border: "none",
+                        cursor: !isValidUtr(bundleUtr) || bundleLoading ? "default" : "pointer",
+                        opacity: !isValidUtr(bundleUtr) || bundleLoading ? 0.5 : 1,
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        transition: "opacity 0.2s",
+                      }}
+                    >
+                      {bundleLoading
+                        ? <><Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> Confirming…</>
+                        : <>{isSignedIn ? "Confirm & Unlock" : "Sign in to confirm →"} <ArrowRight style={{ width: 15, height: 15 }} /></>
+                      }
+                    </button>
+
+                    <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: 10, margin: 0 }}>
+                      Find it in your UPI app under transaction details
+                    </p>
+                  </div>
                 </motion.div>
               )}
 
@@ -250,104 +316,6 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
           </>
         )}
       </motion.div>
-    </div>
-  );
-}
-
-/* ── Shared UPI payment section ── */
-interface UpiPaySectionProps {
-  upiUri: string;
-  amount: number;
-  utrValue: string;
-  onUtrChange: (v: string) => void;
-  utrError: string;
-  loading: boolean;
-  upiCopied: boolean;
-  onCopyUpi: () => void;
-  onSubmit: () => void;
-  qrSrc: string;
-  submitLabel: string;
-  disabled?: boolean;
-}
-
-function UpiPaySection({
-  upiUri, amount, utrValue, onUtrChange, utrError,
-  loading, upiCopied, onCopyUpi, onSubmit, qrSrc, submitLabel, disabled,
-}: UpiPaySectionProps) {
-  return (
-    <div style={{
-      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
-      borderRadius: 20, padding: "16px",
-    }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
-        <a
-          href={upiUri}
-          style={{ background: "#fff", borderRadius: 12, padding: 6, flexShrink: 0, display: "block" }}
-          title="Tap to open in your UPI app"
-        >
-          <img src={qrSrc} alt={`UPI QR ₹${amount}`} style={{ width: 88, height: 88, borderRadius: 8, display: "block" }} />
-        </a>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 4 }}>
-            UPI of <span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>Itisha</span> — Creator of HeartSync AI
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <p style={{ fontFamily: "monospace", fontWeight: 700, color: "#fff", fontSize: 14, flex: 1, minWidth: 0, overflowWrap: "break-word" }}>
-              {UPI_DISPLAY}
-            </p>
-            <button
-              type="button"
-              onClick={onCopyUpi}
-              style={{
-                flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
-                borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700,
-                background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
-                color: upiCopied ? "#4ade80" : "#FFD700",
-                border: `1px solid ${upiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
-                cursor: "pointer",
-              }}
-            >
-              {upiCopied ? <><Check style={{ width: 12, height: 12 }} /> Copied</> : <><Copy style={{ width: 12, height: 12 }} /> Copy</>}
-            </button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-            <Info style={{ width: 11, height: 11, color: "rgba(255,255,255,0.25)", flexShrink: 0 }} />
-            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10 }}>
-              Pay <span style={{ color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>exactly ₹{amount}</span> — scan, tap, or copy
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Input
-          placeholder="Paste UTR / Transaction ID"
-          value={utrValue}
-          onChange={(e) => onUtrChange(e.target.value)}
-          className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
-        />
-        {utrError && (
-          <p style={{ color: "#f87171", fontSize: 12, textAlign: "center", margin: 0 }}>{utrError}</p>
-        )}
-        <button
-          onClick={onSubmit}
-          disabled={(!isValidUtr(utrValue) || loading || disabled === true)}
-          style={{
-            width: "100%", height: 44, borderRadius: 12,
-            background: "linear-gradient(135deg, #FFD700, #FFA500)",
-            color: "#000", fontWeight: 700, fontSize: 14, border: "none",
-            cursor: (!isValidUtr(utrValue) || loading || disabled) ? "default" : "pointer",
-            opacity: (!isValidUtr(utrValue) || loading || disabled) ? 0.5 : 1,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            transition: "opacity 0.2s",
-          }}
-        >
-          {loading
-            ? <><Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> Verifying…</>
-            : <>{submitLabel} <ArrowRight style={{ width: 15, height: 15 }} /></>
-          }
-        </button>
-      </div>
     </div>
   );
 }
