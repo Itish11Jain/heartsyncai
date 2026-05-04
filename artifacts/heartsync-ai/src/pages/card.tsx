@@ -884,7 +884,7 @@ export default function Card() {
     const update = () => {
       setOrbRadius(
         personalPictureUrl
-          ? Math.min(230, window.innerWidth * 0.55)
+          ? Math.min(210, window.innerWidth * 0.40)
           : Math.min(115, window.innerWidth * 0.27)
       );
     };
