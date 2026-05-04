@@ -10,6 +10,12 @@ export function ShareClean() {
     setTimeout(() => setter(false), 2000);
   }
 
+  function shareInstagram() {
+    tap(setIgCopied);
+    try { navigator.clipboard.writeText("https://heartsync.in/card?..."); } catch { /* ignore */ }
+    setTimeout(() => window.open("https://www.instagram.com", "_blank"), 300);
+  }
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -107,7 +113,7 @@ export function ShareClean() {
 
           {/* Instagram */}
           <button
-            onClick={() => tap(setIgCopied)}
+            onClick={shareInstagram}
             style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
           >
             <div style={{
