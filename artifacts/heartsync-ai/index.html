@@ -155,7 +155,10 @@
         } else if (isHome) {
           emojis = ['\uD83D\uDC9B', '\u2728', '\uD83D\uDC96', '\uD83C\uDF38', '\uD83D\uDCAB', '\uD83E\uDD70', '\uD83D\uDC9E', '\uD83C\uDF1F'];
           // LCP: show the hero heading from HTML so it paints at FCP time.
-          heroEl.innerHTML = 'Send love<br>in a card.';
+          // textContent is safe (no HTML injection); pre-line gives us the
+          // line break without innerHTML.
+          heroEl.textContent = 'Send love\nin a card.';
+          heroEl.style.whiteSpace = 'pre-line';
           heroEl.style.display = 'block';
           titleEl.style.display = 'none';
           subEl.textContent = 'Personalised cards for every occasion \u2728';
