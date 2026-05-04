@@ -31,7 +31,7 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
         alt="Personal photo"
         style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
       />
-      <p style={{ textAlign: "center", fontSize: 11, color: "#888", marginTop: 8, fontFamily: "serif", margin: "8px 0 0" }}>
+      <p style={{ textAlign: "center", fontSize: 11, color: "#888", margin: "8px 0 0", fontFamily: "serif" }}>
         Made with 💌
       </p>
     </motion.div>
