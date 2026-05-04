@@ -555,21 +555,21 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   borderRadius: 14, padding: "14px 16px", marginBottom: 6,
                   textAlign: "left",
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(168,85,247,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-                    What you get
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(168,85,247,0.85)", marginBottom: 10 }}>
+                    What all do you get in ₹49?
                   </div>
                   {[
-                    "📸 Picture of them inside the card",
-                    "🚫 No watermark on your card",
-                    "✨ Cosmic, Crystal & Vinyl unlocked",
-                    "♾️ All future cards — forever",
+                    "1. Picture of them inside the cards",
+                    "2. No watermark on your cards",
+                    "3. 10+ Premium templates unlocked",
+                    "4. All these features are yours — Forever (On all cards!)",
                   ].map((line) => (
                     <div key={line} style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 7, display: "flex", alignItems: "flex-start", gap: 6 }}>
                       {line}
                     </div>
                   ))}
                   <div style={{ fontSize: 12, color: "rgba(255,215,0,0.55)", fontWeight: 700, marginTop: 10 }}>
-                    All for ₹49 — one-time payment
+                    All for ₹49 — one time payment
                   </div>
                 </div>
               </div>
