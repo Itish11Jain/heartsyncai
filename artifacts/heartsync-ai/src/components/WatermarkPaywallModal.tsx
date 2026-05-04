@@ -40,7 +40,7 @@ async function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   setTimeout(() => setCopied(false), 1800);
 }
 
-type Stage = "choose" | "bundle-upi" | "done-bundle" | "done-watermark";
+type Stage = "paying" | "done-bundle" | "done-watermark";
 
 interface Props {
   cardId: string;
@@ -53,7 +53,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const clerk = useClerk();
 
-  const [stage, setStage] = useState<Stage>("choose");
+  const [stage, setStage] = useState<Stage>("paying");
 
   const [bundleUtr, setBundleUtr] = useState("");
   const [bundleUtrError, setBundleUtrError] = useState("");
@@ -152,11 +152,11 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
         ) : (
           <>
             {/* Header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <button
                 onClick={onClose}
                 style={{
-                  width: 36, height: 36, borderRadius: "50%",
+                  width: 34, height: 34, borderRadius: "50%",
                   border: "1px solid rgba(255,255,255,0.12)",
                   background: "rgba(255,255,255,0.06)", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -164,11 +164,11 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                 }}
               >←</button>
               <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, lineHeight: 1.2 }}>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
                   {mode === "photo" ? "Share with the photo included" : "Remove watermark"}
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 }}>
-                  Pay via UPI · instant unlock
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 2 }}>
+                  One-time ₹49 · instant unlock
                 </div>
               </div>
             </div>
@@ -203,93 +203,31 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                 </motion.div>
               )}
 
-              {/* Choose */}
-              {stage === "choose" && (
-                <motion.div key="choose"
-                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                >
-                  <div style={{ textAlign: "center", marginBottom: 20 }}>
-                    <Sparkles style={{ width: 26, height: 26, color: "#a855f7", margin: "0 auto 8px" }} />
-                    <h1 style={{ color: "#fff", fontWeight: 800, fontSize: 19, marginBottom: 6 }}>
-                      {mode === "photo" ? "Share with the photo included" : "Remove Watermark · Go Premium"}
-                    </h1>
-                    <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
-                      One payment of ₹49 — yours forever.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setStage("bundle-upi")}
-                    style={{
-                      width: "100%", marginBottom: 16, padding: "16px", borderRadius: 18,
-                      background: "linear-gradient(135deg, rgba(168,85,247,0.22), rgba(236,72,153,0.14))",
-                      border: "1.5px solid rgba(168,85,247,0.55)",
-                      boxShadow: "0 0 20px rgba(168,85,247,0.18)",
-                      cursor: "pointer", textAlign: "left",
-                      display: "flex", alignItems: "flex-start", gap: 12,
-                    }}
-                  >
-                    <div style={{ fontSize: 22, marginTop: 2 }}>👑</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
-                        Remove watermark & unlock all premium templates
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Removes watermark</span>
-                        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Unlocks Cosmic, Crystal, Vinyl</span>
-                        <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Add a picture of them in your card</span>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 2 }}>
-                      <span style={{ color: "#d8b4fe", fontWeight: 800, fontSize: 15 }}>₹49</span>
-                      <ArrowRight size={14} color="rgba(216,180,254,0.6)" />
-                    </div>
-                  </button>
-
-                  <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12, lineHeight: 1.5 }}>
-                    Only the card sender can remove the watermark.
-                  </p>
-                </motion.div>
-              )}
-
-              {/* Bundle UPI */}
-              {stage === "bundle-upi" && (
-                <motion.div key="bundle-upi"
+              {/* Single paying screen */}
+              {stage === "paying" && (
+                <motion.div key="paying"
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                    <button
-                      onClick={() => setStage("choose")}
-                      style={{
-                        width: 36, height: 36, borderRadius: "50%",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        background: "rgba(255,255,255,0.06)", cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "rgba(255,255,255,0.6)", fontSize: 18, flexShrink: 0,
-                      }}
-                    >←</button>
-                    <div>
-                      <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Unlock all premium — ₹49</div>
-                      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>Pay once, use forever on all cards</div>
-                    </div>
-                  </div>
-
+                  {/* Compact benefits strip */}
                   <div style={{
-                    marginBottom: 16, borderRadius: 16, padding: "12px 16px",
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.10))",
-                    border: "1.5px solid rgba(255,215,0,0.55)",
+                    display: "flex", flexWrap: "wrap", gap: "6px 10px",
+                    marginBottom: 16, padding: "10px 14px",
+                    background: "rgba(168,85,247,0.08)",
+                    border: "1px solid rgba(168,85,247,0.2)",
+                    borderRadius: 12,
                   }}>
-                    <div>
-                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>₹49</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
-                        <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Removes watermark</span>
-                        <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Unlocks premium templates</span>
-                        <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Add a picture of them in your card</span>
-                      </div>
-                    </div>
+                    {(mode === "photo"
+                      ? ["📸 Photo in card", "🚫 No watermark", "✨ All templates", "♾️ Forever"]
+                      : ["🚫 No watermark", "✨ All templates", "📸 Photo in card", "♾️ Forever"]
+                    ).map((item) => (
+                      <span key={item} style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap" }}>
+                        {item}
+                      </span>
+                    ))}
+                    <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2 }}>
+                      All for ₹49 — pay once, yours forever
+                    </span>
                   </div>
 
                   <UpiPaySection
@@ -303,7 +241,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     onCopyUpi={() => copyToClipboard(UPI_DISPLAY, setBundleUpiCopied)}
                     onSubmit={handleBundleSubmit}
                     qrSrc={qrUrl(bundleUpiUri, 220)}
-                    submitLabel={isSignedIn ? "Submit & unlock all" : "Sign in to pay →"}
+                    submitLabel={isSignedIn ? "Submit & unlock" : "Sign in to pay →"}
                   />
                 </motion.div>
               )}
