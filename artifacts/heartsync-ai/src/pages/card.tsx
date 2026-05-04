@@ -859,6 +859,13 @@ export default function Card() {
   const confettiRef = useRef<Particle[]>([]);
   const rafRef = useRef<number>(0);
 
+  /* ── Preload personal picture immediately so it's cached by the time the polaroid phase arrives ── */
+  useEffect(() => {
+    if (!personalPictureUrl) return;
+    const img = new Image();
+    img.src = personalPictureUrl;
+  }, [personalPictureUrl]);
+
   /* ── background music ── */
   useEffect(() => {
     if (isRecipient) {
@@ -1153,9 +1160,9 @@ export default function Card() {
             key="orbs-scene"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            style={{ position: "fixed", inset: 0 }}
+            style={{ position: "fixed", inset: 0, zIndex: 40 }}
           >
-            <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {orbs.map((orb, i) => {
                 const pos = orbPositions[i];
                 const finaleOffset = getFinaleOffset(pos.angle);

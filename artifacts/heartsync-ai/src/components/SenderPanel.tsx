@@ -103,6 +103,23 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }, [isLoaded, isSignedIn]);
 
+  /* After Clerk redirect with ?open_paywall=1: restore pending share type, open bundle paywall. */
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("open_paywall") === "1") {
+      p.delete("open_paywall");
+      const clean = window.location.pathname + (p.toString() ? "?" + p.toString() : "");
+      window.history.replaceState(null, "", clean);
+      const stored = sessionStorage.getItem("hs_pending_share");
+      if (stored) {
+        pendingShareTypeRef.current = stored as ShareType;
+        sessionStorage.removeItem("hs_pending_share");
+      }
+      setShowBundlePaywall(true);
+    }
+  }, [isLoaded, isSignedIn]);
+
   function handleRemoveWatermarkClick() {
     if (isLoaded && isSignedIn) {
       removeWatermarkFree();
@@ -173,14 +190,14 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     else void copySenderLink(shareUrlWithoutPhoto);
   }
 
-  /* After bundle payment succeeds: close paywall, fire pending share action WITH photo */
+  /* After bundle payment succeeds: navigate to the share finale so all CTAs are visible. */
   function handleBundlePaywallSuccess() {
     setShowBundlePaywall(false);
-    const type = pendingShareTypeRef.current;
     pendingShareTypeRef.current = null;
-    if (type === "whatsapp") shareSenderWhatsApp(senderShareUrl);
-    else if (type === "instagram") void shareInstagram(senderShareUrl);
-    else if (type === "link") void copySenderLink(senderShareUrl);
+    const u = new URL(window.location.href);
+    u.searchParams.set("direct_share", "1");
+    u.searchParams.delete("open_paywall");
+    window.location.href = u.toString();
   }
 
   return (
@@ -354,60 +371,96 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
             transition={{ duration: 0.25 }}
             style={{
               position: "fixed", inset: 0, zIndex: 10001,
-              background: "rgba(0,0,0,0.8)",
+              background: "rgba(0,0,0,0.85)",
               display: "flex", alignItems: "center", justifyContent: "center",
               padding: "0 20px",
             }}
             onClick={(e) => { if (e.target === e.currentTarget) { setShowPhotoPaywall(false); pendingShareTypeRef.current = null; } }}
           >
             <motion.div
-              initial={{ scale: 0.93, opacity: 0, y: 16 }}
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.93, opacity: 0, y: 8 }}
-              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              transition={{ type: "spring", stiffness: 340, damping: 30 }}
               style={{
                 width: "100%", maxWidth: 360,
-                background: "radial-gradient(ellipse at 50% 0%, #1e0044 0%, #0c000e 70%)",
-                border: "1px solid rgba(168,85,247,0.3)",
+                background: "radial-gradient(ellipse at 50% 0%, #1e0044 0%, #080010 70%)",
+                border: "1px solid rgba(168,85,247,0.35)",
                 borderRadius: 24,
                 padding: "28px 22px 24px",
                 fontFamily: "'Segoe UI', system-ui, sans-serif",
               }}
             >
-              <div style={{ textAlign: "center", marginBottom: 20 }}>
-                <div style={{ fontSize: 42, marginBottom: 10 }}>📸</div>
-                <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 20, marginBottom: 8 }}>
-                  Share with your photo
+              {/* Header */}
+              <div style={{ textAlign: "center", marginBottom: 22 }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>📸</div>
+                <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 20, marginBottom: 16, lineHeight: 1.3 }}>
+                  Share with your photo included
                 </h2>
-                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
-                  Pay ₹49 to include your personal Polaroid photo in the shared link — or share without it for free.
-                </p>
+
+                {/* Benefits */}
+                <div style={{
+                  background: "rgba(168,85,247,0.08)",
+                  border: "1px solid rgba(168,85,247,0.2)",
+                  borderRadius: 14, padding: "14px 16px", marginBottom: 6,
+                  textAlign: "left",
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(168,85,247,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                    What you get
+                  </div>
+                  {[
+                    "📸 Picture of them inside the card",
+                    "🚫 No watermark on your card",
+                    "✨ Cosmic, Crystal & Vinyl unlocked",
+                    "♾️ All future cards — forever",
+                  ].map((line) => (
+                    <div key={line} style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 7, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                      {line}
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 12, color: "rgba(255,215,0,0.55)", fontWeight: 700, marginTop: 10 }}>
+                    All for ₹49 — one-time payment
+                  </div>
+                </div>
               </div>
 
+              {/* Primary CTA */}
               <button
                 onClick={() => {
-                  setShowPhotoPaywall(false);
-                  setShowBundlePaywall(true);
+                  if (isSignedIn) {
+                    setShowPhotoPaywall(false);
+                    setShowBundlePaywall(true);
+                  } else {
+                    sessionStorage.setItem("hs_pending_share", pendingShareTypeRef.current ?? "link");
+                    const returnUrl = new URL(window.location.href);
+                    returnUrl.searchParams.set("open_paywall", "1");
+                    (clerk.openSignIn as unknown as (opts: { forceRedirectUrl: string; afterSignUpUrl: string }) => void)({
+                      forceRedirectUrl: returnUrl.toString(),
+                      afterSignUpUrl: returnUrl.toString(),
+                    });
+                  }
                 }}
                 style={{
-                  width: "100%", padding: "14px 16px", borderRadius: 14,
-                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                  border: "none", color: "#000",
+                  width: "100%", padding: "15px 16px", borderRadius: 14,
+                  background: "linear-gradient(135deg, #a855f7, #ec4899)",
+                  border: "none", color: "#fff",
                   fontWeight: 800, fontSize: 15, cursor: "pointer",
                   marginBottom: 10,
+                  boxShadow: "0 4px 24px rgba(168,85,247,0.4)",
                 }}
               >
-                ✨ Unlock with ₹49 bundle
+                {isSignedIn ? "Unlock Premium — ₹49" : "Sign up & Unlock Premium — ₹49"}
               </button>
 
+              {/* Secondary: share without photo */}
               <button
                 onClick={executeShareWithoutPhoto}
                 style={{
                   width: "100%", padding: "12px", borderRadius: 12,
                   background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13, cursor: "pointer",
-                  marginBottom: 12,
+                  color: "rgba(255,255,255,0.5)", fontWeight: 600, fontSize: 13, cursor: "pointer",
+                  marginBottom: 10,
                 }}
               >
                 Share without photo
@@ -415,7 +468,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
               <button
                 onClick={() => { setShowPhotoPaywall(false); pendingShareTypeRef.current = null; }}
-                style={{ display: "block", width: "100%", textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer" }}
+                style={{ display: "block", width: "100%", textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", background: "none", border: "none", cursor: "pointer" }}
               >
                 Cancel
               </button>
