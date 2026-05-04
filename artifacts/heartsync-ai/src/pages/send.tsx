@@ -521,7 +521,7 @@ function SendInner() {
         recipient_name: recipientName.trim() || undefined,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, false, uploadedPhotoUrl ?? undefined);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -552,6 +552,7 @@ function SendInner() {
             occasion,
             recipient_name: recipientName.trim() || undefined,
             message_b64,
+            photo_url: uploadedPhotoUrl ?? null,
           }),
         });
         if (cardRes.ok) {
@@ -629,6 +630,7 @@ function SendInner() {
             template: selectedTemplate, occasion,
             recipient_name: recipientName.trim() || undefined,
             message_b64,
+            photo_url: uploadedPhotoUrl ?? null,
           }),
         });
         if (cardRes.ok) {

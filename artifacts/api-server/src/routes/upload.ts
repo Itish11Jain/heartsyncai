@@ -89,6 +89,12 @@ router.get(/^\/photos\/(.+)$/, async (req: Request, res: Response) => {
       return;
     }
 
+    // Security: only serve keys under the "photo/" prefix to prevent key-guessing attacks.
+    if (!key.startsWith("photo/")) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     const existsResult = await getStorage().exists(key);
     if (!existsResult.ok || !existsResult.value) {
       res.status(404).json({ error: "Not found" });
