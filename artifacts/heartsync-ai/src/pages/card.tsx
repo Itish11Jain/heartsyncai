@@ -882,12 +882,16 @@ export default function Card() {
 
   useEffect(() => {
     const update = () => {
-      setOrbRadius(Math.min(115, window.innerWidth * 0.27));
+      setOrbRadius(
+        personalPictureUrl
+          ? Math.min(188, window.innerWidth * 0.46)
+          : Math.min(115, window.innerWidth * 0.27)
+      );
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
+  }, [personalPictureUrl]);
 
   /* Remove native pre-React splash once React has mounted */
   useEffect(() => {
@@ -995,8 +999,8 @@ export default function Card() {
     envelope.open();
     setPhase("opening");
     if (personalPictureUrl) {
-      setTimeout(() => { setPhase("polaroid"); }, 1200);
-      setTimeout(() => { setPhase("orbs"); }, 2200);
+      setTimeout(() => { setPhase("polaroid"); }, 300);
+      setTimeout(() => { setPhase("orbs"); }, 1500);
     } else {
       setTimeout(() => { setPhase("orbs"); }, 1200);
     }

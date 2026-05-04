@@ -11,10 +11,10 @@ export default function PolaroidFrame({ src }: PolaroidFrameProps) {
   return (
     <motion.div
       key="polaroid"
-      initial={{ y: "110vh", scale: 0.75, opacity: 0 }}
-      animate={loaded ? { y: "-50%", scale: 1, opacity: 1 } : { y: "-50%", scale: 1, opacity: 0 }}
-      exit={{ scale: 0.7, opacity: 0, y: "20vh", transition: { duration: 0.35 } }}
-      transition={{ type: "spring", damping: 22, stiffness: 130 }}
+      initial={{ scale: 0.05, opacity: 0 }}
+      animate={loaded ? { scale: 1, opacity: 1 } : { scale: 0.05, opacity: 0 }}
+      exit={{ scale: 0.7, opacity: 0, transition: { duration: 0.3 } }}
+      transition={{ type: "spring", damping: 18, stiffness: 200 }}
       style={{
         position: "fixed",
         top: "50%",
