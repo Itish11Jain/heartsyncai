@@ -208,8 +208,17 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         }
       } else {
         if (!signUp) return;
-        const { error } = await (signUp.verifications as { verifyEmailCode: (p: { code: string }) => Promise<{ error: { longMessage?: string; message: string } | null }> }).verifyEmailCode({ code });
+        type VE = { verifyEmailCode: (p: { code: string }) => Promise<{ error: { longMessage?: string; message: string } | null }> };
+        const { error } = await (signUp.verifications as unknown as VE).verifyEmailCode({ code });
         if (error) { setSignInError(error.longMessage ?? error.message ?? "Wrong code — please try again."); return; }
+
+        // Finalize if not yet complete (required by Clerk 6.x signal API)
+        if (signUp.status !== "complete") {
+          type Fin = { finalize: () => Promise<{ error: { longMessage?: string; message: string } | null }> };
+          const { error: finalizeErr } = await (signUp as unknown as Fin).finalize();
+          if (finalizeErr) { setSignInError(finalizeErr.longMessage ?? finalizeErr.message ?? "Couldn't complete sign-up."); return; }
+        }
+
         if (signUp.status === "complete" && signUp.createdSessionId) {
           await (clerk.setActive as (params: { session: string }) => Promise<void>)({ session: signUp.createdSessionId });
           completeAuth();
