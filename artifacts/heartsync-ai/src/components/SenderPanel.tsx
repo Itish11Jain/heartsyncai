@@ -28,6 +28,10 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const authFlowRef = useRef<"signIn" | "signUp">("signIn");
+  type SignInRes = { attemptFirstFactor: (p: object) => Promise<{ status: string; createdSessionId: string | null }> };
+  type SignUpRes = { attemptEmailAddressVerification: (p: object) => Promise<{ status: string; createdSessionId: string | null }> };
+  const signInResRef = useRef<SignInRes | null>(null);
+  const signUpResRef = useRef<SignUpRes | null>(null);
   const { usage } = useCardUsage();
   const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
@@ -162,7 +166,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     try {
       // Try sign-in first — resource API creates attempt + sends code in one call
       try {
-        await (signIn as unknown as { create: (p: object) => Promise<unknown> })
+        signInResRef.current = await (signIn as unknown as { create: (p: object) => Promise<SignInRes> })
           .create({ strategy: "email_code", identifier: email });
         authFlowRef.current = "signIn";
         setSignInStep("otp");
@@ -178,9 +182,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       }
 
       // Account not found — create new account and send OTP
-      await (signUp as unknown as { create: (p: object) => Promise<unknown> })
+      signUpResRef.current = await (signUp as unknown as { create: (p: object) => Promise<SignUpRes> })
         .create({ emailAddress: email });
-      await (signUp as unknown as { prepareEmailAddressVerification: (p: object) => Promise<unknown> })
+      await (signUpResRef.current as unknown as { prepareEmailAddressVerification: (p: object) => Promise<unknown> })
         .prepareEmailAddressVerification({ strategy: "email_code" });
       authFlowRef.current = "signUp";
       setSignInStep("otp");
@@ -198,11 +202,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     const code = signInOtp.trim();
     try {
       if (authFlowRef.current === "signIn") {
-        if (!signIn) return;
-        // Resource API — returns result directly with status + createdSessionId
-        const result = await (signIn as unknown as {
-          attemptFirstFactor: (p: object) => Promise<{ status: string; createdSessionId: string | null }>;
-        }).attemptFirstFactor({ strategy: "email_code", code });
+        // Use stored resource directly — avoids stale hook state
+        const res = signInResRef.current ?? (signIn as unknown as SignInRes);
+        const result = await res.attemptFirstFactor({ strategy: "email_code", code });
         if (result?.status === "complete" && result?.createdSessionId) {
           await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: result.createdSessionId });
           completeAuth();
@@ -210,11 +212,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           setSignInError("Sign-in couldn't complete. Please try again.");
         }
       } else {
-        if (!signUp) return;
-        // Resource API — returns result directly with status + createdSessionId
-        const result = await (signUp as unknown as {
-          attemptEmailAddressVerification: (p: object) => Promise<{ status: string; createdSessionId: string | null }>;
-        }).attemptEmailAddressVerification({ code });
+        // Use stored resource directly — avoids stale hook state
+        const res = signUpResRef.current ?? (signUp as unknown as SignUpRes);
+        const result = await res.attemptEmailAddressVerification({ code });
         if (result?.status === "complete" && result?.createdSessionId) {
           await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: result.createdSessionId });
           completeAuth();

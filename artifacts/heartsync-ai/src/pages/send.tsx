@@ -1062,6 +1062,21 @@ function SendInner() {
                 </div>
 
                 {/* ── Photo upload (premium feature) ── */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>
+                    Photo
+                  </span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                    color: "rgba(255,255,255,0.4)",
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 20, padding: "2px 8px",
+                    textTransform: "uppercase",
+                  }}>
+                    Optional
+                  </span>
+                </div>
                 <div style={{
                   borderRadius: 14,
                   border: "1.5px solid rgba(255,215,0,0.18)",
