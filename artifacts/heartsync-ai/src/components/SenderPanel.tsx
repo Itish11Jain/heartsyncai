@@ -156,28 +156,58 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setWaCopied(true);
     setTimeout(() => setWaCopied(false), 2500);
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    // Use anchor click — more reliable than window.open for deep links on mobile
+    const a = document.createElement("a");
+    a.href = waUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
-  async function shareInstagram(url: string = senderShareUrl) {
+  function copyToClipboard(text: string): void {
+    // Try modern API first; fall back to execCommand for older/restricted contexts
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {
+        _execCommandCopy(text);
+      });
+    } else {
+      _execCommandCopy(text);
+    }
+  }
+
+  function _execCommandCopy(text: string): void {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;opacity:0;top:0;left:0;";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch { /* ignore */ }
+  }
+
+  function shareInstagram(url: string = senderShareUrl) {
     envelope.copy();
     trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope" });
-    try {
-      await navigator.clipboard.writeText(url);
-      setIgCopied(true);
-      setTimeout(() => setIgCopied(false), 2500);
-    } catch { /* ignore */ }
+    // Show feedback immediately — don't wait for clipboard permission
+    setIgCopied(true);
+    setTimeout(() => setIgCopied(false), 2500);
+    copyToClipboard(url);
     setTimeout(() => window.open("https://www.instagram.com", "_blank"), 300);
   }
 
-  async function copySenderLink(url: string = senderShareUrl) {
+  function copySenderLink(url: string = senderShareUrl) {
     envelope.copy();
     trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope" });
-    try {
-      await navigator.clipboard.writeText(url);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2500);
-    } catch { /* ignore */ }
+    // Show feedback immediately — don't gate it on clipboard permission
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2500);
+    copyToClipboard(url);
   }
 
   /* Dispatch the "share without photo" action */

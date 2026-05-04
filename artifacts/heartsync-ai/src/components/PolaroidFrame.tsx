@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -7,14 +7,11 @@ interface Props {
 }
 
 export default function PolaroidFrame({ src }: Props) {
-  const [loaded, setLoaded] = useState(false);
+  // Always show the ring immediately; image fills in when it loads from the
+  // preload cache. Starting as `true` means the spring animation fires on
+  // mount regardless of network latency.
+  const [loaded] = useState(true);
   const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    if (imgRef.current?.complete && (imgRef.current.naturalWidth ?? 1) > 0) {
-      setLoaded(true);
-    }
-  }, []);
 
   return (
     <motion.div
@@ -108,7 +105,6 @@ export default function PolaroidFrame({ src }: Props) {
           ref={imgRef}
           src={src}
           alt="Personal photo"
-          onLoad={() => setLoaded(true)}
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       </div>
