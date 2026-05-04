@@ -242,6 +242,20 @@
           if (window.__clearHsSplash) window.__clearHsSplash();
         }, isSend ? 3000 : 1000);
 
+        // Preload personal photo as early as possible — the API takes ~3.5s
+        // and React mounts 1-2s after HTML, so starting here saves ~1-2s of
+        // latency before the ring even appears. Browser caches the decoded
+        // image so PolaroidFrame's <img> finds it instantly on mount.
+        if (isCard) {
+          var picUrl = p.get('personalpicture');
+          if (picUrl) {
+            try {
+              var preloadImg = new Image();
+              preloadImg.src = picUrl;
+            } catch(e) {}
+          }
+        }
+
         // Warm the API server connection immediately so the first real API
         // call (usage check, card creation) doesn't pay the full TCP+TLS
         // handshake cost. Low-priority so it never competes with JS loading.

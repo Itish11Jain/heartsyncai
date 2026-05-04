@@ -1166,7 +1166,7 @@ export default function Card() {
             animate={{ opacity: 1 }}
             style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: allClicked ? "none" : "auto" }}
           >
-            <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
               {orbs.map((orb, i) => {
                 const pos = orbPositions[i];
                 const finaleOffset = getFinaleOffset(pos.angle);
