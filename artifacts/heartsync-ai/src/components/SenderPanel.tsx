@@ -255,7 +255,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
             marginLeft: "auto",
             marginRight: "auto",
             paddingBottom: 8,
-            zIndex: 35,
+            zIndex: 50,
           }}
         >
           <p style={{ fontSize: 12, color: "rgba(255,215,0,0.55)", textAlign: "center", marginBottom: 14, fontWeight: 600, letterSpacing: "0.04em" }}>

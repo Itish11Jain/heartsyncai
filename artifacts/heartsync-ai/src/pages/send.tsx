@@ -1074,7 +1074,7 @@ function SendInner() {
                     </label>
                     <div style={{ textAlign: "right" }}>
                       <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "rgba(255,215,0,0.45)", letterSpacing: "0.06em" }}>
-                        INCLUDED IN PREMIUM ₹49
+                        Premium @Rs. 49
                       </span>
                       <span style={{ display: "block", fontSize: 9, color: "rgba(255,215,0,0.3)", marginTop: 2 }}>
                         Pay when you share

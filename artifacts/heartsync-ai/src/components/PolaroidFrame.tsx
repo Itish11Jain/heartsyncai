@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -7,17 +7,21 @@ interface Props {
 }
 
 export default function PolaroidFrame({ src }: Props) {
-  // Always show the ring immediately; image fills in when it loads from the
-  // preload cache. Starting as `true` means the spring animation fires on
-  // mount regardless of network latency.
-  const [loaded] = useState(true);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // Catch cached images: browser fires load before React attaches onLoad
+  useEffect(() => {
+    if (imgRef.current?.complete && (imgRef.current.naturalWidth ?? 1) > 0) {
+      setImgLoaded(true);
+    }
+  }, []);
 
   return (
     <motion.div
       key="polaroid"
       initial={{ scale: 0.05, opacity: 0 }}
-      animate={loaded ? { scale: 1, opacity: 1 } : { scale: 0.05, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0.7, opacity: 0, transition: { duration: 0.3 } }}
       transition={{ type: "spring", damping: 18, stiffness: 200 }}
       style={{
@@ -92,20 +96,45 @@ export default function PolaroidFrame({ src }: Props) {
         }}
       />
 
-      {/* Photo circle */}
+      {/* Photo circle — shimmer until image arrives */}
       <div
         style={{
           width: "100%",
           height: "100%",
           borderRadius: "50%",
           overflow: "hidden",
+          background: "radial-gradient(circle at 40% 35%, rgba(80,40,120,0.9) 0%, rgba(20,10,40,0.95) 100%)",
+          position: "relative",
         }}
       >
+        {/* Shimmer sweep — hidden once image is ready */}
+        {!imgLoaded && (
+          <motion.div
+            animate={{ x: ["-100%", "200%"] }}
+            transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.12) 50%, transparent 100%)",
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+        )}
         <img
           ref={imgRef}
           src={src}
           alt="Personal photo"
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onLoad={() => setImgLoaded(true)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+            // Instant appearance — no fade-in delay
+            opacity: imgLoaded ? 1 : 0,
+            transition: "none",
+          }}
         />
       </div>
     </motion.div>
