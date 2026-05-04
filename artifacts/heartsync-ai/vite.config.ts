@@ -26,12 +26,57 @@ if (!basePath) {
   );
 }
 
+/**
+ * Vite plugin: Cache-Control headers
+ *
+ * Dev server  — applies to public/ files only (fonts, lottie, images).
+ * Preview server — applies to all built output; adds immutable headers for
+ *   content-hashed Vite chunks (/assets/*) which are safe to cache forever.
+ *
+ * Rule                         Header
+ * /assets/* (hashed JS/CSS)   public, max-age=31536000, immutable
+ * /fonts/*  (woff2)           public, max-age=31536000, immutable
+ * /lottie/* (json)            public, max-age=86400, stale-while-revalidate=3600
+ * images    (jpg/png/svg/…)   public, max-age=604800, stale-while-revalidate=86400
+ * *.html / root               no-cache  (must revalidate so deploys land instantly)
+ */
+function cacheControlPlugin() {
+  function applyHeaders(req: { url?: string }, res: { setHeader: (k: string, v: string) => void }, next: () => void) {
+    const url = req.url ?? "";
+    if (/^\/assets\//.test(url)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    } else if (/\/fonts\//.test(url) || /\.(woff2?|ttf|otf|eot)(\?.*)?$/.test(url)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    } else if (/\/lottie\/.*\.json(\?.*)?$/.test(url)) {
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=3600");
+    } else if (/\.(jpe?g|png|webp|gif|ico|svg)(\?.*)?$/.test(url)) {
+      res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
+    } else if (/\.html(\?.*)?$/.test(url) || url === "/" || url === "") {
+      res.setHeader("Cache-Control", "no-cache");
+    }
+    next();
+  }
+  return {
+    name: "hs-cache-control",
+    // Dev server: only public/ static files benefit; Vite's own module graph
+    // is already handled internally. Apply headers for consistency.
+    configureServer(server: { middlewares: { use: (fn: typeof applyHeaders) => void } }) {
+      server.middlewares.use(applyHeaders);
+    },
+    // Preview server: serves the full built output — most important for prod.
+    configurePreviewServer(server: { middlewares: { use: (fn: typeof applyHeaders) => void } }) {
+      server.middlewares.use(applyHeaders);
+    },
+  };
+}
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    cacheControlPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

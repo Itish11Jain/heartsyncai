@@ -30,6 +30,15 @@
     </style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!--
+      Preconnect to Google Tag Manager / Analytics early so the async
+      analytics script doesn't pay the full DNS+TCP+TLS handshake cost
+      on the critical path. dns-prefetch is the fallback for older browsers
+      that don't support preconnect.
+    -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    <!--
       Preload the self-hosted Inter latin variable font so it's fetched in
       parallel with the CSS. Without this, the browser only discovers the
       font *after* parsing the stylesheet, costing ~150–250ms on mobile.
