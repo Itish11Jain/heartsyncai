@@ -30,6 +30,14 @@ type Overview = {
   generate_users: string;
   cards_created_users: string;
   card_viewed_users: string;
+  photo_added: string;
+  photo_added_users: string;
+  signup_unlock_clicked: string;
+  signup_unlock_users: string;
+  continue_to_signin_clicked: string;
+  continue_to_signin_users: string;
+  share_without_photo_clicked: string;
+  share_without_photo_users: string;
 };
 
 type Occasion = { occasion: string; cnt: string };
@@ -639,6 +647,17 @@ export default function Analytics() {
             </>
           );
         })()}
+
+        {/* ── Photo Funnel ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Photo Funnel</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
+          <Stat label="Photos Added" value={o.photo_added} sub={`${o.photo_added_users} unique users`} />
+          <Stat label="Sign up & Unlock Clicks" value={o.signup_unlock_clicked} sub={`${o.signup_unlock_users} unique users`} />
+          <Stat label="Continue to Sign In Clicks" value={o.continue_to_signin_clicked} sub={`${o.continue_to_signin_users} unique users`} />
+          <Stat label="Share Without Photo Clicks" value={o.share_without_photo_clicked} sub={`${o.share_without_photo_users} unique users`} />
+          <Stat label="Cards Created with Photo" value={String(data.photo_breakdown?.photo_created ?? 0)} sub="from Photo vs No-Photo" />
+          <Stat label="Cards Viewed with Photo" value={String(data.photo_breakdown?.photo_viewed ?? 0)} sub="recipient views" />
+        </div>
 
         {/* ── Engagement ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Engagement</h2>

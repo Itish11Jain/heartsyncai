@@ -483,7 +483,15 @@ router.get("/events/analytics", async (req, res) => {
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'cta_clicked')          AS cta_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'generate_clicked')     AS generate_users,
             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_created')         AS cards_created_users,
-            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_viewed')          AS card_viewed_users
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_viewed')          AS card_viewed_users,
+            COUNT(*) FILTER (WHERE event = 'photo_added')                                        AS photo_added,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'photo_added')          AS photo_added_users,
+            COUNT(*) FILTER (WHERE event = 'signup_unlock_clicked')                              AS signup_unlock_clicked,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'signup_unlock_clicked') AS signup_unlock_users,
+            COUNT(*) FILTER (WHERE event = 'continue_to_signin_clicked')                         AS continue_to_signin_clicked,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'continue_to_signin_clicked') AS continue_to_signin_users,
+            COUNT(*) FILTER (WHERE event = 'share_without_photo_clicked')                        AS share_without_photo_clicked,
+            COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'share_without_photo_clicked') AS share_without_photo_users
            FROM hs_card_events WHERE ${whereSql}`,
           params,
         ),

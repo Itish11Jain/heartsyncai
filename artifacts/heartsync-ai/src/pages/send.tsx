@@ -478,7 +478,10 @@ function SendInner() {
         return;
       }
       const data = await res.json() as { url?: string };
-      if (data.url) setUploadedPhotoUrl(data.url);
+      if (data.url) {
+        setUploadedPhotoUrl(data.url);
+        trackEvent({ event: "photo_added", occasion, clerk_user_id: clerkUserId ?? undefined, email: userEmail ?? undefined, fingerprint: fingerprint ?? undefined, template: selectedTemplate });
+      }
     } catch {
       setPhotoUploadError("Upload failed. Please try again.");
       setPhotoPreviewSrc(null);

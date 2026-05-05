@@ -150,6 +150,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   async function handleGoogleSignIn() {
     if (googleLoading) return;
+    trackEvent({ event: "continue_to_signin_clicked", occasion, card_id: cardId });
     setGoogleLoading(true);
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
     // Persist the target URL so new-user sign-up flow (which loses the URL
@@ -286,6 +287,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
    * current page URL still has the personalpicture param. */
   function executeShareWithoutPhoto() {
     const type = pendingShareTypeRef.current ?? "link";
+    trackEvent({ event: "share_without_photo_clicked", occasion, card_id: cardId, channel: type, has_photo: false });
     pendingShareTypeRef.current = null;
     setShowPhotoPaywall(false);
     setShowPhotoChoice(false);
@@ -542,6 +544,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               {/* Primary CTA */}
               <button
                 onClick={() => {
+                  trackEvent({ event: "signup_unlock_clicked", occasion, card_id: cardId, has_photo: true });
                   if (isSignedIn) {
                     setShowPhotoPaywall(false);
                     setShowBundlePaywall(true);
