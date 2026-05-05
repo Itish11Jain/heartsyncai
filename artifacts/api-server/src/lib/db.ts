@@ -105,6 +105,7 @@ export async function initDb(): Promise<void> {
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS message_b64 TEXT;
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS is_premium BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS photo_url TEXT;
+    ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS has_photo BOOLEAN;
     CREATE INDEX IF NOT EXISTS hs_cards_clerk_idx ON hs_cards(clerk_user_id);
     CREATE INDEX IF NOT EXISTS hs_cards_created_idx ON hs_cards(created_at);
 

@@ -274,7 +274,7 @@ router.post("/events/card", async (req, res) => {
       event, fingerprint, clerk_user_id, email,
       occasion, template, channel,
       has_likes, used_custom_msg, is_free, from_card_ref,
-      recipient_name, card_id,
+      recipient_name, card_id, has_photo,
       utm_source, utm_medium, utm_campaign,
     } = req.body as Record<string, unknown>;
 
@@ -304,8 +304,8 @@ router.post("/events/card", async (req, res) => {
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
           channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id,
-          utm_source, utm_medium, utm_campaign)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+          has_photo, utm_source, utm_medium, utm_campaign)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
       [
         event,
         fingerprint ?? null,
@@ -320,6 +320,7 @@ router.post("/events/card", async (req, res) => {
         from_card_ref ?? null,
         recipient_name ?? null,
         card_id ?? null,
+        has_photo ?? null,
         capUtm(utm_source, 60),
         capUtm(utm_medium, 60),
         capUtm(utm_campaign, 80),
@@ -617,20 +618,20 @@ router.get("/events/analytics", async (req, res) => {
         ),
 
         /* ── Card with photo vs without photo breakdown ──
-         * Joins hs_card_events to hs_cards on card_id so we can inspect
-         * the photo_url column without storing it redundantly in events.
-         * The inner subquery applies all date/email filters first, then
-         * the outer LEFT JOIN decides photo status. */
+         * has_photo is stored directly on each event (set at tracking time).
+         * For events where has_photo is NULL (older data), we fall back to
+         * a LEFT JOIN to hs_cards to check photo_url on the stored card.
+         * COALESCE prefers the explicit flag over the JOIN result. */
         pool.query(
           `SELECT
-             COUNT(*) FILTER (WHERE e.event = 'card_created' AND c.photo_url IS NOT NULL)                            AS photo_created,
-             COUNT(*) FILTER (WHERE e.event = 'card_created' AND (e.card_id IS NULL OR c.id IS NULL OR c.photo_url IS NULL)) AS nophoto_created,
-             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND c.photo_url IS NOT NULL)                            AS photo_shared,
-             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND (e.card_id IS NULL OR c.id IS NULL OR c.photo_url IS NULL)) AS nophoto_shared,
-             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND c.photo_url IS NOT NULL)                            AS photo_viewed,
-             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND (e.card_id IS NULL OR c.id IS NULL OR c.photo_url IS NULL)) AS nophoto_viewed
+             COUNT(*) FILTER (WHERE e.event = 'card_created' AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_created,
+             COUNT(*) FILTER (WHERE e.event = 'card_created' AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_created,
+             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_shared,
+             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_shared,
+             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_viewed,
+             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_viewed
            FROM (
-             SELECT event, card_id
+             SELECT event, card_id, has_photo
              FROM hs_card_events
              WHERE ${whereSql}
                AND event IN ('card_created', 'card_shared', 'card_viewed')

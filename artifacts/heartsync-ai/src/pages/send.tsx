@@ -519,6 +519,7 @@ function SendInner() {
         is_free: false,
         from_card_ref: fromCardRef,
         recipient_name: recipientName.trim() || undefined,
+        has_photo: !!(uploadedPhotoUrl),
       });
       clearDraft();
       const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, false, uploadedPhotoUrl ?? undefined);
@@ -578,6 +579,7 @@ function SendInner() {
       from_card_ref: fromCardRef,
       recipient_name: recipientName.trim() || undefined,
       card_id: effectiveCardId,
+      has_photo: !!(uploadedPhotoUrl),
     });
 
     clearDraft();
