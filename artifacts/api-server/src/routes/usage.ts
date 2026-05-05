@@ -17,6 +17,15 @@ function validateUtr(value: unknown): value is string {
   return /^\d{4}$/.test(v) || /^\d{12}$/.test(v) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(v);
 }
 
+function isSequential4(v: string): boolean {
+  const d = v.split("").map(Number);
+  if (d.length !== 4) return false;
+  if (d.every(x => x === d[0])) return true;
+  if (d[1] === (d[0] + 1) % 10 && d[2] === (d[1] + 1) % 10 && d[3] === (d[2] + 1) % 10) return true;
+  if (d[1] === (d[0] + 9) % 10 && d[2] === (d[1] + 9) % 10 && d[3] === (d[2] + 9) % 10) return true;
+  return false;
+}
+
 /** Check if a UTR has been used in any of our payment tables. Caller must hold the UTR advisory lock.
  *
  * IMPORTANT: in Postgres, ANY error inside a transaction puts the whole
@@ -58,7 +67,7 @@ async function withUtrLock<T>(cleanUtr: string, fn: (client: import("pg").PoolCl
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [cleanUtr]);
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", [cleanUtr]);
     const result = await fn(client);
     await client.query("COMMIT");
     return result;
@@ -316,10 +325,30 @@ router.post("/usage/template-unlock-utr", async (req, res) => {
 
   const cleanUtr = (utr as string).trim().toUpperCase();
 
+  // Reject trivially sequential / repeated 4-digit codes
+  if (/^\d{4}$/.test(cleanUtr) && isSequential4(cleanUtr)) {
+    return res.status(400).json({
+      error: "validation_error",
+      message: "That code looks sequential or repeated (e.g. 1234, 0000). Enter the actual last 4 digits of your UPI transaction.",
+    });
+  }
+
   await pool.query(
     `INSERT INTO hs_clerk_users (clerk_user_id) VALUES ($1) ON CONFLICT (clerk_user_id) DO NOTHING`,
     [clerkUserId],
   );
+
+  // Ensure payment table exists before inserting
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS hs_template_unlock_payments (
+      id SERIAL PRIMARY KEY,
+      clerk_user_id TEXT NOT NULL,
+      utr TEXT UNIQUE NOT NULL,
+      plan TEXT NOT NULL,
+      claimed_template TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 
   let duplicate = false;
   let bundleUnlocked = false;

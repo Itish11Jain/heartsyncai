@@ -12,9 +12,18 @@ function qrUrl(size = 240) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(UPI_DEEP_LINK)}`;
 }
 
+function isSequential(v: string): boolean {
+  const d = v.trim().split("").map(Number);
+  if (d.length !== 4) return false;
+  if (d.every(x => x === d[0])) return true; // repeated: 0000, 1111
+  if (d[1] === (d[0] + 1) % 10 && d[2] === (d[1] + 1) % 10 && d[3] === (d[2] + 1) % 10) return true; // ascending
+  if (d[1] === (d[0] + 9) % 10 && d[2] === (d[1] + 9) % 10 && d[3] === (d[2] + 9) % 10) return true; // descending
+  return false;
+}
+
 function isValidUtr(v: string) {
   const t = v.trim();
-  return /^\d{4}$/.test(t);
+  return /^\d{4}$/.test(t) && !isSequential(t);
 }
 
 type Stage = "paying" | "utr" | "done-bundle" | "done-watermark";
@@ -277,7 +286,11 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       onChange={(e) => {
                         const v = e.target.value.replace(/\D/g, "").slice(0, 4);
                         setBundleUtr(v);
-                        setBundleUtrError("");
+                        setBundleUtrError(
+                          v.length === 4 && isSequential(v)
+                            ? "Don't use sequential (1234) or repeated (1111) codes — enter your actual last 4 digits."
+                            : ""
+                        );
                       }}
                       className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
                     />
