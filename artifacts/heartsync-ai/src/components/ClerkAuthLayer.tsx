@@ -65,11 +65,27 @@ const clerkAppearance = {
   },
 };
 
+const REDIRECT_STORAGE_KEY = "hs_post_auth_redirect";
+
 function useRedirectUrl() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const raw = params.get("redirect_url");
-  return raw ? decodeURIComponent(raw) : `${basePath}/send`;
+  if (raw) {
+    // Clear any stale sessionStorage entry now that we have an explicit param.
+    try { sessionStorage.removeItem(REDIRECT_STORAGE_KEY); } catch { /* ignore */ }
+    return decodeURIComponent(raw);
+  }
+  // For new Google sign-ups Clerk routes through /sign-up (losing the URL
+  // param), so fall back to whatever was saved in sessionStorage.
+  try {
+    const stored = sessionStorage.getItem(REDIRECT_STORAGE_KEY);
+    if (stored) {
+      sessionStorage.removeItem(REDIRECT_STORAGE_KEY);
+      return stored;
+    }
+  } catch { /* ignore */ }
+  return `${basePath}/send`;
 }
 
 function SignInPage() {
@@ -184,8 +200,22 @@ export default function ClerkAuthLayer({ children }: ClerkAuthLayerProps) {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+      routerPush={(to) => {
+        // Clerk passes absolute URLs for the final post-auth redirect.
+        // Wouter's setLocation can't handle those — use the browser directly.
+        if (to.startsWith("http://") || to.startsWith("https://")) {
+          window.location.href = to;
+        } else {
+          setLocation(stripBase(to));
+        }
+      }}
+      routerReplace={(to) => {
+        if (to.startsWith("http://") || to.startsWith("https://")) {
+          window.location.replace(to);
+        } else {
+          setLocation(stripBase(to), { replace: true });
+        }
+      }}
     >
       <ClerkQueryClientCacheInvalidator />
       <SessionSyncer />

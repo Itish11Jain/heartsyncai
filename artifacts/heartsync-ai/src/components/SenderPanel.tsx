@@ -149,6 +149,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     if (googleLoading) return;
     setGoogleLoading(true);
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
+    // Persist the target URL so new-user sign-up flow (which loses the URL
+    // param when Clerk routes through /sign-up) can still redirect correctly.
+    try { sessionStorage.setItem("hs_post_auth_redirect", returnUrl); } catch { /* ignore */ }
     const fallback = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
     try {
       const res = await fetch(`${BASE}/api/__clerk/v1/client/sign_ins`, {
