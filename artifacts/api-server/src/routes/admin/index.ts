@@ -182,4 +182,20 @@ router.post("/admin/revoke-premium", async (req, res) => {
   return res.json({ ok: true, user: result.rows[0] });
 });
 
+/** DELETE /api/admin/purge-since?key=...&since=YYYY-MM-DD
+ *  Deletes all analytics + signup rows created on or after `since`. */
+router.delete("/admin/purge-since", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const { since } = req.query as Record<string, string>;
+  if (!since || !/^\d{4}-\d{2}-\d{2}$/.test(since)) {
+    return res.status(400).json({ error: "bad_request", message: "since param required (YYYY-MM-DD)" });
+  }
+  const results: Record<string, number> = {};
+  for (const tbl of ["hs_card_events", "hs_clerk_users", "hs_card_usage", "hs_template_unlock_payments"]) {
+    const r = await pool.query(`DELETE FROM ${tbl} WHERE created_at >= $1`, [since]);
+    results[tbl] = r.rowCount ?? 0;
+  }
+  return res.json({ ok: true, deleted: results });
+});
+
 export default router;
