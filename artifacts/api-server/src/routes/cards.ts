@@ -439,6 +439,13 @@ router.post("/cards/:id/remove-watermark", async (req, res) => {
  *   - Card has no owner (created anonymously) → claim it + remove watermark.
  *   - Card is owned by this user → remove watermark.
  *   - Card is owned by someone else → 403.
+ *
+ * Anonymous cards (no DB row): if an optional JSON body is provided with card
+ * metadata (recipient_name, occasion, template), the card row is created on
+ * the fly so the watermark can be removed. This handles the case where a user
+ * creates a card anonymously, signs up via Google OAuth, and is redirected
+ * back to the card page — the card needs to be claimed without the user having
+ * to recreate it.
  */
 router.post("/cards/:id/free-watermark-removal", async (req, res) => {
   const auth = getAuth(req);
@@ -460,7 +467,40 @@ router.post("/cards/:id/free-watermark-removal", async (req, res) => {
     );
 
     if (existing.rows.length === 0) {
-      res.status(404).json({ error: "not_found" });
+      /* Card not in DB — this is an anonymously-created card whose data lives
+       * entirely in URL params. If the caller provides card metadata in the
+       * request body, create the row and claim it for the signed-in user. */
+      const body = req.body as {
+        recipient_name?: string;
+        occasion?: string;
+        template?: string;
+        message_b64?: string;
+        photo_url?: string;
+      } | null;
+
+      const hasMetadata = body && (body.recipient_name || body.occasion);
+      if (!hasMetadata) {
+        res.status(404).json({ error: "not_found" });
+        return;
+      }
+
+      await pool.query(
+        `INSERT INTO hs_cards
+           (id, clerk_user_id, template, occasion, recipient_name, message_b64, photo_url, is_watermarked)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          id,
+          clerkUserId,
+          body.template ?? "envelope",
+          body.occasion ?? null,
+          body.recipient_name ?? null,
+          body.message_b64 ?? null,
+          body.photo_url ?? null,
+        ],
+      );
+
+      res.json({ ok: true });
       return;
     }
 

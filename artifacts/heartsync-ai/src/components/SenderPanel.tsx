@@ -72,7 +72,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       .catch(() => { /* ignore */ });
   }, [cardId]);
 
-  /* Call the free-removal API — no payment needed, just auth. */
+  /* Call the free-removal API — no payment needed, just auth.
+   * For anonymous cards (no DB row), we send the card's metadata in the
+   * request body so the server can create the row and claim it for this user. */
   const removeWatermarkFree = useCallback(async () => {
     if (!cardId) return;
     setWmLoading(true);
@@ -81,7 +83,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       const token = await getToken();
       const res = await fetch(`${BASE}/api/cards/${cardId}/free-watermark-removal`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient_name: recipientName, occasion, template: "envelope" }),
       });
       if (res.ok) {
         setWatermarkRemoved(true);
@@ -96,7 +99,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     } finally {
       setWmLoading(false);
     }
-  }, [cardId, getToken]);
+  }, [cardId, getToken, recipientName, occasion]);
 
   /* Auto-remove watermark for any signed-in user. */
   useEffect(() => {
@@ -217,9 +220,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     action();
   }
 
-  function shareSenderWhatsApp(url: string = senderShareUrl) {
+  function shareSenderWhatsApp(url: string = senderShareUrl, overrideHasPhoto?: boolean) {
     envelope.copy();
-    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "envelope", card_id: cardId, has_photo: hasPhoto });
+    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "envelope", card_id: cardId, has_photo: overrideHasPhoto ?? hasPhoto });
     setWaCopied(true);
     setTimeout(() => setWaCopied(false), 2500);
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${url}`;
@@ -258,9 +261,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     } catch { /* ignore */ }
   }
 
-  function shareInstagram(url: string = senderShareUrl) {
+  function shareInstagram(url: string = senderShareUrl, overrideHasPhoto?: boolean) {
     envelope.copy();
-    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope", card_id: cardId, has_photo: hasPhoto });
+    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope", card_id: cardId, has_photo: overrideHasPhoto ?? hasPhoto });
     // Show feedback immediately — don't wait for clipboard permission
     setIgCopied(true);
     setTimeout(() => setIgCopied(false), 2500);
@@ -268,24 +271,27 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setTimeout(() => window.open("https://www.instagram.com", "_blank"), 300);
   }
 
-  function copySenderLink(url: string = senderShareUrl) {
+  function copySenderLink(url: string = senderShareUrl, overrideHasPhoto?: boolean) {
     envelope.copy();
-    trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope", card_id: cardId, has_photo: hasPhoto });
+    trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope", card_id: cardId, has_photo: overrideHasPhoto ?? hasPhoto });
     // Show feedback immediately — don't gate it on clipboard permission
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2500);
     copyToClipboard(url);
   }
 
-  /* Dispatch the "share without photo" action */
+  /* Dispatch the "share without photo" action.
+   * Pass overrideHasPhoto=false so the tracking event correctly records that
+   * the shared URL does not contain a personal photo, even though the sender's
+   * current page URL still has the personalpicture param. */
   function executeShareWithoutPhoto() {
     const type = pendingShareTypeRef.current ?? "link";
     pendingShareTypeRef.current = null;
     setShowPhotoPaywall(false);
     setShowPhotoChoice(false);
-    if (type === "whatsapp") shareSenderWhatsApp(shareUrlWithoutPhoto);
-    else if (type === "instagram") void shareInstagram(shareUrlWithoutPhoto);
-    else void copySenderLink(shareUrlWithoutPhoto);
+    if (type === "whatsapp") shareSenderWhatsApp(shareUrlWithoutPhoto, false);
+    else if (type === "instagram") shareInstagram(shareUrlWithoutPhoto, false);
+    else copySenderLink(shareUrlWithoutPhoto, false);
   }
 
   /* Called whenever the photo paywall or bundle paywall is cancelled mid-flow */
