@@ -10,8 +10,9 @@ const ADMIN_KEY =
     return generated;
   })();
 
-function checkKey(req: { query: Record<string, unknown> }, res: { status: (n: number) => { json: (o: unknown) => void } }): boolean {
-  if (req.query["key"] !== ADMIN_KEY) {
+function checkKey(req: { query: Record<string, unknown>; body?: Record<string, unknown> }, res: { status: (n: number) => { json: (o: unknown) => void } }): boolean {
+  const key = req.query["key"] ?? req.body?.["key"];
+  if (key !== ADMIN_KEY) {
     res.status(401).json({ error: "unauthorized", message: "Invalid admin key." });
     return false;
   }
@@ -93,6 +94,92 @@ router.get("/admin/utrs", async (req, res) => {
   );
 
   res.json({ submissions: rows.rows });
+});
+
+/** GET /api/admin/lookup-card?key=...&card_id=... */
+router.get("/admin/lookup-card", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const { card_id } = req.query as Record<string, string>;
+  if (!card_id?.trim()) {
+    return res.status(400).json({ error: "bad_request", message: "card_id required." });
+  }
+  const row = await pool.query(
+    `SELECT id, clerk_user_id, recipient_name, occasion, template,
+            is_watermarked, is_premium, created_at
+     FROM hs_cards WHERE id = $1`,
+    [card_id.trim()],
+  );
+  if ((row.rowCount ?? 0) === 0) {
+    return res.status(404).json({ error: "not_found", message: `No card found: ${card_id}` });
+  }
+  const card = row.rows[0] as Record<string, unknown>;
+  // Enrich with owner email if available
+  if (card["clerk_user_id"]) {
+    const u = await pool.query<{ email: string }>(
+      "SELECT email FROM hs_clerk_users WHERE clerk_user_id = $1",
+      [card["clerk_user_id"]],
+    );
+    card["owner_email"] = u.rows[0]?.email ?? null;
+  }
+  return res.json({ card });
+});
+
+/** POST /api/admin/revoke-card — body: { key, card_id } */
+router.post("/admin/revoke-card", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const { card_id } = req.body as { card_id?: string };
+  if (!card_id?.trim()) {
+    return res.status(400).json({ error: "bad_request", message: "card_id required." });
+  }
+  const result = await pool.query(
+    `UPDATE hs_cards
+     SET is_watermarked = true, is_premium = false
+     WHERE id = $1
+     RETURNING id, clerk_user_id, recipient_name, occasion`,
+    [card_id.trim()],
+  );
+  if ((result.rowCount ?? 0) === 0) {
+    return res.status(404).json({ error: "not_found", message: `No card found: ${card_id}` });
+  }
+  return res.json({ ok: true, revoked: result.rows[0] });
+});
+
+/** GET /api/admin/lookup-user?key=...&email=... */
+router.get("/admin/lookup-user", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const { email } = req.query as Record<string, string>;
+  if (!email?.trim()) {
+    return res.status(400).json({ error: "bad_request", message: "email required." });
+  }
+  const row = await pool.query(
+    `SELECT clerk_user_id, email, cards_used, unlocked_templates, created_at
+     FROM hs_clerk_users WHERE email ILIKE $1`,
+    [email.trim()],
+  );
+  if ((row.rowCount ?? 0) === 0) {
+    return res.status(404).json({ error: "not_found", message: `No user found: ${email}` });
+  }
+  return res.json({ user: row.rows[0] });
+});
+
+/** POST /api/admin/revoke-premium — body: { key, email } */
+router.post("/admin/revoke-premium", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const { email } = req.body as { email?: string };
+  if (!email?.trim()) {
+    return res.status(400).json({ error: "bad_request", message: "email required." });
+  }
+  const result = await pool.query(
+    `UPDATE hs_clerk_users
+     SET unlocked_templates = '{}'
+     WHERE email ILIKE $1
+     RETURNING clerk_user_id, email, unlocked_templates`,
+    [email.trim()],
+  );
+  if ((result.rowCount ?? 0) === 0) {
+    return res.status(404).json({ error: "not_found", message: `No user found: ${email}` });
+  }
+  return res.json({ ok: true, user: result.rows[0] });
 });
 
 export default router;
