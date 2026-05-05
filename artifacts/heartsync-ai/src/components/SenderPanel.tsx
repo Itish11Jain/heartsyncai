@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 
-import { useAuth, useClerk, useSignIn } from "@clerk/react";
+import { useAuth, useClerk } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -41,47 +41,11 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [showPhotoChoice, setShowPhotoChoice] = useState(false);
   const pendingShareTypeRef = useRef<ShareType | null>(null);
 
-  const { signIn, isLoaded: signInLoaded } = useSignIn();
-
   // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
-  const [pendingGoogleSignIn, setPendingGoogleSignIn] = useState(false);
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
   const pendingReturnUrlRef = useRef<string>("");
-
-  /* Core Google OAuth initiator — calls signIn.create() directly so we own
-     the navigation step. authenticateWithRedirect() can silently navigate to
-     "null" when externalVerificationRedirectURL is missing; this avoids that. */
-  const initiateGoogleOAuth = useCallback(async (returnUrl: string) => {
-    if (!signIn) return false;
-    try {
-      const attempt = await signIn.create({
-        strategy: "oauth_google",
-        redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
-        actionCompleteRedirectUrl: returnUrl,
-      });
-      const redirectTo = attempt.firstFactorVerification?.externalVerificationRedirectURL?.toString();
-      if (redirectTo && redirectTo !== "null" && redirectTo !== "undefined") {
-        window.location.href = redirectTo;
-        return true;
-      }
-    } catch { /* fall through to fallback */ }
-    return false;
-  }, [signIn]);
-
-  /* Fire the Google OAuth redirect the moment Clerk becomes ready,
-     in case the user clicked the button before the SDK had initialized. */
-  useEffect(() => {
-    if (!pendingGoogleSignIn || !signInLoaded || !signIn) return;
-    setPendingGoogleSignIn(false);
-    const returnUrl = pendingReturnUrlRef.current || window.location.href;
-    void initiateGoogleOAuth(returnUrl).then((ok) => {
-      if (!ok) {
-        window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
-      }
-    });
-  }, [pendingGoogleSignIn, signInLoaded, signIn, initiateGoogleOAuth]);
 
 
   // Detect if the card URL has a personal picture param
@@ -182,17 +146,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function handleGoogleSignIn() {
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
-    if (signInLoaded && signIn) {
-      void initiateGoogleOAuth(returnUrl).then((ok) => {
-        if (!ok) {
-          window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
-        }
-      });
-    } else {
-      /* Clerk not ready yet — queue the redirect; the useEffect fires it
-         the instant signIn becomes available (typically < 1 second). */
-      setPendingGoogleSignIn(true);
-    }
+    window.location.href = `${window.location.origin}${BASE}/google-auth?return_url=${encodeURIComponent(returnUrl)}`;
   }
 
   function completeAuth() {

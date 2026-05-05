@@ -43,6 +43,9 @@ const Account = lazy(() => import("@/pages/account"));
 /* ── Admin (secret key gate, no Clerk needed) ───────────────────────── */
 const AdminPage = lazy(() => import("@/pages/admin"));
 
+/* ── Google OAuth redirect (needs Clerk — added to AUTH_ROUTE_PREFIXES) */
+const GoogleAuth = lazy(() => import("@/pages/google-auth"));
+
 /* ── Lazy Clerk wrapper (loads ~250 KB only when needed) ────────────── */
 const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
 
@@ -54,7 +57,7 @@ const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
  * /send is intentionally absent: Send renders outside ClerkAuthLayer for
  * instant first paint, and mounts its own lazy ClerkBridgeForSend to get
  * auth state once Clerk resolves. See src/pages/send.tsx for details. */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/analytics", "/remove-watermark", "/crystal", "/cosmic", "/vinyl"];
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/analytics", "/remove-watermark", "/crystal", "/cosmic", "/vinyl", "/google-auth"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,
@@ -113,6 +116,7 @@ function AppRoutes() {
           component itself. Auth state is bridged via SendAuthCtx. */}
       <Route path="/send"><L><Send /></L></Route>
       <Route path="/hs-admin"><L><AdminPage /></L></Route>
+      <Route path="/google-auth"><L><GoogleAuth /></L></Route>
 
       {/* Auth-required — only matched when ClerkAuthLayer is mounted around the Switch. */}
       <Route path="/analytics"><L><Analytics /></L></Route>
