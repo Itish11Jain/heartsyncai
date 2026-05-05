@@ -68,12 +68,13 @@ function buildEventFilter(opts: { from?: string | null; to?: string | null } = {
 
   if (opts.from) {
     params.push(opts.from);
-    conds.push(`created_at >= $${params.length}::date`);
+    // Compare in IST (UTC+5:30) so "Today" aligns with Indian midnight, not UTC midnight.
+    conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${params.length}::date`);
   }
   if (opts.to) {
     params.push(opts.to);
-    // Inclusive end-of-day: rows with created_at strictly before midnight of the next day.
-    conds.push(`created_at < ($${params.length}::date + INTERVAL '1 day')`);
+    // Inclusive end-of-day in IST.
+    conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date < ($${params.length}::date + INTERVAL '1 day')`);
   }
 
   return { whereSql: conds.join(" AND "), params };
@@ -422,11 +423,11 @@ router.get("/events/analytics", async (req, res) => {
       const conds: string[] = [];
       if (from) {
         vitalsParams.push(from);
-        conds.push(`created_at >= $${vitalsParams.length}::date`);
+        conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${vitalsParams.length}::date`);
       }
       if (to) {
         vitalsParams.push(to);
-        conds.push(`created_at < ($${vitalsParams.length}::date + INTERVAL '1 day')`);
+        conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date < ($${vitalsParams.length}::date + INTERVAL '1 day')`);
       }
       vitalsWhere = conds.join(" AND ");
     } else {
