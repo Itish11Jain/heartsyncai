@@ -38,6 +38,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   // Photo paywall state
   const [showPhotoPaywall, setShowPhotoPaywall] = useState(false);
   const [showBundlePaywall, setShowBundlePaywall] = useState(false);
+  const [showPhotoChoice, setShowPhotoChoice] = useState(false);
   const pendingShareTypeRef = useRef<ShareType | null>(null);
 
   // Inline sign-in state
@@ -245,12 +246,24 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   /* Dispatch the "share without photo" action */
   function executeShareWithoutPhoto() {
-    const type = pendingShareTypeRef.current;
+    const type = pendingShareTypeRef.current ?? "link";
     pendingShareTypeRef.current = null;
     setShowPhotoPaywall(false);
+    setShowPhotoChoice(false);
     if (type === "whatsapp") shareSenderWhatsApp(shareUrlWithoutPhoto);
     else if (type === "instagram") void shareInstagram(shareUrlWithoutPhoto);
     else void copySenderLink(shareUrlWithoutPhoto);
+  }
+
+  /* Called whenever the photo paywall or bundle paywall is cancelled mid-flow */
+  function handlePhotoPaywallDismiss() {
+    setShowPhotoPaywall(false);
+    setShowBundlePaywall(false);
+    if (isSignedIn) {
+      setShowPhotoChoice(true);
+    } else {
+      pendingShareTypeRef.current = null;
+    }
   }
 
   /* After bundle payment succeeds: navigate to the share finale so all CTAs are visible. */
@@ -438,7 +451,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               display: "flex", alignItems: "center", justifyContent: "center",
               padding: "0 20px",
             }}
-            onClick={(e) => { if (e.target === e.currentTarget) { setShowPhotoPaywall(false); pendingShareTypeRef.current = null; } }}
+            onClick={(e) => { if (e.target === e.currentTarget) handlePhotoPaywallDismiss(); }}
           >
             <motion.div
               initial={{ scale: 0.93, opacity: 0, y: 20 }}
@@ -525,7 +538,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               </button>
 
               <button
-                onClick={() => { setShowPhotoPaywall(false); pendingShareTypeRef.current = null; }}
+                onClick={handlePhotoPaywallDismiss}
                 style={{ display: "block", width: "100%", textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", background: "none", border: "none", cursor: "pointer" }}
               >
                 Cancel
@@ -541,9 +554,98 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           <WatermarkPaywallModal
             mode="photo"
             cardId={cardId}
-            onClose={() => { setShowBundlePaywall(false); pendingShareTypeRef.current = null; }}
+            onClose={handlePhotoPaywallDismiss}
             onSuccess={handleBundlePaywallSuccess}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Post-cancel photo choice modal ── */}
+      <AnimatePresence>
+        {showPhotoChoice && (
+          <motion.div
+            key="photo-choice-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 10003,
+              background: "rgba(0,0,0,0.88)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 20px",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowPhotoChoice(false);
+                pendingShareTypeRef.current = null;
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 8 }}
+              transition={{ type: "spring", stiffness: 340, damping: 30 }}
+              style={{
+                width: "100%", maxWidth: 360,
+                background: "radial-gradient(ellipse at 50% 0%, #1e0044 0%, #080010 70%)",
+                border: "1px solid rgba(168,85,247,0.35)",
+                borderRadius: 24,
+                padding: "28px 22px 24px",
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+              }}
+            >
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>📸</div>
+                <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 20, margin: "0 0 8px", lineHeight: 1.3 }}>
+                  How would you like to share?
+                </h2>
+                <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, margin: 0, lineHeight: 1.55 }}>
+                  Unlock the photo version for ₹49, or share without it — free.
+                </p>
+              </div>
+
+              {/* Pay to unlock */}
+              <button
+                onClick={() => {
+                  setShowPhotoChoice(false);
+                  setShowBundlePaywall(true);
+                }}
+                style={{
+                  width: "100%", padding: "15px 16px", borderRadius: 14,
+                  background: "linear-gradient(135deg, #a855f7, #ec4899)",
+                  border: "none", color: "#fff",
+                  fontWeight: 800, fontSize: 15, cursor: "pointer",
+                  marginBottom: 10,
+                  boxShadow: "0 4px 24px rgba(168,85,247,0.4)",
+                }}
+              >
+                📸 Unlock with photo — ₹49
+              </button>
+
+              {/* Share without photo */}
+              <button
+                onClick={executeShareWithoutPhoto}
+                style={{
+                  width: "100%", padding: "13px", borderRadius: 12,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(255,255,255,0.55)", fontWeight: 600, fontSize: 13, cursor: "pointer",
+                  marginBottom: 10,
+                }}
+              >
+                Share without photo
+              </button>
+
+              <button
+                onClick={() => { setShowPhotoChoice(false); pendingShareTypeRef.current = null; }}
+                style={{ display: "block", width: "100%", textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", background: "none", border: "none", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
