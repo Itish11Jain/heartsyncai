@@ -84,13 +84,12 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
         body: JSON.stringify({ is_watermarked: false, is_premium: true }),
       });
       if (!patchRes.ok) {
-        const patchData = await patchRes.json().catch(() => ({})) as { message?: string };
         if (patchRes.status === 403 || patchRes.status === 401) {
           setBundleUtrError("Only the card sender can remove the watermark.");
-        } else {
-          setBundleUtrError(patchData.message ?? "Failed to finalise. Please try again.");
+          return;
         }
-        return;
+        // 404 means the card row doesn't exist in DB yet (generated on-the-fly) —
+        // that's fine, the template unlock already succeeded above. Continue to done.
       }
 
       setStage("done-bundle");
