@@ -182,19 +182,36 @@ router.post("/admin/revoke-premium", async (req, res) => {
   return res.json({ ok: true, user: result.rows[0] });
 });
 
-/** DELETE /api/admin/purge-since?key=...&since=YYYY-MM-DD
- *  Deletes all analytics + signup rows created on or after `since`. */
+/** DELETE /api/admin/purge-since?key=...&since=YYYY-MM-DD[&exclude_clerk_user_id=...]
+ *  Deletes analytics + signup rows on/after `since`.
+ *  If exclude_clerk_user_id is set, events from that user are kept;
+ *  signups/usage/payments tables are always fully purged for the date range. */
 router.delete("/admin/purge-since", async (req, res) => {
   if (!checkKey(req as never, res as never)) return;
-  const { since } = req.query as Record<string, string>;
+  const { since, exclude_clerk_user_id } = req.query as Record<string, string>;
   if (!since || !/^\d{4}-\d{2}-\d{2}$/.test(since)) {
     return res.status(400).json({ error: "bad_request", message: "since param required (YYYY-MM-DD)" });
   }
   const results: Record<string, number> = {};
-  for (const tbl of ["hs_card_events", "hs_clerk_users", "hs_card_usage", "hs_template_unlock_payments"]) {
+
+  // Events: optionally exclude one user's rows
+  if (exclude_clerk_user_id) {
+    const r = await pool.query(
+      `DELETE FROM hs_card_events WHERE created_at >= $1 AND (clerk_user_id IS DISTINCT FROM $2) AND (email IS DISTINCT FROM (SELECT email FROM hs_clerk_users WHERE clerk_user_id = $2 LIMIT 1))`,
+      [since, exclude_clerk_user_id],
+    );
+    results["hs_card_events"] = r.rowCount ?? 0;
+  } else {
+    const r = await pool.query(`DELETE FROM hs_card_events WHERE created_at >= $1`, [since]);
+    results["hs_card_events"] = r.rowCount ?? 0;
+  }
+
+  // Signups, usage, payments — always full purge for the date range
+  for (const tbl of ["hs_clerk_users", "hs_card_usage", "hs_template_unlock_payments"]) {
     const r = await pool.query(`DELETE FROM ${tbl} WHERE created_at >= $1`, [since]);
     results[tbl] = r.rowCount ?? 0;
   }
+
   return res.json({ ok: true, deleted: results });
 });
 
