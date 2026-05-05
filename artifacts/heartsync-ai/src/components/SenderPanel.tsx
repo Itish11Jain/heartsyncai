@@ -186,14 +186,19 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         sessionId = (result as { createdSessionId?: string | null }).createdSessionId ?? null;
       } else {
         const result = await clerk.client.signUp.attemptEmailAddressVerification({ code: authOtp.trim() });
-        sessionId = (result as { createdSessionId?: string | null }).createdSessionId ?? null;
+        // createdSessionId may be null on dev keys — fall back to sessions list
+        sessionId = (result as { createdSessionId?: string | null }).createdSessionId
+          ?? (clerk.client.sessions as Array<{ id: string }>)?.[0]?.id
+          ?? null;
       }
       if (sessionId) {
         await clerk.setActive({ session: sessionId });
+        setShowSignIn(false);
       } else {
+        // Clerk has set the cookie — reload will pick up the session
+        setShowSignIn(false);
         window.location.reload();
       }
-      setShowSignIn(false);
     } catch (err: unknown) {
       const ce = err as { errors?: Array<{ longMessage?: string; message?: string }> };
       setAuthError(ce?.errors?.[0]?.longMessage ?? ce?.errors?.[0]?.message ?? "Incorrect code. Please try again.");
