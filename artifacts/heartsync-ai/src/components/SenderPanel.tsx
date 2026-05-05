@@ -144,9 +144,28 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     setShowSignIn(true);
   }
 
-  function handleGoogleSignIn() {
+  async function handleGoogleSignIn() {
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
-    window.location.href = `${window.location.origin}${BASE}/google-auth?return_url=${encodeURIComponent(returnUrl)}`;
+    const fallback = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+    try {
+      const res = await fetch(`${BASE}/api/__clerk/v1/sign_ins`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        credentials: "include",
+        body: new URLSearchParams({
+          strategy: "oauth_google",
+          redirect_url: `${window.location.origin}${BASE}/sign-in/sso-callback`,
+          action_complete_redirect_url: returnUrl,
+        }),
+      });
+      const data = await res.json() as { response?: { first_factor_verification?: { external_verification_redirect_url?: string } } };
+      const googleUrl = data?.response?.first_factor_verification?.external_verification_redirect_url;
+      if (googleUrl) {
+        window.location.href = googleUrl;
+        return;
+      }
+    } catch { /* fall through */ }
+    window.location.href = fallback;
   }
 
   function completeAuth() {
