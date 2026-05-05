@@ -43,7 +43,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
-  const [authMode, setAuthMode] = useState<"signIn" | "signUp">("signIn");
+  const [authMode, setAuthMode] = useState<"signIn" | "signUp">("signUp");
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
 
   // Detect if the card URL has a personal picture param
@@ -129,7 +129,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
-    setAuthMode("signIn");
+    setAuthMode("signUp");
     setShowSignIn(true);
   }
 
