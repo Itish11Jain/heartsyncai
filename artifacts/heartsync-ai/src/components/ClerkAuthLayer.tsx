@@ -4,6 +4,13 @@ import { dark } from "@clerk/themes";
 import { Switch, Route, useLocation, useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
+function useClearSplash() {
+  useEffect(() => {
+    const clear = (window as unknown as { __clearHsSplash?: () => void }).__clearHsSplash;
+    if (clear) clear();
+  }, []);
+}
+
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL as string | undefined;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -72,23 +79,24 @@ function useRedirectUrl() {
   const params = new URLSearchParams(search);
   const raw = params.get("redirect_url");
   if (raw) {
-    // Clear any stale sessionStorage entry now that we have an explicit param.
-    try { sessionStorage.removeItem(REDIRECT_STORAGE_KEY); } catch { /* ignore */ }
+    // URL param present — use it directly. Leave sessionStorage intact;
+    // the SSO-callback page and the /sign-up page both lose the URL param
+    // and will need to read it from sessionStorage.
     return decodeURIComponent(raw);
   }
-  // For new Google sign-ups Clerk routes through /sign-up (losing the URL
-  // param), so fall back to whatever was saved in sessionStorage.
+  // SSO-callback and /sign-up pages never receive redirect_url, so read
+  // from sessionStorage.  Do NOT clear it here — Clerk may route through
+  // both /sign-in/sso-callback AND /sign-up for a brand-new Google user,
+  // so we must leave the value for the sign-up page to read as well.
   try {
     const stored = sessionStorage.getItem(REDIRECT_STORAGE_KEY);
-    if (stored) {
-      sessionStorage.removeItem(REDIRECT_STORAGE_KEY);
-      return stored;
-    }
+    if (stored) return stored;
   } catch { /* ignore */ }
   return `${basePath}/send`;
 }
 
 function SignInPage() {
+  useClearSplash();
   const redirectUrl = useRedirectUrl();
   return (
     <div
@@ -112,6 +120,7 @@ function SignInPage() {
 }
 
 function SignUpPage() {
+  useClearSplash();
   const redirectUrl = useRedirectUrl();
   return (
     <div
