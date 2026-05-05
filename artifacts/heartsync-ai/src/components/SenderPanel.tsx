@@ -26,7 +26,7 @@ interface SenderPanelProps {
 function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, phase }: SenderPanelProps) {
   const { isSignedIn, isLoaded, getToken } = useAuth();
   const clerk = useClerk();
-  const { signIn } = useSignIn();
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
   const { usage } = useCardUsage();
   const isPremiumUser = !!(usage?.is_superuser || (usage?.unlocked_templates?.length ?? 0) > 0);
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
@@ -147,16 +147,25 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   }
 
   async function handleGoogleSignIn() {
-    if (googleAuthLoading || !signIn) return;
+    if (googleAuthLoading) return;
+    const returnUrl = pendingReturnUrlRef.current || window.location.href;
+    // Fallback: if Clerk hasn't initialised yet, go to the sign-in page directly
+    if (!signInLoaded || !signIn) {
+      window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+      return;
+    }
     setGoogleAuthLoading(true);
     try {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
         redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
-        redirectUrlComplete: pendingReturnUrlRef.current || window.location.href,
+        redirectUrlComplete: returnUrl,
       });
-    } catch {
+    } catch (err) {
+      console.error("[HeartSync] Google sign-in failed:", err);
       setGoogleAuthLoading(false);
+      // Hard fallback so the user is never left stranded
+      window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
     }
   }
 
@@ -728,6 +737,11 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     <circle cx="12" cy="12" r="10" stroke="rgba(168,85,247,0.4)" strokeWidth="3" />
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="#a855f7" strokeWidth="3" strokeLinecap="round" />
                   </svg>
+                ) : !signInLoaded ? (
+                  <svg style={{ width: 22, height: 22, animation: "spin 1s linear infinite" }} viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="rgba(0,0,0,0.15)" strokeWidth="3" />
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="#666" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
                 ) : (
                   <svg style={{ width: 22, height: 22, flexShrink: 0 }} viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -740,7 +754,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   fontSize: 16, fontWeight: 700,
                   color: googleAuthLoading ? "rgba(255,255,255,0.5)" : "#111",
                 }}>
-                  {googleAuthLoading ? "Redirecting…" : "Continue with Google"}
+                  {googleAuthLoading ? "Redirecting…" : !signInLoaded ? "Loading…" : "Continue with Google"}
                 </span>
               </button>
 
