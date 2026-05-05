@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 
-import { useAuth, useClerk } from "@clerk/react";
+import { useAuth, useClerk, useSignIn } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -41,11 +41,29 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [showPhotoChoice, setShowPhotoChoice] = useState(false);
   const pendingShareTypeRef = useRef<ShareType | null>(null);
 
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
+
   // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
+  const [pendingGoogleSignIn, setPendingGoogleSignIn] = useState(false);
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
   const pendingReturnUrlRef = useRef<string>("");
+
+  /* Fire the Google OAuth redirect the moment Clerk becomes ready,
+     in case the user clicked the button before the SDK had initialized. */
+  useEffect(() => {
+    if (!pendingGoogleSignIn || !signInLoaded || !signIn) return;
+    setPendingGoogleSignIn(false);
+    void signIn.authenticateWithRedirect({
+      strategy: "oauth_google",
+      redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
+      redirectUrlComplete: pendingReturnUrlRef.current || window.location.href,
+    }).catch(() => {
+      const returnUrl = pendingReturnUrlRef.current || window.location.href;
+      window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+    });
+  }, [pendingGoogleSignIn, signInLoaded, signIn]);
 
 
   // Detect if the card URL has a personal picture param
@@ -146,7 +164,19 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function handleGoogleSignIn() {
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
-    window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+    if (signInLoaded && signIn) {
+      void signIn.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
+        redirectUrlComplete: returnUrl,
+      }).catch(() => {
+        window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+      });
+    } else {
+      /* Clerk not ready yet — queue the redirect; the useEffect above fires it
+         the instant signIn becomes available (typically within 1–2 seconds). */
+      setPendingGoogleSignIn(true);
+    }
   }
 
   function completeAuth() {
