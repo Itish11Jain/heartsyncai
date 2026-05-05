@@ -148,8 +148,9 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       signUp?: {
         create: (p: { emailAddress: string }) => Promise<unknown>;
         prepareEmailAddressVerification: (p: { strategy: string }) => Promise<unknown>;
-        attemptEmailAddressVerification: (p: { code: string }) => Promise<unknown>;
+        attemptEmailAddressVerification: (p: { code: string }) => Promise<{ createdSessionId?: string | null; status?: string }>;
         createdSessionId?: string | null;
+        status?: string;
       };
       sessions?: Array<{ id: string }>;
       activeSessions?: Array<{ id: string }>;
@@ -242,12 +243,19 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       } else {
         const su = clerkClient()?.signUp;
         if (!su) throw new Error("Clerk not ready");
-        await su.attemptEmailAddressVerification({ code: authOtp.trim() });
-        const sid = findSessionId();
+        const result = await su.attemptEmailAddressVerification({ code: authOtp.trim() });
+        // Clerk returns the updated SignUpResource with createdSessionId on it
+        // Also re-read after call — Clerk may replace the resource instance
+        const freshSu = clerkClient()?.signUp;
+        const sid =
+          result?.createdSessionId
+          ?? freshSu?.createdSessionId
+          ?? findSessionId();
         if (sid) { await activateSession(sid); return; }
+        // Poll — Clerk resolves the session asynchronously after the API call
         if (!await pollAndActivate()) {
-          // Last resort: wait an extra second for the safety-net useEffect
-          await new Promise(r => setTimeout(r, 1000));
+          // Safety-net useEffect (isSignedIn) may still catch it; give it one more second
+          await new Promise(r => setTimeout(r, 1500));
           if (!findSessionId()) setAuthError("Verified! Please refresh and sign in.");
         }
       }
