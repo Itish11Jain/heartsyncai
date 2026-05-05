@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 
-import { useAuth, useClerk, SignIn } from "@clerk/react";
+import { useAuth, useClerk } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -43,15 +43,16 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
-  const [authMode, setAuthMode] = useState<"signIn" | "signUp">("signUp");
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
 
-  // Custom sign-up OTP state (uses clerk.client directly, bypasses signal proxy)
-  const [suStep, setSuStep] = useState<"email" | "otp">("email");
-  const [suEmail, setSuEmail] = useState("");
-  const [suOtp, setSuOtp] = useState("");
-  const [suLoading, setSuLoading] = useState(false);
-  const [suError, setSuError] = useState<string | null>(null);
+  // Unified auth state — one flow for sign-in & sign-up
+  const [authStep, setAuthStep] = useState<"email" | "otp">("email");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authOtp, setAuthOtp] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authFlowType, setAuthFlowType] = useState<"signIn" | "signUp">("signIn");
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Detect if the card URL has a personal picture param
   const hasPhoto = (() => {
@@ -134,16 +135,21 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }, [isLoaded, isSignedIn]);
 
-  // ── Custom sign-up OTP handlers (clerk.client direct — no signal proxy) ──
+  // ── Unified auth handlers (clerk.client direct, no signal proxy) ──
 
-  type ClerkWithSignUp = {
+  type ClerkClient = {
     client?: {
+      signIn?: {
+        create: (p: object) => Promise<{ createdSessionId?: string | null }>;
+        attemptFirstFactor: (p: object) => Promise<{ createdSessionId?: string | null }>;
+        createdSessionId?: string | null;
+        authenticateWithRedirect: (p: { strategy: string; redirectUrl: string; redirectUrlComplete: string }) => Promise<void>;
+      };
       signUp?: {
         create: (p: { emailAddress: string }) => Promise<unknown>;
         prepareEmailAddressVerification: (p: { strategy: string }) => Promise<unknown>;
         attemptEmailAddressVerification: (p: { code: string }) => Promise<unknown>;
         createdSessionId?: string | null;
-        status?: string;
       };
       sessions?: Array<{ id: string }>;
       activeSessions?: Array<{ id: string }>;
@@ -151,85 +157,141 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     session?: { id: string } | null;
   };
 
-  /** Scan every place Clerk might stash the newly-created session id. */
-  function findNewSessionId(): string | null {
-    const c = (clerk as unknown as ClerkWithSignUp).client;
+  function clerkClient() { return (clerk as unknown as ClerkClient).client; }
+
+  /** Scan all places Clerk might stash the new session id after auth. */
+  function findSessionId(): string | null {
+    const c = clerkClient();
     return (
-      c?.signUp?.createdSessionId
+      c?.signIn?.createdSessionId
+      ?? c?.signUp?.createdSessionId
       ?? c?.activeSessions?.[0]?.id
       ?? c?.sessions?.[0]?.id
-      ?? (clerk as unknown as ClerkWithSignUp).session?.id
+      ?? (clerk as unknown as ClerkClient).session?.id
       ?? null
     );
   }
 
-  async function handleSuEmailSubmit() {
-    setSuLoading(true);
-    setSuError(null);
+  async function activateSession(sid: string) {
+    await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sid });
+    // safety-net useEffect fires completeAuth() once isSignedIn becomes true
+  }
+
+  async function pollAndActivate(): Promise<boolean> {
+    for (let i = 0; i < 12; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      const sid = findSessionId();
+      if (sid) { await activateSession(sid); return true; }
+    }
+    return false;
+  }
+
+  async function handleAuthEmailSubmit() {
+    setAuthLoading(true);
+    setAuthError(null);
+    const email = authEmail.trim();
     try {
-      const su = (clerk as unknown as ClerkWithSignUp).client?.signUp;
+      const si = clerkClient()?.signIn;
+      if (!si) throw new Error("Clerk not ready");
+
+      // Try sign-in first (sends email code in one call)
+      try {
+        const result = await si.create({ strategy: "email_code", identifier: email });
+        const sid = result?.createdSessionId ?? si.createdSessionId;
+        if (sid) { await activateSession(sid); return; }
+        setAuthFlowType("signIn");
+        setAuthStep("otp");
+        return;
+      } catch (siErr: unknown) {
+        const code = (siErr as { errors?: Array<{ code?: string }> }).errors?.[0]?.code ?? "";
+        // Only fall through to sign-up for "account not found" errors
+        const notFound = ["form_identifier_not_found", "user_not_found", "strategy_for_user_invalid",
+          "form_param_value_invalid", "identification_not_found"].some(c => code.includes(c));
+        if (!notFound) throw siErr; // re-throw hard errors (rate limit, locked, etc.)
+      }
+
+      // Account not found → create new account and send OTP
+      const su = clerkClient()?.signUp;
       if (!su) throw new Error("Clerk not ready");
-      await su.create({ emailAddress: suEmail.trim() });
-      // Re-read after create() — Clerk replaces the resource instance
-      const freshSu = (clerk as unknown as ClerkWithSignUp).client?.signUp;
-      if (!freshSu) throw new Error("Sign-up resource missing after create");
+      await su.create({ emailAddress: email });
+      // Re-read after create — Clerk may replace the resource instance
+      const freshSu = clerkClient()?.signUp;
+      if (!freshSu) throw new Error("Sign-up resource missing");
       await freshSu.prepareEmailAddressVerification({ strategy: "email_code" });
-      setSuStep("otp");
+      setAuthFlowType("signUp");
+      setAuthStep("otp");
     } catch (err: unknown) {
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
-      setSuError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Couldn't send code. Try again.");
+      setAuthError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Couldn't send code. Check your email and try again.");
     } finally {
-      setSuLoading(false);
+      setAuthLoading(false);
     }
   }
 
-  async function handleSuOtpSubmit() {
-    setSuLoading(true);
-    setSuError(null);
+  async function handleAuthOtpSubmit() {
+    setAuthLoading(true);
+    setAuthError(null);
     try {
-      const su = (clerk as unknown as ClerkWithSignUp).client?.signUp;
-      if (!su) throw new Error("Clerk not ready");
-      await su.attemptEmailAddressVerification({ code: suOtp.trim() });
-
-      // Re-read signUp after attempt — Clerk may have swapped the resource
-      // Check all known locations for the new session id
-      let sid = findNewSessionId();
-      if (!sid) {
-        // Poll up to 5 s — Clerk resolves asynchronously after the API call
-        for (let i = 0; i < 10; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          sid = findNewSessionId();
-          if (sid) break;
-        }
-      }
-
-      if (sid) {
-        await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sid });
-        // safety-net useEffect fires completeAuth() once isSignedIn becomes true
+      if (authFlowType === "signIn") {
+        const si = clerkClient()?.signIn;
+        if (!si) throw new Error("Clerk not ready");
+        const result = await si.attemptFirstFactor({ strategy: "email_code", code: authOtp.trim() });
+        const sid = result?.createdSessionId ?? si.createdSessionId ?? findSessionId();
+        if (sid) { await activateSession(sid); return; }
+        if (!await pollAndActivate()) setAuthError("Verified! Please refresh and sign in.");
       } else {
-        // Verification succeeded but we can't locate the session id —
-        // Clerk's safety-net (isSignedIn useEffect) may still catch it;
-        // only show the error after a short extra wait.
-        await new Promise(r => setTimeout(r, 1500));
-        if (!findNewSessionId()) {
-          setSuError("Verified! Please refresh the page to continue.");
+        const su = clerkClient()?.signUp;
+        if (!su) throw new Error("Clerk not ready");
+        await su.attemptEmailAddressVerification({ code: authOtp.trim() });
+        const sid = findSessionId();
+        if (sid) { await activateSession(sid); return; }
+        if (!await pollAndActivate()) {
+          // Last resort: wait an extra second for the safety-net useEffect
+          await new Promise(r => setTimeout(r, 1000));
+          if (!findSessionId()) setAuthError("Verified! Please refresh and sign in.");
         }
       }
     } catch (err: unknown) {
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
-      setSuError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Wrong code — try again.");
+      setAuthError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Wrong code — please try again.");
     } finally {
-      setSuLoading(false);
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    if (googleLoading) return;
+    setGoogleLoading(true);
+    setAuthError(null);
+    const returnUrl = new URL(window.location.href);
+    if (pendingSignInActionRef.current === "paywall") {
+      sessionStorage.setItem("hs_pending_share", pendingShareTypeRef.current ?? "link");
+      returnUrl.searchParams.set("open_paywall", "1");
+    } else if (pendingSignInActionRef.current === "watermark") {
+      returnUrl.searchParams.set("open_watermark", "1");
+    }
+    try {
+      const si = clerkClient()?.signIn;
+      if (!si) throw new Error("Clerk not ready");
+      await si.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: returnUrl.toString(),
+        redirectUrlComplete: returnUrl.toString(),
+      });
+    } catch (err: unknown) {
+      const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
+      setAuthError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Google sign-in failed — try email instead.");
+      setGoogleLoading(false);
     }
   }
 
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
-    setAuthMode("signUp");
-    setSuStep("email");
-    setSuEmail("");
-    setSuOtp("");
-    setSuError(null);
+    setAuthStep("email");
+    setAuthEmail("");
+    setAuthOtp("");
+    setAuthError(null);
+    setGoogleLoading(false);
     setShowSignIn(true);
   }
 
@@ -353,57 +415,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     u.searchParams.delete("open_paywall");
     window.location.href = u.toString();
   }
-
-  const clerkAppearance = {
-    variables: {
-      colorPrimary: "#a855f7",
-      colorBackground: "#0a0020",
-      colorText: "#ffffff",
-      colorTextSecondary: "rgba(255,255,255,0.6)",
-      colorInputBackground: "rgba(255,255,255,0.07)",
-      colorInputText: "#ffffff",
-      borderRadius: "12px",
-      fontFamily: "'Segoe UI', system-ui, sans-serif",
-    },
-    elements: {
-      rootBox: { width: "100%" },
-      card: {
-        background: "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)",
-        border: "1px solid rgba(168,85,247,0.3)",
-        borderRadius: "0 0 24px 24px",
-        boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
-        padding: "8px",
-      },
-      headerTitle: { color: "#ffffff", fontWeight: 800 },
-      headerSubtitle: { color: "rgba(255,255,255,0.55)" },
-      formButtonPrimary: {
-        background: "linear-gradient(135deg,#a855f7,#ec4899)",
-        fontWeight: 800,
-      },
-      formFieldInput: {
-        background: "rgba(255,255,255,0.07)",
-        border: "1px solid rgba(168,85,247,0.35)",
-        color: "#ffffff",
-      },
-      formFieldLabel: { color: "rgba(255,255,255,0.7)" },
-      identityPreviewText: { color: "rgba(255,255,255,0.8)" },
-      identityPreviewEditButton: { color: "#a855f7" },
-      footerActionLink: { color: "#c084fc" },
-      dividerText: { color: "rgba(255,255,255,0.3)" },
-      dividerLine: { background: "rgba(255,255,255,0.1)" },
-      socialButtonsBlockButton: {
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        color: "#ffffff",
-      },
-      socialButtonsBlockButtonText: { color: "#ffffff" },
-      alternativeMethodsBlockButton: {
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(168,85,247,0.25)",
-        color: "#ffffff",
-      },
-    },
-  } as const;
 
   return (
     <>
@@ -677,7 +688,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         )}
       </AnimatePresence>
 
-      {/* ── Inline sign-in modal ── */}
+      {/* ── Inline auth modal — single flow, auto sign-in or sign-up ── */}
       <AnimatePresence>
         {showSignIn && (
           <motion.div
@@ -699,152 +710,157 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.93, opacity: 0, y: 8 }}
               transition={{ type: "spring", stiffness: 340, damping: 30 }}
-              style={{ width: "100%", maxWidth: 400, position: "relative" }}
+              style={{
+                width: "100%", maxWidth: 360,
+                background: "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)",
+                border: "1px solid rgba(168,85,247,0.3)",
+                borderRadius: 24,
+                padding: "28px 24px 24px",
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+                position: "relative",
+              }}
             >
-              {/* Close button */}
+              {/* Close */}
               <button
                 onClick={() => setShowSignIn(false)}
                 style={{
-                  position: "absolute", top: 12, right: 12, zIndex: 1,
-                  background: "rgba(255,255,255,0.12)", border: "none", borderRadius: "50%",
+                  position: "absolute", top: 14, right: 14, zIndex: 1,
+                  background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%",
                   width: 28, height: 28, cursor: "pointer", color: "#fff",
-                  fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center",
                 }}
-              >
-                ✕
-              </button>
+              >✕</button>
 
-              {/* Sign-in / Sign-up tab toggle */}
-              <div style={{
-                display: "flex", borderRadius: "16px 16px 0 0", overflow: "hidden",
-                border: "1px solid rgba(168,85,247,0.3)", borderBottom: "none",
-              }}>
-                {(["signIn", "signUp"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setAuthMode(mode)}
-                    style={{
-                      flex: 1, padding: "12px 0", border: "none", cursor: "pointer",
-                      fontWeight: 700, fontSize: 14,
-                      background: authMode === mode
-                        ? "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)"
-                        : "rgba(255,255,255,0.04)",
-                      color: authMode === mode ? "#fff" : "rgba(255,255,255,0.4)",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {mode === "signIn" ? "Sign in" : "New account"}
-                  </button>
-                ))}
+              {/* Header */}
+              <div style={{ textAlign: "center", marginBottom: 22 }}>
+                <div style={{ fontSize: 34, marginBottom: 8 }}>💌</div>
+                <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, margin: 0 }}>
+                  {authStep === "email" ? "Sign in or create account" : "Check your inbox"}
+                </h2>
+                {authStep === "otp" && (
+                  <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 8, marginBottom: 0 }}>
+                    We sent a 6-digit code to<br />
+                    <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{authEmail}</span>
+                  </p>
+                )}
               </div>
 
-              {/* Clerk components — safety-net useEffect fires completeAuth() on isSignedIn */}
-              {authMode === "signIn" ? (
-                <SignIn appearance={clerkAppearance} />
-              ) : (
-                /* Custom OTP sign-up — uses clerk.client directly, no signal proxy */
-                <div style={{
-                  background: "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)",
-                  border: "1px solid rgba(168,85,247,0.3)", borderTop: "none",
-                  borderRadius: "0 0 24px 24px",
-                  padding: "28px 24px 24px",
-                  fontFamily: "'Segoe UI', system-ui, sans-serif",
-                }}>
-                  <div style={{ textAlign: "center", marginBottom: 22 }}>
-                    <div style={{ fontSize: 34, marginBottom: 8 }}>💌</div>
-                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, margin: 0 }}>
-                      {suStep === "email" ? "Create your account" : "Check your inbox"}
-                    </h2>
-                    {suStep === "otp" && (
-                      <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 8, marginBottom: 0 }}>
-                        We sent a 6-digit code to<br />
-                        <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{suEmail}</span>
-                      </p>
-                    )}
+              {authStep === "email" ? (
+                <>
+                  {/* Email input */}
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={authEmail}
+                    onChange={e => setAuthEmail(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") void handleAuthEmailSubmit(); }}
+                    autoFocus
+                    style={{
+                      width: "100%", padding: "13px 16px", borderRadius: 12,
+                      border: "1px solid rgba(168,85,247,0.35)",
+                      background: "rgba(255,255,255,0.05)", color: "#fff",
+                      fontSize: 15, outline: "none", boxSizing: "border-box", marginBottom: 10,
+                    }}
+                  />
+                  <button
+                    onClick={() => void handleAuthEmailSubmit()}
+                    disabled={authLoading || !authEmail.trim()}
+                    style={{
+                      width: "100%", padding: "14px", borderRadius: 12,
+                      background: authLoading || !authEmail.trim()
+                        ? "rgba(168,85,247,0.3)"
+                        : "linear-gradient(135deg,#a855f7,#ec4899)",
+                      border: "none", color: "#fff",
+                      fontWeight: 800, fontSize: 15,
+                      cursor: authLoading || !authEmail.trim() ? "default" : "pointer",
+                      marginBottom: 16,
+                    }}
+                  >
+                    {authLoading ? "Sending…" : "Continue with email →"}
+                  </button>
+
+                  {/* Divider */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>OR</span>
+                    <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
                   </div>
 
-                  {suStep === "email" ? (
-                    <>
-                      <input
-                        type="email"
-                        placeholder="your@email.com"
-                        value={suEmail}
-                        onChange={e => setSuEmail(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") void handleSuEmailSubmit(); }}
-                        autoFocus
-                        style={{
-                          width: "100%", padding: "13px 16px", borderRadius: 12,
-                          border: "1px solid rgba(168,85,247,0.35)",
-                          background: "rgba(255,255,255,0.05)", color: "#fff",
-                          fontSize: 15, outline: "none", boxSizing: "border-box", marginBottom: 10,
-                        }}
-                      />
-                      <button
-                        onClick={() => void handleSuEmailSubmit()}
-                        disabled={suLoading || !suEmail.trim()}
-                        style={{
-                          width: "100%", padding: "14px", borderRadius: 12,
-                          background: suLoading || !suEmail.trim()
-                            ? "rgba(168,85,247,0.3)"
-                            : "linear-gradient(135deg,#a855f7,#ec4899)",
-                          border: "none", color: "#fff",
-                          fontWeight: 800, fontSize: 15,
-                          cursor: suLoading || !suEmail.trim() ? "default" : "pointer",
-                          marginBottom: 8,
-                        }}
-                      >
-                        {suLoading ? "Sending…" : "Send code →"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="6-digit code"
-                        value={suOtp}
-                        onChange={e => setSuOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                        onKeyDown={e => { if (e.key === "Enter") void handleSuOtpSubmit(); }}
-                        autoFocus
-                        style={{
-                          width: "100%", padding: "14px 16px", borderRadius: 12,
-                          border: "1px solid rgba(168,85,247,0.35)",
-                          background: "rgba(255,255,255,0.05)", color: "#fff",
-                          fontSize: 22, fontWeight: 700, letterSpacing: "0.25em",
-                          textAlign: "center", outline: "none", boxSizing: "border-box", marginBottom: 10,
-                        }}
-                      />
-                      <button
-                        onClick={() => void handleSuOtpSubmit()}
-                        disabled={suLoading || suOtp.length < 6}
-                        style={{
-                          width: "100%", padding: "14px", borderRadius: 12,
-                          background: suLoading || suOtp.length < 6
-                            ? "rgba(168,85,247,0.3)"
-                            : "linear-gradient(135deg,#a855f7,#ec4899)",
-                          border: "none", color: "#fff",
-                          fontWeight: 800, fontSize: 15,
-                          cursor: suLoading || suOtp.length < 6 ? "default" : "pointer",
-                          marginBottom: 8,
-                        }}
-                      >
-                        {suLoading ? "Verifying…" : "Verify & Continue →"}
-                      </button>
-                      <button
-                        onClick={() => { setSuStep("email"); setSuOtp(""); setSuError(null); }}
-                        style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 0" }}
-                      >
-                        ← Use a different email
-                      </button>
-                    </>
-                  )}
+                  {/* Google */}
+                  <button
+                    onClick={() => void handleGoogleSignIn()}
+                    disabled={googleLoading}
+                    style={{
+                      width: "100%", padding: "13px", borderRadius: 12,
+                      background: googleLoading ? "rgba(255,255,255,0.7)" : "#fff",
+                      border: "none", cursor: googleLoading ? "default" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                      fontWeight: 700, fontSize: 14, color: "#1f2937",
+                    }}
+                  >
+                    {googleLoading ? (
+                      <span style={{ fontSize: 13, color: "#6b7280" }}>Redirecting…</span>
+                    ) : (
+                      <>
+                        <svg width="18" height="18" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Continue with Google
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* OTP input */}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="6-digit code"
+                    value={authOtp}
+                    onChange={e => setAuthOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onKeyDown={e => { if (e.key === "Enter") void handleAuthOtpSubmit(); }}
+                    autoFocus
+                    style={{
+                      width: "100%", padding: "14px 16px", borderRadius: 12,
+                      border: "1px solid rgba(168,85,247,0.35)",
+                      background: "rgba(255,255,255,0.05)", color: "#fff",
+                      fontSize: 22, fontWeight: 700, letterSpacing: "0.25em",
+                      textAlign: "center", outline: "none", boxSizing: "border-box", marginBottom: 10,
+                    }}
+                  />
+                  <button
+                    onClick={() => void handleAuthOtpSubmit()}
+                    disabled={authLoading || authOtp.length < 6}
+                    style={{
+                      width: "100%", padding: "14px", borderRadius: 12,
+                      background: authLoading || authOtp.length < 6
+                        ? "rgba(168,85,247,0.3)"
+                        : "linear-gradient(135deg,#a855f7,#ec4899)",
+                      border: "none", color: "#fff",
+                      fontWeight: 800, fontSize: 15,
+                      cursor: authLoading || authOtp.length < 6 ? "default" : "pointer",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {authLoading ? "Verifying…" : "Verify & Continue →"}
+                  </button>
+                  <button
+                    onClick={() => { setAuthStep("email"); setAuthOtp(""); setAuthError(null); }}
+                    style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 0" }}
+                  >
+                    ← Use a different email
+                  </button>
+                </>
+              )}
 
-                  {suError && (
-                    <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 8, marginBottom: 0 }}>
-                      {suError}
-                    </p>
-                  )}
-                </div>
+              {authError && (
+                <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 10, marginBottom: 0 }}>
+                  {authError}
+                </p>
               )}
             </motion.div>
           </motion.div>
