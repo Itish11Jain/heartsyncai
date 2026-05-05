@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 
-import { useAuth, useClerk, SignIn, SignUp } from "@clerk/react";
+import { useAuth, useClerk, SignIn } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -45,6 +45,13 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [showSignIn, setShowSignIn] = useState(false);
   const [authMode, setAuthMode] = useState<"signIn" | "signUp">("signUp");
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
+
+  // Custom sign-up OTP state (uses clerk.client directly, bypasses signal proxy)
+  const [suStep, setSuStep] = useState<"email" | "otp">("email");
+  const [suEmail, setSuEmail] = useState("");
+  const [suOtp, setSuOtp] = useState("");
+  const [suLoading, setSuLoading] = useState(false);
+  const [suError, setSuError] = useState<string | null>(null);
 
   // Detect if the card URL has a personal picture param
   const hasPhoto = (() => {
@@ -127,9 +134,77 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }, [isLoaded, isSignedIn]);
 
+  // ── Custom sign-up OTP handlers (clerk.client direct — no signal proxy) ──
+
+  type ClerkWithSignUp = {
+    client?: {
+      signUp?: {
+        create: (p: { emailAddress: string }) => Promise<void>;
+        prepareEmailAddressVerification: (p: { strategy: string }) => Promise<void>;
+        attemptEmailAddressVerification: (p: { code: string }) => Promise<{ createdSessionId?: string | null }>;
+        createdSessionId?: string | null;
+      };
+    };
+  };
+
+  async function handleSuEmailSubmit() {
+    setSuLoading(true);
+    setSuError(null);
+    try {
+      const su = (clerk as unknown as ClerkWithSignUp).client?.signUp;
+      if (!su) throw new Error("Clerk not ready");
+      await su.create({ emailAddress: suEmail.trim() });
+      // Re-read after create() — Clerk replaces the resource instance
+      const freshSu = (clerk as unknown as ClerkWithSignUp).client?.signUp;
+      if (!freshSu) throw new Error("Sign-up resource missing after create");
+      await freshSu.prepareEmailAddressVerification({ strategy: "email_code" });
+      setSuStep("otp");
+    } catch (err: unknown) {
+      const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
+      setSuError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Couldn't send code. Try again.");
+    } finally {
+      setSuLoading(false);
+    }
+  }
+
+  async function handleSuOtpSubmit() {
+    setSuLoading(true);
+    setSuError(null);
+    try {
+      const su = (clerk as unknown as ClerkWithSignUp).client?.signUp;
+      if (!su) throw new Error("Clerk not ready");
+      const result = await su.attemptEmailAddressVerification({ code: suOtp.trim() });
+      const sid = result?.createdSessionId ?? su.createdSessionId;
+      if (sid) {
+        await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sid });
+        // safety-net useEffect fires completeAuth() once isSignedIn becomes true
+      } else {
+        // Poll up to 4 s for Clerk to populate the session
+        for (let i = 0; i < 8; i++) {
+          await new Promise(r => setTimeout(r, 500));
+          const pollSid = (clerk as unknown as ClerkWithSignUp).client?.signUp?.createdSessionId;
+          if (pollSid) {
+            await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: pollSid });
+            return;
+          }
+        }
+        setSuError("Verified! Session didn't activate — please refresh and sign in.");
+      }
+    } catch (err: unknown) {
+      const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
+      setSuError(e.errors?.[0]?.longMessage ?? e.errors?.[0]?.message ?? "Wrong code — try again.");
+    } finally {
+      setSuLoading(false);
+    }
+  }
+
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
     setAuthMode("signUp");
+    setSuStep("email");
+    setSuEmail("");
+    setSuOtp("");
+    setSuError(null);
     setShowSignIn(true);
   }
 
@@ -640,13 +715,111 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
               {/* Clerk components — safety-net useEffect fires completeAuth() on isSignedIn */}
               {authMode === "signIn" ? (
-                <SignIn
-                  appearance={clerkAppearance}
-                />
+                <SignIn appearance={clerkAppearance} />
               ) : (
-                <SignUp
-                  appearance={clerkAppearance}
-                />
+                /* Custom OTP sign-up — uses clerk.client directly, no signal proxy */
+                <div style={{
+                  background: "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)",
+                  border: "1px solid rgba(168,85,247,0.3)", borderTop: "none",
+                  borderRadius: "0 0 24px 24px",
+                  padding: "28px 24px 24px",
+                  fontFamily: "'Segoe UI', system-ui, sans-serif",
+                }}>
+                  <div style={{ textAlign: "center", marginBottom: 22 }}>
+                    <div style={{ fontSize: 34, marginBottom: 8 }}>💌</div>
+                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, margin: 0 }}>
+                      {suStep === "email" ? "Create your account" : "Check your inbox"}
+                    </h2>
+                    {suStep === "otp" && (
+                      <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 8, marginBottom: 0 }}>
+                        We sent a 6-digit code to<br />
+                        <span style={{ color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{suEmail}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {suStep === "email" ? (
+                    <>
+                      <input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={suEmail}
+                        onChange={e => setSuEmail(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") void handleSuEmailSubmit(); }}
+                        autoFocus
+                        style={{
+                          width: "100%", padding: "13px 16px", borderRadius: 12,
+                          border: "1px solid rgba(168,85,247,0.35)",
+                          background: "rgba(255,255,255,0.05)", color: "#fff",
+                          fontSize: 15, outline: "none", boxSizing: "border-box", marginBottom: 10,
+                        }}
+                      />
+                      <button
+                        onClick={() => void handleSuEmailSubmit()}
+                        disabled={suLoading || !suEmail.trim()}
+                        style={{
+                          width: "100%", padding: "14px", borderRadius: 12,
+                          background: suLoading || !suEmail.trim()
+                            ? "rgba(168,85,247,0.3)"
+                            : "linear-gradient(135deg,#a855f7,#ec4899)",
+                          border: "none", color: "#fff",
+                          fontWeight: 800, fontSize: 15,
+                          cursor: suLoading || !suEmail.trim() ? "default" : "pointer",
+                          marginBottom: 8,
+                        }}
+                      >
+                        {suLoading ? "Sending…" : "Send code →"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="6-digit code"
+                        value={suOtp}
+                        onChange={e => setSuOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        onKeyDown={e => { if (e.key === "Enter") void handleSuOtpSubmit(); }}
+                        autoFocus
+                        style={{
+                          width: "100%", padding: "14px 16px", borderRadius: 12,
+                          border: "1px solid rgba(168,85,247,0.35)",
+                          background: "rgba(255,255,255,0.05)", color: "#fff",
+                          fontSize: 22, fontWeight: 700, letterSpacing: "0.25em",
+                          textAlign: "center", outline: "none", boxSizing: "border-box", marginBottom: 10,
+                        }}
+                      />
+                      <button
+                        onClick={() => void handleSuOtpSubmit()}
+                        disabled={suLoading || suOtp.length < 6}
+                        style={{
+                          width: "100%", padding: "14px", borderRadius: 12,
+                          background: suLoading || suOtp.length < 6
+                            ? "rgba(168,85,247,0.3)"
+                            : "linear-gradient(135deg,#a855f7,#ec4899)",
+                          border: "none", color: "#fff",
+                          fontWeight: 800, fontSize: 15,
+                          cursor: suLoading || suOtp.length < 6 ? "default" : "pointer",
+                          marginBottom: 8,
+                        }}
+                      >
+                        {suLoading ? "Verifying…" : "Verify & Continue →"}
+                      </button>
+                      <button
+                        onClick={() => { setSuStep("email"); setSuOtp(""); setSuError(null); }}
+                        style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "rgba(255,255,255,0.3)", padding: "4px 0" }}
+                      >
+                        ← Use a different email
+                      </button>
+                    </>
+                  )}
+
+                  {suError && (
+                    <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 8, marginBottom: 0 }}>
+                      {suError}
+                    </p>
+                  )}
+                </div>
               )}
             </motion.div>
           </motion.div>
