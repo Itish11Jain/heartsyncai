@@ -450,7 +450,7 @@ router.get("/events/analytics", async (req, res) => {
       recentCards,
       vitals,
       utm_funnel,
-      premiumClicks,
+      photoBreakdown,
       recipientCtaFunnel,
       userCards,
     ] = await Promise.all([
@@ -615,27 +615,26 @@ router.get("/events/analytics", async (req, res) => {
           params,
         ),
 
-        /* ── Premium-card click breakdown by template ──
-         * `paywall_shown` fires the moment a user taps a premium template
-         * card (cosmic / crystal / vinyl) and the paywall opens. We expose:
-         *   - per-template click count (events) and unique customers
-         *   - total clicks + total unique customers across all premium
-         * so the dashboard can show "X customers clicked premium, broken
-         * down as Y on cosmic, Z on crystal, ...". Templates are kept as
-         * raw event values rather than hard-coding the premium list, so
-         * adding a new premium template later doesn't require a code
-         * change here. */
+        /* ── Card with photo vs without photo breakdown ──
+         * Joins hs_card_events to hs_cards on card_id so we can inspect
+         * the photo_url column without storing it redundantly in events.
+         * The inner subquery applies all date/email filters first, then
+         * the outer LEFT JOIN decides photo status. */
         pool.query(
           `SELECT
-             template,
-             COUNT(*)::int                                          AS clicks,
-             COUNT(DISTINCT NULLIF(fingerprint, ''))::int           AS unique_customers
-           FROM hs_card_events
-           WHERE event = 'paywall_shown'
-             AND template IS NOT NULL AND template <> ''
-             AND ${whereSql}
-           GROUP BY template
-           ORDER BY clicks DESC`,
+             COUNT(*) FILTER (WHERE e.event = 'card_created' AND c.photo_url IS NOT NULL)                            AS photo_created,
+             COUNT(*) FILTER (WHERE e.event = 'card_created' AND (e.card_id IS NULL OR c.id IS NULL OR c.photo_url IS NULL)) AS nophoto_created,
+             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND c.photo_url IS NOT NULL)                            AS photo_shared,
+             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND (e.card_id IS NULL OR c.id IS NULL OR c.photo_url IS NULL)) AS nophoto_shared,
+             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND c.photo_url IS NOT NULL)                            AS photo_viewed,
+             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND (e.card_id IS NULL OR c.id IS NULL OR c.photo_url IS NULL)) AS nophoto_viewed
+           FROM (
+             SELECT event, card_id
+             FROM hs_card_events
+             WHERE ${whereSql}
+               AND event IN ('card_created', 'card_shared', 'card_viewed')
+           ) e
+           LEFT JOIN hs_cards c ON e.card_id = c.id`,
           params,
         ),
 
@@ -663,7 +662,7 @@ router.get("/events/analytics", async (req, res) => {
       recent_cards: recentCards.rows,
       vitals: vitals.rows,
       utm_funnel: utm_funnel.rows,
-      premium_clicks: premiumClicks.rows,
+      photo_breakdown: photoBreakdown.rows[0] ?? null,
       recipient_cta_funnel: recipientCtaFunnel.rows[0] ?? { clicks: 0, unique_clickers: 0, cards_after_click: 0 },
       user_cards: userCards.rows,
       // Echo back the effective range so the UI can show what's selected.

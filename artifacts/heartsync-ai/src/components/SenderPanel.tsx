@@ -219,7 +219,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function shareSenderWhatsApp(url: string = senderShareUrl) {
     envelope.copy();
-    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "envelope" });
+    trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "envelope", card_id: cardId, has_photo: hasPhoto });
     setWaCopied(true);
     setTimeout(() => setWaCopied(false), 2500);
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${url}`;
@@ -260,7 +260,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function shareInstagram(url: string = senderShareUrl) {
     envelope.copy();
-    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope" });
+    trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "envelope", card_id: cardId, has_photo: hasPhoto });
     // Show feedback immediately — don't wait for clipboard permission
     setIgCopied(true);
     setTimeout(() => setIgCopied(false), 2500);
@@ -270,7 +270,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function copySenderLink(url: string = senderShareUrl) {
     envelope.copy();
-    trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope" });
+    trackEvent({ event: "card_shared", channel: "link", occasion, template: "envelope", card_id: cardId, has_photo: hasPhoto });
     // Show feedback immediately — don't gate it on clipboard permission
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2500);
