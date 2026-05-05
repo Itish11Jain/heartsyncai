@@ -50,20 +50,38 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
   const pendingReturnUrlRef = useRef<string>("");
 
+  /* Core Google OAuth initiator — calls signIn.create() directly so we own
+     the navigation step. authenticateWithRedirect() can silently navigate to
+     "null" when externalVerificationRedirectURL is missing; this avoids that. */
+  const initiateGoogleOAuth = useCallback(async (returnUrl: string) => {
+    if (!signIn) return false;
+    try {
+      const attempt = await signIn.create({
+        strategy: "oauth_google",
+        redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
+        actionCompleteRedirectUrl: returnUrl,
+      });
+      const redirectTo = attempt.firstFactorVerification?.externalVerificationRedirectURL?.toString();
+      if (redirectTo && redirectTo !== "null" && redirectTo !== "undefined") {
+        window.location.href = redirectTo;
+        return true;
+      }
+    } catch { /* fall through to fallback */ }
+    return false;
+  }, [signIn]);
+
   /* Fire the Google OAuth redirect the moment Clerk becomes ready,
      in case the user clicked the button before the SDK had initialized. */
   useEffect(() => {
     if (!pendingGoogleSignIn || !signInLoaded || !signIn) return;
     setPendingGoogleSignIn(false);
-    void signIn.authenticateWithRedirect({
-      strategy: "oauth_google",
-      redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
-      redirectUrlComplete: pendingReturnUrlRef.current || window.location.href,
-    }).catch(() => {
-      const returnUrl = pendingReturnUrlRef.current || window.location.href;
-      window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+    const returnUrl = pendingReturnUrlRef.current || window.location.href;
+    void initiateGoogleOAuth(returnUrl).then((ok) => {
+      if (!ok) {
+        window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+      }
     });
-  }, [pendingGoogleSignIn, signInLoaded, signIn]);
+  }, [pendingGoogleSignIn, signInLoaded, signIn, initiateGoogleOAuth]);
 
 
   // Detect if the card URL has a personal picture param
@@ -165,16 +183,14 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   function handleGoogleSignIn() {
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
     if (signInLoaded && signIn) {
-      void signIn.authenticateWithRedirect({
-        strategy: "oauth_google",
-        redirectUrl: `${window.location.origin}${BASE}/sign-in/sso-callback`,
-        redirectUrlComplete: returnUrl,
-      }).catch(() => {
-        window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+      void initiateGoogleOAuth(returnUrl).then((ok) => {
+        if (!ok) {
+          window.location.href = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
+        }
       });
     } else {
-      /* Clerk not ready yet — queue the redirect; the useEffect above fires it
-         the instant signIn becomes available (typically within 1–2 seconds). */
+      /* Clerk not ready yet — queue the redirect; the useEffect fires it
+         the instant signIn becomes available (typically < 1 second). */
       setPendingGoogleSignIn(true);
     }
   }
