@@ -181,13 +181,28 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         setSignInStep("otp");
         return;
       } catch (signInErr: unknown) {
-        // Only fall through to sign-up if the account doesn't exist yet
+        // Log the exact error so we can diagnose which code Clerk sends
         const se = signInErr as { errors?: Array<{ code?: string; longMessage?: string; message: string }> };
         const errCode = se.errors?.[0]?.code ?? "";
-        if (errCode !== "form_identifier_not_found" && errCode !== "user_not_found") {
+        console.log("[HeartSync] signIn.create error — code:", errCode, "| full:", JSON.stringify(se.errors));
+        // BLOCKLIST: only stop for errors that mean the account EXISTS but has a problem.
+        // For "account not found" codes (form_identifier_not_found, user_not_found,
+        // strategy_for_user_invalid, form_param_value_invalid, etc.) fall through to sign-up.
+        const HARD_STOP_CODES = [
+          "too_many_requests",
+          "lockout",
+          "user_locked",
+          "user_banned",
+          "identifier_already_signed_in",
+          "session_exists",
+        ];
+        const isHardStop = HARD_STOP_CODES.some(c => errCode.startsWith(c));
+        if (isHardStop) {
           setSignInError(se.errors?.[0]?.longMessage ?? se.errors?.[0]?.message ?? "Couldn't send code. Check your email and try again.");
           return;
         }
+        // Anything else (including "form_identifier_not_found", "user_not_found",
+        // "strategy_for_user_invalid", unexpected 422s) → fall through and try sign-up
       }
 
       // Account not found — create sign-up, then send OTP.
