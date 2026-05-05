@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 
-import { useAuth, useClerk, SignIn } from "@clerk/react";
+import { useAuth, useClerk, SignIn, SignUp } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
@@ -43,6 +43,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
+  const [authMode, setAuthMode] = useState<"signIn" | "signUp">("signIn");
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
 
   // Detect if the card URL has a personal picture param
@@ -128,6 +129,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
+    setAuthMode("signIn");
     setShowSignIn(true);
   }
 
@@ -251,6 +253,57 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     u.searchParams.delete("open_paywall");
     window.location.href = u.toString();
   }
+
+  const clerkAppearance = {
+    variables: {
+      colorPrimary: "#a855f7",
+      colorBackground: "#0a0020",
+      colorText: "#ffffff",
+      colorTextSecondary: "rgba(255,255,255,0.6)",
+      colorInputBackground: "rgba(255,255,255,0.07)",
+      colorInputText: "#ffffff",
+      borderRadius: "12px",
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+    },
+    elements: {
+      rootBox: { width: "100%" },
+      card: {
+        background: "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)",
+        border: "1px solid rgba(168,85,247,0.3)",
+        borderRadius: "0 0 24px 24px",
+        boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
+        padding: "8px",
+      },
+      headerTitle: { color: "#ffffff", fontWeight: 800 },
+      headerSubtitle: { color: "rgba(255,255,255,0.55)" },
+      formButtonPrimary: {
+        background: "linear-gradient(135deg,#a855f7,#ec4899)",
+        fontWeight: 800,
+      },
+      formFieldInput: {
+        background: "rgba(255,255,255,0.07)",
+        border: "1px solid rgba(168,85,247,0.35)",
+        color: "#ffffff",
+      },
+      formFieldLabel: { color: "rgba(255,255,255,0.7)" },
+      identityPreviewText: { color: "rgba(255,255,255,0.8)" },
+      identityPreviewEditButton: { color: "#a855f7" },
+      footerActionLink: { color: "#c084fc" },
+      dividerText: { color: "rgba(255,255,255,0.3)" },
+      dividerLine: { background: "rgba(255,255,255,0.1)" },
+      socialButtonsBlockButton: {
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "#ffffff",
+      },
+      socialButtonsBlockButtonText: { color: "#ffffff" },
+      alternativeMethodsBlockButton: {
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(168,85,247,0.25)",
+        color: "#ffffff",
+      },
+    },
+  } as const;
 
   return (
     <>
@@ -561,59 +614,40 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                 ✕
               </button>
 
-              {/* Clerk's built-in SignIn — handles email OTP, new sign-ups, Google, everything */}
-              <SignIn
-                appearance={{
-                  variables: {
-                    colorPrimary: "#a855f7",
-                    colorBackground: "#0a0020",
-                    colorText: "#ffffff",
-                    colorTextSecondary: "rgba(255,255,255,0.6)",
-                    colorInputBackground: "rgba(255,255,255,0.07)",
-                    colorInputText: "#ffffff",
-                    borderRadius: "12px",
-                    fontFamily: "'Segoe UI', system-ui, sans-serif",
-                  },
-                  elements: {
-                    rootBox: { width: "100%" },
-                    card: {
-                      background: "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)",
-                      border: "1px solid rgba(168,85,247,0.3)",
-                      borderRadius: "24px",
-                      boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
-                      padding: "8px",
-                    },
-                    headerTitle: { color: "#ffffff", fontWeight: 800 },
-                    headerSubtitle: { color: "rgba(255,255,255,0.55)" },
-                    formButtonPrimary: {
-                      background: "linear-gradient(135deg,#a855f7,#ec4899)",
-                      fontWeight: 800,
-                    },
-                    formFieldInput: {
-                      background: "rgba(255,255,255,0.07)",
-                      border: "1px solid rgba(168,85,247,0.35)",
-                      color: "#ffffff",
-                    },
-                    formFieldLabel: { color: "rgba(255,255,255,0.7)" },
-                    identityPreviewText: { color: "rgba(255,255,255,0.8)" },
-                    identityPreviewEditButton: { color: "#a855f7" },
-                    footerActionLink: { color: "#c084fc" },
-                    dividerText: { color: "rgba(255,255,255,0.3)" },
-                    dividerLine: { background: "rgba(255,255,255,0.1)" },
-                    socialButtonsBlockButton: {
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#ffffff",
-                    },
-                    socialButtonsBlockButtonText: { color: "#ffffff" },
-                    alternativeMethodsBlockButton: {
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(168,85,247,0.25)",
-                      color: "#ffffff",
-                    },
-                  },
-                }}
-              />
+              {/* Sign-in / Sign-up tab toggle */}
+              <div style={{
+                display: "flex", borderRadius: "16px 16px 0 0", overflow: "hidden",
+                border: "1px solid rgba(168,85,247,0.3)", borderBottom: "none",
+              }}>
+                {(["signIn", "signUp"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setAuthMode(mode)}
+                    style={{
+                      flex: 1, padding: "12px 0", border: "none", cursor: "pointer",
+                      fontWeight: 700, fontSize: 14,
+                      background: authMode === mode
+                        ? "radial-gradient(ellipse at 50% 0%, #0d0030 0%, #050015 80%)"
+                        : "rgba(255,255,255,0.04)",
+                      color: authMode === mode ? "#fff" : "rgba(255,255,255,0.4)",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {mode === "signIn" ? "Sign in" : "New account"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Clerk components — safety-net useEffect fires completeAuth() on isSignedIn */}
+              {authMode === "signIn" ? (
+                <SignIn
+                  appearance={clerkAppearance}
+                />
+              ) : (
+                <SignUp
+                  appearance={clerkAppearance}
+                />
+              )}
             </motion.div>
           </motion.div>
         )}
