@@ -139,13 +139,29 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   type ClerkWithSignUp = {
     client?: {
       signUp?: {
-        create: (p: { emailAddress: string }) => Promise<void>;
-        prepareEmailAddressVerification: (p: { strategy: string }) => Promise<void>;
-        attemptEmailAddressVerification: (p: { code: string }) => Promise<{ createdSessionId?: string | null }>;
+        create: (p: { emailAddress: string }) => Promise<unknown>;
+        prepareEmailAddressVerification: (p: { strategy: string }) => Promise<unknown>;
+        attemptEmailAddressVerification: (p: { code: string }) => Promise<unknown>;
         createdSessionId?: string | null;
+        status?: string;
       };
+      sessions?: Array<{ id: string }>;
+      activeSessions?: Array<{ id: string }>;
     };
+    session?: { id: string } | null;
   };
+
+  /** Scan every place Clerk might stash the newly-created session id. */
+  function findNewSessionId(): string | null {
+    const c = (clerk as unknown as ClerkWithSignUp).client;
+    return (
+      c?.signUp?.createdSessionId
+      ?? c?.activeSessions?.[0]?.id
+      ?? c?.sessions?.[0]?.id
+      ?? (clerk as unknown as ClerkWithSignUp).session?.id
+      ?? null
+    );
+  }
 
   async function handleSuEmailSubmit() {
     setSuLoading(true);
@@ -173,22 +189,31 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     try {
       const su = (clerk as unknown as ClerkWithSignUp).client?.signUp;
       if (!su) throw new Error("Clerk not ready");
-      const result = await su.attemptEmailAddressVerification({ code: suOtp.trim() });
-      const sid = result?.createdSessionId ?? su.createdSessionId;
+      await su.attemptEmailAddressVerification({ code: suOtp.trim() });
+
+      // Re-read signUp after attempt — Clerk may have swapped the resource
+      // Check all known locations for the new session id
+      let sid = findNewSessionId();
+      if (!sid) {
+        // Poll up to 5 s — Clerk resolves asynchronously after the API call
+        for (let i = 0; i < 10; i++) {
+          await new Promise(r => setTimeout(r, 500));
+          sid = findNewSessionId();
+          if (sid) break;
+        }
+      }
+
       if (sid) {
         await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: sid });
         // safety-net useEffect fires completeAuth() once isSignedIn becomes true
       } else {
-        // Poll up to 4 s for Clerk to populate the session
-        for (let i = 0; i < 8; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          const pollSid = (clerk as unknown as ClerkWithSignUp).client?.signUp?.createdSessionId;
-          if (pollSid) {
-            await (clerk.setActive as (p: { session: string }) => Promise<void>)({ session: pollSid });
-            return;
-          }
+        // Verification succeeded but we can't locate the session id —
+        // Clerk's safety-net (isSignedIn useEffect) may still catch it;
+        // only show the error after a short extra wait.
+        await new Promise(r => setTimeout(r, 1500));
+        if (!findNewSessionId()) {
+          setSuError("Verified! Please refresh the page to continue.");
         }
-        setSuError("Verified! Session didn't activate — please refresh and sign in.");
       }
     } catch (err: unknown) {
       const e = err as { errors?: Array<{ longMessage?: string; message: string }> };
