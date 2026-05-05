@@ -83,6 +83,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       });
       if (res.ok) {
         setWatermarkRemoved(true);
+      } else if (res.status === 401 || res.status === 403) {
+        // Not the card owner — silently do nothing, no error shown
       } else {
         const data = await res.json().catch(() => ({}));
         setWmError((data as { message?: string })?.message ?? "Something went wrong. Please try again.");
