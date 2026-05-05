@@ -151,10 +151,54 @@ router.post("/cards", async (req, res) => {
   }
 
   try {
-    const { template, occasion, recipient_name, message_b64, photo_url } =
+    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url } =
       req.body as Record<string, unknown>;
 
-    const id = await uniqueId();
+    // Allow callers to supply a pre-existing client-generated tracking ID
+    // (e.g. after UTR payment when the card was created anonymously and never
+    // saved to DB). Must match the same character set as genId.
+    const isValidClientId =
+      typeof clientId === "string" &&
+      /^[a-z0-9]{6,16}$/.test(clientId);
+
+    const id = isValidClientId ? clientId as string : await uniqueId();
+
+    // Upsert: if the ID already exists and belongs to this user (or is
+    // unclaimed), claim it and set is_watermarked=FALSE.  If it belongs to
+    // someone else, fall through and generate a fresh server ID instead.
+    if (isValidClientId) {
+      const existing = await pool.query<{ clerk_user_id: string | null }>(
+        "SELECT clerk_user_id FROM hs_cards WHERE id = $1",
+        [id],
+      );
+      if (existing.rows.length > 0) {
+        const owner = existing.rows[0].clerk_user_id;
+        if (owner === null || owner === clerkUserId) {
+          // Claim / already ours — ensure is_watermarked=FALSE
+          await pool.query(
+            "UPDATE hs_cards SET is_watermarked = FALSE, clerk_user_id = $1 WHERE id = $2",
+            [clerkUserId, id],
+          );
+          res.json({ id });
+          return;
+        }
+        // Belongs to someone else — fall through to generate a fresh ID
+        const freshId = await uniqueId();
+        await pool.query(
+          `INSERT INTO hs_cards
+             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url)
+           VALUES ($1,$2,$3,$4,$5,$6,FALSE,FALSE,$7)`,
+          [freshId, clerkUserId,
+            typeof template === "string" ? template : null,
+            typeof occasion === "string" ? occasion : null,
+            typeof recipient_name === "string" ? recipient_name : null,
+            typeof message_b64 === "string" ? message_b64 : null,
+            typeof photo_url === "string" ? photo_url : null],
+        );
+        res.json({ id: freshId });
+        return;
+      }
+    }
 
     await pool.query(
       `INSERT INTO hs_cards

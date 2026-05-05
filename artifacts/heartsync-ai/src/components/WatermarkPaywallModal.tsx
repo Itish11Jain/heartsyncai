@@ -88,8 +88,23 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
           setBundleUtrError("Only the card sender can remove the watermark.");
           return;
         }
-        // 404 means the card row doesn't exist in DB yet (generated on-the-fly) —
-        // that's fine, the template unlock already succeeded above. Continue to done.
+        if (patchRes.status === 404) {
+          // Card was never saved to DB (created as a client-side tracking ID).
+          // Register it now so recipients see is_watermarked: false.
+          const p = new URLSearchParams(window.location.search);
+          const msgParam = p.get("msg");
+          await fetch(`${BASE}/api/cards`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              id: cardId,
+              template: p.get("template") ?? "envelope",
+              occasion: p.get("occasion") ?? undefined,
+              recipient_name: p.get("name") ?? undefined,
+              ...(msgParam ? { message_b64: msgParam } : {}),
+            }),
+          });
+        }
       }
 
       setStage("done-bundle");
