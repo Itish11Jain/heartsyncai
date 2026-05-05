@@ -130,7 +130,20 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
     setShowSignIn(true);
-    clerk.openSignIn();
+
+    // Build a return URL with the action param so the pending action survives
+    // both Google OAuth redirects AND "Sign up" page navigation.
+    const returnUrl = new URL(window.location.href);
+    if (action === "paywall") {
+      sessionStorage.setItem("hs_pending_share", pendingShareTypeRef.current ?? "link");
+      returnUrl.searchParams.set("open_paywall", "1");
+    } else {
+      returnUrl.searchParams.set("open_watermark", "1");
+    }
+    const ret = returnUrl.toString();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    clerk.openSignIn({ fallbackRedirectUrl: ret, signUpFallbackRedirectUrl: ret } as any);
   }
 
   function completeAuth() {
