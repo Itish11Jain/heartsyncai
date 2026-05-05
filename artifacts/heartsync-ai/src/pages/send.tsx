@@ -417,11 +417,11 @@ function SendInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usage, usageLoading]);
 
-  const defaultMsg = (() => {
+  const defaultMsg = useMemo(() => {
     if (!occasion || !relation) return "";
     const t = getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
     return t.final_message;
-  })();
+  }, [occasion, relation]);
 
   // Re-seed message when occasion/relation change (but only if user hasn't customised it).
   useEffect(() => {

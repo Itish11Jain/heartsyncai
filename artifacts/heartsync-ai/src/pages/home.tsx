@@ -212,11 +212,10 @@ function CardIllustration() {
           { t: "72%", l: "82%", d: 0.8 }, { t: "85%", l: "22%", d: 1.8 },
           { t: "42%", l: "90%", d: 0.2 }, { t: "55%", l: "5%", d: 2.5 },
         ].map((s, i) => (
-          <m.div
+          <div
             key={i}
-            animate={{ opacity: [0.1, 0.6, 0.1] }}
-            transition={{ duration: 2.2 + i * 0.4, delay: s.d, repeat: Infinity, ease: "easeInOut" }}
-            style={{ position: "absolute", top: s.t, left: s.l, width: 2, height: 2, borderRadius: "50%", background: "white" }}
+            className="hs-ambient-anim"
+            style={{ position: "absolute", top: s.t, left: s.l, width: 2, height: 2, borderRadius: "50%", background: "white", animation: `hs-star-twinkle ${2.2 + i * 0.4}s ease-in-out ${s.d}s infinite` }}
           />
         ))}
 
@@ -231,13 +230,12 @@ function CardIllustration() {
               style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}
             >
               {/* Pulsating headline */}
-              <m.p
-                animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: "0.06em", textAlign: "center" }}
+              <p
+                className="hs-ambient-anim"
+                style={{ fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: "0.06em", textAlign: "center", animation: "hs-fade-pulse 2s ease-in-out infinite" }}
               >
                 ✨ A Surprise For You! ✨
-              </m.p>
+              </p>
 
               {/* Mini envelope */}
               <div style={{ position: "relative", width: 180, height: 112, filter: "drop-shadow(0 12px 24px rgba(255,165,0,0.4))" }}>
@@ -685,13 +683,13 @@ function CosmicCardIllustration() {
                 {seq === 3 && [
                   { top: "-8%", left: "10%", d: 0 }, { top: "-6%", right: "14%", d: 0.2 },
                   { bottom: "-6%", left: "18%", d: 0.4 }, { bottom: "-8%", right: "8%", d: 0.1 },
-                ].map((p, i) => (
+                ].map(({ d, ...pos }, i) => (
                   <m.span
                     key={i}
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: [0, 1, 0], scale: [0, 1, 0] }}
-                    transition={{ duration: 1.4, delay: p.d, repeat: Infinity, repeatDelay: 1.2 }}
-                    style={{ position: "absolute", fontSize: 10, ...p }}
+                    transition={{ duration: 1.4, delay: d, repeat: Infinity, repeatDelay: 1.2 }}
+                    style={{ position: "absolute", fontSize: 10, ...pos }}
                   >
                     ✦
                   </m.span>
@@ -702,13 +700,12 @@ function CosmicCardIllustration() {
         </AnimatePresence>
 
         {/* Bottom label */}
-        <m.div
-          animate={{ opacity: [0.2, 0.5, 0.2] }}
-          transition={{ duration: 3.5, repeat: Infinity }}
-          style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(160,100,255,0.4)", letterSpacing: "0.1em" }}
+        <div
+          className="hs-ambient-anim"
+          style={{ position: "absolute", bottom: 14, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "rgba(160,100,255,0.4)", letterSpacing: "0.1em", animation: "hs-dim-pulse 3.5s ease-in-out infinite" }}
         >
           ✦ HeartSync AI
-        </m.div>
+        </div>
       </div>
 
       {/* Floating sparkles */}
@@ -716,16 +713,18 @@ function CosmicCardIllustration() {
         { top: "-6%", left: "-8%", size: 18, delay: 0.5 },
         { top: "28%", right: "-12%", size: 13, delay: 1.0 },
         { bottom: "-5%", right: "-7%", size: 20, delay: 0.2 },
-      ].map((s, i) => (
-        <m.div
-          key={i}
-          animate={{ scale: [1, 1.6, 1], opacity: [0.3, 0.9, 0.3] }}
-          transition={{ duration: 2.6 + i * 0.7, repeat: Infinity, ease: "easeInOut", delay: s.delay }}
-          style={{ position: "absolute", ...s, fontSize: s.size, color: "rgba(160,100,255,0.65)" }}
-        >
-          ✦
-        </m.div>
-      ))}
+      ].map((s, i) => {
+        const { size, delay, ...pos } = s;
+        return (
+          <div
+            key={i}
+            className="hs-ambient-anim"
+            style={{ position: "absolute", ...pos, fontSize: size, color: "rgba(160,100,255,0.65)", animation: `hs-sparkle-float ${2.6 + i * 0.7}s ease-in-out ${delay}s infinite` }}
+          >
+            ✦
+          </div>
+        );
+      })}
     </div>
   );
 }

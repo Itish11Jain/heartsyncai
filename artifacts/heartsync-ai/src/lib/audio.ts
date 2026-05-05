@@ -56,7 +56,9 @@ const N = {
    ══════════════════════════════════════════════════════════════ */
 
 const LOOK_AHEAD = 0.40;  // seconds to schedule ahead
-const TICK_MS    = 150;   // scheduler tick interval (ms)
+// 250ms tick — enough headroom with the 400ms lookahead, and slower ticks
+// reduce main-thread interruptions during user interactions (INP improvement).
+const TICK_MS    = 250;   // scheduler tick interval (ms)
 
 type MStep = {
   freq: number;          // melody note (0 = rest)

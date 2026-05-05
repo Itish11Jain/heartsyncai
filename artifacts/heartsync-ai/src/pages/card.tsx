@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, lazy, Suspense, memo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
@@ -1031,10 +1031,10 @@ export default function Card() {
     });
   }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl]);
 
-  const orbPositions = orbs.map((_, i) => {
+  const orbPositions = useMemo(() => orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;
     return { x: orbRadius * Math.cos(angle), y: orbRadius * Math.sin(angle), angle };
-  });
+  }), [orbs, orbRadius]);
 
   const clickedCount = clickedOrbs.size;
   const allClicked = clickedCount === orbs.length;
@@ -1348,10 +1348,9 @@ function AmbientStars() {
   return (
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>
       {STARS.map(s => (
-        <motion.div
+        <div
           key={s.id}
-          animate={{ opacity: [0.15, 0.7, 0.15] }}
-          transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
+          className="hs-ambient-anim"
           style={{
             position: "absolute",
             left: `${s.left}%`,
@@ -1360,6 +1359,7 @@ function AmbientStars() {
             height: s.size,
             borderRadius: "50%",
             background: "white",
+            animation: `hs-star-twinkle ${s.duration}s ease-in-out ${s.delay}s infinite`,
           }}
         />
       ))}
