@@ -148,7 +148,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     const returnUrl = pendingReturnUrlRef.current || window.location.href;
     const fallback = `${window.location.origin}${BASE}/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
     try {
-      const res = await fetch(`${BASE}/api/__clerk/v1/sign_ins`, {
+      const res = await fetch(`${BASE}/api/__clerk/v1/client/sign_ins`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         credentials: "include",
