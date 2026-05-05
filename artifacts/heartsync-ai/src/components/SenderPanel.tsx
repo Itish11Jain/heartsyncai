@@ -40,16 +40,10 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [showBundlePaywall, setShowBundlePaywall] = useState(false);
   const pendingShareTypeRef = useRef<ShareType | null>(null);
 
-  // Inline auth modal state
+  // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
   const pendingSignInActionRef = useRef<SignInAction | null>(null);
-  const [authStep, setAuthStep] = useState<"email" | "otp">("email");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authOtp, setAuthOtp] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authFlowType, setAuthFlowType] = useState<"signIn" | "signUp">("signIn");
 
 
   // Detect if the card URL has a personal picture param
@@ -135,76 +129,17 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
-    setAuthStep("email");
-    setAuthEmail("");
-    setAuthOtp("");
-    setAuthError(null);
-    setAuthFlowType("signIn");
     setShowSignIn(true);
-  }
-
-  async function handleAuthEmailSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!authEmail.trim() || authLoading) return;
-    setAuthLoading(true);
-    setAuthError(null);
-    const email = authEmail.trim().toLowerCase();
-    try {
-      await clerk.client.signIn.create({ strategy: "email_code", identifier: email });
-      setAuthFlowType("signIn");
-      setAuthStep("otp");
-    } catch (err: unknown) {
-      const ce = err as { errors?: Array<{ code?: string; longMessage?: string; message?: string }> };
-      const code = ce?.errors?.[0]?.code;
-      if (code === "form_identifier_not_found") {
-        try {
-          await clerk.client.signUp.create({ emailAddress: email });
-          await clerk.client.signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-          setAuthFlowType("signUp");
-          setAuthStep("otp");
-        } catch (suErr: unknown) {
-          const se = suErr as { errors?: Array<{ longMessage?: string; message?: string }> };
-          setAuthError(se?.errors?.[0]?.longMessage ?? se?.errors?.[0]?.message ?? "Something went wrong. Try again.");
-        }
-      } else {
-        setAuthError(ce?.errors?.[0]?.longMessage ?? ce?.errors?.[0]?.message ?? "Something went wrong. Try again.");
-      }
-    } finally {
-      setAuthLoading(false);
+    const returnUrl = new URL(window.location.href);
+    if (action === "paywall") {
+      sessionStorage.setItem("hs_pending_share", pendingShareTypeRef.current ?? "link");
+      returnUrl.searchParams.set("open_paywall", "1");
+    } else {
+      returnUrl.searchParams.set("open_watermark", "1");
     }
-  }
-
-  async function handleAuthOtpSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!authOtp.trim() || authLoading) return;
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      let sessionId: string | null = null;
-      if (authFlowType === "signIn") {
-        const result = await clerk.client.signIn.attemptFirstFactor({ strategy: "email_code", code: authOtp.trim() });
-        sessionId = (result as { createdSessionId?: string | null }).createdSessionId ?? null;
-      } else {
-        const result = await clerk.client.signUp.attemptEmailAddressVerification({ code: authOtp.trim() });
-        // createdSessionId may be null on dev keys — fall back to sessions list
-        sessionId = (result as { createdSessionId?: string | null }).createdSessionId
-          ?? (clerk.client.sessions as Array<{ id: string }>)?.[0]?.id
-          ?? null;
-      }
-      if (sessionId) {
-        await clerk.setActive({ session: sessionId });
-        setShowSignIn(false);
-      } else {
-        // Clerk has set the cookie — reload will pick up the session
-        setShowSignIn(false);
-        window.location.reload();
-      }
-    } catch (err: unknown) {
-      const ce = err as { errors?: Array<{ longMessage?: string; message?: string }> };
-      setAuthError(ce?.errors?.[0]?.longMessage ?? ce?.errors?.[0]?.message ?? "Incorrect code. Please try again.");
-    } finally {
-      setAuthLoading(false);
-    }
+    const ret = returnUrl.toString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    clerk.openSignIn({ fallbackRedirectUrl: ret, signUpFallbackRedirectUrl: ret } as any);
   }
 
   function completeAuth() {
@@ -612,158 +547,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         )}
       </AnimatePresence>
 
-      {/* ── Inline email+OTP auth modal ── */}
-      <AnimatePresence>
-        {showSignIn && (
-          <motion.div
-            key="auth-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 10002,
-              background: "rgba(0,0,0,0.82)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "0 20px",
-            }}
-            onClick={(e) => { if (e.target === e.currentTarget) setShowSignIn(false); }}
-          >
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 18 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 8 }}
-              transition={{ type: "spring", stiffness: 340, damping: 30 }}
-              style={{
-                width: "100%", maxWidth: 360,
-                background: "radial-gradient(ellipse at 50% 0%, #1e0044 0%, #080010 75%)",
-                border: "1px solid rgba(168,85,247,0.35)",
-                borderRadius: 24,
-                padding: "28px 24px 24px",
-                fontFamily: "'Segoe UI', system-ui, sans-serif",
-              }}
-            >
-              {authStep === "email" ? (
-                <>
-                  <div style={{ textAlign: "center", marginBottom: 22 }}>
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>💌</div>
-                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 20, margin: "0 0 6px" }}>
-                      Sign in to HeartSync
-                    </h2>
-                    <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, margin: 0 }}>
-                      Enter your email — we'll send a one-time code
-                    </p>
-                  </div>
-                  <form onSubmit={handleAuthEmailSubmit}>
-                    <input
-                      type="email"
-                      value={authEmail}
-                      onChange={e => setAuthEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      autoFocus
-                      required
-                      disabled={authLoading}
-                      style={{
-                        width: "100%", boxSizing: "border-box",
-                        padding: "13px 14px",
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.13)",
-                        borderRadius: 12, color: "#fff", fontSize: 15,
-                        outline: "none", marginBottom: 10,
-                        opacity: authLoading ? 0.6 : 1,
-                      }}
-                    />
-                    {authError && (
-                      <p style={{ color: "#f87171", fontSize: 13, margin: "0 0 10px" }}>{authError}</p>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={authLoading || !authEmail.trim()}
-                      style={{
-                        width: "100%", padding: "14px",
-                        background: (authLoading || !authEmail.trim())
-                          ? "rgba(255,215,0,0.25)"
-                          : "linear-gradient(135deg, #FFD700, #f59e0b)",
-                        border: "none", borderRadius: 12,
-                        color: "#000", fontWeight: 800, fontSize: 15,
-                        cursor: (authLoading || !authEmail.trim()) ? "default" : "pointer",
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      {authLoading ? "Sending…" : "Send code →"}
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <>
-                  <div style={{ textAlign: "center", marginBottom: 22 }}>
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>📬</div>
-                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 20, margin: "0 0 6px" }}>
-                      Check your inbox
-                    </h2>
-                    <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, margin: 0 }}>
-                      Code sent to <span style={{ color: "rgba(255,255,255,0.75)" }}>{authEmail}</span>
-                    </p>
-                  </div>
-                  <form onSubmit={handleAuthOtpSubmit}>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={authOtp}
-                      onChange={e => setAuthOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="000000"
-                      autoFocus
-                      required
-                      disabled={authLoading}
-                      style={{
-                        width: "100%", boxSizing: "border-box",
-                        padding: "14px",
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.13)",
-                        borderRadius: 12, color: "#fff",
-                        fontSize: 28, letterSpacing: "0.4em", textAlign: "center",
-                        outline: "none", marginBottom: 10,
-                        opacity: authLoading ? 0.6 : 1,
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    />
-                    {authError && (
-                      <p style={{ color: "#f87171", fontSize: 13, margin: "0 0 10px" }}>{authError}</p>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={authLoading || authOtp.length < 6}
-                      style={{
-                        width: "100%", padding: "14px",
-                        background: (authLoading || authOtp.length < 6)
-                          ? "rgba(255,215,0,0.25)"
-                          : "linear-gradient(135deg, #FFD700, #f59e0b)",
-                        border: "none", borderRadius: 12,
-                        color: "#000", fontWeight: 800, fontSize: 15,
-                        cursor: (authLoading || authOtp.length < 6) ? "default" : "pointer",
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      {authLoading ? "Verifying…" : "Verify & continue →"}
-                    </button>
-                  </form>
-                  <button
-                    onClick={() => { setAuthStep("email"); setAuthOtp(""); setAuthError(null); }}
-                    style={{
-                      display: "block", width: "100%", textAlign: "center",
-                      marginTop: 14, fontSize: 12,
-                      color: "rgba(255,255,255,0.3)",
-                      background: "none", border: "none", cursor: "pointer",
-                    }}
-                  >
-                    ← Different email
-                  </button>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }
