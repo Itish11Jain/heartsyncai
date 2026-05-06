@@ -609,6 +609,29 @@ router.get("/events/analytics", async (req, res) => {
           params,
         ),
 
+        /* ── Card with photo vs without photo breakdown ──
+         * has_photo is stored directly on each event (set at tracking time).
+         * For events where has_photo is NULL (older data), we fall back to
+         * a LEFT JOIN to hs_cards to check photo_url on the stored card.
+         * COALESCE prefers the explicit flag over the JOIN result. */
+        pool.query(
+          `SELECT
+             COUNT(*) FILTER (WHERE e.event = 'card_created' AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_created,
+             COUNT(*) FILTER (WHERE e.event = 'card_created' AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_created,
+             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_shared,
+             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_shared,
+             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_viewed,
+             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_viewed
+           FROM (
+             SELECT event, card_id, has_photo
+             FROM hs_card_events
+             WHERE ${whereSql}
+               AND event IN ('card_created', 'card_shared', 'card_viewed')
+           ) e
+           LEFT JOIN hs_cards c ON e.card_id = c.id`,
+          params,
+        ),
+
         /* ── Recipient-card "Create your own card" CTA funnel ──
          * Measures the recipient → creator viral loop:
          *   - clicks   = total taps on the CTA at the end of a received card
@@ -635,29 +658,6 @@ router.get("/events/analytics", async (req, res) => {
                 WHERE e.event = 'card_created'
                   AND e.fingerprint IN (SELECT fingerprint FROM clickers)
                   AND ${whereSql})                                          AS cards_after_click`,
-          params,
-        ),
-
-        /* ── Card with photo vs without photo breakdown ──
-         * has_photo is stored directly on each event (set at tracking time).
-         * For events where has_photo is NULL (older data), we fall back to
-         * a LEFT JOIN to hs_cards to check photo_url on the stored card.
-         * COALESCE prefers the explicit flag over the JOIN result. */
-        pool.query(
-          `SELECT
-             COUNT(*) FILTER (WHERE e.event = 'card_created' AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_created,
-             COUNT(*) FILTER (WHERE e.event = 'card_created' AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_created,
-             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_shared,
-             COUNT(*) FILTER (WHERE e.event = 'card_shared'  AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_shared,
-             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND COALESCE(e.has_photo, c.photo_url IS NOT NULL))      AS photo_viewed,
-             COUNT(*) FILTER (WHERE e.event = 'card_viewed'  AND NOT COALESCE(e.has_photo, c.photo_url IS NOT NULL))  AS nophoto_viewed
-           FROM (
-             SELECT event, card_id, has_photo
-             FROM hs_card_events
-             WHERE ${whereSql}
-               AND event IN ('card_created', 'card_shared', 'card_viewed')
-           ) e
-           LEFT JOIN hs_cards c ON e.card_id = c.id`,
           params,
         ),
 
