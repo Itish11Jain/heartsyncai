@@ -131,9 +131,10 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         pendingShareTypeRef.current = stored as ShareType;
         sessionStorage.removeItem("hs_pending_share");
       }
+      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
       setShowBundlePaywall(true);
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, occasion, cardId]);
 
   function openSignInModal(action: "paywall" | "watermark") {
     pendingSignInActionRef.current = action;
@@ -185,6 +186,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     const action = pendingSignInActionRef.current;
     pendingSignInActionRef.current = null;
     if (action === "paywall") {
+      trackEvent({ event: "google_signin_completed", occasion, card_id: cardId });
+      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
       setShowBundlePaywall(true);
     } else if (action === "watermark") {
       void removeWatermarkFree();
@@ -214,6 +217,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
    */
   function gatedShare(type: ShareType, action: () => void) {
     if (hasPhoto && !isPremiumUser) {
+      trackEvent({ event: "photo_paywall_shown", occasion, card_id: cardId, channel: type });
       pendingShareTypeRef.current = type;
       setShowPhotoPaywall(true);
       return;

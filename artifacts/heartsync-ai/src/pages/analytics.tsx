@@ -38,6 +38,19 @@ type Overview = {
   continue_to_signin_users: string;
   share_without_photo_clicked: string;
   share_without_photo_users: string;
+  photo_paywall_shown: string;
+  photo_paywall_shown_users: string;
+  google_signin_completed: string;
+  google_signin_completed_users: string;
+  bundle_paywall_shown: string;
+  bundle_paywall_shown_users: string;
+  pay_now_clicked: string;
+  pay_now_clicked_users: string;
+  utr_entered: string;
+  utr_entered_users: string;
+  confirm_unlock_clicked: string;
+  confirm_unlock_clicked_users: string;
+  paywall_paid_users: string;
 };
 
 type Occasion = { occasion: string; cnt: string };
@@ -658,6 +671,44 @@ export default function Analytics() {
           <Stat label="Cards Created with Photo" value={String(data.photo_breakdown?.photo_created ?? 0)} sub="from Photo vs No-Photo" />
           <Stat label="Cards Viewed with Photo" value={String(data.photo_breakdown?.photo_viewed ?? 0)} sub="recipient views" />
         </div>
+
+        {/* ── Photo Paywall Funnel ── */}
+        {(() => {
+          const steps = [
+            { label: "Saw 'Share with Photo' popup", users: Number(o.photo_paywall_shown_users) },
+            { label: "Clicked 'Sign up & Unlock'", users: Number(o.signup_unlock_users) },
+            { label: "Clicked 'Continue with Google'", users: Number(o.continue_to_signin_users) },
+            { label: "Successfully signed up", users: Number(o.google_signin_completed_users) },
+            { label: "Saw payment paywall", users: Number(o.bundle_paywall_shown_users) },
+            { label: "Clicked 'Pay ₹49 Now'", users: Number(o.pay_now_clicked_users) },
+            { label: "Entered last 4 digits of UTR", users: Number(o.utr_entered_users) },
+            { label: "Clicked 'Confirm & Unlock'", users: Number(o.confirm_unlock_clicked_users) },
+            { label: "Payment confirmed (paid)", users: Number(o.paywall_paid_users) },
+          ];
+          return (
+            <>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Photo Paywall Funnel</h2>
+              <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 70px 80px", padding: "8px 14px", background: "rgba(255,215,0,0.06)", fontSize: 11, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                  <div>#</div><div>Step</div><div style={{ textAlign: "right" }}>Users</div><div style={{ textAlign: "right" }}>Conv.</div>
+                </div>
+                {steps.map((s, i) => {
+                  const prev = i === 0 ? null : steps[i - 1].users;
+                  const conv = prev != null && prev > 0 ? Math.round((s.users / prev) * 100) + "%" : "—";
+                  const isLast = s.label === "Payment confirmed (paid)";
+                  return (
+                    <div key={s.label} style={{ display: "grid", gridTemplateColumns: "24px 1fr 70px 80px", padding: "11px 14px", borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.06)", alignItems: "center", background: isLast ? "rgba(255,215,0,0.04)" : undefined }}>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 700 }}>{i + 1}</div>
+                      <div style={{ color: isLast ? "rgba(255,215,0,0.9)" : "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: isLast ? 700 : 400 }}>{s.label}</div>
+                      <div style={{ textAlign: "right", color: "#FFD700", fontWeight: 700, fontSize: 15 }}>{s.users}</div>
+                      <div style={{ textAlign: "right", fontSize: 12, color: conv === "—" ? "rgba(255,255,255,0.2)" : s.users === 0 ? "#f87171" : "#4ade80", fontWeight: 600 }}>{conv}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
 
         {/* ── Engagement ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Engagement</h2>

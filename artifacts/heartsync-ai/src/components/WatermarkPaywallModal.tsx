@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, useClerk } from "@clerk/react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -45,6 +46,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
   const [bundleUtrError, setBundleUtrError] = useState("");
   const [bundleLoading, setBundleLoading] = useState(false);
 
+  const utrFiredRef = useRef(false);
+
   useEffect(() => {
     if (stage !== "done-bundle" && stage !== "done-watermark") return;
     const t = setTimeout(() => onSuccess(), 2000);
@@ -61,6 +64,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
     if (!isValidUtr(bundleUtr)) return;
     if (!cardId) { setBundleUtrError("No card ID — close and try again from the card page."); return; }
     if (!isSignedIn) { clerk.openSignIn({ redirectUrl: window.location.href } as Parameters<typeof clerk.openSignIn>[0]); return; }
+    trackEvent({ event: "confirm_unlock_clicked", card_id: cardId });
     setBundleUtrError("");
     setBundleLoading(true);
     try {
@@ -107,6 +111,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
         }
       }
 
+      trackEvent({ event: "paywall_paid", card_id: cardId });
       setStage("done-bundle");
     } catch {
       setBundleUtrError("Submission failed. Please try again.");
@@ -252,7 +257,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                   {/* Pay Now CTA */}
                   <a
                     href={UPI_DEEP_LINK}
-                    onClick={() => setTimeout(() => setStage("utr"), 600)}
+                    onClick={() => { trackEvent({ event: "pay_now_clicked", card_id: cardId }); setTimeout(() => setStage("utr"), 600); }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", height: 52, borderRadius: 14,
@@ -305,6 +310,10 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                             ? "Don't use sequential (1234) or repeated (1111) codes — enter your actual last 4 digits."
                             : ""
                         );
+                        if (v.length === 4 && !isSequential(v) && !utrFiredRef.current) {
+                          utrFiredRef.current = true;
+                          trackEvent({ event: "utr_entered", card_id: cardId });
+                        }
                       }}
                       className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
                     />
