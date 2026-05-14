@@ -237,31 +237,9 @@ export default function UnlockModal({
                   </div>
                 </div>
 
-                <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 12 }}>
+                <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 18 }}>
                   This is what {recipientName} will experience ✨
                 </p>
-
-                {/* Benefits pills */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 18 }}>
-                  {[
-                    "🚫 No watermark",
-                    hasPhoto ? "📸 Photo included" : "✨ All templates",
-                    "🔒 Unlock forever",
-                  ].map((b) => (
-                    <div
-                      key={b}
-                      style={{
-                        background: "rgba(255,215,0,0.055)",
-                        border: "1px solid rgba(255,215,0,0.12)",
-                        borderRadius: 20, padding: "5px 12px",
-                        color: "rgba(255,255,255,0.62)",
-                        fontSize: 12, fontWeight: 500,
-                      }}
-                    >
-                      {b}
-                    </div>
-                  ))}
-                </div>
 
                 {/* Pay CTA */}
                 <motion.a
@@ -361,7 +339,7 @@ export default function UnlockModal({
                           of your<br />UPI transaction reference
                         </div>
 
-                        <div style={{ display: "flex", gap: 8, maxWidth: 270, margin: "0 auto" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 240, margin: "0 auto" }}>
                           <input
                             autoFocus
                             type="text"
@@ -376,11 +354,12 @@ export default function UnlockModal({
                             }}
                             onKeyDown={(e) => { if (e.key === "Enter") void handleConfirm(); }}
                             style={{
-                              flex: 1, height: 50, borderRadius: 12,
+                              width: "100%", height: 56, borderRadius: 14,
                               border: `1.5px solid ${utrError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.14)"}`,
                               background: "rgba(255,255,255,0.07)", color: "#fff",
-                              fontSize: 24, fontWeight: 700, textAlign: "center",
-                              letterSpacing: "0.25em", outline: "none", padding: "0 8px",
+                              fontSize: 28, fontWeight: 700, textAlign: "center",
+                              letterSpacing: "0.3em", outline: "none", padding: "0 12px",
+                              boxSizing: "border-box",
                               transition: "border-color 0.2s",
                             }}
                           />
@@ -389,18 +368,17 @@ export default function UnlockModal({
                             onClick={() => void handleConfirm()}
                             disabled={!isValidUtr(utr) || utrLoading}
                             style={{
-                              height: 50, paddingInline: 18, borderRadius: 12,
+                              width: "100%", height: 50, borderRadius: 14,
                               background: isValidUtr(utr) && !utrLoading
                                 ? "linear-gradient(135deg, #FFD700, #FFA500)"
                                 : "rgba(255,255,255,0.07)",
                               color: isValidUtr(utr) && !utrLoading ? "#000" : "rgba(255,255,255,0.2)",
-                              fontWeight: 700, fontSize: 14, border: "none",
+                              fontWeight: 800, fontSize: 15, border: "none",
                               cursor: isValidUtr(utr) && !utrLoading ? "pointer" : "default",
                               transition: "background 0.2s, color 0.2s",
-                              whiteSpace: "nowrap",
                             }}
                           >
-                            {utrLoading ? "…" : "Confirm"}
+                            {utrLoading ? "Verifying…" : "Confirm & Unlock 🔓"}
                           </motion.button>
                         </div>
 

@@ -1043,23 +1043,16 @@ export default function Card() {
 
   useEffect(() => {
     if (!isAutoplay || phase !== "orbs") return;
+    /* Use center of screen as particle origin so orb-pop effects still render */
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    const fakeRect = { left: cx, top: cy, right: cx, bottom: cy, width: 0, height: 0, x: cx, y: cy, toJSON: () => ({}) } as DOMRect;
     const timers = orbs.map((_, i) =>
-      setTimeout(() => {
-        setClickedOrbs(prev => {
-          const next = new Set(prev).add(i);
-          if (next.size === orbs.length) {
-            setTimeout(() => {
-              envelope.finale();
-              setPhase("finale");
-            }, 1200);
-          }
-          return next;
-        });
-      }, 600 + i * 600)
+      setTimeout(() => handleOrbClick(i, fakeRect), 600 + i * 600)
     );
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAutoplay, phase, orbs.length]);
+  }, [isAutoplay, phase, orbs.length, handleOrbClick]);
 
   const orbPositions = useMemo(() => orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;
