@@ -400,7 +400,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     data-uropay-environment="LIVE"
                     data-uropay-amount="49"
                     href="#"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
                     }}
                     style={{
