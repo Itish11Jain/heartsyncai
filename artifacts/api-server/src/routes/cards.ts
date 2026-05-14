@@ -358,6 +358,46 @@ router.patch("/cards/:id", async (req, res) => {
 });
 
 /**
+ * POST /api/cards/:id/pay-unlock
+ * No auth required. Accepts the last 4 digits of the UPI transaction,
+ * records the submission, and immediately marks the card as unlocked.
+ * Body: { utr: string }  (exactly 4 digits, non-sequential)
+ */
+router.post("/cards/:id/pay-unlock", async (req, res) => {
+  const { id } = req.params;
+  const { utr } = req.body as { utr?: unknown };
+
+  if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
+    res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
+    return;
+  }
+
+  const last4 = utr.trim();
+
+  try {
+    // Upsert a card row if it doesn't exist yet (anonymous users never POST /api/cards)
+    await pool.query(
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium)
+       VALUES ($1, FALSE, TRUE)
+       ON CONFLICT (id) DO UPDATE
+         SET is_watermarked = FALSE, is_premium = TRUE`,
+      [id],
+    );
+
+    // Record the last-4 for admin review
+    await pool.query(
+      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
+      [id, last4],
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[cards] POST /cards/:id/pay-unlock error", err);
+    res.status(500).json({ error: "internal_error", message: "Something went wrong. Please try again." });
+  }
+});
+
+/**
  * POST /api/cards/:id/remove-watermark
  * Requires Clerk auth + card ownership.
  * Body: { utr: string }

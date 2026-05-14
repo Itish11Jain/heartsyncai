@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth, useClerk } from "@clerk/react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/trackEvent";
@@ -37,9 +36,6 @@ interface Props {
 }
 
 export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode = "watermark" }: Props) {
-  const { isSignedIn, isLoaded, getToken } = useAuth();
-  const clerk = useClerk();
-
   const [stage, setStage] = useState<Stage>("paying");
 
   const [bundleUtr, setBundleUtr] = useState("");
@@ -63,54 +59,20 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
   const handleBundleSubmit = useCallback(async () => {
     if (!isValidUtr(bundleUtr)) return;
     if (!cardId) { setBundleUtrError("No card ID — close and try again from the card page."); return; }
-    if (!isSignedIn) { clerk.openSignIn({ redirectUrl: window.location.href } as Parameters<typeof clerk.openSignIn>[0]); return; }
     trackEvent({ event: "confirm_unlock_clicked", card_id: cardId });
     setBundleUtrError("");
     setBundleLoading(true);
     try {
-      const token = await getToken();
-      if (!token) { setBundleUtrError("Session expired — please refresh and try again."); return; }
-
-      const unlockRes = await fetch(`${BASE}/api/usage/template-unlock-utr`, {
+      const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ utr: bundleUtr.trim(), plan: "bundle" }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ utr: bundleUtr.trim() }),
       });
-      const unlockData = await unlockRes.json() as { ok?: boolean; message?: string };
-      if (!unlockRes.ok) {
-        setBundleUtrError(unlockData.message ?? "Submission failed. Please try again.");
+      const data = await res.json() as { ok?: boolean; message?: string };
+      if (!res.ok) {
+        setBundleUtrError(data.message ?? "Submission failed. Please try again.");
         return;
       }
-
-      const patchRes = await fetch(`${BASE}/api/cards/${cardId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ is_watermarked: false, is_premium: true }),
-      });
-      if (!patchRes.ok) {
-        if (patchRes.status === 403 || patchRes.status === 401) {
-          setBundleUtrError("Only the card sender can remove the watermark.");
-          return;
-        }
-        if (patchRes.status === 404) {
-          // Card was never saved to DB (created as a client-side tracking ID).
-          // Register it now so recipients see is_watermarked: false.
-          const p = new URLSearchParams(window.location.search);
-          const msgParam = p.get("msg");
-          await fetch(`${BASE}/api/cards`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              id: cardId,
-              template: p.get("template") ?? "envelope",
-              occasion: p.get("occasion") ?? undefined,
-              recipient_name: p.get("name") ?? undefined,
-              ...(msgParam ? { message_b64: msgParam } : {}),
-            }),
-          });
-        }
-      }
-
       trackEvent({ event: "paywall_paid", card_id: cardId });
       setStage("done-bundle");
     } catch {
@@ -118,7 +80,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
     } finally {
       setBundleLoading(false);
     }
-  }, [bundleUtr, cardId, isSignedIn, getToken, clerk]);
+  }, [bundleUtr, cardId]);
 
   return (
     <div
@@ -145,12 +107,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
           fontFamily: "'Segoe UI', system-ui, sans-serif",
         }}
       >
-        {!isLoaded ? (
-          <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
-            <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-          </div>
-        ) : (
-          <>
+        <>
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <button
@@ -337,7 +294,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     >
                       {bundleLoading
                         ? <><Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> Confirming…</>
-                        : <>{isSignedIn ? "Confirm & Unlock" : "Sign in to confirm →"} <ArrowRight style={{ width: 15, height: 15 }} /></>
+                        : <>Confirm & Unlock <ArrowRight style={{ width: 15, height: 15 }} /></>
                       }
                     </button>
 
@@ -350,7 +307,6 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
 
             </AnimatePresence>
           </>
-        )}
       </motion.div>
     </div>
   );

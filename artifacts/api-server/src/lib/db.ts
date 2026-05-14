@@ -119,5 +119,14 @@ export async function initDb(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS hs_wm_payments_user_idx ON hs_watermark_payments(clerk_user_id);
     CREATE INDEX IF NOT EXISTS hs_wm_payments_card_idx ON hs_watermark_payments(card_id);
+
+    -- Anonymous card unlock submissions (no auth required, last-4-digit UTR)
+    CREATE TABLE IF NOT EXISTS hs_card_unlock_submissions (
+      id         SERIAL PRIMARY KEY,
+      card_id    TEXT NOT NULL,
+      utr_last4  TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_card_unlock_card_idx ON hs_card_unlock_submissions(card_id);
   `);
 }
