@@ -62,6 +62,7 @@ export default function UnlockModal({
 
   const copyUpiId = useCallback(() => {
     navigator.clipboard.writeText(UPI_ID).then(() => {
+      setTimeout(() => setUtrVisible(true), 1800);
       setIdCopied(true);
       setTimeout(() => setIdCopied(false), 2500);
     }).catch(() => {});
@@ -345,64 +346,68 @@ export default function UnlockModal({
                 >
                   <AnimatePresence mode="wait">
                     {!utrVisible ? (
-                      /* Choose UPI app */
+                      /* UPI ID copy — only step before UTR entry */
                       <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-                          Choose your UPI app
+                        <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
+                          Pay ₹49 via any UPI app
                         </div>
-                        <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 12, marginBottom: 18, lineHeight: 1.5 }}>
-                          Pay ₹49 · come back &amp; enter last 4 digits
+                        <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 22, lineHeight: 1.6 }}>
+                          Open PhonePe / GPay / Paytm → Send to this UPI ID
                         </div>
 
-                        {/* App buttons */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
-                          {UPI_APPS.map((app) => (
-                            <motion.a
-                              key={app.label}
-                              href={app.scheme}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => trackEvent({ event: "upi_app_tapped", occasion, card_id: cardId, app: app.label })}
+                        {/* UPI ID copy box */}
+                        <div style={{
+                          background: "rgba(255,215,0,0.05)",
+                          border: "1.5px solid rgba(255,215,0,0.18)",
+                          borderRadius: 16, padding: "18px 16px 14px",
+                          marginBottom: 10,
+                        }}>
+                          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+                            UPI ID
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ flex: 1, color: "#fff", fontSize: 16, fontWeight: 700, letterSpacing: "0.03em", wordBreak: "break-all" }}>
+                              {UPI_ID}
+                            </div>
+                            <motion.button
+                              whileTap={{ scale: 0.92 }}
+                              onClick={copyUpiId}
                               style={{
-                                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                                height: 48, borderRadius: 14, textDecoration: "none",
-                                background: "rgba(255,255,255,0.06)",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                color: "#fff", fontWeight: 700, fontSize: 14,
+                                flexShrink: 0, height: 38, paddingInline: 18, borderRadius: 10,
+                                background: idCopied ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg,#FFD700,#FFA500)",
+                                border: "none",
+                                color: idCopied ? "#4ade80" : "#000",
+                                fontWeight: 800, fontSize: 13, cursor: "pointer",
+                                transition: "all 0.25s",
                               }}
                             >
-                              <span style={{ fontSize: 20 }}>{app.emoji}</span>
-                              {app.label}
-                            </motion.a>
-                          ))}
-                        </div>
-
-                        {/* Divider */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
-                          <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 11 }}>or pay to UPI ID</span>
-                          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
-                        </div>
-
-                        {/* UPI ID copy row */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "10px 14px" }}>
-                          <div style={{ flex: 1, color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: 600, letterSpacing: "0.02em", wordBreak: "break-all" }}>
-                            {UPI_ID}
+                              {idCopied ? "Copied ✓" : "Copy"}
+                            </motion.button>
                           </div>
-                          <motion.button
-                            whileTap={{ scale: 0.92 }}
-                            onClick={copyUpiId}
-                            style={{
-                              flexShrink: 0, height: 34, paddingInline: 14, borderRadius: 8,
-                              background: idCopied ? "rgba(34,197,94,0.18)" : "rgba(255,215,0,0.12)",
-                              border: `1px solid ${idCopied ? "rgba(34,197,94,0.35)" : "rgba(255,215,0,0.2)"}`,
-                              color: idCopied ? "#4ade80" : "#FFD700",
-                              fontWeight: 700, fontSize: 12, cursor: "pointer",
-                              transition: "all 0.2s",
-                            }}
-                          >
-                            {idCopied ? "Copied ✓" : "Copy"}
-                          </motion.button>
+
+                          {/* Trust line */}
+                          <div style={{
+                            marginTop: 12, paddingTop: 10,
+                            borderTop: "1px solid rgba(255,255,255,0.07)",
+                            display: "flex", alignItems: "center", gap: 6,
+                          }}>
+                            <span style={{ fontSize: 14 }}>🔐</span>
+                            <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, lineHeight: 1.5 }}>
+                              This belongs to <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>Saurabh</span> — Creator of HeartSync AI
+                            </span>
+                          </div>
                         </div>
+
+                        {idCopied && (
+                          <motion.p
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 6 }}
+                          >
+                            Taking you to payment confirmation…
+                          </motion.p>
+                        )}
                       </motion.div>
                     ) : (
                       /* UTR entry */
