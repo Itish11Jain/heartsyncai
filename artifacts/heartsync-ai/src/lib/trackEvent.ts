@@ -80,6 +80,7 @@ export type CardEventPayload = {
   recipient_name?: string;
   card_id?: string;
   has_photo?: boolean;
+  app?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;

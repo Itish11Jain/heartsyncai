@@ -1350,7 +1350,7 @@ export default function Card() {
             recipientName={recipientName}
             occasion={occasion}
             cardId={params.get("id") ?? ""}
-            phase={phase}
+            phase={phase as "envelope" | "opening" | "orbs" | "finale"}
           />
         </Suspense>
       )}
