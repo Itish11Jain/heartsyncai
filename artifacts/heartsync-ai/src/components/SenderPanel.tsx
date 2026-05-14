@@ -14,11 +14,13 @@ const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 const UPI_DEEP_LINK = "upi://pay?pa=8905158970@ptyes&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
 
-function isSequential(s: string) {
-  const d = s.split("").map(Number);
-  const asc  = d.every((n, i) => i === 0 || n === d[i - 1] + 1);
-  const desc = d.every((n, i) => i === 0 || n === d[i - 1] - 1);
-  return asc || desc;
+function isSequential(v: string): boolean {
+  const d = v.trim().split("").map(Number);
+  if (d.length !== 4) return false;
+  if (d.every(x => x === d[0])) return true; // repeated: 0000, 1111
+  if (d[1] === (d[0] + 1) % 10 && d[2] === (d[1] + 1) % 10 && d[3] === (d[2] + 1) % 10) return true; // ascending wrap
+  if (d[1] === (d[0] + 9) % 10 && d[2] === (d[1] + 9) % 10 && d[3] === (d[2] + 9) % 10) return true; // descending wrap
+  return false;
 }
 function isValidUtr(v: string) {
   const t = v.trim();
