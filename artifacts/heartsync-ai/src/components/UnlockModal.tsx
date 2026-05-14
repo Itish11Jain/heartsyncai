@@ -6,13 +6,20 @@
  * Phase 3 "success"  — celebration animation, then onSuccess() + onClose()
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-const UPI_DEEP_LINK =
-  "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+const UPI_ID = "9706900714@pthdfc";
+const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment`;
+
+const UPI_APPS = [
+  { label: "PhonePe", emoji: "💜", scheme: `phonepe://pay?${UPI_PARAMS}` },
+  { label: "GPay",    emoji: "🔵", scheme: `gpay://upi/pay?${UPI_PARAMS}` },
+  { label: "Paytm",   emoji: "🔷", scheme: `paytm://pay?${UPI_PARAMS}` },
+  { label: "BHIM",    emoji: "🟠", scheme: `bhim://pay?${UPI_PARAMS}` },
+];
 
 type ModalPhase = "preview" | "paying" | "success";
 
@@ -50,6 +57,14 @@ export default function UnlockModal({
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
+  const [idCopied, setIdCopied] = useState(false);
+
+  const copyUpiId = useCallback(() => {
+    navigator.clipboard.writeText(UPI_ID).then(() => {
+      setIdCopied(true);
+      setTimeout(() => setIdCopied(false), 2500);
+    }).catch(() => {});
+  }, []);
 
   const hasPhoto = (() => {
     try { return new URLSearchParams(window.location.search).has("personalpicture"); } catch { return false; }
@@ -242,8 +257,7 @@ export default function UnlockModal({
                 </p>
 
                 {/* Pay CTA */}
-                <motion.a
-                  href={UPI_DEEP_LINK}
+                <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
@@ -254,13 +268,13 @@ export default function UnlockModal({
                     width: "100%", height: 56, borderRadius: 16,
                     background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
                     color: "#000", fontWeight: 800, fontSize: 17,
-                    textDecoration: "none",
+                    border: "none", cursor: "pointer",
                     boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
                     marginBottom: 10,
                   }}
                 >
                   🔓 Pay ₹49 &amp; Share the card
-                </motion.a>
+                </motion.button>
               </motion.div>
             )}
 
@@ -300,30 +314,63 @@ export default function UnlockModal({
                 >
                   <AnimatePresence mode="wait">
                     {!utrVisible ? (
-                      /* Waiting for payment */
+                      /* Choose UPI app */
                       <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        <motion.div
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                          style={{ fontSize: 52, marginBottom: 16 }}
-                        >
-                          📱
-                        </motion.div>
-                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
-                          Opening UPI app…
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                          Choose your UPI app
                         </div>
-                        <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 13, lineHeight: 1.6 }}>
-                          Complete the ₹49 payment,<br />then come back here
+                        <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 12, marginBottom: 18, lineHeight: 1.5 }}>
+                          Pay ₹49 · come back &amp; enter last 4 digits
                         </div>
-                        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 22 }}>
-                          {[0, 0.22, 0.44].map((delay, i) => (
-                            <motion.div
-                              key={i}
-                              animate={{ opacity: [0.2, 1, 0.2] }}
-                              transition={{ duration: 1.2, repeat: Infinity, delay }}
-                              style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFD700" }}
-                            />
+
+                        {/* App buttons */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+                          {UPI_APPS.map((app) => (
+                            <motion.a
+                              key={app.label}
+                              href={app.scheme}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => trackEvent({ event: "upi_app_tapped", occasion, card_id: cardId, app: app.label })}
+                              style={{
+                                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                                height: 48, borderRadius: 14, textDecoration: "none",
+                                background: "rgba(255,255,255,0.06)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                color: "#fff", fontWeight: 700, fontSize: 14,
+                              }}
+                            >
+                              <span style={{ fontSize: 20 }}>{app.emoji}</span>
+                              {app.label}
+                            </motion.a>
                           ))}
+                        </div>
+
+                        {/* Divider */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+                          <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 11 }}>or pay to UPI ID</span>
+                          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+                        </div>
+
+                        {/* UPI ID copy row */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "10px 14px" }}>
+                          <div style={{ flex: 1, color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: 600, letterSpacing: "0.02em", wordBreak: "break-all" }}>
+                            {UPI_ID}
+                          </div>
+                          <motion.button
+                            whileTap={{ scale: 0.92 }}
+                            onClick={copyUpiId}
+                            style={{
+                              flexShrink: 0, height: 34, paddingInline: 14, borderRadius: 8,
+                              background: idCopied ? "rgba(34,197,94,0.18)" : "rgba(255,215,0,0.12)",
+                              border: `1px solid ${idCopied ? "rgba(34,197,94,0.35)" : "rgba(255,215,0,0.2)"}`,
+                              color: idCopied ? "#4ade80" : "#FFD700",
+                              fontWeight: 700, fontSize: 12, cursor: "pointer",
+                              transition: "all 0.2s",
+                            }}
+                          >
+                            {idCopied ? "Copied ✓" : "Copy"}
+                          </motion.button>
                         </div>
                       </motion.div>
                     ) : (
