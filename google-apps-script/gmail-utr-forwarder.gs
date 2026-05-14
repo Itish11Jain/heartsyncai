@@ -1,95 +1,83 @@
 /**
- * HeartSync AI — Gmail UTR Auto-Forwarder
+ * HeartSync AI — Gmail UTR Auto-Forwarder (final version)
  *
- * Watches your Gmail inbox for HDFC payment alert emails (₹49 credits),
- * extracts the 12-digit UPI Reference No., and POSTs it to the HeartSync
- * API so customers can unlock their cards instantly — fully automatic.
+ * Finds HDFC ₹49 credit emails, extracts the UPI Reference No.,
+ * and POSTs it to the HeartSync API so customers can unlock instantly.
+ *
+ * Uses PropertiesService to track processed message IDs so new payments
+ * in the same Gmail thread are never skipped.
  *
  * SETUP (one-time)
  * ────────────────
- * 1. Go to https://script.google.com — sign in with the Gmail that gets HDFC alerts
- * 2. Paste this entire file, replacing whatever is there. Save (Ctrl+S).
- * 3. Fill in HEARTSYNC_API_SECRET below (copy from Replit secrets → ADMIN_SECRET)
- * 4. Click Run → setupTrigger  (approve the Gmail permission popup)
- * 5. Done — fully automatic from here. Every new ₹49 credit is forwarded in ≤1 min.
- *
- * To retroactively process emails that were missed before this fix, run:
- *   reprocessPast()
- * once from the Apps Script editor (Run menu).
+ * 1. script.google.com → paste this file → save (Ctrl+S)
+ * 2. Fill in HEARTSYNC_API_SECRET below
+ * 3. Run → setupTrigger (approve Gmail permission)
+ * 4. Run → reprocessPast  (catches any missed past emails)
+ * Done — every new ₹49 credit is forwarded within 1 minute automatically.
  */
 
 var HEARTSYNC_API_URL    = "https://heartsync.in/api/internal/upi-payment";
 var HEARTSYNC_API_SECRET = "PASTE_YOUR_ADMIN_SECRET_HERE";  // ← fill this in
-var PROCESSED_LABEL      = "heartsync-processed";
 var AMOUNT_FILTER        = "49";
 
-// ─── Main function — runs every 1 minute via trigger ────────────────────────
+// ─── Main — runs every 1 minute ─────────────────────────────────────────────
 
 function checkHdfcEmails() {
-  var label = getOrCreateLabel(PROCESSED_LABEL);
-
-  // Search by sender + text that actually appears in HDFC credit emails.
-  // No "is:unread" — the email may already be read by the time the trigger fires.
-  // The "-label:heartsync-processed" prevents double-processing.
-  var query = '"UPI Reference No" "successfully credited" -label:' + PROCESSED_LABEL;
-  var threads = GmailApp.search(query, 0, 20);
-
+  // Search only for the unique phrase that appears in HDFC credit emails.
+  // No sender filter (HDFC uses hdfcbank.bank.in which breaks from: filters).
+  // No label filter — we track by message ID instead so threads work correctly.
+  var threads = GmailApp.search('"UPI Reference No"', 0, 20);
   threads.forEach(function(thread) {
     thread.getMessages().forEach(function(msg) {
-      processMessage(msg, label);
+      if (!isProcessed(msg.getId())) {
+        processMessage(msg);
+      }
     });
   });
 }
 
-// ─── Run once to catch emails missed before this fix ────────────────────────
+// ─── Reprocess past emails ───────────────────────────────────────────────────
 
 function reprocessPast() {
-  var label = getOrCreateLabel(PROCESSED_LABEL);
-  // Broader search — no label filter, looks at last 100 HDFC emails
-  var query = '"UPI Reference No" "successfully credited"';
-  var threads = GmailApp.search(query, 0, 100);
+  var threads = GmailApp.search('"UPI Reference No"', 0, 100);
+  Logger.log("Threads found: " + threads.length);
   var count = 0;
   threads.forEach(function(thread) {
     thread.getMessages().forEach(function(msg) {
-      // Skip already-labelled messages
-      var labels = msg.getThread().getLabels().map(function(l) { return l.getName(); });
-      if (labels.indexOf(PROCESSED_LABEL) === -1) {
-        processMessage(msg, label);
+      if (!isProcessed(msg.getId())) {
+        processMessage(msg);
         count++;
+      } else {
+        Logger.log("Already processed: " + msg.getId());
       }
     });
   });
-  Logger.log("reprocessPast complete — checked " + count + " unlabelled messages.");
+  Logger.log("reprocessPast complete — processed " + count + " new messages.");
 }
 
 // ─── Process a single email ──────────────────────────────────────────────────
 
-function processMessage(msg, processedLabel) {
+function processMessage(msg) {
   var body = msg.getPlainBody() || msg.getBody();
 
-  // Extract 12-digit UTR from "UPI Reference No.: 306164728586"
-  var utrMatch = body.match(/UPI Reference No\.?\s*[:\-]?\s*(\d{12})/i);
-  if (!utrMatch) {
-    // Fallback: older HDFC format
-    utrMatch = body.match(/UPI transaction reference number is\s*(\d{12})/i);
-  }
+  // Extract 12-digit UTR
+  var utrMatch = body.match(/UPI Reference No\.?\s*[:\-]?\s*(\d{12})/i)
+              || body.match(/UPI transaction reference number is\s*(\d{12})/i);
   if (!utrMatch) return;
   var utr = utrMatch[1];
 
-  // Extract amount — "Rs.49.00 has been successfully credited"
-  var amountMatch = body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+has been successfully credited/i);
-  if (!amountMatch) {
-    amountMatch = body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+is\s+successfully\s+credited/i);
-  }
+  // Extract amount
+  var amountMatch = body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+has been successfully credited/i)
+                 || body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+is\s+successfully\s+credited/i);
   if (!amountMatch) return;
 
   var amount = amountMatch[1].replace(/,/g, "");
   if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
     Logger.log("Skipping non-₹49 payment: Rs." + amount + " | UTR " + utr);
+    markProcessed(msg.getId());  // mark so we don't check again
     return;
   }
 
-  // POST to HeartSync API
   try {
     var response = UrlFetchApp.fetch(HEARTSYNC_API_URL, {
       method: "post",
@@ -101,8 +89,8 @@ function processMessage(msg, processedLabel) {
 
     var code = response.getResponseCode();
     if (code === 200 || code === 409) {
-      msg.getThread().addLabel(processedLabel);
-      Logger.log("✓ UTR " + utr + " stored. Customer can unlock with last 4 digits: " + utr.slice(-4));
+      markProcessed(msg.getId());
+      Logger.log("✓ UTR " + utr + " stored. Customer unlocks with last 4: " + utr.slice(-4));
     } else {
       Logger.log("✗ API error " + code + ": " + response.getContentText() + " | UTR: " + utr);
     }
@@ -111,21 +99,22 @@ function processMessage(msg, processedLabel) {
   }
 }
 
-// ─── One-time setup: 1-minute trigger ───────────────────────────────────────
+// ─── Message ID tracking (survives across trigger runs) ─────────────────────
+
+function isProcessed(msgId) {
+  return PropertiesService.getScriptProperties().getProperty("msg_" + msgId) === "1";
+}
+
+function markProcessed(msgId) {
+  PropertiesService.getScriptProperties().setProperty("msg_" + msgId, "1");
+}
+
+// ─── One-time setup ──────────────────────────────────────────────────────────
 
 function setupTrigger() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === "checkHdfcEmails") ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger("checkHdfcEmails").timeBased().everyMinutes(1).create();
-  getOrCreateLabel(PROCESSED_LABEL);
-  Logger.log("✓ Trigger created. checkHdfcEmails will run every 1 minute.");
-}
-
-// ─── Helper ──────────────────────────────────────────────────────────────────
-
-function getOrCreateLabel(name) {
-  var label = GmailApp.getUserLabelByName(name);
-  if (!label) label = GmailApp.createLabel(name);
-  return label;
+  Logger.log("✓ Trigger set — checkHdfcEmails runs every 1 minute.");
 }
