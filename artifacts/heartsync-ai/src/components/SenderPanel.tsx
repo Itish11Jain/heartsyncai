@@ -412,23 +412,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   textAlign: "center",
                 }}>
 
-                  {/* QR code */}
-                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", marginBottom: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                    Scan QR to pay ₹49
-                  </p>
-                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodeURIComponent(UPI_DEEP_LINK)}`}
-                      alt="UPI QR code — ₹49"
-                      width={150}
-                      height={150}
-                      style={{ borderRadius: 12, background: "#fff", display: "block" }}
-                    />
-                  </div>
-                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", marginBottom: 16 }}>
-                    On mobile? Tap the button below
-                  </p>
-
                   {/* UPI app deep link button */}
                   <a
                     href={UPI_DEEP_LINK}
@@ -438,15 +421,15 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      width: "100%", height: 50, borderRadius: 14,
+                      width: "100%", height: 52, borderRadius: 14,
                       background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                      color: "#000", fontWeight: 800, fontSize: 15,
+                      color: "#000", fontWeight: 800, fontSize: 16,
                       textDecoration: "none",
                       boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
                       marginBottom: upiTapped ? 20 : 0,
                     }}
                   >
-                    🔓 Open UPI App — ₹49
+                    🔓 Pay ₹49 &amp; Unlock the card
                   </a>
 
                   {/* Inline UTR confirmation — slides in after UPI button is tapped */}
