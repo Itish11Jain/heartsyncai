@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { getTemplate, getFallbackTemplate, type OrbData } from "@/lib/card-templates";
 import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
-import WatermarkBadge from "@/components/WatermarkBadge";
+
 import PolaroidFrame from "@/components/PolaroidFrame";
 
 /* Premium templates and sender auth features lazy-load only when needed.
@@ -1307,15 +1307,7 @@ export default function Card() {
         </motion.div>
       </Link>
 
-      {/* WatermarkBadge for recipients — no auth needed, hidden in finale */}
-      {!isSender && (
-        <WatermarkBadge
-          id={params.get("id")}
-          showRemoveCta={false}
-          prominent={false}
-          hidden={phase === "finale"}
-        />
-      )}
+      
 
       {/* SenderPanel: lazy-loads Clerk + share gate + badge + paywall — only for senders */}
       {isSender && (

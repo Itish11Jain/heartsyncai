@@ -6,7 +6,7 @@ import { useAuth, useClerk } from "@clerk/react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
-import WatermarkBadge from "@/components/WatermarkBadge";
+
 import WatermarkPaywallModal from "@/components/WatermarkPaywallModal";
 import ClerkAuthLayer from "@/components/ClerkAuthLayer";
 
@@ -324,14 +324,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   return (
     <>
-      {/* Watermark badge */}
-      <WatermarkBadge
-        id={cardId || undefined}
-        showRemoveCta={false}
-        prominent={false}
-        hidden={isPremiumUser || watermarkRemoved}
-      />
-
       {/* ── Sender share panel (finale only) ── */}
       {phase === "finale" && (
         <motion.div
