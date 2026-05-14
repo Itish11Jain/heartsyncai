@@ -1,0 +1,78 @@
+/**
+ * HeartSync AI — Gmail UTR Auto-Forwarder
+ */
+
+var HEARTSYNC_API_URL    = "https://heartsync.in/api/internal/upi-payment";
+var HEARTSYNC_API_SECRET = "Mahim@501@elanza";  // ← your ADMIN_SECRET
+var PROCESSED_LABEL      = "heartsync-processed";
+var AMOUNT_FILTER        = "49";
+
+function checkHdfcEmails() {
+  var label = getOrCreateLabel(PROCESSED_LABEL);
+var query = '"UPI Reference No" "successfully credited" -label:' + PROCESSED_LABEL;  var threads = GmailApp.search(query, 0, 20);
+  threads.forEach(function(thread) {
+    thread.getMessages().forEach(function(msg) { processMessage(msg, label); });
+  });
+}
+
+function reprocessPast() {
+  var label = getOrCreateLabel(PROCESSED_LABEL);
+var query = '"UPI Reference No" "successfully credited"';  var threads = GmailApp.search(query, 0, 100);
+  var count = 0;
+  threads.forEach(function(thread) {
+    thread.getMessages().forEach(function(msg) {
+      var labels = msg.getThread().getLabels().map(function(l) { return l.getName(); });
+      if (labels.indexOf(PROCESSED_LABEL) === -1) { processMessage(msg, label); count++; }
+    });
+  });
+  Logger.log("reprocessPast complete — checked " + count + " unlabelled messages.");
+}
+
+function processMessage(msg, processedLabel) {
+  var body = msg.getPlainBody() || msg.getBody();
+  var utrMatch = body.match(/UPI Reference No\.?\s*[:\-]?\s*(\d{12})/i)
+              || body.match(/UPI transaction reference number is\s*(\d{12})/i);
+  if (!utrMatch) return;
+  var utr = utrMatch[1];
+
+  var amountMatch = body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+has been successfully credited/i)
+                 || body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+is\s+successfully\s+credited/i);
+  if (!amountMatch) return;
+
+  var amount = amountMatch[1].replace(/,/g, "");
+  if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
+    Logger.log("Skipping non-₹49 payment: Rs." + amount + " | UTR " + utr);
+    return;
+  }
+
+  try {
+    var response = UrlFetchApp.fetch(HEARTSYNC_API_URL, {
+      method: "post", contentType: "application/json",
+      headers: { "Authorization": "Bearer " + HEARTSYNC_API_SECRET },
+      payload: JSON.stringify({ utr: utr, amount: amount, raw_sms: body.substring(0, 500) }),
+      muteHttpExceptions: true
+    });
+    var code = response.getResponseCode();
+    if (code === 200 || code === 409) {
+      msg.getThread().addLabel(processedLabel);
+      Logger.log("✓ UTR " + utr + " stored. Last 4: " + utr.slice(-4));
+    } else {
+      Logger.log("✗ API error " + code + ": " + response.getContentText());
+    }
+  } catch (e) { Logger.log("✗ Fetch error: " + e.message); }
+}
+
+function setupTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === "checkHdfcEmails") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("checkHdfcEmails").timeBased().everyMinutes(1).create();
+  getOrCreateLabel(PROCESSED_LABEL);
+  Logger.log("✓ Trigger set.");
+}
+
+function getOrCreateLabel(name) {
+  var label = GmailApp.getUserLabelByName(name);
+  if (!label) label = GmailApp.createLabel(name);
+  return label;
+}
