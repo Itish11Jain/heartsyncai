@@ -385,23 +385,44 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
 
 /**
  * POST /api/cards/:id/pay-unlock
- * No auth required. Accepts the last 4 digits of the UPI transaction,
- * records the submission, and immediately marks the card as unlocked.
- * Body: { utr: string }  (exactly 4 digits, non-sequential)
+ * No auth required. Accepts a 12-digit UPI transaction ID, verifies it
+ * against hs_received_payments (populated by the Android SMS forwarder),
+ * marks the UTR as used, and unlocks the card.
+ * Body: { utr: string }  (exactly 12 digits)
  */
 router.post("/cards/:id/pay-unlock", async (req, res) => {
   const { id } = req.params;
   const { utr } = req.body as { utr?: unknown };
 
-  if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
-    res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
+  if (typeof utr !== "string" || !/^\d{12}$/.test(utr.trim())) {
+    res.status(400).json({ error: "validation_error", message: "Enter your 12-digit UPI transaction ID." });
     return;
   }
 
-  const last4 = utr.trim();
+  const cleanUtr = utr.trim();
 
   try {
-    // Upsert a card row if it doesn't exist yet (anonymous users never POST /api/cards)
+    // Check hs_received_payments for a matching, unused UTR
+    const { rows } = await pool.query<{ id: number }>(
+      `SELECT id FROM hs_received_payments WHERE utr = $1 AND used_at IS NULL`,
+      [cleanUtr],
+    );
+
+    if (rows.length === 0) {
+      res.status(402).json({
+        error: "payment_not_verified",
+        message: "Payment not verified yet. Please double-check your 12-digit UTR and try again, or contact hello@heartsync.in",
+      });
+      return;
+    }
+
+    // Mark UTR as used to prevent reuse
+    await pool.query(
+      `UPDATE hs_received_payments SET used_at = NOW() WHERE utr = $1`,
+      [cleanUtr],
+    );
+
+    // Upsert card as unlocked
     await pool.query(
       `INSERT INTO hs_cards (id, is_watermarked, is_premium)
        VALUES ($1, FALSE, TRUE)
@@ -410,10 +431,10 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
       [id],
     );
 
-    // Record the last-4 for admin review
+    // Record submission for audit trail
     await pool.query(
       `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
-      [id, last4],
+      [id, cleanUtr.slice(-4)],
     );
 
     res.json({ ok: true });

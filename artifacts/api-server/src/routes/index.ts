@@ -10,6 +10,7 @@ import eventsRouter from "./events";
 import shareRouter from "./share";
 import cardsRouter from "./cards";
 import uploadRouter from "./upload";
+import internalRouter from "./internal";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(eventsRouter);
 router.use(shareRouter);
 router.use(cardsRouter);
 router.use(uploadRouter);
+router.use(internalRouter);
 
 export default router;

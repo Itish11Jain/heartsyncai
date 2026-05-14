@@ -6,7 +6,7 @@ import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-const UPI_DEEP_LINK = "upi://pay?pa=8905158970@ptyes&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+const UPI_DEEP_LINK = "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
 
 function qrUrl(size = 240) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(UPI_DEEP_LINK)}`;

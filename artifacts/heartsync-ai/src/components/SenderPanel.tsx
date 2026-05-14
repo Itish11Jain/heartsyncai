@@ -12,19 +12,19 @@ import ClerkAuthLayer from "@/components/ClerkAuthLayer";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-const UPI_DEEP_LINK = "upi://pay?pa=8905158970@ptyes&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+const UPI_DEEP_LINK = "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
 
 function isSequential(v: string): boolean {
   const d = v.trim().split("").map(Number);
-  if (d.length !== 4) return false;
-  if (d.every(x => x === d[0])) return true; // repeated: 0000, 1111
-  if (d[1] === (d[0] + 1) % 10 && d[2] === (d[1] + 1) % 10 && d[3] === (d[2] + 1) % 10) return true; // ascending wrap
-  if (d[1] === (d[0] + 9) % 10 && d[2] === (d[1] + 9) % 10 && d[3] === (d[2] + 9) % 10) return true; // descending wrap
-  return false;
+  if (d.length !== 12) return false;
+  if (d.every(x => x === d[0])) return true; // all same: 111111111111
+  const asc = d.every((x, i) => i === 0 || x === (d[i - 1]! + 1) % 10);
+  const desc = d.every((x, i) => i === 0 || x === (d[i - 1]! + 9) % 10);
+  return asc || desc;
 }
 function isValidUtr(v: string) {
   const t = v.trim();
-  return /^\d{4}$/.test(t) && !isSequential(t);
+  return /^\d{12}$/.test(t) && !isSequential(t);
 }
 
 type Phase = "envelope" | "opening" | "orbs" | "finale";
@@ -445,18 +445,18 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                       >
                         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
                           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginBottom: 10, lineHeight: 1.5 }}>
-                            Paid? Enter the last 4 digits of your UPI transaction ID
+                            Paid? Enter your 12-digit UPI transaction ID
                           </p>
                           <div style={{ display: "flex", gap: 8 }}>
                             <input
                               autoFocus
                               type="text"
                               inputMode="numeric"
-                              maxLength={4}
-                              placeholder="e.g. 4821"
+                              maxLength={12}
+                              placeholder="e.g. 612345678901"
                               value={utr}
                               onChange={e => {
-                                const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                const v = e.target.value.replace(/\D/g, "").slice(0, 12);
                                 setUtr(v);
                                 setUtrError(null);
                               }}

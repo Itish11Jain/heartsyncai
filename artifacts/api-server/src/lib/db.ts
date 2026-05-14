@@ -128,5 +128,16 @@ export async function initDb(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS hs_card_unlock_card_idx ON hs_card_unlock_submissions(card_id);
+
+    -- Confirmed UPI payments received via Android SMS forwarder
+    CREATE TABLE IF NOT EXISTS hs_received_payments (
+      id         SERIAL PRIMARY KEY,
+      utr        TEXT NOT NULL UNIQUE,
+      amount     TEXT,
+      raw_sms    TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      used_at    TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS hs_received_payments_utr_idx ON hs_received_payments(utr);
   `);
 }
