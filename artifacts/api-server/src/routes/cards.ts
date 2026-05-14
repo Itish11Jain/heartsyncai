@@ -358,6 +358,32 @@ router.patch("/cards/:id", async (req, res) => {
 });
 
 /**
+ * POST /api/cards/:id/payment-link-unlock
+ * No auth, no UTR needed. Called from the /payment-success page after a
+ * payment-gateway redirect confirms the customer has paid.
+ */
+router.post("/cards/:id/payment-link-unlock", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query(
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium)
+       VALUES ($1, FALSE, TRUE)
+       ON CONFLICT (id) DO UPDATE
+         SET is_watermarked = FALSE, is_premium = TRUE`,
+      [id],
+    );
+    await pool.query(
+      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
+      [id, "LINK"],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[cards] payment-link-unlock error", err);
+    res.status(500).json({ error: "internal_error", message: "Something went wrong. Please try again." });
+  }
+});
+
+/**
  * POST /api/cards/:id/pay-unlock
  * No auth required. Accepts the last 4 digits of the UPI transaction,
  * records the submission, and immediately marks the card as unlocked.
