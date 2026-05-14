@@ -195,8 +195,8 @@ export default function UnlockModal({
                     <div style={{ color: "#FFD700", fontWeight: 800, fontSize: 18 }}>
                       Unlock &amp; Share 💌
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.32)", fontSize: 12, marginTop: 2 }}>
-                      One-time ₹49 · yours forever
+                    <div style={{ color: "rgba(255,215,0,0.75)", fontSize: 13, marginTop: 3, fontWeight: 600, letterSpacing: "0.01em" }}>
+                      One-time ₹49 · yours forever ✨
                     </div>
                   </div>
                   <button
@@ -252,8 +252,8 @@ export default function UnlockModal({
                   </div>
                 </div>
 
-                <p style={{ textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)", marginBottom: 18 }}>
-                  This is what {recipientName} will experience ✨
+                <p style={{ textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.72)", marginBottom: 18, fontWeight: 600 }}>
+                  This is what <span style={{ color: "#FFD700" }}>{recipientName}</span> will experience ✨
                 </p>
 
                 {/* Pay CTA */}
