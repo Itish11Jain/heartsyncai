@@ -86,12 +86,9 @@ export default function UnlockModal({
   /* Auto-close after success animation */
   useEffect(() => {
     if (phase !== "success") return;
-    const t = setTimeout(() => {
-      onSuccess();
-      onClose();
-    }, 1800);
+    const t = setTimeout(() => { onSuccess(); }, 1800);
     return () => clearTimeout(t);
-  }, [phase, onSuccess, onClose]);
+  }, [phase, onSuccess]);
 
   async function handleConfirm() {
     const trimmed = utr.trim();

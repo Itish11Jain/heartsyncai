@@ -869,7 +869,7 @@ export default function Card() {
 
   /* ── background music ── */
   useEffect(() => {
-    if (isRecipient) {
+    if (isRecipient && !isAutoplay) {
       const cardId = params.get("id") ?? undefined;
       trackEvent({ event: "card_viewed", occasion, template: "envelope", recipient_name: recipientName, card_id: cardId });
     }
@@ -877,6 +877,7 @@ export default function Card() {
   }, []);
 
   useEffect(() => {
+    if (isAutoplay) return;
     music.start("envelope", occasion);
     return () => { music.stop(); };
   }, []);
