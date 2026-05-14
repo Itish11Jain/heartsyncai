@@ -12,6 +12,19 @@ import ClerkAuthLayer from "@/components/ClerkAuthLayer";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
+const UPI_DEEP_LINK = "upi://pay?pa=8905158970@ptyes&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+
+function isSequential(s: string) {
+  const d = s.split("").map(Number);
+  const asc  = d.every((n, i) => i === 0 || n === d[i - 1] + 1);
+  const desc = d.every((n, i) => i === 0 || n === d[i - 1] - 1);
+  return asc || desc;
+}
+function isValidUtr(v: string) {
+  const t = v.trim();
+  return /^\d{4}$/.test(t) && !isSequential(t);
+}
+
 type Phase = "envelope" | "opening" | "orbs" | "finale";
 type ShareType = "whatsapp" | "instagram" | "link";
 
@@ -31,10 +44,14 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [watermarkRemoved, setWatermarkRemoved] = useState(false);
   const [wmLoading, setWmLoading] = useState(false);
   const [wmError, setWmError] = useState<string | null>(null);
-  const [showPaywall, setShowPaywall] = useState(false);
   const [waCopied, setWaCopied] = useState(false);
   const [igCopied, setIgCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Inline UTR payment state
+  const [utr, setUtr] = useState("");
+  const [utrLoading, setUtrLoading] = useState(false);
+  const [utrError, setUtrError] = useState<string | null>(null);
 
   // Photo paywall state
   const [showPhotoPaywall, setShowPhotoPaywall] = useState(false);
@@ -312,6 +329,32 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }
 
+  /* Inline UTR submit — calls pay-unlock, sets watermarkRemoved on success. */
+  async function handleUtrSubmit() {
+    const trimmed = utr.trim();
+    if (!isValidUtr(trimmed) || utrLoading) return;
+    setUtrLoading(true);
+    setUtrError(null);
+    try {
+      const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ utr: trimmed }),
+      });
+      const data = await res.json() as { message?: string };
+      if (res.ok) {
+        trackEvent({ event: "card_paid", occasion, card_id: cardId });
+        setWatermarkRemoved(true);
+      } else {
+        setUtrError(data.message ?? "Verification failed. Try again.");
+      }
+    } catch {
+      setUtrError("Network error. Please try again.");
+    } finally {
+      setUtrLoading(false);
+    }
+  }
+
   /* After bundle payment succeeds: navigate to the share finale so all CTAs are visible. */
   function handleBundlePaywallSuccess() {
     setShowBundlePaywall(false);
@@ -344,7 +387,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         >
           <AnimatePresence mode="wait">
 
-            {/* ── LOCKED: Pay CTA ── */}
+            {/* ── LOCKED: Inline UPI Payment Panel ── */}
             {!isPremiumUser && !watermarkRemoved && (
               <motion.div
                 key="pay-cta"
@@ -354,7 +397,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                 transition={{ duration: 0.3 }}
               >
                 <p style={{ fontSize: 12, color: "rgba(255,215,0,0.55)", textAlign: "center", marginBottom: 14, fontWeight: 600, letterSpacing: "0.04em" }}>
-                  ✨ Your card is ready!
+                  ✨ Your card is ready — unlock it to share!
                 </p>
 
                 <div style={{
@@ -365,26 +408,93 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   backdropFilter: "blur(12px)",
                   textAlign: "center",
                 }}>
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => {
-                      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
-                      setShowPaywall(true);
-                    }}
+
+                  {/* QR code */}
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", marginBottom: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Scan QR to pay ₹49
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodeURIComponent(UPI_DEEP_LINK)}`}
+                      alt="UPI QR code — ₹49"
+                      width={150}
+                      height={150}
+                      style={{ borderRadius: 12, background: "#fff", display: "block" }}
+                    />
+                  </div>
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", marginBottom: 16 }}>
+                    On mobile? Tap the button below
+                  </p>
+
+                  {/* UPI app deep link button */}
+                  <a
+                    href={UPI_DEEP_LINK}
+                    onClick={() => trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId })}
                     style={{
-                      width: "100%", height: 52, borderRadius: 14,
-                      background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                      color: "#000", fontWeight: 800, fontSize: 16,
-                      border: "none", cursor: "pointer",
-                      boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", height: 50, borderRadius: 14,
+                      background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                      color: "#000", fontWeight: 800, fontSize: 15,
+                      textDecoration: "none",
+                      boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
+                      marginBottom: 20,
                     }}
                   >
-                    🔓 Pay ₹49 &amp; Unlock the card
-                  </motion.button>
-                  <p style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
-                    The card will be available for you to share immediately after payment.
-                  </p>
+                    🔓 Open UPI App — ₹49
+                  </a>
+
+                  {/* Inline UTR confirmation */}
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginBottom: 10, lineHeight: 1.5 }}>
+                      Already paid? Enter the last 4 digits of your UPI transaction
+                    </p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="e.g. 4821"
+                        value={utr}
+                        onChange={e => {
+                          const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          setUtr(v);
+                          setUtrError(null);
+                        }}
+                        onKeyDown={e => { if (e.key === "Enter") void handleUtrSubmit(); }}
+                        style={{
+                          flex: 1, height: 42, borderRadius: 10,
+                          border: `1.5px solid ${utrError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)"}`,
+                          background: "rgba(255,255,255,0.06)", color: "#fff",
+                          fontSize: 20, fontWeight: 700, textAlign: "center",
+                          letterSpacing: "0.2em", outline: "none", padding: "0 8px",
+                          transition: "border-color 0.2s",
+                        }}
+                      />
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => void handleUtrSubmit()}
+                        disabled={!isValidUtr(utr) || utrLoading}
+                        style={{
+                          height: 42, paddingInline: 16, borderRadius: 10,
+                          background: isValidUtr(utr) && !utrLoading
+                            ? "linear-gradient(135deg, #FFD700, #FFA500)"
+                            : "rgba(255,255,255,0.07)",
+                          color: isValidUtr(utr) && !utrLoading ? "#000" : "rgba(255,255,255,0.2)",
+                          fontWeight: 700, fontSize: 13, border: "none",
+                          cursor: isValidUtr(utr) && !utrLoading ? "pointer" : "default",
+                          transition: "background 0.2s, color 0.2s",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {utrLoading ? "…" : "Confirm"}
+                      </motion.button>
+                    </div>
+                    {utrError && (
+                      <p style={{ marginTop: 8, fontSize: 11, color: "#f87171", textAlign: "center" }}>
+                        {utrError}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
@@ -509,21 +619,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           </AnimatePresence>
         </motion.div>
       )}
-
-      {/* ── Pay ₹49 paywall modal ── */}
-      <AnimatePresence>
-        {showPaywall && (
-          <WatermarkPaywallModal
-            cardId={cardId}
-            onClose={() => setShowPaywall(false)}
-            onSuccess={() => {
-              setShowPaywall(false);
-              setWatermarkRemoved(true);
-            }}
-            mode="watermark"
-          />
-        )}
-      </AnimatePresence>
 
       {/* ── Photo paywall intercept modal ── */}
       <AnimatePresence>
