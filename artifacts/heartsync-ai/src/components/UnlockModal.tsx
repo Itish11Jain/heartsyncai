@@ -16,9 +16,9 @@ const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayme
 
 const UPI_APPS = [
   { label: "PhonePe", emoji: "💜", scheme: `phonepe://pay?${UPI_PARAMS}` },
-  { label: "GPay",    emoji: "🔵", scheme: `gpay://upi/pay?${UPI_PARAMS}` },
-  { label: "Paytm",   emoji: "🔷", scheme: `paytm://pay?${UPI_PARAMS}` },
-  { label: "BHIM",    emoji: "🟠", scheme: `bhim://pay?${UPI_PARAMS}` },
+  { label: "GPay",    emoji: "🔵", scheme: `tez://upi/pay?${UPI_PARAMS}` },
+  { label: "Paytm",   emoji: "🔷", scheme: `paytmmp://pay?${UPI_PARAMS}` },
+  { label: "BHIM",    emoji: "🟠", scheme: `upi://pay?${UPI_PARAMS}` },
 ];
 
 type ModalPhase = "preview" | "paying" | "success";
