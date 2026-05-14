@@ -165,7 +165,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
               >←</button>
               <div>
                 <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
-                  {mode === "photo" ? "Share with the photo included" : "Remove watermark"}
+                  {mode === "photo" ? "Share with the photo included" : "Unlock & share your card"}
                 </div>
                 <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 2 }}>
                   One-time ₹49 · instant unlock
