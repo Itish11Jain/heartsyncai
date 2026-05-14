@@ -51,6 +51,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [linkCopied, setLinkCopied] = useState(false);
 
   // Inline UTR payment state
+  const [upiTapped, setUpiTapped] = useState(false);
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
@@ -431,7 +432,10 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   {/* UPI app deep link button */}
                   <a
                     href={UPI_DEEP_LINK}
-                    onClick={() => trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId })}
+                    onClick={() => {
+                      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+                      setUpiTapped(true);
+                    }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", height: 50, borderRadius: 14,
@@ -439,64 +443,78 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                       color: "#000", fontWeight: 800, fontSize: 15,
                       textDecoration: "none",
                       boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
-                      marginBottom: 20,
+                      marginBottom: upiTapped ? 20 : 0,
                     }}
                   >
                     🔓 Open UPI App — ₹49
                   </a>
 
-                  {/* Inline UTR confirmation */}
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginBottom: 10, lineHeight: 1.5 }}>
-                      Already paid? Enter the last 4 digits of your UPI transaction
-                    </p>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={4}
-                        placeholder="e.g. 4821"
-                        value={utr}
-                        onChange={e => {
-                          const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          setUtr(v);
-                          setUtrError(null);
-                        }}
-                        onKeyDown={e => { if (e.key === "Enter") void handleUtrSubmit(); }}
-                        style={{
-                          flex: 1, height: 42, borderRadius: 10,
-                          border: `1.5px solid ${utrError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)"}`,
-                          background: "rgba(255,255,255,0.06)", color: "#fff",
-                          fontSize: 20, fontWeight: 700, textAlign: "center",
-                          letterSpacing: "0.2em", outline: "none", padding: "0 8px",
-                          transition: "border-color 0.2s",
-                        }}
-                      />
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => void handleUtrSubmit()}
-                        disabled={!isValidUtr(utr) || utrLoading}
-                        style={{
-                          height: 42, paddingInline: 16, borderRadius: 10,
-                          background: isValidUtr(utr) && !utrLoading
-                            ? "linear-gradient(135deg, #FFD700, #FFA500)"
-                            : "rgba(255,255,255,0.07)",
-                          color: isValidUtr(utr) && !utrLoading ? "#000" : "rgba(255,255,255,0.2)",
-                          fontWeight: 700, fontSize: 13, border: "none",
-                          cursor: isValidUtr(utr) && !utrLoading ? "pointer" : "default",
-                          transition: "background 0.2s, color 0.2s",
-                          whiteSpace: "nowrap",
-                        }}
+                  {/* Inline UTR confirmation — slides in after UPI button is tapped */}
+                  <AnimatePresence>
+                    {upiTapped && (
+                      <motion.div
+                        key="utr-section"
+                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                        animate={{ opacity: 1, height: "auto", marginTop: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        style={{ overflow: "hidden" }}
                       >
-                        {utrLoading ? "…" : "Confirm & Unlock"}
-                      </motion.button>
-                    </div>
-                    {utrError && (
-                      <p style={{ marginTop: 8, fontSize: 11, color: "#f87171", textAlign: "center" }}>
-                        {utrError}
-                      </p>
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
+                          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginBottom: 10, lineHeight: 1.5 }}>
+                            Paid? Enter the last 4 digits of your UPI transaction ID
+                          </p>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input
+                              autoFocus
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={4}
+                              placeholder="e.g. 4821"
+                              value={utr}
+                              onChange={e => {
+                                const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                setUtr(v);
+                                setUtrError(null);
+                              }}
+                              onKeyDown={e => { if (e.key === "Enter") void handleUtrSubmit(); }}
+                              style={{
+                                flex: 1, height: 42, borderRadius: 10,
+                                border: `1.5px solid ${utrError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)"}`,
+                                background: "rgba(255,255,255,0.06)", color: "#fff",
+                                fontSize: 20, fontWeight: 700, textAlign: "center",
+                                letterSpacing: "0.2em", outline: "none", padding: "0 8px",
+                                transition: "border-color 0.2s",
+                              }}
+                            />
+                            <motion.button
+                              whileTap={{ scale: 0.96 }}
+                              onClick={() => void handleUtrSubmit()}
+                              disabled={!isValidUtr(utr) || utrLoading}
+                              style={{
+                                height: 42, paddingInline: 16, borderRadius: 10,
+                                background: isValidUtr(utr) && !utrLoading
+                                  ? "linear-gradient(135deg, #FFD700, #FFA500)"
+                                  : "rgba(255,255,255,0.07)",
+                                color: isValidUtr(utr) && !utrLoading ? "#000" : "rgba(255,255,255,0.2)",
+                                fontWeight: 700, fontSize: 13, border: "none",
+                                cursor: isValidUtr(utr) && !utrLoading ? "pointer" : "default",
+                                transition: "background 0.2s, color 0.2s",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {utrLoading ? "…" : "Confirm & Unlock"}
+                            </motion.button>
+                          </div>
+                          {utrError && (
+                            <p style={{ marginTop: 8, fontSize: 11, color: "#f87171", textAlign: "center" }}>
+                              {utrError}
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
                     )}
-                  </div>
+                  </AnimatePresence>
                 </div>
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
