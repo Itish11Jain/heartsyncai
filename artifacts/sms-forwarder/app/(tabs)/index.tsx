@@ -30,10 +30,15 @@ interface ForwardedPayment {
 }
 
 function extractUtr(text: string): string | null {
+  // HDFC format: "...from VPA xxx (UPI 606009209619)"
+  const hdfcMatch = text.match(/\(UPI\s+(\d{12})\)/i);
+  if (hdfcMatch?.[1]) return hdfcMatch[1];
+  // Generic: after Ref/UTR keyword
   const refMatch = text.match(
-    /(?:UPI\s*Ref\s*(?:No\.?\s*)?|UTR\s*(?:No\.?\s*)?|Ref\s*(?:No\.?\s*)?|Txn\s*ID\s*:?\s*)(\d{12})/i,
+    /(?:UPI\s*Ref\s*(?:No\.?\s*)?|UTR\s*(?:No\.?\s*)?|Ref\s*(?:No\.?\s*)?)(\d{12})/i,
   );
   if (refMatch?.[1]) return refMatch[1];
+  // Fallback: first 12-digit sequence
   const numMatch = text.match(/\b(\d{12})\b/);
   return numMatch?.[1] ?? null;
 }

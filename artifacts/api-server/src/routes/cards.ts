@@ -385,41 +385,45 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
 
 /**
  * POST /api/cards/:id/pay-unlock
- * No auth required. Accepts a 12-digit UPI transaction ID, verifies it
- * against hs_received_payments (populated by the Android SMS forwarder),
- * marks the UTR as used, and unlocks the card.
- * Body: { utr: string }  (exactly 12 digits)
+ * No auth required. Accepts the last 4 digits of a UPI transaction ID,
+ * matches against hs_received_payments (populated by the Android SMS forwarder),
+ * marks the full UTR as used, and unlocks the card.
+ * Body: { utr: string }  (exactly 4 digits, non-sequential)
  */
 router.post("/cards/:id/pay-unlock", async (req, res) => {
   const { id } = req.params;
   const { utr } = req.body as { utr?: unknown };
 
-  if (typeof utr !== "string" || !/^\d{12}$/.test(utr.trim())) {
-    res.status(400).json({ error: "validation_error", message: "Enter your 12-digit UPI transaction ID." });
+  if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
+    res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
     return;
   }
 
-  const cleanUtr = utr.trim();
+  const last4 = utr.trim();
 
   try {
-    // Check hs_received_payments for a matching, unused UTR
-    const { rows } = await pool.query<{ id: number }>(
-      `SELECT id FROM hs_received_payments WHERE utr = $1 AND used_at IS NULL`,
-      [cleanUtr],
+    // Match against the last 4 digits of any unused received UTR
+    const { rows } = await pool.query<{ id: number; utr: string }>(
+      `SELECT id, utr FROM hs_received_payments
+       WHERE RIGHT(utr, 4) = $1 AND used_at IS NULL
+       ORDER BY created_at DESC LIMIT 1`,
+      [last4],
     );
 
     if (rows.length === 0) {
       res.status(402).json({
         error: "payment_not_verified",
-        message: "Payment not verified yet. Please double-check your 12-digit UTR and try again, or contact hello@heartsync.in",
+        message: "Payment not verified. Please check your last 4 digits and try again, or contact hello@heartsync.in",
       });
       return;
     }
 
-    // Mark UTR as used to prevent reuse
+    const matchedUtr = rows[0]!.utr;
+
+    // Mark the full UTR as used to prevent reuse
     await pool.query(
       `UPDATE hs_received_payments SET used_at = NOW() WHERE utr = $1`,
-      [cleanUtr],
+      [matchedUtr],
     );
 
     // Upsert card as unlocked
@@ -434,7 +438,7 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     // Record submission for audit trail
     await pool.query(
       `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
-      [id, cleanUtr.slice(-4)],
+      [id, last4],
     );
 
     res.json({ ok: true });
