@@ -811,6 +811,7 @@ export default function Card() {
   const isPreview = params.get("preview") === "1" || isSender;
   const isRecipient = !isSender && !isPreview;
   const directShare = params.get("direct_share") === "1";
+  const isAutoplay = params.get("autoplay") === "1";
   const personalPictureUrl = (() => {
     const raw = params.get("personalpicture");
     if (!raw) return null;
@@ -1030,6 +1031,34 @@ export default function Card() {
       return newClicked;
     });
   }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl]);
+
+  /* ── Autoplay mode: auto-advance all phases for the modal iframe preview ── */
+  useEffect(() => {
+    if (!isAutoplay || phase !== "envelope") return;
+    const t = setTimeout(handleUnlock, 1500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase]);
+
+  useEffect(() => {
+    if (!isAutoplay || phase !== "orbs") return;
+    const timers = orbs.map((_, i) =>
+      setTimeout(() => {
+        setClickedOrbs(prev => {
+          const next = new Set(prev).add(i);
+          if (next.size === orbs.length) {
+            setTimeout(() => {
+              envelope.finale();
+              setPhase("finale");
+            }, 1200);
+          }
+          return next;
+        });
+      }, 600 + i * 600)
+    );
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase, orbs.length]);
 
   const orbPositions = useMemo(() => orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;

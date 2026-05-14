@@ -55,6 +55,20 @@ export default function UnlockModal({
     try { return new URLSearchParams(window.location.search).has("personalpicture"); } catch { return false; }
   })();
 
+  /* Build the autoplay URL: current card page, sender stripped, autoplay=1 added.
+     This makes the iframe self-advance through envelope → opening → orbs → finale
+     without any touch input needed. */
+  const autoplayUrl = (() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      p.delete("sender");
+      p.set("autoplay", "1");
+      return `${window.location.origin}${window.location.pathname}?${p.toString()}`;
+    } catch {
+      return senderShareUrl;
+    }
+  })();
+
   /* Lock body scroll while open */
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -203,7 +217,7 @@ export default function UnlockModal({
                     }}
                   >
                     <iframe
-                      src={senderShareUrl}
+                      src={autoplayUrl}
                       title={`Card preview for ${recipientName}`}
                       sandbox="allow-scripts allow-same-origin"
                       scrolling="no"
