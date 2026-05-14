@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "9WYw3jzQdRE8hBSKpVznT"
 uri = "file://artifacts/sms-forwarder/assets/images/icon.png"
 type = "image"
 title = "sms forwarder icon"
+
+[[outputs]]
+id = "fDmbJv3aewQm22JAKoiDp"
+uri = "file://google-apps-script/gmail-utr-forwarder.txt"
+type = "text"
+title = "Gmail UTR Auto-Forwarder Script"
