@@ -8,24 +8,10 @@ import { trackEvent } from "@/lib/trackEvent";
 import { envelope } from "@/lib/audio";
 
 import WatermarkPaywallModal from "@/components/WatermarkPaywallModal";
+import UnlockModal from "@/components/UnlockModal";
 import ClerkAuthLayer from "@/components/ClerkAuthLayer";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-
-const UPI_DEEP_LINK = "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
-
-function isSequential(v: string): boolean {
-  const d = v.trim().split("").map(Number);
-  if (d.length !== 4) return false;
-  if (d.every(x => x === d[0])) return true; // repeated: 0000, 1111
-  if (d[1] === (d[0]! + 1) % 10 && d[2] === (d[1]! + 1) % 10 && d[3] === (d[2]! + 1) % 10) return true; // ascending wrap
-  if (d[1] === (d[0]! + 9) % 10 && d[2] === (d[1]! + 9) % 10 && d[3] === (d[2]! + 9) % 10) return true; // descending wrap
-  return false;
-}
-function isValidUtr(v: string) {
-  const t = v.trim();
-  return /^\d{4}$/.test(t) && !isSequential(t);
-}
 
 type Phase = "envelope" | "opening" | "orbs" | "finale";
 type ShareType = "whatsapp" | "instagram" | "link";
@@ -50,11 +36,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   const [igCopied, setIgCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  // Inline UTR payment state
-  const [upiTapped, setUpiTapped] = useState(false);
-  const [utr, setUtr] = useState("");
-  const [utrLoading, setUtrLoading] = useState(false);
-  const [utrError, setUtrError] = useState<string | null>(null);
+  // Unlock modal state
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
 
   // Photo paywall state
   const [showPhotoPaywall, setShowPhotoPaywall] = useState(false);
@@ -332,32 +315,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     }
   }
 
-  /* Inline UTR submit — calls pay-unlock, sets watermarkRemoved on success. */
-  async function handleUtrSubmit() {
-    const trimmed = utr.trim();
-    if (!isValidUtr(trimmed) || utrLoading) return;
-    setUtrLoading(true);
-    setUtrError(null);
-    try {
-      const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ utr: trimmed }),
-      });
-      const data = await res.json() as { message?: string };
-      if (res.ok) {
-        trackEvent({ event: "card_paid", occasion, card_id: cardId });
-        setWatermarkRemoved(true);
-      } else {
-        setUtrError(data.message ?? "Verification failed. Try again.");
-      }
-    } catch {
-      setUtrError("Network error. Please try again.");
-    } finally {
-      setUtrLoading(false);
-    }
-  }
-
   /* After bundle payment succeeds: navigate to the share finale so all CTAs are visible. */
   function handleBundlePaywallSuccess() {
     setShowBundlePaywall(false);
@@ -390,7 +347,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         >
           <AnimatePresence mode="wait">
 
-            {/* ── LOCKED: Inline UPI Payment Panel ── */}
+            {/* ── LOCKED: Unlock & Share CTA ── */}
             {!isPremiumUser && !watermarkRemoved && (
               <motion.div
                 key="pay-cta"
@@ -403,102 +360,20 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   ✨ Your card is ready — unlock it to share!
                 </p>
 
-                <div style={{
-                  background: "rgba(255,255,255,0.04)",
-                  borderRadius: 20,
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  padding: "20px 20px 22px",
-                  backdropFilter: "blur(12px)",
-                  textAlign: "center",
-                }}>
-
-                  {/* UPI app deep link button */}
-                  <a
-                    href={UPI_DEEP_LINK}
-                    onClick={() => {
-                      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
-                      setUpiTapped(true);
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      width: "100%", height: 52, borderRadius: 14,
-                      background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                      color: "#000", fontWeight: 800, fontSize: 16,
-                      textDecoration: "none",
-                      boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
-                      marginBottom: upiTapped ? 20 : 0,
-                    }}
-                  >
-                    🔓 Pay ₹49 &amp; Unlock the card
-                  </a>
-
-                  {/* Inline UTR confirmation — slides in after UPI button is tapped */}
-                  <AnimatePresence>
-                    {upiTapped && (
-                      <motion.div
-                        key="utr-section"
-                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                        animate={{ opacity: 1, height: "auto", marginTop: 0 }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        style={{ overflow: "hidden" }}
-                      >
-                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
-                          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginBottom: 10, lineHeight: 1.5 }}>
-                            Paid? Enter the last 4 digits of your UPI transaction ID
-                          </p>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            <input
-                              autoFocus
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={4}
-                              placeholder="e.g. 9619"
-                              value={utr}
-                              onChange={e => {
-                                const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                                setUtr(v);
-                                setUtrError(null);
-                              }}
-                              onKeyDown={e => { if (e.key === "Enter") void handleUtrSubmit(); }}
-                              style={{
-                                flex: 1, height: 42, borderRadius: 10,
-                                border: `1.5px solid ${utrError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)"}`,
-                                background: "rgba(255,255,255,0.06)", color: "#fff",
-                                fontSize: 20, fontWeight: 700, textAlign: "center",
-                                letterSpacing: "0.2em", outline: "none", padding: "0 8px",
-                                transition: "border-color 0.2s",
-                              }}
-                            />
-                            <motion.button
-                              whileTap={{ scale: 0.96 }}
-                              onClick={() => void handleUtrSubmit()}
-                              disabled={!isValidUtr(utr) || utrLoading}
-                              style={{
-                                height: 42, paddingInline: 16, borderRadius: 10,
-                                background: isValidUtr(utr) && !utrLoading
-                                  ? "linear-gradient(135deg, #FFD700, #FFA500)"
-                                  : "rgba(255,255,255,0.07)",
-                                color: isValidUtr(utr) && !utrLoading ? "#000" : "rgba(255,255,255,0.2)",
-                                fontWeight: 700, fontSize: 13, border: "none",
-                                cursor: isValidUtr(utr) && !utrLoading ? "pointer" : "default",
-                                transition: "background 0.2s, color 0.2s",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {utrLoading ? "…" : "Confirm & Unlock"}
-                            </motion.button>
-                          </div>
-                          {utrError && (
-                            <p style={{ marginTop: 8, fontSize: 11, color: "#f87171", textAlign: "center" }}>
-                              {utrError}
-                            </p>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowUnlockModal(true)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    width: "100%", height: 56, borderRadius: 16,
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                    color: "#000", fontWeight: 800, fontSize: 17,
+                    border: "none", cursor: "pointer",
+                    boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
+                  }}
+                >
+                  🔓 Unlock &amp; Share the card
+                </motion.button>
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
                   <Link href="/send">
@@ -622,6 +497,22 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           </AnimatePresence>
         </motion.div>
       )}
+
+      {/* ── Unlock & Share modal ── */}
+      <AnimatePresence>
+        {showUnlockModal && (
+          <UnlockModal
+            cardId={cardId}
+            recipientName={recipientName}
+            occasion={occasion}
+            onClose={() => setShowUnlockModal(false)}
+            onSuccess={() => {
+              setWatermarkRemoved(true);
+              setShowUnlockModal(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Photo paywall intercept modal ── */}
       <AnimatePresence>
