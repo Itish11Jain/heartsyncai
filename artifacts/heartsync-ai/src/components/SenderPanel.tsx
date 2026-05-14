@@ -362,7 +362,15 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowUnlockModal(true)}
+                  onClick={() => {
+                    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+                    if (isMobile) {
+                      setShowUnlockModal(true);
+                    } else {
+                      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+                      setShowBundlePaywall(true);
+                    }
+                  }}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     width: "100%", height: 56, borderRadius: 16,
@@ -498,13 +506,14 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         </motion.div>
       )}
 
-      {/* ── Unlock & Share modal ── */}
+      {/* ── Unlock & Share modal (mobile UPI flow) ── */}
       <AnimatePresence>
         {showUnlockModal && (
           <UnlockModal
             cardId={cardId}
             recipientName={recipientName}
             occasion={occasion}
+            senderShareUrl={senderShareUrl}
             onClose={() => setShowUnlockModal(false)}
             onSuccess={() => {
               setWatermarkRemoved(true);
