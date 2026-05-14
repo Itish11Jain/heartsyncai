@@ -57,6 +57,7 @@ export default function UnlockModal({
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
+  const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
   const [idCopied, setIdCopied] = useState(false);
 
   const copyUpiId = useCallback(() => {
@@ -110,24 +111,54 @@ export default function UnlockModal({
     if (!isValidUtr(trimmed) || utrLoading) return;
     setUtrLoading(true);
     setUtrError(null);
-    try {
-      const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ utr: trimmed }),
-      });
-      const data = (await res.json()) as { message?: string };
-      if (res.ok) {
-        trackEvent({ event: "card_paid", occasion, card_id: cardId });
-        setPhase("success");
-      } else {
-        setUtrError(data.message ?? "Verification failed. Please check your digits.");
-      }
-    } catch {
-      setUtrError("Network error. Please try again.");
-    } finally {
+
+    const TIMEOUT_S = 60;
+    const POLL_MS   = 3000;
+    const deadline  = Date.now() + TIMEOUT_S * 1000;
+
+    // Live countdown ticker
+    setUtrCountdown(TIMEOUT_S);
+    const ticker = setInterval(() => {
+      const remaining = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+      setUtrCountdown(remaining);
+    }, 1000);
+
+    const cleanup = () => {
+      clearInterval(ticker);
       setUtrLoading(false);
+      setUtrCountdown(null);
+    };
+
+    // Poll until success or timeout
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ utr: trimmed }),
+        });
+        if (res.ok) {
+          cleanup();
+          trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          setPhase("success");
+          return;
+        }
+        // 402 = UTR not in DB yet (payment pending) — keep polling. Any other error = stop.
+        if (res.status !== 402) {
+          const data = (await res.json()) as { message?: string };
+          cleanup();
+          setUtrError(data.message ?? "Verification failed. Please check your digits.");
+          return;
+        }
+      } catch {
+        // Network blip — keep trying until deadline
+      }
+      // Wait before next poll (but don't overshoot the deadline)
+      await new Promise<void>((r) => setTimeout(r, Math.min(POLL_MS, deadline - Date.now())));
     }
+
+    cleanup();
+    setUtrError("Payment not found yet. Please wait a moment and try again.");
   }
 
   /* ── Card iframe preview dimensions ──
@@ -425,7 +456,9 @@ export default function UnlockModal({
                               transition: "background 0.2s, color 0.2s",
                             }}
                           >
-                            {utrLoading ? "Verifying…" : "Confirm & Unlock 🔓"}
+                            {utrLoading
+                              ? `Checking payment… ${utrCountdown !== null ? `(${utrCountdown}s)` : ""}`
+                              : "Confirm & Unlock 🔓"}
                           </motion.button>
                         </div>
 
