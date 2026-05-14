@@ -73,6 +73,34 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       .catch(() => { /* ignore */ });
   }, [cardId]);
 
+  /* Load the UROPay embed script once. The SDK auto-enhances any element with
+   * [data-uropay-button-id] via its MutationObserver, so no manual init call needed. */
+  useEffect(() => {
+    const SCRIPT_SRC = "https://cdn.uropay.me/uropay-embed.min.js";
+    if (document.querySelector(`script[src="${SCRIPT_SRC}"]`)) return;
+    const script = document.createElement("script");
+    script.src = SCRIPT_SRC;
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
+  /* Listen for UROPay's CustomEvent "uropay:success" fired on document.
+   * When payment is confirmed, call the unlock endpoint and reveal share buttons. */
+  useEffect(() => {
+    if (!cardId) return;
+    const handler = async () => {
+      try {
+        const res = await fetch(`${BASE}/api/cards/${cardId}/payment-link-unlock`, { method: "POST" });
+        if (res.ok) {
+          trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          setWatermarkRemoved(true);
+        }
+      } catch { /* ignore — card status re-fetch on next load will correct state */ }
+    };
+    document.addEventListener("uropay:success", handler);
+    return () => document.removeEventListener("uropay:success", handler);
+  }, [cardId, occasion]);
+
   /* Call the free-removal API — no payment needed, just auth.
    * For anonymous cards (no DB row), we send the card's metadata in the
    * request body so the server can create the row and claim it for this user. */
@@ -365,23 +393,28 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   backdropFilter: "blur(12px)",
                   textAlign: "center",
                 }}>
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
+                  <a
+                    className="uropay-btn"
+                    data-uropay-api-key="MMRNI77Z2M4NQJ2UH3BZK1DKH5AWKRPE"
+                    data-uropay-button-id="LIMA930162"
+                    data-uropay-environment="LIVE"
+                    data-uropay-amount="49"
+                    href="#"
                     onClick={() => {
                       trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
-                      setShowPaywall(true);
                     }}
                     style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", height: 52, borderRadius: 14,
                       background: "linear-gradient(135deg, #FFD700, #FFA500)",
                       color: "#000", fontWeight: 800, fontSize: 16,
-                      border: "none", cursor: "pointer",
+                      textDecoration: "none", cursor: "pointer",
                       boxShadow: "0 4px 24px rgba(255,165,0,0.45)",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      border: "none",
                     }}
                   >
                     🔓 Pay ₹49 &amp; Unlock the card
-                  </motion.button>
+                  </a>
                   <p style={{ marginTop: 12, fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.5 }}>
                     The card will be available for you to share immediately after payment.
                   </p>
