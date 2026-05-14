@@ -31,7 +31,7 @@ function checkHdfcEmails() {
   // Search by sender + text that actually appears in HDFC credit emails.
   // No "is:unread" — the email may already be read by the time the trigger fires.
   // The "-label:heartsync-processed" prevents double-processing.
-  var query = 'from:(alerts@hdfcbank.com OR noreply@hdfcbank.com OR alerts@hdfcbank.net OR alerts@hdfcbank.bank.in) "UPI Reference No" -label:' + PROCESSED_LABEL;
+  var query = 'from:hdfcbank "UPI Reference No" "successfully credited" -label:' + PROCESSED_LABEL;
   var threads = GmailApp.search(query, 0, 20);
 
   threads.forEach(function(thread) {
@@ -46,7 +46,7 @@ function checkHdfcEmails() {
 function reprocessPast() {
   var label = getOrCreateLabel(PROCESSED_LABEL);
   // Broader search — no label filter, looks at last 100 HDFC emails
-  var query = 'from:(alerts@hdfcbank.com OR noreply@hdfcbank.com OR alerts@hdfcbank.net OR alerts@hdfcbank.bank.in) "UPI Reference No"';
+  var query = 'from:hdfcbank "UPI Reference No" "successfully credited"';
   var threads = GmailApp.search(query, 0, 100);
   var count = 0;
   threads.forEach(function(thread) {
