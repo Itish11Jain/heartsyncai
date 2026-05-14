@@ -488,7 +488,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {utrLoading ? "…" : "Confirm"}
+                        {utrLoading ? "…" : "Confirm & Unlock"}
                       </motion.button>
                     </div>
                     {utrError && (
