@@ -48,13 +48,17 @@ function checkHdfcEmails() {
 function processMessage(msg, processedLabel) {
   var body = msg.getPlainBody() || msg.getBody();
 
-  // Extract UTR — "Your UPI transaction reference number is 606009209619"
-  var utrMatch = body.match(/UPI transaction reference number is\s*(\d{12})/i);
+  // Extract UTR — "UPI Reference No.: 306164728586"
+  // Also handles older format "UPI transaction reference number is 306164728586"
+  var utrMatch = body.match(/UPI Reference No\.\s*[:\-]?\s*(\d{12})/i)
+               || body.match(/UPI transaction reference number is\s*(\d{12})/i);
   if (!utrMatch) return;
   var utr = utrMatch[1];
 
   // Only process ₹49 payments
-  var amountMatch = body.match(/Rs\.\s*([\d,]+(?:\.\d+)?)\s+is\s+successfully\s+credited/i);
+  // Handles "Rs.49.00 has been successfully credited" and "Rs. 49 is successfully credited"
+  var amountMatch = body.match(/Rs\.\s*([\d,]+(?:\.\d+)?)\s+has been successfully credited/i)
+                 || body.match(/Rs\.\s*([\d,]+(?:\.\d+)?)\s+is\s+successfully\s+credited/i);
   if (!amountMatch) return;
   var amount = amountMatch[1].replace(",", "");
   if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
