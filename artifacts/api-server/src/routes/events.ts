@@ -455,6 +455,7 @@ router.get("/events/analytics", async (req, res) => {
       photoBreakdown,
       recipientCtaFunnel,
       userCards,
+      paymentFunnel,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -674,6 +675,22 @@ router.get("/events/analytics", async (req, res) => {
            ORDER BY cards_used DESC, created_at DESC`,
           SUPERUSER_EMAILS,
         ),
+
+        /* ── Payment funnel ── 7 steps from card creation to sharing.
+         * Distinct fingerprints per step so we measure unique users, not
+         * event repetitions (a user could open the paywall multiple times). */
+        pool.query(
+          `SELECT
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_created')          AS step1_cards_created,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'bundle_paywall_shown')   AS step2_paywall_shown,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'pay_popup_cta_clicked')  AS step3_popup_clicked,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'upi_id_copied')          AS step4_upi_copied,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'payment_done_clicked')   AS step5_payment_done,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_paid')              AS step6_card_unlocked,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_shared')            AS step7_card_shared
+           FROM hs_card_events WHERE ${whereSql}`,
+          params,
+        ),
       ]);
 
     return res.json({
@@ -688,6 +705,7 @@ router.get("/events/analytics", async (req, res) => {
       photo_breakdown: photoBreakdown.rows[0] ?? null,
       recipient_cta_funnel: recipientCtaFunnel.rows[0] ?? { clicks: 0, unique_clickers: 0, cards_after_click: 0 },
       user_cards: userCards.rows,
+      payment_funnel: paymentFunnel.rows[0] ?? null,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });

@@ -77,7 +77,8 @@ export default function UnlockModal({
     clearUtrTimer();
     navigator.clipboard.writeText(UPI_ID).catch(() => {});
     setIdCopied(true);
-  }, [clearUtrTimer]);
+    trackEvent({ event: "upi_id_copied", occasion, card_id: cardId });
+  }, [clearUtrTimer, occasion, cardId]);
 
   const hasPhoto = (() => {
     try { return new URLSearchParams(window.location.search).has("personalpicture"); } catch { return false; }
@@ -113,6 +114,7 @@ export default function UnlockModal({
 
   async function handlePaymentDone() {
     if (autoLoading) return;
+    trackEvent({ event: "payment_done_clicked", occasion, card_id: cardId });
     setAutoLoading(true);
 
     const TIMEOUT_S = 60;
@@ -344,6 +346,7 @@ export default function UnlockModal({
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+                    trackEvent({ event: "pay_popup_cta_clicked", occasion, card_id: cardId });
                     setPhase("paying");
                   }}
                   style={{

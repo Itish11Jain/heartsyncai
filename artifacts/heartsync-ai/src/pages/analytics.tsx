@@ -61,6 +61,15 @@ type UtmRow = { source: string; sessions: string | number; cta_users: string | n
 type PhotoBreakdown = { photo_created: string; nophoto_created: string; photo_shared: string; nophoto_shared: string; photo_viewed: string; nophoto_viewed: string };
 type RecipientCtaFunnel = { clicks: number; unique_clickers: number; cards_after_click: number };
 type UserCardRow = { email: string; clerk_user_id: string; cards_used: string | number; created_at: string };
+type PaymentFunnelRow = {
+  step1_cards_created: string;
+  step2_paywall_shown: string;
+  step3_popup_clicked: string;
+  step4_upi_copied: string;
+  step5_payment_done: string;
+  step6_card_unlocked: string;
+  step7_card_shared: string;
+};
 
 type AnalyticsData = {
   overview: Overview;
@@ -74,6 +83,7 @@ type AnalyticsData = {
   photo_breakdown?: PhotoBreakdown | null;
   recipient_cta_funnel?: RecipientCtaFunnel;
   user_cards?: UserCardRow[];
+  payment_funnel?: PaymentFunnelRow | null;
   range?: { from: string | null; to: string | null };
 };
 
@@ -199,6 +209,9 @@ export default function Analytics() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /** Which top-level tab is active. */
+  const [activeTab, setActiveTab] = useState<"overview" | "payment_funnel">("overview");
+
   /** Current date filter applied to the dashboard. Defaults to "All time". */
   const [range, setRange] = useState<DateRange>({ from: null, to: null });
   /** Which preset (or "custom") is currently selected, for highlighting. */
@@ -318,6 +331,35 @@ export default function Analytics() {
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginBottom: 16 }}>
           Excluding superuser · Real users only
         </p>
+
+        {/* ── Tab switcher ── */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {(["overview", "payment_funnel"] as const).map((tab) => {
+            const label = tab === "overview" ? "Overview" : "💳 Payment Funnel";
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 999,
+                  border: `1px solid ${isActive ? "rgba(255,215,0,0.6)" : "rgba(255,255,255,0.12)"}`,
+                  background: isActive ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.04)",
+                  color: isActive ? "#FFD700" : "rgba(255,255,255,0.55)",
+                  fontWeight: isActive ? 700 : 500,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "all 0.15s",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* ── Date range filter ──
            Quick presets + custom from/to inputs. Applies to every panel
@@ -449,6 +491,82 @@ export default function Analytics() {
             </div>
           )}
         </div>
+
+        {activeTab === "payment_funnel" && (() => {
+          const pf = data.payment_funnel;
+          const steps: { label: string; key: keyof PaymentFunnelRow; color: string }[] = [
+            { label: "1 · Generated Card",               key: "step1_cards_created",  color: "#818cf8" },
+            { label: "2 · Pay & Unlock CTA clicked",     key: "step2_paywall_shown",  color: "#a78bfa" },
+            { label: "3 · 'Pay ₹49' button tapped",      key: "step3_popup_clicked",  color: "#c084fc" },
+            { label: "4 · UPI ID Copied",                key: "step4_upi_copied",     color: "#f472b6" },
+            { label: "5 · 'I've Paid' CTA clicked",      key: "step5_payment_done",   color: "#fb923c" },
+            { label: "6 · Card Unlocked",                key: "step6_card_unlocked",  color: "#facc15" },
+            { label: "7 · Shared (WA / Insta / Link)",   key: "step7_card_shared",    color: "#34d399" },
+          ];
+          const values = steps.map((s) => (pf ? Number(pf[s.key]) : 0));
+          const top = values[0] || 1;
+          return (
+            <div style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
+                Payment Funnel
+              </h2>
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginBottom: 16 }}>Unique users (distinct fingerprints) per step · {describeRange(range)}</p>
+              {!pf ? (
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>No data yet for this range.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {steps.map((step, i) => {
+                    const val = values[i];
+                    const prev = i > 0 ? values[i - 1] : null;
+                    const barPct = top > 0 ? Math.max(4, Math.round((val / top) * 100)) : 4;
+                    const dropPct = prev !== null && prev > 0 ? Math.round(((prev - val) / prev) * 100) : null;
+                    return (
+                      <div key={step.key} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: 500 }}>{step.label}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {dropPct !== null && (
+                              <span style={{ fontSize: 11, color: dropPct > 50 ? "#ef4444" : dropPct > 25 ? "#f59e0b" : "#34d399", fontWeight: 600, background: "rgba(0,0,0,0.25)", padding: "2px 7px", borderRadius: 99 }}>
+                                {dropPct > 0 ? `−${dropPct}%` : "0% drop"}
+                              </span>
+                            )}
+                            <span style={{ color: step.color, fontWeight: 800, fontSize: 22, lineHeight: 1 }}>{val.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${barPct}%`, background: step.color, borderRadius: 99, transition: "width 0.4s ease" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Summary conversion rate */}
+                  <div style={{ background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.25)", borderRadius: 12, padding: "14px 16px", marginTop: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "rgba(255,215,0,0.8)", fontSize: 13, fontWeight: 600 }}>Overall: Created → Shared</span>
+                      <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 20 }}>
+                        {top > 0 ? `${Math.round((values[6] / top) * 100)}%` : "—"}
+                        <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>
+                          ({values[6].toLocaleString()} / {values[0].toLocaleString()})
+                        </span>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                      <span style={{ color: "rgba(255,215,0,0.8)", fontSize: 13, fontWeight: 600 }}>Paywall → Unlocked</span>
+                      <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 20 }}>
+                        {values[1] > 0 ? `${Math.round((values[5] / values[1]) * 100)}%` : "—"}
+                        <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>
+                          ({values[5].toLocaleString()} / {values[1].toLocaleString()})
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {activeTab === "overview" && <>
 
         {/* ── Conversion Funnel ── */}
         <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Conversion Funnel</h2>
@@ -835,6 +953,8 @@ export default function Analytics() {
         <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 11, textAlign: "center" }}>
           HeartSync Admin · Data refreshed on page load
         </p>
+
+        </>}
       </div>
     </div>
   );
