@@ -452,6 +452,11 @@ export default function UnlockModal({
                           </div>
                         </div>
 
+                        {/* Subtext above CTA */}
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textAlign: "center", margin: "18px 0 6px", lineHeight: 1.5 }}>
+                          Only click this if you have made the payment successfully
+                        </p>
+
                         {/* Payment Done CTA — disabled until UPI ID is copied */}
                         <motion.button
                           whileTap={autoLoading || !idCopied ? {} : { scale: 0.97 }}
