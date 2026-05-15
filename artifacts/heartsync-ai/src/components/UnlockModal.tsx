@@ -64,7 +64,7 @@ export default function UnlockModal({
     navigator.clipboard.writeText(UPI_ID).then(() => {
       setIdCopied(true);
     }).catch(() => {});
-    setUtrVisible(true);
+    setTimeout(() => setUtrVisible(true), 2000);
   }, []);
 
   const hasPhoto = (() => {
