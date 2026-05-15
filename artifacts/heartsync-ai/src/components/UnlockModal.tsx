@@ -62,10 +62,9 @@ export default function UnlockModal({
 
   const copyUpiId = useCallback(() => {
     navigator.clipboard.writeText(UPI_ID).then(() => {
-      setTimeout(() => setUtrVisible(true), 1800);
       setIdCopied(true);
-      setTimeout(() => setIdCopied(false), 2500);
     }).catch(() => {});
+    setUtrVisible(true);
   }, []);
 
   const hasPhoto = (() => {
@@ -350,7 +349,9 @@ export default function UnlockModal({
                       <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
                         <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
-                          Pay via any UPI App
+                          Pay{" "}
+                          <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹49</span>
+                          {" "}via any UPI App
                         </div>
                         <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 22, lineHeight: 1.6 }}>
                           Open PhonePe / GPay / Paytm → Send to this UPI ID
@@ -399,15 +400,6 @@ export default function UnlockModal({
                           </div>
                         </div>
 
-                        {idCopied && (
-                          <motion.p
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 6 }}
-                          >
-                            Taking you to payment confirmation…
-                          </motion.p>
-                        )}
                       </motion.div>
                     ) : (
                       /* UTR entry */
