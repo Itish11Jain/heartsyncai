@@ -1,0 +1,115 @@
+/**
+ * HeartSync AI — Gmail UTR Auto-Forwarder (final version)
+ *
+ * Finds HDFC ₹49 credit emails, extracts the UPI Reference No.,
+ * and POSTs it to the HeartSync API so customers can unlock instantly.
+ *
+ * Uses PropertiesService to track processed message IDs so new payments
+ * in the same Gmail thread are never skipped.
+ *
+ * SETUP (one-time)
+ * ────────────────
+ * 1. script.google.com → paste this file → save (Ctrl+S)
+ * 2. Fill in HEARTSYNC_API_SECRET below
+ * 3. Run → setupTrigger (approve Gmail permission)
+ * 4. Run → reprocessPast  (catches any missed past emails)
+ * Done — every new ₹49 credit is forwarded within 1 minute automatically.
+ */
+
+var HEARTSYNC_API_URL    = "https://heartsync.in/api/internal/upi-payment";
+var HEARTSYNC_API_SECRET = "Mahim@501@elanza";  // ← fill this in
+var AMOUNT_FILTER        = "49";
+
+// ─── Main — runs every 1 minute ─────────────────────────────────────────────
+
+function checkHdfcEmails() {
+  var threads = GmailApp.search('"UPI Reference No"', 0, 20);
+  threads.forEach(function(thread) {
+    thread.getMessages().forEach(function(msg) {
+      if (!isProcessed(msg.getId())) {
+        processMessage(msg);
+      }
+    });
+  });
+}
+
+// ─── Reprocess past emails ───────────────────────────────────────────────────
+
+function reprocessPast() {
+  var threads = GmailApp.search('"UPI Reference No"', 0, 100);
+  Logger.log("Threads found: " + threads.length);
+  var count = 0;
+  threads.forEach(function(thread) {
+    thread.getMessages().forEach(function(msg) {
+      if (!isProcessed(msg.getId())) {
+        processMessage(msg);
+        count++;
+      } else {
+        Logger.log("Already processed: " + msg.getId());
+      }
+    });
+  });
+  Logger.log("reprocessPast complete — processed " + count + " new messages.");
+}
+
+// ─── Process a single email ──────────────────────────────────────────────────
+
+function processMessage(msg) {
+  var body = msg.getPlainBody() || msg.getBody();
+
+  var utrMatch = body.match(/UPI Reference No\.?\s*[:\-]?\s*(\d{12})/i)
+              || body.match(/UPI transaction reference number is\s*(\d{12})/i);
+  if (!utrMatch) return;
+  var utr = utrMatch[1];
+
+  var amountMatch = body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+has been successfully credited/i)
+                 || body.match(/Rs\.?\s*([\d,]+(?:\.\d+)?)\s+is\s+successfully\s+credited/i);
+  if (!amountMatch) return;
+
+  var amount = amountMatch[1].replace(/,/g, "");
+  if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
+    Logger.log("Skipping non-₹49 payment: Rs." + amount + " | UTR " + utr);
+    markProcessed(msg.getId());
+    return;
+  }
+
+  try {
+    var response = UrlFetchApp.fetch(HEARTSYNC_API_URL, {
+      method: "post",
+      contentType: "application/json",
+      headers: { "Authorization": "Bearer " + HEARTSYNC_API_SECRET },
+      payload: JSON.stringify({ utr: utr, amount: amount, raw_sms: body.substring(0, 500) }),
+      muteHttpExceptions: true
+    });
+
+    var code = response.getResponseCode();
+    if (code === 200 || code === 409) {
+      markProcessed(msg.getId());
+      Logger.log("✓ UTR " + utr + " stored. Customer unlocks with last 4: " + utr.slice(-4));
+    } else {
+      Logger.log("✗ API error " + code + ": " + response.getContentText() + " | UTR: " + utr);
+    }
+  } catch (e) {
+    Logger.log("✗ Fetch error: " + e.message);
+  }
+}
+
+// ─── Message ID tracking (survives across trigger runs) ─────────────────────
+
+function isProcessed(msgId) {
+  return PropertiesService.getScriptProperties().getProperty("msg_" + msgId) === "1";
+}
+
+function markProcessed(msgId) {
+  PropertiesService.getScriptProperties().setProperty("msg_" + msgId, "1");
+}
+
+// ─── One-time setup ──────────────────────────────────────────────────────────
+
+function setupTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === "checkHdfcEmails") ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger("checkHdfcEmails").timeBased().everyMinutes(1).create();
+  Logger.log("✓ Trigger set — checkHdfcEmails runs every 1 minute.");
+}
