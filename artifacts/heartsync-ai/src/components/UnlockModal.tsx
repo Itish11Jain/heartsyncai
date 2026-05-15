@@ -141,6 +141,9 @@ export default function UnlockModal({
         if (res.ok) {
           cleanup();
           trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
+            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 49.00, currency: "INR" });
+          }
           setPhase("success");
           return;
         }
@@ -194,6 +197,9 @@ export default function UnlockModal({
         if (res.ok) {
           cleanup();
           trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
+            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 49.00, currency: "INR" });
+          }
           setPhase("success");
           return;
         }
