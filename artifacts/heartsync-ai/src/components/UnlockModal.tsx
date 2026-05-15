@@ -243,7 +243,7 @@ export default function UnlockModal({
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
         style={{
           width: "100%",
-          maxWidth: 440,
+          maxWidth: 480,
           background:
             "radial-gradient(ellipse at 50% 0%, #1a003a 0%, #0a0014 55%, #04000c 100%)",
           border: "1px solid rgba(255,215,0,0.12)",
@@ -453,7 +453,7 @@ export default function UnlockModal({
                         </div>
 
                         {/* Subtext above CTA */}
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textAlign: "center", margin: "18px 0 6px", lineHeight: 1.5 }}>
+                        <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "14px 0 4px", whiteSpace: "nowrap", fontWeight: 600 }}>
                           {autoLoading
                             ? "Please make a payment of ₹49 now if you have not done yet."
                             : "Only click this if you have made the payment successfully"}
