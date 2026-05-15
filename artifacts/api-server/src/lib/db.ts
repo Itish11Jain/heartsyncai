@@ -122,22 +122,28 @@ export async function initDb(): Promise<void> {
 
     -- Anonymous card unlock submissions (no auth required, last-4-digit UTR)
     CREATE TABLE IF NOT EXISTS hs_card_unlock_submissions (
-      id         SERIAL PRIMARY KEY,
-      card_id    TEXT NOT NULL,
-      utr_last4  TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
+      id             SERIAL PRIMARY KEY,
+      card_id        TEXT NOT NULL,
+      utr_last4      TEXT NOT NULL,
+      created_at     TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS hs_card_unlock_card_idx ON hs_card_unlock_submissions(card_id);
+    ALTER TABLE hs_card_unlock_submissions ADD COLUMN IF NOT EXISTS full_utr TEXT;
+    ALTER TABLE hs_card_unlock_submissions ADD COLUMN IF NOT EXISTS unlock_method TEXT;
 
-    -- Confirmed UPI payments received via Android SMS forwarder
+    -- Confirmed UPI payments received via Gmail/SMS forwarder
     CREATE TABLE IF NOT EXISTS hs_received_payments (
-      id         SERIAL PRIMARY KEY,
-      utr        TEXT NOT NULL UNIQUE,
-      amount     TEXT,
-      raw_sms    TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      used_at    TIMESTAMPTZ
+      id             SERIAL PRIMARY KEY,
+      utr            TEXT NOT NULL UNIQUE,
+      amount         TEXT,
+      raw_sms        TEXT,
+      created_at     TIMESTAMPTZ DEFAULT NOW(),
+      used_at        TIMESTAMPTZ,
+      card_id        TEXT,
+      unlock_method  TEXT
     );
     CREATE INDEX IF NOT EXISTS hs_received_payments_utr_idx ON hs_received_payments(utr);
+    ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS card_id TEXT;
+    ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS unlock_method TEXT;
   `);
 }

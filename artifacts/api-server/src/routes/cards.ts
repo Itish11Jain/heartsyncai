@@ -407,7 +407,10 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
 
     const matchedUtr = rows[0]!.utr;
 
-    await pool.query(`UPDATE hs_received_payments SET used_at = NOW() WHERE utr = $1`, [matchedUtr]);
+    await pool.query(
+      `UPDATE hs_received_payments SET used_at = NOW(), card_id = $2, unlock_method = 'auto_unlock' WHERE utr = $1`,
+      [matchedUtr, id],
+    );
 
     await pool.query(
       `INSERT INTO hs_cards (id, is_watermarked, is_premium)
@@ -416,11 +419,24 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
       [id],
     );
 
+    const cardRow = await pool.query<{ occasion: string }>(
+      `SELECT occasion FROM hs_cards WHERE id = $1`,
+      [id],
+    );
+    const occasion = cardRow.rows[0]?.occasion ?? null;
+
     await pool.query(
-      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
-      [id, matchedUtr.slice(-4)],
+      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4, full_utr, unlock_method) VALUES ($1, $2, $3, 'auto_unlock')`,
+      [id, matchedUtr.slice(-4), matchedUtr],
     );
 
+    await pool.query(
+      `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel)
+       VALUES ('card_paid', $1, $2, 'server', 'auto_unlock')`,
+      [id, occasion],
+    );
+
+    console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/auto-unlock error", err);
@@ -465,10 +481,10 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
 
     const matchedUtr = rows[0]!.utr;
 
-    // Mark the full UTR as used to prevent reuse
+    // Mark the full UTR as used, record which card and method consumed it
     await pool.query(
-      `UPDATE hs_received_payments SET used_at = NOW() WHERE utr = $1`,
-      [matchedUtr],
+      `UPDATE hs_received_payments SET used_at = NOW(), card_id = $2, unlock_method = 'manual_utr' WHERE utr = $1`,
+      [matchedUtr, id],
     );
 
     // Upsert card as unlocked
@@ -480,12 +496,26 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
       [id],
     );
 
-    // Record submission for audit trail
+    const cardRow = await pool.query<{ occasion: string }>(
+      `SELECT occasion FROM hs_cards WHERE id = $1`,
+      [id],
+    );
+    const occasion = cardRow.rows[0]?.occasion ?? null;
+
+    // Record submission with full UTR and method for audit trail
     await pool.query(
-      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
-      [id, last4],
+      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4, full_utr, unlock_method) VALUES ($1, $2, $3, 'manual_utr')`,
+      [id, last4, matchedUtr],
     );
 
+    // Server-side card_paid event — recorded even if the client closes the page
+    await pool.query(
+      `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel)
+       VALUES ('card_paid', $1, $2, 'server', 'manual_utr')`,
+      [id, occasion],
+    );
+
+    console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/pay-unlock error", err);
