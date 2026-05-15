@@ -6,7 +6,7 @@
  * Phase 3 "success"  — celebration animation, then onSuccess() + onClose()
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 
@@ -59,13 +59,27 @@ export default function UnlockModal({
   const [utrError, setUtrError] = useState<string | null>(null);
   const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
   const [idCopied, setIdCopied] = useState(false);
+  const utrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearUtrTimer = useCallback(() => {
+    if (utrTimerRef.current !== null) {
+      clearTimeout(utrTimerRef.current);
+      utrTimerRef.current = null;
+    }
+  }, []);
+
+  // Clear timer on unmount
+  useEffect(() => clearUtrTimer, [clearUtrTimer]);
 
   const copyUpiId = useCallback(() => {
-    navigator.clipboard.writeText(UPI_ID).then(() => {
-      setIdCopied(true);
-    }).catch(() => {});
-    setTimeout(() => setUtrVisible(true), 2000);
-  }, []);
+    clearUtrTimer();
+    navigator.clipboard.writeText(UPI_ID).catch(() => {});
+    setIdCopied(true);
+    utrTimerRef.current = setTimeout(() => {
+      utrTimerRef.current = null;
+      setUtrVisible(true);
+    }, 2000);
+  }, [clearUtrTimer]);
 
   const hasPhoto = (() => {
     try { return new URLSearchParams(window.location.search).has("personalpicture"); } catch { return false; }
@@ -320,7 +334,7 @@ export default function UnlockModal({
                 {/* Back header */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
                   <button
-                    onClick={() => { setPhase("preview"); setUtrVisible(false); setUtr(""); setUtrError(null); }}
+                    onClick={() => { clearUtrTimer(); setPhase("preview"); setUtrVisible(false); setIdCopied(false); setUtr(""); setUtrError(null); }}
                     style={{
                       width: 32, height: 32, borderRadius: "50%",
                       border: "1px solid rgba(255,255,255,0.12)",
