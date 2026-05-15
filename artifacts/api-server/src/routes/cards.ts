@@ -432,8 +432,8 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
 
     await pool.query(
       `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel)
-       VALUES ('card_paid', $1, $2, 'server', 'auto_unlock')`,
-      [id, occasion],
+       VALUES ('card_paid', $1, $2, $3, 'auto_unlock')`,
+      [id, occasion, `srv_${id}`],
     );
 
     console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
@@ -511,8 +511,8 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     // Server-side card_paid event — recorded even if the client closes the page
     await pool.query(
       `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel)
-       VALUES ('card_paid', $1, $2, 'server', 'manual_utr')`,
-      [id, occasion],
+       VALUES ('card_paid', $1, $2, $3, 'manual_utr')`,
+      [id, occasion, `srv_${id}`],
     );
 
     console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);

@@ -686,7 +686,7 @@ router.get("/events/analytics", async (req, res) => {
              COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'pay_popup_cta_clicked')  AS step3_popup_clicked,
              COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'upi_id_copied')          AS step4_upi_copied,
              COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'payment_done_clicked')   AS step5_payment_done,
-             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_paid')              AS step6_card_unlocked,
+             COUNT(DISTINCT NULLIF(card_id,''))     FILTER (WHERE event = 'card_paid')              AS step6_card_unlocked,
              COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'card_shared')            AS step7_card_shared
            FROM hs_card_events WHERE ${whereSql}`,
           params,
