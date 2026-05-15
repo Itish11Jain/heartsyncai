@@ -350,7 +350,7 @@ export default function UnlockModal({
                       <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
                         <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
-                          Pay ₹49 via any UPI app
+                          Pay via any UPI App
                         </div>
                         <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 22, lineHeight: 1.6 }}>
                           Open PhonePe / GPay / Paytm → Send to this UPI ID
