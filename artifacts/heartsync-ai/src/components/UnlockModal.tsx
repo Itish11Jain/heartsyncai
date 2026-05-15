@@ -452,27 +452,31 @@ export default function UnlockModal({
                           </div>
                         </div>
 
-                        {/* Payment Done CTA */}
+                        {/* Payment Done CTA — disabled until UPI ID is copied */}
                         <motion.button
-                          whileTap={autoLoading ? {} : { scale: 0.97 }}
-                          onClick={() => void handlePaymentDone()}
-                          disabled={autoLoading}
+                          whileTap={autoLoading || !idCopied ? {} : { scale: 0.97 }}
+                          onClick={() => { if (idCopied && !autoLoading) void handlePaymentDone(); }}
+                          disabled={autoLoading || !idCopied}
                           style={{
                             width: "100%", height: 54, borderRadius: 16, marginTop: 18,
                             background: autoLoading
                               ? "rgba(255,215,0,0.15)"
-                              : "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
-                            color: autoLoading ? "rgba(255,215,0,0.7)" : "#000",
+                              : idCopied
+                                ? "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)"
+                                : "rgba(255,255,255,0.06)",
+                            color: autoLoading
+                              ? "rgba(255,215,0,0.7)"
+                              : idCopied ? "#000" : "rgba(255,255,255,0.2)",
                             fontWeight: 800, fontSize: 16,
-                            border: autoLoading ? "1px solid rgba(255,215,0,0.25)" : "none",
-                            cursor: autoLoading ? "default" : "pointer",
-                            boxShadow: autoLoading ? "none" : "0 6px 24px rgba(255,165,0,0.35)",
-                            transition: "all 0.25s",
+                            border: idCopied && !autoLoading ? "none" : "1px solid rgba(255,255,255,0.08)",
+                            cursor: idCopied && !autoLoading ? "pointer" : "default",
+                            boxShadow: idCopied && !autoLoading ? "0 6px 24px rgba(255,165,0,0.35)" : "none",
+                            transition: "all 0.3s",
                           }}
                         >
                           {autoLoading
                             ? `Checking payment… ${autoCountdown !== null ? `(${autoCountdown}s)` : ""}`
-                            : "Payment Done ✓"}
+                            : "I've Paid ₹49 →"}
                         </motion.button>
 
                       </motion.div>
