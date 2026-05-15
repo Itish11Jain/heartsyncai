@@ -454,7 +454,9 @@ export default function UnlockModal({
 
                         {/* Subtext above CTA */}
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textAlign: "center", margin: "18px 0 6px", lineHeight: 1.5 }}>
-                          Only click this if you have made the payment successfully
+                          {autoLoading
+                            ? "Please make a payment of ₹49 now if you have not done yet."
+                            : "Only click this if you have made the payment successfully"}
                         </p>
 
                         {/* Payment Done CTA — disabled until UPI ID is copied */}
