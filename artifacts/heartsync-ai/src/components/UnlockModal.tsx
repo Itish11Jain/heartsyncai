@@ -58,6 +58,8 @@ export default function UnlockModal({
   const [utrLoading, setUtrLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
   const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
+  const [autoLoading, setAutoLoading] = useState(false);
+  const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
   const [idCopied, setIdCopied] = useState(false);
   const utrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,6 +110,53 @@ export default function UnlockModal({
     const t = setTimeout(() => { onSuccess(); }, 1800);
     return () => clearTimeout(t);
   }, [phase, onSuccess]);
+
+  async function handlePaymentDone() {
+    if (autoLoading) return;
+    setAutoLoading(true);
+
+    const TIMEOUT_S = 60;
+    const POLL_MS   = 3000;
+    const deadline  = Date.now() + TIMEOUT_S * 1000;
+
+    setAutoCountdown(TIMEOUT_S);
+    const ticker = setInterval(() => {
+      setAutoCountdown(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    }, 1000);
+
+    const cleanup = () => {
+      clearInterval(ticker);
+      setAutoLoading(false);
+      setAutoCountdown(null);
+    };
+
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(`${BASE}/api/cards/${cardId}/auto-unlock`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (res.ok) {
+          cleanup();
+          trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          setPhase("success");
+          return;
+        }
+        if (res.status !== 402) {
+          cleanup();
+          setUtrVisible(true);
+          return;
+        }
+      } catch {
+        // network blip — keep polling
+      }
+      await new Promise<void>((r) => setTimeout(r, Math.min(POLL_MS, deadline - Date.now())));
+    }
+
+    cleanup();
+    // Timeout — fall back to manual UTR entry
+    setUtrVisible(true);
+  }
 
   async function handleConfirm() {
     const trimmed = utr.trim();
@@ -405,17 +454,25 @@ export default function UnlockModal({
 
                         {/* Payment Done CTA */}
                         <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setUtrVisible(true)}
+                          whileTap={autoLoading ? {} : { scale: 0.97 }}
+                          onClick={() => void handlePaymentDone()}
+                          disabled={autoLoading}
                           style={{
                             width: "100%", height: 54, borderRadius: 16, marginTop: 18,
-                            background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
-                            color: "#000", fontWeight: 800, fontSize: 16,
-                            border: "none", cursor: "pointer",
-                            boxShadow: "0 6px 24px rgba(255,165,0,0.35)",
+                            background: autoLoading
+                              ? "rgba(255,215,0,0.15)"
+                              : "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                            color: autoLoading ? "rgba(255,215,0,0.7)" : "#000",
+                            fontWeight: 800, fontSize: 16,
+                            border: autoLoading ? "1px solid rgba(255,215,0,0.25)" : "none",
+                            cursor: autoLoading ? "default" : "pointer",
+                            boxShadow: autoLoading ? "none" : "0 6px 24px rgba(255,165,0,0.35)",
+                            transition: "all 0.25s",
                           }}
                         >
-                          Payment Done ✓
+                          {autoLoading
+                            ? `Checking payment… ${autoCountdown !== null ? `(${autoCountdown}s)` : ""}`
+                            : "Payment Done ✓"}
                         </motion.button>
 
                       </motion.div>

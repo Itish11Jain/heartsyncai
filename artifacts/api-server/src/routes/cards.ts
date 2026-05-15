@@ -384,6 +384,51 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
 });
 
 /**
+ * POST /api/cards/:id/auto-unlock
+ * No auth required. Finds the most recent unused ₹49 payment received in the
+ * last 5 minutes and uses it to unlock the card — no UTR input needed.
+ * Returns 402 if no matching payment found yet (caller should keep polling).
+ */
+router.post("/cards/:id/auto-unlock", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { rows } = await pool.query<{ id: number; utr: string }>(
+      `SELECT id, utr FROM hs_received_payments
+       WHERE used_at IS NULL
+         AND created_at > NOW() - INTERVAL '5 minutes'
+       ORDER BY created_at DESC LIMIT 1`,
+    );
+
+    if (rows.length === 0) {
+      res.status(402).json({ error: "payment_not_found", message: "No recent payment detected yet." });
+      return;
+    }
+
+    const matchedUtr = rows[0]!.utr;
+
+    await pool.query(`UPDATE hs_received_payments SET used_at = NOW() WHERE utr = $1`, [matchedUtr]);
+
+    await pool.query(
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium)
+       VALUES ($1, FALSE, TRUE)
+       ON CONFLICT (id) DO UPDATE SET is_watermarked = FALSE, is_premium = TRUE`,
+      [id],
+    );
+
+    await pool.query(
+      `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4) VALUES ($1, $2)`,
+      [id, matchedUtr.slice(-4)],
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[cards] POST /cards/:id/auto-unlock error", err);
+    res.status(500).json({ error: "internal_error", message: "Something went wrong. Please try again." });
+  }
+});
+
+/**
  * POST /api/cards/:id/pay-unlock
  * No auth required. Accepts the last 4 digits of a UPI transaction ID,
  * matches against hs_received_payments (populated by the Android SMS forwarder),
