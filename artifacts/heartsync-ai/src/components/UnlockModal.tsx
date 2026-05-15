@@ -431,7 +431,7 @@ export default function UnlockModal({
                               whileTap={{ scale: 0.92 }}
                               onClick={copyUpiId}
                               style={{
-                                flexShrink: 0, height: 38, paddingInline: 18, borderRadius: 10,
+                                flexShrink: 0, height: 38, paddingInline: 12, borderRadius: 10,
                                 background: idCopied ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg,#FFD700,#FFA500)",
                                 border: "none",
                                 color: idCopied ? "#4ade80" : "#000",
@@ -458,7 +458,7 @@ export default function UnlockModal({
 
                         {/* Subtext above CTA — only shown once UPI is copied */}
                         {idCopied && (
-                          <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "14px 0 4px", whiteSpace: "nowrap", fontWeight: 600 }}>
+                          <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "6px 0 2px", whiteSpace: "nowrap", fontWeight: 600 }}>
                             {autoLoading
                               ? "Please pay Rs. 49 now if you have not paid yet."
                               : "Only click this if you have made the payment successfully"}
