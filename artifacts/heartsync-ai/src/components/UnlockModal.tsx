@@ -102,13 +102,6 @@ export default function UnlockModal({
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  /* After tapping Pay: 2.5 s wait → show UTR input */
-  useEffect(() => {
-    if (phase !== "paying") return;
-    const t = setTimeout(() => setUtrVisible(true), 2500);
-    return () => clearTimeout(t);
-  }, [phase]);
-
   /* Auto-close after success animation */
   useEffect(() => {
     if (phase !== "success") return;
