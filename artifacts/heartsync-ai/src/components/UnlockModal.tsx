@@ -75,10 +75,6 @@ export default function UnlockModal({
     clearUtrTimer();
     navigator.clipboard.writeText(UPI_ID).catch(() => {});
     setIdCopied(true);
-    utrTimerRef.current = setTimeout(() => {
-      utrTimerRef.current = null;
-      setUtrVisible(true);
-    }, 2000);
   }, [clearUtrTimer]);
 
   const hasPhoto = (() => {
@@ -334,7 +330,7 @@ export default function UnlockModal({
                 {/* Back header */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
                   <button
-                    onClick={() => { clearUtrTimer(); setPhase("preview"); setUtrVisible(false); setIdCopied(false); setUtr(""); setUtrError(null); }}
+                    onClick={() => { clearUtrTimer(); if (utrVisible) { setUtrVisible(false); setUtr(""); setUtrError(null); } else { setPhase("preview"); setIdCopied(false); } }}
                     style={{
                       width: 32, height: 32, borderRadius: "50%",
                       border: "1px solid rgba(255,255,255,0.12)",
@@ -413,6 +409,21 @@ export default function UnlockModal({
                             </span>
                           </div>
                         </div>
+
+                        {/* Payment Done CTA */}
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => setUtrVisible(true)}
+                          style={{
+                            width: "100%", height: 54, borderRadius: 16, marginTop: 18,
+                            background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                            color: "#000", fontWeight: 800, fontSize: 16,
+                            border: "none", cursor: "pointer",
+                            boxShadow: "0 6px 24px rgba(255,165,0,0.35)",
+                          }}
+                        >
+                          Payment Done ✓
+                        </motion.button>
 
                       </motion.div>
                     ) : (
