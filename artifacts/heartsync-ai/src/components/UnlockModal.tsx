@@ -471,7 +471,7 @@ export default function UnlockModal({
                           onClick={() => { if (idCopied && !autoLoading) void handlePaymentDone(); }}
                           disabled={autoLoading || !idCopied}
                           style={{
-                            width: "100%", height: 54, borderRadius: 16, marginTop: 18,
+                            width: "100%", height: 54, borderRadius: 16, marginTop: idCopied ? 6 : 18,
                             background: autoLoading
                               ? "rgba(255,215,0,0.15)"
                               : idCopied
