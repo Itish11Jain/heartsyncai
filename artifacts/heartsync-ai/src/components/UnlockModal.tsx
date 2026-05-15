@@ -416,8 +416,9 @@ export default function UnlockModal({
                         <div style={{
                           background: "rgba(255,215,0,0.05)",
                           border: "1.5px solid rgba(255,215,0,0.18)",
-                          borderRadius: 16, padding: "18px 16px 14px",
+                          borderRadius: 16, padding: "18px 22px 14px",
                           marginBottom: 10,
+                          marginInline: -8,
                         }}>
                           <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
                             UPI ID
@@ -455,12 +456,14 @@ export default function UnlockModal({
                           </div>
                         </div>
 
-                        {/* Subtext above CTA */}
-                        <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "14px 0 4px", whiteSpace: "nowrap", fontWeight: 600 }}>
-                          {autoLoading
-                            ? "Please make a payment of ₹49 now if you have not done yet."
-                            : "Only click this if you have made the payment successfully"}
-                        </p>
+                        {/* Subtext above CTA — only shown once UPI is copied */}
+                        {idCopied && (
+                          <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "14px 0 4px", whiteSpace: "nowrap", fontWeight: 600 }}>
+                            {autoLoading
+                              ? "Please pay Rs. 49 now if you have not paid yet."
+                              : "Only click this if you have made the payment successfully"}
+                          </p>
+                        )}
 
                         {/* Payment Done CTA — disabled until UPI ID is copied */}
                         <motion.button
