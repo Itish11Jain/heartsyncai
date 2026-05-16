@@ -50,29 +50,5 @@ router.post("/internal/upi-payment", async (req, res) => {
   }
 });
 
-/**
- * DELETE /api/internal/upi-payment/:utr
- * Remove a payment record (e.g. test entries). Admin-only.
- */
-router.delete("/internal/upi-payment/:utr", async (req, res) => {
-  const authHeader = req.headers["authorization"];
-  const adminSecret = process.env["ADMIN_SECRET"];
-
-  if (!adminSecret || authHeader !== `Bearer ${adminSecret}`) {
-    res.status(401).json({ error: "unauthorized" });
-    return;
-  }
-
-  const { utr } = req.params;
-
-  try {
-    await pool.query(`DELETE FROM hs_received_payments WHERE utr = $1`, [utr]);
-    await pool.query(`DELETE FROM hs_card_unlock_submissions WHERE full_utr = $1`, [utr]);
-    res.json({ ok: true, deleted: utr });
-  } catch (err) {
-    console.error("[internal] DELETE /internal/upi-payment error", err);
-    res.status(500).json({ error: "internal_error" });
-  }
-});
 
 export default router;
