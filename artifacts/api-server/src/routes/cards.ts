@@ -137,7 +137,7 @@ router.get("/clerk/profile", async (req, res) => {
 /**
  * POST /api/cards
  * Requires a valid Clerk session. Creates a card row.
- * Signed-in users get is_watermarked=FALSE (sign-in = free watermark removal).
+ * Cards start with is_watermarked=TRUE — payment is required to unlock.
  * Body: { template, occasion, recipient_name, message_b64 }
  * Returns: { id }
  */
@@ -174,9 +174,9 @@ router.post("/cards", async (req, res) => {
       if (existing.rows.length > 0) {
         const owner = existing.rows[0].clerk_user_id;
         if (owner === null || owner === clerkUserId) {
-          // Claim / already ours — ensure is_watermarked=FALSE
+          // Claim / already ours — just claim ownership, do NOT remove watermark
           await pool.query(
-            "UPDATE hs_cards SET is_watermarked = FALSE, clerk_user_id = $1 WHERE id = $2",
+            "UPDATE hs_cards SET clerk_user_id = $1 WHERE id = $2 AND clerk_user_id IS NULL",
             [clerkUserId, id],
           );
           res.json({ id });
@@ -187,7 +187,7 @@ router.post("/cards", async (req, res) => {
         await pool.query(
           `INSERT INTO hs_cards
              (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url)
-           VALUES ($1,$2,$3,$4,$5,$6,FALSE,FALSE,$7)`,
+           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7)`,
           [freshId, clerkUserId,
             typeof template === "string" ? template : null,
             typeof occasion === "string" ? occasion : null,
@@ -203,7 +203,7 @@ router.post("/cards", async (req, res) => {
     await pool.query(
       `INSERT INTO hs_cards
          (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url)
-       VALUES ($1,$2,$3,$4,$5,$6,FALSE,FALSE,$7)`,
+       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7)`,
       [
         id,
         clerkUserId,
@@ -599,19 +599,10 @@ router.post("/cards/:id/remove-watermark", async (req, res) => {
 
 /**
  * POST /api/cards/:id/free-watermark-removal
- * Requires Clerk auth. No payment needed — signing in is sufficient.
- *
- * Ownership rules:
- *   - Card has no owner (created anonymously) → claim it + remove watermark.
- *   - Card is owned by this user → remove watermark.
- *   - Card is owned by someone else → 403.
- *
- * Anonymous cards (no DB row): if an optional JSON body is provided with card
- * metadata (recipient_name, occasion, template), the card row is created on
- * the fly so the watermark can be removed. This handles the case where a user
- * creates a card anonymously, signs up via Google OAuth, and is redirected
- * back to the card page — the card needs to be claimed without the user having
- * to recreate it.
+ * Requires Clerk auth AND a valid bundle payment (unlocked_templates must
+ * contain all premium templates). Signing in alone is NOT sufficient.
+ * This endpoint exists so the SenderPanel can auto-remove the watermark
+ * for users who have already paid the ₹49 bundle on a previous card.
  */
 router.post("/cards/:id/free-watermark-removal", async (req, res) => {
   const auth = getAuth(req);
@@ -624,6 +615,21 @@ router.post("/cards/:id/free-watermark-removal", async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Require bundle payment (superuser OR all premium templates unlocked).
+    const userRow = await pool.query<{ unlocked_templates: string[]; is_superuser: boolean }>(
+      "SELECT unlocked_templates, is_superuser FROM hs_clerk_users WHERE clerk_user_id = $1",
+      [clerkUserId],
+    );
+    const unlocked: string[] = userRow.rows[0]?.unlocked_templates ?? [];
+    const isSuperuser = userRow.rows[0]?.is_superuser ?? false;
+    const ALL_PREMIUM = ["cosmic", "crystal", "vinyl"];
+    const hasBundle = isSuperuser || ALL_PREMIUM.every((t) => unlocked.includes(t));
+
+    if (!hasBundle) {
+      res.status(403).json({ error: "payment_required", message: "Bundle payment (₹49) required." });
+      return;
+    }
+
     const existing = await pool.query<{
       clerk_user_id: string | null;
       is_watermarked: boolean;
@@ -633,40 +639,7 @@ router.post("/cards/:id/free-watermark-removal", async (req, res) => {
     );
 
     if (existing.rows.length === 0) {
-      /* Card not in DB — this is an anonymously-created card whose data lives
-       * entirely in URL params. If the caller provides card metadata in the
-       * request body, create the row and claim it for the signed-in user. */
-      const body = req.body as {
-        recipient_name?: string;
-        occasion?: string;
-        template?: string;
-        message_b64?: string;
-        photo_url?: string;
-      } | null;
-
-      const hasMetadata = body && (body.recipient_name || body.occasion);
-      if (!hasMetadata) {
-        res.status(404).json({ error: "not_found" });
-        return;
-      }
-
-      await pool.query(
-        `INSERT INTO hs_cards
-           (id, clerk_user_id, template, occasion, recipient_name, message_b64, photo_url, is_watermarked)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)
-         ON CONFLICT (id) DO NOTHING`,
-        [
-          id,
-          clerkUserId,
-          body.template ?? "envelope",
-          body.occasion ?? null,
-          body.recipient_name ?? null,
-          body.message_b64 ?? null,
-          body.photo_url ?? null,
-        ],
-      );
-
-      res.json({ ok: true });
+      res.status(404).json({ error: "not_found" });
       return;
     }
 
@@ -682,18 +655,10 @@ router.post("/cards/:id/free-watermark-removal", async (req, res) => {
       return;
     }
 
-    if (card.clerk_user_id === null) {
-      /* Anonymous card — claim ownership and remove watermark in one step. */
-      await pool.query(
-        "UPDATE hs_cards SET is_watermarked = FALSE, clerk_user_id = $1 WHERE id = $2",
-        [clerkUserId, id],
-      );
-    } else {
-      await pool.query(
-        "UPDATE hs_cards SET is_watermarked = FALSE WHERE id = $1",
-        [id],
-      );
-    }
+    await pool.query(
+      "UPDATE hs_cards SET is_watermarked = FALSE, clerk_user_id = $1 WHERE id = $2",
+      [clerkUserId, id],
+    );
 
     res.json({ ok: true });
   } catch (err) {
