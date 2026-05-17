@@ -12,7 +12,7 @@ import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const UPI_ID = "9706900714@pthdfc";
-const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment`;
+const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=99&cu=INR&tn=HeartSyncWebsitePayment`;
 
 const UPI_APPS = [
   { label: "PhonePe", emoji: "💜", scheme: `phonepe://pay?${UPI_PARAMS}` },
@@ -142,7 +142,7 @@ export default function UnlockModal({
           cleanup();
           trackEvent({ event: "card_paid", occasion, card_id: cardId });
           if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 49.00, currency: "INR" });
+            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" });
           }
           setPhase("success");
           return;
@@ -198,7 +198,7 @@ export default function UnlockModal({
           cleanup();
           trackEvent({ event: "card_paid", occasion, card_id: cardId });
           if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 49.00, currency: "INR" });
+            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" });
           }
           setPhase("success");
           return;
@@ -287,7 +287,7 @@ export default function UnlockModal({
                       Unlock &amp; Share 💌
                     </div>
                     <div style={{ color: "rgba(255,215,0,0.75)", fontSize: 13, marginTop: 3, fontWeight: 600, letterSpacing: "0.01em" }}>
-                      One-time ₹49 · yours forever ✨
+                      One-time ₹99 · yours forever ✨
                     </div>
                   </div>
                   <button
@@ -365,7 +365,7 @@ export default function UnlockModal({
                     marginBottom: 10,
                   }}
                 >
-                  🔓 Pay ₹49 &amp; Share the card
+                  🔓 Pay ₹99 &amp; Share the card
                 </motion.button>
               </motion.div>
             )}
@@ -411,7 +411,7 @@ export default function UnlockModal({
                         <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
                         <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
                           Pay{" "}
-                          <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹49</span>
+                          <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹99</span>
                           {" "}via any UPI App
                         </div>
                         <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 22, lineHeight: 1.6 }}>
@@ -466,7 +466,7 @@ export default function UnlockModal({
                         {idCopied && (
                           <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "6px 0 2px", whiteSpace: "nowrap", fontWeight: 600 }}>
                             {autoLoading
-                              ? "Please pay Rs. 49 now if you have not paid yet."
+                              ? "Please pay Rs. 99 now if you have not paid yet."
                               : "Only click this if you have made the payment successfully"}
                           </p>
                         )}
@@ -495,7 +495,7 @@ export default function UnlockModal({
                         >
                           {autoLoading
                             ? `Checking payment… ${autoCountdown !== null ? `(${autoCountdown}s)` : ""}`
-                            : "I've Paid ₹49 →"}
+                            : "I've Paid ₹99 →"}
                         </motion.button>
 
                       </motion.div>

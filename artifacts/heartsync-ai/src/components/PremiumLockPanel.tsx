@@ -292,7 +292,7 @@ export default function PremiumLockPanel({
         }}>🔗 Copy Link</button>
         <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 10, cursor: "pointer" }}
           onClick={reopenPaywall}>
-          Tap any button to unlock · ₹49 one-time
+          Tap any button to unlock · ₹99 one-time
         </p>
       </motion.div>
     );
@@ -326,7 +326,7 @@ export default function PremiumLockPanel({
             boxShadow: "0 0 28px rgba(255,215,0,0.35)",
           }}
         >
-          ✨ Pay ₹49 to Unlock &amp; Share
+          ✨ Pay ₹99 to Unlock &amp; Share
         </button>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
           One-time · All 3 premium templates unlocked forever
@@ -441,7 +441,7 @@ export default function PremiumLockPanel({
               Unlock &amp; Share Your Card
             </h1>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-              One payment of ₹49 — yours forever.
+              One payment of ₹99 — yours forever.
             </p>
           </div>
 
@@ -453,7 +453,7 @@ export default function PremiumLockPanel({
             display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
             <div>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹49</div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹99</div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 4, lineHeight: 1.6 }}>
                 <div>✓ Unlocks Crystal, Cosmic &amp; Vinyl — forever</div>
                 <div>✓ No watermark · No subscription</div>
@@ -474,7 +474,7 @@ export default function PremiumLockPanel({
             {/* QR + UPI ID */}
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
               <a href={upiUri} style={{ background: "#fff", borderRadius: 12, padding: 6, display: "block", flexShrink: 0 }}>
-                <img src={qrSrc} alt="UPI QR ₹49" style={{ width: 96, height: 96, borderRadius: 8, display: "block" }} />
+                <img src={qrSrc} alt="UPI QR ₹99" style={{ width: 96, height: 96, borderRadius: 8, display: "block" }} />
               </a>
               <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 4, lineHeight: 1.4 }}>
@@ -501,7 +501,7 @@ export default function PremiumLockPanel({
                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
                   <Info size={11} style={{ color: "rgba(255,255,255,0.22)", flexShrink: 0 }} />
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.28)" }}>
-                    Pay <strong style={{ color: "rgba(255,255,255,0.55)" }}>exactly ₹49</strong> — scan, tap, or copy
+                    Pay <strong style={{ color: "rgba(255,255,255,0.55)" }}>exactly ₹99</strong> — scan, tap, or copy
                   </p>
                 </div>
               </div>

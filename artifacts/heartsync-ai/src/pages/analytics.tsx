@@ -497,7 +497,7 @@ export default function Analytics() {
           const steps: { label: string; key: keyof PaymentFunnelRow; color: string }[] = [
             { label: "1 · Generated Card",               key: "step1_cards_created",  color: "#818cf8" },
             { label: "2 · Pay & Unlock CTA clicked",     key: "step2_paywall_shown",  color: "#a78bfa" },
-            { label: "3 · 'Pay ₹49' button tapped",      key: "step3_popup_clicked",  color: "#c084fc" },
+            { label: "3 · 'Pay ₹99' button tapped",      key: "step3_popup_clicked",  color: "#c084fc" },
             { label: "4 · UPI ID Copied",                key: "step4_upi_copied",     color: "#f472b6" },
             { label: "5 · 'I've Paid' CTA clicked",      key: "step5_payment_done",   color: "#fb923c" },
             { label: "6 · Card Unlocked",                key: "step6_card_unlocked",  color: "#facc15" },
@@ -798,7 +798,7 @@ export default function Analytics() {
             { label: "Clicked 'Continue with Google'", users: Number(o.continue_to_signin_users) },
             { label: "Successfully signed up", users: Number(o.google_signin_completed_users) },
             { label: "Saw payment paywall", users: Number(o.bundle_paywall_shown_users) },
-            { label: "Clicked 'Pay ₹49 Now'", users: Number(o.pay_now_clicked_users) },
+            { label: "Clicked 'Pay ₹99 Now'", users: Number(o.pay_now_clicked_users) },
             { label: "Entered last 4 digits of UTR", users: Number(o.utr_entered_users) },
             { label: "Clicked 'Confirm & Unlock'", users: Number(o.confirm_unlock_clicked_users) },
             { label: "Payment confirmed (paid)", users: Number(o.paywall_paid_users) },

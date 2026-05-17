@@ -6,7 +6,7 @@ import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-const UPI_DEEP_LINK = "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+const UPI_DEEP_LINK = "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=99&cu=INR&tn=HeartSyncWebsitePayment";
 
 function qrUrl(size = 240) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(UPI_DEEP_LINK)}`;
@@ -125,7 +125,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                   {mode === "photo" ? "Share with the photo included" : "Unlock & share your card"}
                 </div>
                 <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 2 }}>
-                  One-time ₹49 · instant unlock
+                  One-time ₹99 · instant unlock
                 </div>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       </span>
                     ))}
                     <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2 }}>
-                      All for ₹49 — pay once, yours forever
+                      All for ₹99 — pay once, yours forever
                     </span>
                   </div>
 
@@ -202,7 +202,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     >
                       <img
                         src={qrUrl(200)}
-                        alt="UPI QR ₹49"
+                        alt="UPI QR ₹99"
                         style={{ width: 200, height: 200, borderRadius: 8, display: "block" }}
                       />
                     </a>
@@ -223,7 +223,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
                     }}
                   >
-                    Pay ₹49 Now <ArrowRight style={{ width: 18, height: 18 }} />
+                    Pay ₹99 Now <ArrowRight style={{ width: 18, height: 18 }} />
                   </a>
 
                   <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>

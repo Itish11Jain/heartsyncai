@@ -110,7 +110,7 @@ export default function Terms() {
                 Envelope-style cards are free to send; they include a "Made on HeartSync AI"
                 watermark badge by default. You may remove the watermark on a per-card basis for a
                 one-time fee of ₹29, or unlock all three premium templates (Cosmic, Crystal, Vinyl)
-                watermark-free with a one-time bundle payment of ₹49. All card payments are
+                watermark-free with a one-time bundle payment of ₹99. All card payments are
                 non-refundable once the link is generated.
               </p>
             </Section>

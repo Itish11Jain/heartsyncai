@@ -167,7 +167,7 @@ export default function RemoveWatermark() {
     }
   }, [wmUtr, cardId, isSignedIn, getToken, clerk]);
 
-  const bundleUpiUri = makeUpiUri(49, "HeartSync Premium");
+  const bundleUpiUri = makeUpiUri(99, "HeartSync Premium");
   const wmUpiUri    = makeUpiUri(29, "HeartSync Watermark");
 
   const outerStyle: React.CSSProperties = {
@@ -273,7 +273,7 @@ export default function RemoveWatermark() {
                   Remove Watermark | Go Premium
                 </h1>
                 <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
-                  One payment of ₹49 — yours forever.
+                  One payment of ₹99 — yours forever.
                 </p>
               </div>
 
@@ -300,7 +300,7 @@ export default function RemoveWatermark() {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 2 }}>
-                  <span style={{ color: "#d8b4fe", fontWeight: 800, fontSize: 15 }}>₹49</span>
+                  <span style={{ color: "#d8b4fe", fontWeight: 800, fontSize: 15 }}>₹99</span>
                   <ArrowRight size={14} color="rgba(216,180,254,0.6)" />
                 </div>
               </button>
@@ -328,7 +328,7 @@ export default function RemoveWatermark() {
                   }}
                 >←</button>
                 <div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Unlock all premium — ₹49</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Unlock all premium — ₹99</div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>Pay once, use forever on all cards</div>
                 </div>
               </div>
@@ -341,7 +341,7 @@ export default function RemoveWatermark() {
                 border: "1.5px solid rgba(255,215,0,0.55)",
               }}>
                 <div>
-                  <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>₹49</div>
+                  <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>₹99</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
                     <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Removes watermark</span>
                     <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
@@ -351,7 +351,7 @@ export default function RemoveWatermark() {
 
               <UpiPaySection
                 upiUri={bundleUpiUri}
-                amount={49}
+                amount={99}
                 utrValue={bundleUtr}
                 onUtrChange={(v) => { setBundleUtr(v); setBundleUtrError(""); }}
                 utrError={bundleUtrError}

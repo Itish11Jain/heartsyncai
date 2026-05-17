@@ -1401,7 +1401,7 @@ function SendInner() {
                   <div className="text-center mb-5">
                     <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
                     <h1 className="text-xl font-bold text-white mb-1 leading-tight">Remove Watermark | Go Premium</h1>
-                    <p className="text-white/55 text-sm">One payment of ₹49 — yours forever.</p>
+                    <p className="text-white/55 text-sm">One payment of ₹99 — yours forever.</p>
                   </div>
 
                   {/* Single ₹49 plan card */}
@@ -1413,7 +1413,7 @@ function SendInner() {
                     }}
                   >
                     <div>
-                      <div className="text-white font-extrabold text-xl leading-tight">₹49</div>
+                      <div className="text-white font-extrabold text-xl leading-tight">₹99</div>
                       <div className="text-white/70 text-xs mt-1.5 flex flex-col gap-1">
                         <span>✓ Removes watermark</span>
                         <span>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
@@ -1425,7 +1425,7 @@ function SendInner() {
                     {(() => {
                       const UPI_DISPLAY = "110193250";
                       const UPI_VPA = "8905158970@upi";
-                      const amount = 49;
+                      const amount = 99;
                       const upiParams = [
                         `pa=${encodeURIComponent(UPI_VPA)}`,
                         `pn=${encodeURIComponent("HeartSync AI")}`,
@@ -1454,7 +1454,7 @@ function SendInner() {
                         <>
                           <div className="flex gap-3 items-center mb-4">
                             <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
-                              <img src={qrSrc} alt="UPI QR Code ₹49" className="w-24 h-24 rounded-lg" />
+                              <img src={qrSrc} alt="UPI QR Code ₹99" className="w-24 h-24 rounded-lg" />
                             </a>
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-[10px] text-white/45 mb-1 leading-tight">
@@ -1478,7 +1478,7 @@ function SendInner() {
                               </div>
                               <div className="flex items-center gap-1 mt-1">
                                 <Info className="w-3 h-3 text-white/25 shrink-0" />
-                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹49</span> — scan, tap, or copy</p>
+                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹99</span> — scan, tap, or copy</p>
                               </div>
                             </div>
                           </div>
@@ -1693,7 +1693,7 @@ function SendInner() {
                       <div className="text-white/50 text-xs mt-1">No badge ever · All 4 templates · Yours forever</div>
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
-                      <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹49</span>
+                      <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹99</span>
                       <ArrowRight size={15} className="text-purple-300/50" />
                     </div>
                   </button>
