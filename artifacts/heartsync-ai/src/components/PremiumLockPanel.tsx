@@ -326,11 +326,23 @@ export default function PremiumLockPanel({
             boxShadow: "0 0 28px rgba(255,215,0,0.35)",
           }}
         >
-          ✨ Pay ₹99 <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13 }}>₹149</span> · Unlock &amp; Share
+          ✨{" "}
+          <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹149</span>
+          {" "}₹99 · Unlock &amp; Share
+          {" "}<span style={{
+            background: "rgba(255,80,50,0.22)", border: "1px solid rgba(255,80,50,0.45)",
+            color: "#ff6b4a", fontSize: 9, fontWeight: 800, padding: "2px 6px",
+            borderRadius: 99, letterSpacing: "0.04em", verticalAlign: "middle",
+          }}>⚡ Limited Time</span>
         </button>
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
-          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹149</span>{" "}
-          One-time ₹99 · All 3 premium templates forever
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
+          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹149</span>
+          <span style={{ color: "rgba(255,255,255,0.35)" }}>₹99 one-time · All 3 premium templates forever</span>
+          <span style={{
+            background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
+            color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px",
+            borderRadius: 99, letterSpacing: "0.04em",
+          }}>⚡ Limited Time</span>
         </p>
       </motion.div>
     );

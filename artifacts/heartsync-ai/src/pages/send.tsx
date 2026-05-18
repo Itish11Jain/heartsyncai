@@ -1700,10 +1700,13 @@ function SendInner() {
                       <div className="text-white font-bold text-sm leading-tight">Remove watermark & unlock all premium templates</div>
                       <div className="text-white/50 text-xs mt-1">No badge ever · All 4 templates · Yours forever</div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                      <span className="line-through text-white/25 text-xs">₹149</span>
-                      <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹99</span>
-                      <ArrowRight size={15} className="text-purple-300/50" />
+                    <div className="flex flex-col items-end gap-0.5 shrink-0 mt-0.5">
+                      <div className="flex items-center gap-1">
+                        <span className="line-through text-white/25 text-xs">₹149</span>
+                        <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹99</span>
+                        <ArrowRight size={15} className="text-purple-300/50" />
+                      </div>
+                      <span style={{ background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)", color: "#ff7d5c", fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 99, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>⚡ Limited Time</span>
                     </div>
                   </button>
 

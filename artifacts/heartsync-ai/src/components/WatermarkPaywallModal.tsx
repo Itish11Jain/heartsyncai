@@ -234,7 +234,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
                     }}
                   >
-                    Pay ₹99 <span style={{ textDecoration: "line-through", opacity: 0.55, fontWeight: 500, fontSize: 13 }}>₹149</span> Now <ArrowRight style={{ width: 18, height: 18 }} />
+                    <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹149</span>
+                    {" "}Pay ₹99 Now <ArrowRight style={{ width: 18, height: 18 }} />
                   </a>
 
                   <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>

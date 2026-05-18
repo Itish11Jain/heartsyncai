@@ -374,7 +374,9 @@ export default function UnlockModal({
                     marginBottom: 10,
                   }}
                 >
-                  🔓 Pay ₹99 (was ₹149) &amp; Share
+                  🔓{" "}
+                  <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 14, marginRight: 2 }}>₹149</span>
+                  {" "}Pay ₹99 &amp; Share
                 </motion.button>
               </motion.div>
             )}
