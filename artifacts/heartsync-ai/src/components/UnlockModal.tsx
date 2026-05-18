@@ -283,11 +283,20 @@ export default function UnlockModal({
                 {/* Header */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <div>
-                    <div style={{ color: "#FFD700", fontWeight: 800, fontSize: 18 }}>
-                      Unlock &amp; Share 💌
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ color: "#FFD700", fontWeight: 800, fontSize: 18 }}>
+                        Unlock &amp; Share 💌
+                      </div>
+                      <span style={{
+                        background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.45)",
+                        color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 7px",
+                        borderRadius: 99, letterSpacing: "0.05em", whiteSpace: "nowrap",
+                      }}>⚡ Limited Time</span>
                     </div>
-                    <div style={{ color: "rgba(255,215,0,0.75)", fontSize: 13, marginTop: 3, fontWeight: 600, letterSpacing: "0.01em" }}>
-                      One-time ₹99 · yours forever ✨
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 0 }}>
+                      <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 13, fontWeight: 500 }}>₹149</span>
+                      <span style={{ color: "rgba(255,215,0,0.9)", fontSize: 14, fontWeight: 800 }}>₹99</span>
+                      <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 12, fontWeight: 600 }}>· yours forever ✨</span>
                     </div>
                   </div>
                   <button
@@ -365,7 +374,7 @@ export default function UnlockModal({
                     marginBottom: 10,
                   }}
                 >
-                  🔓 Pay ₹99 &amp; Share the card
+                  🔓 Pay ₹99 (was ₹149) &amp; Share
                 </motion.button>
               </motion.div>
             )}
@@ -411,6 +420,8 @@ export default function UnlockModal({
                         <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
                         <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
                           Pay{" "}
+                          <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 15, fontWeight: 500 }}>₹149</span>
+                          {" "}
                           <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹99</span>
                           {" "}via any UPI App
                         </div>

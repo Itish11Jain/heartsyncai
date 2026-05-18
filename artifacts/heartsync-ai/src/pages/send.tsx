@@ -1401,7 +1401,11 @@ function SendInner() {
                   <div className="text-center mb-5">
                     <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
                     <h1 className="text-xl font-bold text-white mb-1 leading-tight">Remove Watermark | Go Premium</h1>
-                    <p className="text-white/55 text-sm">One payment of ₹99 — yours forever.</p>
+                    <p className="text-white/55 text-sm flex items-center justify-center gap-1.5 flex-wrap">
+                      <span className="line-through text-white/25">₹149</span>
+                      <span className="text-yellow-300/80 font-bold">₹99</span>
+                      — yours forever.
+                    </p>
                   </div>
 
                   {/* Single ₹49 plan card */}
@@ -1413,7 +1417,11 @@ function SendInner() {
                     }}
                   >
                     <div>
-                      <div className="text-white font-extrabold text-xl leading-tight">₹99</div>
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <div className="text-white font-extrabold text-xl leading-tight">₹99</div>
+                        <span className="line-through text-white/30 text-sm font-normal">₹149</span>
+                        <span style={{ background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)", color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 99, letterSpacing: "0.04em" }}>⚡ Limited Time</span>
+                      </div>
                       <div className="text-white/70 text-xs mt-1.5 flex flex-col gap-1">
                         <span>✓ Removes watermark</span>
                         <span>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
@@ -1692,7 +1700,8 @@ function SendInner() {
                       <div className="text-white font-bold text-sm leading-tight">Remove watermark & unlock all premium templates</div>
                       <div className="text-white/50 text-xs mt-1">No badge ever · All 4 templates · Yours forever</div>
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                    <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                      <span className="line-through text-white/25 text-xs">₹149</span>
                       <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹99</span>
                       <ArrowRight size={15} className="text-purple-300/50" />
                     </div>

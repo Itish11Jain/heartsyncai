@@ -326,10 +326,11 @@ export default function PremiumLockPanel({
             boxShadow: "0 0 28px rgba(255,215,0,0.35)",
           }}
         >
-          ✨ Pay ₹99 to Unlock &amp; Share
+          ✨ Pay ₹99 <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13 }}>₹149</span> · Unlock &amp; Share
         </button>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
-          One-time · All 3 premium templates unlocked forever
+          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹149</span>{" "}
+          One-time ₹99 · All 3 premium templates forever
         </p>
       </motion.div>
     );
@@ -440,8 +441,10 @@ export default function PremiumLockPanel({
             <h1 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 4 }}>
               Unlock &amp; Share Your Card
             </h1>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-              One payment of ₹99 — yours forever.
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ color: "rgba(255,255,255,0.28)", textDecoration: "line-through" }}>₹149</span>
+              <span style={{ color: "rgba(255,215,0,0.75)", fontWeight: 700 }}>₹99</span>
+              — yours forever.
             </p>
           </div>
 
@@ -453,7 +456,15 @@ export default function PremiumLockPanel({
             display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
             <div>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹99</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹99</div>
+                <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 15, fontWeight: 400 }}>₹149</span>
+                <span style={{
+                  background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
+                  color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px",
+                  borderRadius: 99, letterSpacing: "0.04em",
+                }}>⚡ Limited Time</span>
+              </div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 4, lineHeight: 1.6 }}>
                 <div>✓ Unlocks Crystal, Cosmic &amp; Vinyl — forever</div>
                 <div>✓ No watermark · No subscription</div>

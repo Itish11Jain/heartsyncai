@@ -272,8 +272,10 @@ export default function RemoveWatermark() {
                 <h1 style={{ color: "#fff", fontWeight: 800, fontSize: 20, marginBottom: 6 }}>
                   Remove Watermark | Go Premium
                 </h1>
-                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55 }}>
-                  One payment of ₹99 — yours forever.
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.55, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ color: "rgba(255,255,255,0.25)", textDecoration: "line-through" }}>₹149</span>
+                  <span style={{ color: "rgba(255,215,0,0.8)", fontWeight: 700 }}>₹99</span>
+                  — yours forever.
                 </p>
               </div>
 
@@ -299,9 +301,17 @@ export default function RemoveWatermark() {
                     <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 2 }}>
-                  <span style={{ color: "#d8b4fe", fontWeight: 800, fontSize: 15 }}>₹99</span>
-                  <ArrowRight size={14} color="rgba(216,180,254,0.6)" />
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0, marginTop: 2 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 12 }}>₹149</span>
+                    <span style={{ color: "#d8b4fe", fontWeight: 800, fontSize: 15 }}>₹99</span>
+                    <ArrowRight size={14} color="rgba(216,180,254,0.6)" />
+                  </div>
+                  <span style={{
+                    background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
+                    color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "1px 6px",
+                    borderRadius: 99, letterSpacing: "0.04em",
+                  }}>⚡ Limited Time</span>
                 </div>
               </button>
 
@@ -328,7 +338,11 @@ export default function RemoveWatermark() {
                   }}
                 >←</button>
                 <div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Unlock all premium — ₹99</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", gap: 7 }}>
+                    Unlock all premium —
+                    <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 14, fontWeight: 400 }}>₹149</span>
+                    <span style={{ color: "#FFD700" }}>₹99</span>
+                  </div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>Pay once, use forever on all cards</div>
                 </div>
               </div>
@@ -341,7 +355,15 @@ export default function RemoveWatermark() {
                 border: "1.5px solid rgba(255,215,0,0.55)",
               }}>
                 <div>
-                  <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>₹99</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
+                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>₹99</div>
+                    <span style={{ color: "rgba(255,255,255,0.28)", textDecoration: "line-through", fontSize: 14, fontWeight: 400 }}>₹149</span>
+                    <span style={{
+                      background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
+                      color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px",
+                      borderRadius: 99, letterSpacing: "0.04em",
+                    }}>⚡ Limited Time</span>
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
                     <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Removes watermark</span>
                     <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>✓ Unlocks premium templates (Cosmic, Crystal, Vinyl)</span>

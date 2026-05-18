@@ -121,11 +121,20 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                 }}
               >←</button>
               <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
-                  {mode === "photo" ? "Share with the photo included" : "Unlock & share your card"}
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
+                    {mode === "photo" ? "Share with the photo included" : "Unlock & share your card"}
+                  </div>
+                  <span style={{
+                    background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.45)",
+                    color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 7px",
+                    borderRadius: 99, letterSpacing: "0.05em", whiteSpace: "nowrap", flexShrink: 0,
+                  }}>⚡ Limited Time</span>
                 </div>
-                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 2 }}>
-                  One-time ₹99 · instant unlock
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
+                  <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹149</span>
+                  <span style={{ color: "rgba(255,215,0,0.85)", fontSize: 11, fontWeight: 700 }}>₹99</span>
+                  <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>· instant unlock</span>
                 </div>
               </div>
             </div>
@@ -182,8 +191,10 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                         {item}
                       </span>
                     ))}
-                    <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2 }}>
-                      All for ₹99 — pay once, yours forever
+                    <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                      All for{" "}
+                      <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹149</span>
+                      {" "}₹99 — pay once, yours forever
                     </span>
                   </div>
 
@@ -223,7 +234,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
                     }}
                   >
-                    Pay ₹99 Now <ArrowRight style={{ width: 18, height: 18 }} />
+                    Pay ₹99 <span style={{ textDecoration: "line-through", opacity: 0.55, fontWeight: 500, fontSize: 13 }}>₹149</span> Now <ArrowRight style={{ width: 18, height: 18 }} />
                   </a>
 
                   <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>
