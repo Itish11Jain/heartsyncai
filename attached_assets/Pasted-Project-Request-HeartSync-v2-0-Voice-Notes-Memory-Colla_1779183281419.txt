@@ -1,0 +1,45 @@
+Project Request: HeartSync v2.0 - Voice Notes & Memory Collage Upgrade
+
+Objective: Upgrade the digital card creation and receiving flow. Remove unnecessary fields, allow multiple photo uploads, integrate a native web audio recorder, and create an aesthetic final landing page for the receiver.
+
+Phase 1: Sender Flow (Creation Page Updates)
+
+Remove Field: Delete the "What do they love?" input field entirely.
+
+Multiple Photo Upload: * Upgrade the photo upload component to accept multiple images (limit to max 4 images to maintain fast load times).
+
+Display thumbnail previews of selected images with an "X" to remove them.
+
+Voice Note Integration:
+
+Place this directly above the photo upload section.
+
+UI: A clear "Record Voice Note" button. When clicked, request browser microphone permissions, start a timer, and change the button to "Stop".
+
+Post-recording: Show a mini audio player to preview the recording, and a "Delete/Rerecord" button.
+
+File Handling: Convert audio blob to an efficient format (mp3/webm) and attach to the form payload.
+
+Phase 2: Receiver Flow (The Viewing Experience)
+
+The Transition: After the initial 3D envelope (or orbs) animation finishes, smoothly fade out the 3D canvas and fade in a new HTML/React component overlay (The "Memory Collage").
+
+The Layout Logic (Handling Edge Cases):
+
+Edge Case A (Multiple Photos + Voice): Render a masonry-style or aesthetic grid of the photos. Below the grid, render a prominent, beautifully styled audio player with a large "Play" button.
+
+Edge Case B (1 Photo + Voice): Render the single photo as a large hero image with rounded corners. Render the audio player below it.
+
+Edge Case C (0 Photos + Voice): Render an aesthetic, minimalist screen (dark background, glowing elements or a pulsing heart icon). Render the audio player centrally.
+
+Edge Case D (Photos + No Voice): Render the photo grid/hero image as usual. Do not render the audio player. Optionally, display a subtle text message (e.g., "A memory for you") in its place.
+
+Audio Autoplay Rules: Do not attempt to autoplay the audio when the page loads (browsers will block this). The user must tap the Play button on the new page to start the audio.
+
+Technical Constraints & Design Tokens:
+
+Aesthetic: Cozy, premium, dark-mode preferred (bg-stone-900 or similar deep colors).
+
+Animations: Use slow, smooth fades (CSS opacity and transform: translateY) when the collage appears.
+
+Ensure the mobile UI is flawless, as 95% of traffic will view this on a smartphone.
