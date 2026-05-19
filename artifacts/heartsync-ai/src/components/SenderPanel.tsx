@@ -276,8 +276,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   return (
     <>
-      {/* ── Sender share panel (collage or finale) ── */}
-      {(phase === "finale" || phase === "collage") && (
+      {/* ── Sender share panel (finale only) ── */}
+      {phase === "finale" && (
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}

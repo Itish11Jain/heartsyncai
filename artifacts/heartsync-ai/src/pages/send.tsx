@@ -484,7 +484,7 @@ function SendInner() {
   }
 
   async function handlePhotoSelect(file: File) {
-    if (uploadedPhotoUrls.length >= 4 || photoUploading) return;
+    if (photoUploading) return;
     setPhotoUploadError(null);
     const previewSrc = URL.createObjectURL(file);
     setPhotoPreviewSrcs(prev => [...prev, previewSrc]);
@@ -1327,12 +1327,17 @@ function SendInner() {
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
+                          multiple
                           disabled={photoUploading}
                           style={{ display: "none" }}
-                          onChange={e => {
-                            const f = e.target.files?.[0];
-                            if (f) void handlePhotoSelect(f);
+                          onChange={async e => {
+                            const files = Array.from(e.target.files ?? []);
+                            const slotsLeft = Math.max(0, 4 - photoPreviewSrcs.length);
+                            const toProcess = files.slice(0, slotsLeft);
                             e.target.value = "";
+                            for (const f of toProcess) {
+                              await handlePhotoSelect(f);
+                            }
                           }}
                         />
                       </label>

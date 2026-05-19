@@ -779,19 +779,16 @@ function FinalCard({
 function MemoryCollage({
   photoUrls,
   voiceNoteUrl,
-  recipientName,
-  titlePrefix,
-  finalMessage,
+  onContinue,
 }: {
   photoUrls: string[];
   voiceNoteUrl: string | null;
-  recipientName: string;
-  titlePrefix: string;
-  finalMessage: string;
+  onContinue: () => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const n = photoUrls.length;
+  const mediaDelay = Math.max(n, 1) * 0.18 + 0.9;
 
   function togglePlay() {
     if (!voiceNoteUrl) return;
@@ -815,7 +812,7 @@ function MemoryCollage({
       style={{
         position: "fixed", inset: 0, zIndex: 30,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: "20px 16px 16px",
+        padding: "20px 16px 100px",
         overflowY: "auto",
         gap: 20,
       }}
@@ -856,13 +853,11 @@ function MemoryCollage({
         </div>
       )}
 
-      <FinalCard recipientName={recipientName} titlePrefix={titlePrefix} finalMessage={finalMessage} />
-
       {voiceNoteUrl && (
         <motion.button
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: Math.max(n, 1) * 0.18 + 0.9, type: "spring", damping: 14 }}
+          transition={{ delay: mediaDelay, type: "spring", damping: 14 }}
           onClick={togglePlay}
           style={{
             display: "flex", alignItems: "center", gap: 12,
@@ -881,6 +876,26 @@ function MemoryCollage({
           {isPlaying ? "Pause" : "Play voice note"}
         </motion.button>
       )}
+
+      {/* Continue to message */}
+      <motion.button
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: mediaDelay + 0.5, duration: 0.5 }}
+        onClick={onContinue}
+        style={{
+          position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "14px 32px", borderRadius: 99, cursor: "pointer",
+          background: "linear-gradient(135deg, #FFD700, #FFA500)",
+          border: "none", color: "#000",
+          fontSize: 15, fontWeight: 700,
+          boxShadow: "0 4px 24px rgba(255,215,0,0.35)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        See your message ✨
+      </motion.button>
     </motion.div>
   );
 }
@@ -972,7 +987,7 @@ export default function Card() {
   const confettiColors = getConfettiColors(likes);
 
   const skipToFinale = directShare && isSender;
-  const [phase, setPhase] = useState<Phase>(skipToFinale ? "collage" : "envelope");
+  const [phase, setPhase] = useState<Phase>(skipToFinale ? "finale" : "envelope");
   const [clickedOrbs, setClickedOrbs] = useState<Set<number>>(() =>
     skipToFinale ? new Set(orbs.map((_, i) => i)) : new Set()
   );
@@ -1396,44 +1411,8 @@ export default function Card() {
             <MemoryCollage
               photoUrls={effectiveCollagePhotos}
               voiceNoteUrl={voiceNoteUrl}
-              recipientName={recipientName}
-              titlePrefix={template.title_prefix}
-              finalMessage={finalMessage}
+              onContinue={() => setPhase("finale")}
             />
-
-            {isRecipient && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 3, duration: 0.5 }}
-                style={{
-                  position: "fixed", bottom: 24, left: 0, right: 0,
-                  display: "flex", justifyContent: "center",
-                  padding: "0 16px", zIndex: 31,
-                }}
-              >
-                <div style={{ width: "min(300px, calc(100vw - 32px))", textAlign: "center" }}>
-                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
-                    Feeling the love? Send one back ✨
-                  </p>
-                  <Link href="/send?ref=card">
-                    <button
-                      onClick={() => { trackEvent({ event: "create_own_clicked" }); }}
-                      style={{
-                        width: "100%", padding: "14px",
-                        borderRadius: 14,
-                        background: "rgba(255,215,0,0.12)",
-                        border: "1.5px solid rgba(255,215,0,0.35)",
-                        color: "rgba(255,215,0,0.95)",
-                        fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: "0.02em",
-                      }}
-                    >
-                      💛 Create your own card — free!
-                    </button>
-                  </Link>
-                </div>
-              </motion.div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
