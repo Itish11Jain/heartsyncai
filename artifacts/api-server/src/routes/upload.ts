@@ -144,9 +144,6 @@ router.get(/^\/photos\/(.+)$/, async (req: Request, res: Response) => {
     if (!key) { res.status(400).json({ error: "Missing key" }); return; }
     if (!key.startsWith("photo/")) { res.status(403).json({ error: "Forbidden" }); return; }
 
-    const existsResult = await getStorage().exists(key);
-    if (!existsResult.ok || !existsResult.value) { res.status(404).json({ error: "Not found" }); return; }
-
     const ext = key.split(".").pop()?.toLowerCase() ?? "jpg";
     const mimeMap: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
@@ -155,9 +152,9 @@ router.get(/^\/photos\/(.+)$/, async (req: Request, res: Response) => {
 
     const stream = getStorage().downloadAsStream(key);
     stream.pipe(res);
-    stream.on("error", (err) => {
+    stream.on("error", (err: NodeJS.ErrnoException) => {
       console.error("[upload] Stream error", err);
-      if (!res.headersSent) res.status(500).end();
+      if (!res.headersSent) res.status(err.code === "ENOENT" ? 404 : 500).end();
     });
   } catch (err) {
     console.error("[upload] GET /photos/* error", err);
@@ -175,9 +172,6 @@ router.get(/^\/audio\/(.+)$/, async (req: Request, res: Response) => {
     if (!key) { res.status(400).json({ error: "Missing key" }); return; }
     if (!key.startsWith("audio/")) { res.status(403).json({ error: "Forbidden" }); return; }
 
-    const existsResult = await getStorage().exists(key);
-    if (!existsResult.ok || !existsResult.value) { res.status(404).json({ error: "Not found" }); return; }
-
     const ext = key.split(".").pop()?.toLowerCase() ?? "webm";
     const mimeMap: Record<string, string> = {
       webm: "audio/webm", ogg: "audio/ogg", mp3: "audio/mpeg",
@@ -189,9 +183,9 @@ router.get(/^\/audio\/(.+)$/, async (req: Request, res: Response) => {
 
     const stream = getStorage().downloadAsStream(key);
     stream.pipe(res);
-    stream.on("error", (err) => {
+    stream.on("error", (err: NodeJS.ErrnoException) => {
       console.error("[upload] Audio stream error", err);
-      if (!res.headersSent) res.status(500).end();
+      if (!res.headersSent) res.status(err.code === "ENOENT" ? 404 : 500).end();
     });
   } catch (err) {
     console.error("[upload] GET /audio/* error", err);

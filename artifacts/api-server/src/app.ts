@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
@@ -27,6 +28,13 @@ app.use(
     },
   }),
 );
+
+// Compress JSON/text responses; skip already-compressed media streams
+app.use(compression({ filter: (req, res) => {
+  const ct = res.getHeader("Content-Type") as string ?? "";
+  if (/image\/|audio\/|video\//.test(ct)) return false;
+  return compression.filter(req, res);
+}}));
 
 // Clerk proxy must come before body parsers (streams raw bytes)
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
