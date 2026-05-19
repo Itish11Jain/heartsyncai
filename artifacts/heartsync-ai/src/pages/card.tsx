@@ -1143,6 +1143,17 @@ export default function Card() {
     : template.orbs;
 
   const confettiColors = getConfettiColors(likes);
+  const cardId = params.get("id") ?? "";
+  const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
+  /* ── Recipient payment gate ──────────────────────────────────────────
+   * Only runs when someone views the card WITHOUT ?sender=1 AND a card ID
+   * is present. Legitimate recipients have paid cards (is_watermarked=false).
+   * Senders who removed ?sender=1 to bypass the paywall have unpaid cards.
+   * Fail-open after 2 s so a slow network never blocks a real recipient. */
+  const [recipientPayStatus, setRecipientPayStatus] = useState<"checking" | "paid" | "unpaid">(
+    isRecipient && cardId ? "checking" : "paid",
+  );
 
   const skipToFinale = directShare && isSender;
   const [phase, setPhase] = useState<Phase>(skipToFinale ? "finale" : "envelope");
@@ -1302,6 +1313,21 @@ export default function Card() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
+  }, []);
+
+  /* Payment gate check — recipient views only, no-op for senders / previews */
+  useEffect(() => {
+    if (!isRecipient || !cardId) return;
+    const failOpen = setTimeout(() => setRecipientPayStatus("paid"), 2000);
+    fetch(`${BASE}/api/cards/${cardId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        clearTimeout(failOpen);
+        setRecipientPayStatus(data?.is_watermarked === false ? "paid" : "unpaid");
+      })
+      .catch(() => { clearTimeout(failOpen); setRecipientPayStatus("paid"); });
+    return () => clearTimeout(failOpen);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleUnlock() {
@@ -1671,6 +1697,64 @@ export default function Card() {
       </Link>
 
       
+
+      {/* ── Recipient payment gate overlay ──────────────────────────────
+           Shows only when card_id is present and the card hasn't been paid
+           for yet. The sender who bypassed ?sender=1 sees this; legitimate
+           recipients never do (their cards have is_watermarked=false). ── */}
+      <AnimatePresence>
+        {isRecipient && recipientPayStatus === "unpaid" && (
+          <motion.div
+            key="recipient-gate"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 100,
+              background: "rgba(10,8,20,0.88)",
+              backdropFilter: "blur(14px)",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              padding: "32px 24px",
+            }}
+          >
+            <div style={{ fontSize: 44, marginBottom: 20 }}>✉️</div>
+            <p style={{
+              fontSize: 20, fontWeight: 800, color: "#FFD700",
+              textAlign: "center", marginBottom: 10,
+            }}>
+              This card isn't ready yet
+            </p>
+            <p style={{
+              fontSize: 14, color: "rgba(255,255,255,0.55)",
+              textAlign: "center", marginBottom: 32, lineHeight: 1.6,
+              maxWidth: 280,
+            }}>
+              The card hasn't been unlocked for sharing. If you're the creator, tap below to unlock and send it.
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                const u = new URL(window.location.href);
+                u.searchParams.set("sender", "1");
+                u.searchParams.delete("preview");
+                window.location.href = u.toString();
+              }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                width: "min(300px, calc(100vw - 48px))", height: 56, borderRadius: 16,
+                background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                color: "#000", fontWeight: 800, fontSize: 17,
+                border: "none", cursor: "pointer",
+                boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
+              }}
+            >
+              🔓 Unlock &amp; Share
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* SenderPanel: lazy-loads Clerk + share gate + badge + paywall — only for senders */}
       {isSender && (
