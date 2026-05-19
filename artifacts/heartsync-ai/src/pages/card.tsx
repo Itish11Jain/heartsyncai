@@ -988,7 +988,7 @@ function MemoryCollage({
                 />
               ))}
             </div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 5, fontStyle: "italic", letterSpacing: "0.02em" }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 5, fontStyle: "italic", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
               This is a special message for you.
             </div>
           </div>
