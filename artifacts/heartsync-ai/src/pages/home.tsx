@@ -138,8 +138,10 @@ function PageConfetti() {
   // low-end Android. Trim to the brightest pieces on phones.
   const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (reduced) return null;
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 480;
-  const pieces = isMobile ? CONFETTI_PIECES.slice(0, 32) : CONFETTI_PIECES;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  /* Cap at 8 on mobile — 28 animated divs tax low-end Android compositors.
+   * (The old slice(0,32) was a no-op since the array only has 28 items.) */
+  const pieces = isMobile ? CONFETTI_PIECES.slice(0, 8) : CONFETTI_PIECES;
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, pointerEvents: "none", overflow: "hidden" }}>
       {pieces.map((c, i) => (
@@ -176,6 +178,9 @@ function CardIllustration() {
   const [seq, setSeq] = useState(0);
   const [showBlurb, setShowBlurb] = useState(false);
   const [loopCount, setLoopCount] = useState(0);
+  /* On mobile, skip expensive infinite float/rotate animations — the card
+   * preview looks great without them and saves ~8 concurrent animation threads. */
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
     setSeq(0);
@@ -427,11 +432,10 @@ function CardIllustration() {
                   "Wishing you all the happiness in the world."
                 </p>
                 {/* Confetti — big burst */}
-                {[
-                  "#FFD700","#FF69B4","#A78BFA","#34D399","#4FC3F7",
-                  "#FFD700","#FF69B4","#FF4444","#FFAB40","#81D4FA",
-                  "#FFD700","#F06292","#A78BFA","#34D399",
-                ].map((c, i) => {
+                {(isMobile
+                  ? ["#FFD700","#FF69B4","#A78BFA","#34D399","#4FC3F7"]
+                  : ["#FFD700","#FF69B4","#A78BFA","#34D399","#4FC3F7","#FFD700","#FF69B4","#FF4444","#FFAB40","#81D4FA","#FFD700","#F06292","#A78BFA","#34D399"]
+                ).map((c, i) => {
                   const xOff = -90 + (i % 7) * 28;
                   const sz = i % 3 === 0 ? 6 : i % 3 === 1 ? 4 : 3;
                   const rot = (i % 2 === 0 ? 1 : -1) * (25 + i * 12);
@@ -477,25 +481,28 @@ function CardIllustration() {
       ))}
 
       {/* Floating cute edge emojis — kept across all phases */}
+      {/* Floating edge emojis — infinite float/rotate animations on desktop only.
+          On mobile these run as 3 extra concurrent Framer Motion timers; skipping
+          them saves measurable main-thread budget on mid-range Android. */}
       <m.div
-        animate={{ y: [-6, 6, -6], rotate: [-4, 4, -4] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        animate={isMobile ? undefined : { y: [-6, 6, -6], rotate: [-4, 4, -4] }}
+        transition={isMobile ? undefined : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
         style={{ position: "absolute", top: -18, right: -10, fontSize: 36, filter: "drop-shadow(0 6px 12px rgba(236,72,153,0.45))", zIndex: 40, pointerEvents: "none" }}
         aria-hidden="true"
       >
         💖
       </m.div>
       <m.div
-        animate={{ y: [4, -4, 4], rotate: [6, -6, 6] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        animate={isMobile ? undefined : { y: [4, -4, 4], rotate: [6, -6, 6] }}
+        transition={isMobile ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut" }}
         style={{ position: "absolute", top: "26%", left: -22, fontSize: 28, filter: "drop-shadow(0 4px 10px rgba(255,215,0,0.5))", zIndex: 40, pointerEvents: "none" }}
         aria-hidden="true"
       >
         ✨
       </m.div>
       <m.div
-        animate={{ y: [-3, 5, -3], rotate: [-3, 3, -3] }}
-        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+        animate={isMobile ? undefined : { y: [-3, 5, -3], rotate: [-3, 3, -3] }}
+        transition={isMobile ? undefined : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
         style={{ position: "absolute", bottom: 36, right: -22, fontSize: 42, filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.55))", zIndex: 40, pointerEvents: "none" }}
         aria-hidden="true"
       >
@@ -828,6 +835,9 @@ export default function Home() {
   const [, navigate] = useLocation();
   const [heroName, setHeroName] = useState("");
   const nameTrackedRef = useRef(false);
+  /* Used to conditionally skip expensive infinite animations on Android.
+   * Static at mount time — safe for a client-only SPA with no SSR. */
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   /**
    * Below-the-fold sections (How it works, Testimonials, Date Guide footer)
@@ -887,9 +897,14 @@ export default function Home() {
     <div className="min-h-screen min-h-[100svh] md:min-h-screen w-full overflow-hidden bg-background text-foreground selection:bg-primary/30">
       <PageConfetti />
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[55%] h-[55%] rounded-full bg-primary/15 blur-[130px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-secondary/15 blur-[160px]" />
-        <div className="absolute top-[30%] right-[0%] w-[40%] h-[40%] rounded-full bg-accent/8 blur-[120px]" />
+        {/* Desktop: full GPU-blur ambient glows — looks beautiful on fast hardware */}
+        <div className="hidden md:block absolute top-[-20%] left-[-10%] w-[55%] h-[55%] rounded-full bg-primary/15 blur-[130px]" />
+        <div className="hidden md:block absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-secondary/15 blur-[160px]" />
+        <div className="hidden md:block absolute top-[30%] right-[0%] w-[40%] h-[40%] rounded-full bg-accent/8 blur-[120px]" />
+        {/* Mobile: lightweight CSS gradient — same visual result, zero GPU compositor cost.
+            blur-[130px] on full-viewport fixed divs is a frame-rate killer on mid-range Android
+            (Snapdragon 600/700) because it forces full-viewport rasterisation every frame. */}
+        <div className="md:hidden absolute inset-0" style={{ background: "radial-gradient(ellipse at 15% 15%, rgba(168,85,247,0.12) 0%, transparent 52%), radial-gradient(ellipse at 85% 88%, rgba(244,114,182,0.1) 0%, transparent 52%)" }} />
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 pt-3 pb-4 md:pt-6 md:pb-20">
@@ -959,14 +974,14 @@ export default function Home() {
                   style={{
                     background: "linear-gradient(90deg, hsl(328 86% 59%), hsl(24 95% 53%))",
                   }}
-                  animate={{
+                  animate={isMobile ? undefined : {
                     boxShadow: [
                       "0 0 14px rgba(236,72,153,0.22)",
                       "0 0 26px rgba(251,146,60,0.45)",
                       "0 0 14px rgba(236,72,153,0.22)",
                     ],
                   }}
-                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                  transition={isMobile ? undefined : { duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   <Input
                     type="text"
@@ -998,15 +1013,20 @@ export default function Home() {
 
               {/* Single primary CTA */}
               <div className="relative w-full">
-                <m.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
-                  animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</m.span>
-                <m.span className="absolute -top-3 right-[16%] text-yellow-200 text-sm pointer-events-none z-10"
-                  animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
-                  transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</m.span>
-                <m.span className="absolute -bottom-2 right-[28%] text-pink-300 text-xs pointer-events-none z-10"
-                  animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
-                  transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</m.span>
+                {/* ✦ sparkle decorations — desktop/tablet only; on mobile these are
+                    3 extra repeat:Infinity FM animations that run alongside the CTA
+                    shimmer + input glow — trimmed to reduce main-thread work on Android. */}
+                {!isMobile && <>
+                  <m.span className="absolute -top-3 left-[10%] text-yellow-300 text-xs pointer-events-none z-10"
+                    animate={{ scale:[0,1.3,0], opacity:[0,1,0] }}
+                    transition={{ duration:0.9, repeat:Infinity, repeatDelay:2.6, ease:"easeInOut" }}>✦</m.span>
+                  <m.span className="absolute -top-3 right-[16%] text-yellow-200 text-sm pointer-events-none z-10"
+                    animate={{ scale:[0,1.0,0], opacity:[0,0.9,0] }}
+                    transition={{ duration:1.1, repeat:Infinity, repeatDelay:2.0, delay:0.9, ease:"easeInOut" }}>✦</m.span>
+                  <m.span className="absolute -bottom-2 right-[28%] text-pink-300 text-xs pointer-events-none z-10"
+                    animate={{ scale:[0,1.1,0], opacity:[0,1,0] }}
+                    transition={{ duration:0.8, repeat:Infinity, repeatDelay:2.9, delay:1.6, ease:"easeInOut" }}>✦</m.span>
+                </>}
                 <Button
                   type="button"
                   size="lg"
