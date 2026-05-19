@@ -943,7 +943,7 @@ function MemoryCollage({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: mediaDelay, duration: 0.5 }}
-        style={{ display: "flex", alignItems: "center", gap: 14 }}
+        style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 28 }}
       >
         {voiceNoteUrl && (
           <button
@@ -951,11 +951,13 @@ function MemoryCollage({
             style={{
               width: 60, height: 60, borderRadius: "50%", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: "linear-gradient(135deg, #FFD700, #FFA500)",
-              border: "2px solid rgba(255,255,255,0.3)",
-              boxShadow: "0 0 22px rgba(255,215,0,0.55), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.35)",
+              background: isPlaying ? "#000" : "linear-gradient(135deg, #FFD700, #FFA500)",
+              border: isPlaying ? "2px solid rgba(255,215,0,0.5)" : "2px solid rgba(255,255,255,0.3)",
+              boxShadow: isPlaying
+                ? "0 0 18px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)"
+                : "0 0 22px rgba(255,215,0,0.55), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.35)",
               fontSize: 22,
-              color: "#3a2800",
+              color: isPlaying ? "#FFD700" : "#000",
               flexShrink: 0,
             }}
           >
@@ -985,6 +987,9 @@ function MemoryCollage({
                   }}
                 />
               ))}
+            </div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 5, fontStyle: "italic", letterSpacing: "0.02em" }}>
+              This is a special message for you.
             </div>
           </div>
         )}
