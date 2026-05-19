@@ -4,6 +4,30 @@ import { Resvg } from "@resvg/resvg-js";
 
 const router = Router();
 
+/* ── In-process LRU cache for rendered OG images ───────────────────────────
+ * Protects the server from re-running resvg on every request for the same
+ * name (WhatsApp card forwards can trigger many identical hits in seconds).
+ * 500 entries ≈ all common recipient names; each PNG is ~8-15 KB → <10 MB
+ * total. Uses Map insertion-order as the LRU queue (delete+re-insert on hit).
+ */
+const OG_CACHE_MAX = 500;
+const ogCache = new Map<string, { contentType: string; body: Buffer }>();
+
+function ogCacheGet(key: string) {
+  const entry = ogCache.get(key);
+  if (!entry) return null;
+  ogCache.delete(key);
+  ogCache.set(key, entry);
+  return entry;
+}
+
+function ogCacheSet(key: string, value: { contentType: string; body: Buffer }) {
+  if (ogCache.size >= OG_CACHE_MAX) {
+    ogCache.delete(ogCache.keys().next().value!);
+  }
+  ogCache.set(key, value);
+}
+
 const FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 const FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
 
@@ -132,19 +156,26 @@ function buildSvg(name: string): string {
 /* ── GET /api/og-image?name=Sonakshi ───────────────────────────────────────── */
 router.get("/og-image", (req, res) => {
   const name = String(req.query["name"] ?? "You").trim() || "You";
+  const cacheKey = name.toLowerCase();
+
+  const cached = ogCacheGet(cacheKey);
+  if (cached) {
+    res.setHeader("Content-Type", cached.contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.send(cached.body);
+  }
+
   const svg = buildSvg(name);
 
   if (!fontBold) {
+    const body = Buffer.from(svg);
+    ogCacheSet(cacheKey, { contentType: "image/svg+xml", body });
     res.setHeader("Content-Type", "image/svg+xml");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    return res.send(svg);
+    return res.send(body);
   }
 
   try {
-    const fonts: { path?: string; buffer?: Uint8Array }[] = [];
-    if (fontBold) fonts.push({ buffer: new Uint8Array(fontBold) });
-    if (fontReg) fonts.push({ buffer: new Uint8Array(fontReg) });
-
     const resvg = new Resvg(svg, {
       font: {
         fontBuffers: [fontBold, ...(fontReg ? [fontReg] : [])].map(
@@ -156,15 +187,18 @@ router.get("/og-image", (req, res) => {
     });
 
     const pngData = resvg.render();
-    const png = pngData.asPng();
+    const body = Buffer.from(pngData.asPng());
+    ogCacheSet(cacheKey, { contentType: "image/png", body });
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    return res.send(Buffer.from(png));
+    return res.send(body);
   } catch {
+    const body = Buffer.from(svg);
+    ogCacheSet(cacheKey, { contentType: "image/svg+xml", body });
     res.setHeader("Content-Type", "image/svg+xml");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    return res.send(svg);
+    return res.send(body);
   }
 });
 

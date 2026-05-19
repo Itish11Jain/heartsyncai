@@ -146,6 +146,9 @@ export async function initDb(): Promise<void> {
       unlock_method  TEXT
     );
     CREATE INDEX IF NOT EXISTS hs_received_payments_utr_idx ON hs_received_payments(utr);
+    -- Functional index on the last-4 digits of UTR so the card unlock query
+    -- (WHERE RIGHT(utr, 4) = $1) uses an index scan instead of a full table scan.
+    CREATE INDEX IF NOT EXISTS hs_received_payments_utr_last4_idx ON hs_received_payments (RIGHT(utr, 4));
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS card_id TEXT;
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS unlock_method TEXT;
   `);
