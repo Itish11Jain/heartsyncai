@@ -138,6 +138,8 @@ const ENSURE_TABLE = `
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_medium TEXT;
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
   CREATE INDEX IF NOT EXISTS hs_card_events_utm_source ON hs_card_events(utm_source);
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS has_voice_note BOOLEAN;
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS photo_count SMALLINT;
 `;
 
 const ENSURE_VITALS_TABLE = `
@@ -274,7 +276,7 @@ router.post("/events/card", async (req, res) => {
       event, fingerprint, clerk_user_id, email,
       occasion, template, channel,
       has_likes, used_custom_msg, is_free, from_card_ref,
-      recipient_name, card_id, has_photo,
+      recipient_name, card_id, has_photo, has_voice_note, photo_count,
       utm_source, utm_medium, utm_campaign,
     } = req.body as Record<string, unknown>;
 
@@ -304,8 +306,8 @@ router.post("/events/card", async (req, res) => {
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
           channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id,
-          has_photo, utm_source, utm_medium, utm_campaign)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+          has_photo, has_voice_note, photo_count, utm_source, utm_medium, utm_campaign)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [
         event,
         fingerprint ?? null,
@@ -321,6 +323,8 @@ router.post("/events/card", async (req, res) => {
         recipient_name ?? null,
         card_id ?? null,
         has_photo ?? null,
+        has_voice_note ?? null,
+        typeof photo_count === "number" ? photo_count : null,
         capUtm(utm_source, 60),
         capUtm(utm_medium, 60),
         capUtm(utm_campaign, 80),
@@ -692,13 +696,15 @@ router.get("/events/analytics", async (req, res) => {
            FROM hs_card_events WHERE ${whereSql}`,
           params,
         ),
-        /* ── Voice & multi-photo breakdown from hs_cards (no date filter —
-           these are card-level attributes, not event-level) ── */
+        /* ── Voice & multi-photo breakdown from hs_card_events ──
+           photo_url/voice_note_url are never persisted to hs_cards (they live
+           in URL params), so we count from the card_created event flags instead. */
         pool.query(
           `SELECT
-             COUNT(*) FILTER (WHERE voice_note_url IS NOT NULL AND voice_note_url <> '') AS cards_with_voice,
-             COUNT(*) FILTER (WHERE cardinality(photo_urls) > 1)                         AS cards_with_multi_photo
-           FROM hs_cards`,
+             COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_created' AND has_voice_note = true AND card_id IS NOT NULL) AS cards_with_voice,
+             COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_created' AND photo_count >= 2 AND card_id IS NOT NULL)      AS cards_with_multi_photo
+           FROM hs_card_events WHERE ${whereSql}`,
+          params,
         ),
       ]);
 

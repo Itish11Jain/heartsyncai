@@ -646,6 +646,8 @@ function SendInner() {
         from_card_ref: fromCardRef,
         recipient_name: recipientName.trim() || undefined,
         has_photo: uploadedPhotoUrls.length > 0,
+        has_voice_note: !!voiceNoteUrl,
+        photo_count: uploadedPhotoUrls.length,
       });
       clearDraft();
       const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
@@ -708,6 +710,8 @@ function SendInner() {
       recipient_name: recipientName.trim() || undefined,
       card_id: effectiveCardId,
       has_photo: uploadedPhotoUrls.length > 0,
+      has_voice_note: !!voiceNoteUrl,
+      photo_count: uploadedPhotoUrls.length,
     });
 
     clearDraft();
