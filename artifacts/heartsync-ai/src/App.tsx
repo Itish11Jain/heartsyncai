@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotFound from "@/pages/not-found";
 
 /* Radix UI (TooltipProvider + Toaster) is not needed for the first paint.
@@ -16,9 +15,12 @@ const AppShellProvider = lazy(() => import("@/components/AppShellProvider"));
  * The HTML splash screen bridges the tiny extra fetch delay on /. */
 const Home = lazy(() => import("@/pages/home"));
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+/* React Query — lazy so it never blocks the landing page (home doesn't use queries).
+ * All pages that do need queries are themselves lazy-loaded, so they only
+ * render after this wrapper has already resolved. */
+const QueryWrapper = lazy(() => import("@/components/QueryWrapper"));
 
-const queryClient = new QueryClient();
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 /* ── Lazy public pages (no auth needed) ─────────────────────────────── */
 const Preview = lazy(() => import("@/pages/preview"));
@@ -143,17 +145,22 @@ function AppRoutes() {
 function App() {
   return (
     <WouterRouter base={basePath}>
-      <QueryClientProvider client={queryClient}>
-        {/* AppShellProvider (Radix TooltipProvider + Toaster) loads lazily.
-            While it fetches, the fallback renders routes without tooltip/toast
-            context — imperceptible because the HTML splash is still covering
-            the viewport. Once the tiny chunk arrives, the full tree mounts. */}
-        <Suspense fallback={<AppRoutes />}>
-          <AppShellProvider>
-            <AppRoutes />
-          </AppShellProvider>
-        </Suspense>
-      </QueryClientProvider>
+      {/* QueryWrapper is lazy — React Query is not needed for the landing page
+          or card experience. It loads in parallel with Home/Card chunks so
+          pages that do need queries (analytics, history…) never see a delay. */}
+      <Suspense fallback={<AppRoutes />}>
+        <QueryWrapper>
+          {/* AppShellProvider (Radix TooltipProvider + Toaster) loads lazily.
+              While it fetches, the fallback renders routes without tooltip/toast
+              context — imperceptible because the HTML splash is still covering
+              the viewport. Once the tiny chunk arrives, the full tree mounts. */}
+          <Suspense fallback={<AppRoutes />}>
+            <AppShellProvider>
+              <AppRoutes />
+            </AppShellProvider>
+          </Suspense>
+        </QueryWrapper>
+      </Suspense>
     </WouterRouter>
   );
 }

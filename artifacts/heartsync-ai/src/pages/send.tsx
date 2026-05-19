@@ -513,45 +513,43 @@ function SendInner() {
     }
   }
 
-  async function handleStartRecording() {
-    setVoiceUploadError(null);
+  function startRecordingWithStream(stream: MediaStream) {
+    const mimeType = (
+      MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" :
+      MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" :
+      MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" :
+      MediaRecorder.isTypeSupported("audio/ogg;codecs=opus") ? "audio/ogg;codecs=opus" : ""
+    );
+    let mr: MediaRecorder;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = (
-        MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" :
-        MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" :
-        MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" :
-        MediaRecorder.isTypeSupported("audio/ogg;codecs=opus") ? "audio/ogg;codecs=opus" : ""
-      );
-      let mr: MediaRecorder;
-      try {
-        mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      } catch {
-        mr = new MediaRecorder(stream);
-      }
-      voiceChunksRef.current = [];
-      mr.ondataavailable = e => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(voiceChunksRef.current, { type: mimeType || "audio/webm" });
-        await uploadVoiceBlob(blob);
-      };
-      mr.start(200);
-      mediaRecorderRef.current = mr;
-      setVoiceRecording(true);
-      setVoiceRecordDuration(0);
-      voiceTimerRef.current = setInterval(() => {
-        setVoiceRecordDuration(d => d + 1);
-      }, 1000);
-    } catch (err: unknown) {
-      const name = (err instanceof Error) ? err.name : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        setVoiceUploadError("Mic access denied. Please allow microphone access and try again.");
-      } else if (name === "NotFoundError") {
-        setVoiceUploadError("No microphone found. Please connect a mic and try again.");
-      } else {
-        setVoiceUploadError("Could not start recording. Please try again.");
-      }
+      mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    } catch {
+      mr = new MediaRecorder(stream);
+    }
+    voiceChunksRef.current = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(voiceChunksRef.current, { type: mimeType || "audio/webm" });
+      await uploadVoiceBlob(blob);
+    };
+    mr.start(200);
+    mediaRecorderRef.current = mr;
+    setVoiceRecording(true);
+    setVoiceRecordDuration(0);
+    voiceTimerRef.current = setInterval(() => {
+      setVoiceRecordDuration(d => d + 1);
+    }, 1000);
+  }
+
+  function handleMicError(err: unknown) {
+    const name = (err instanceof Error) ? err.name : "";
+    if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+      setVoiceUploadError("Mic blocked — please allow microphone access in your browser settings and try again.");
+    } else if (name === "NotFoundError") {
+      setVoiceUploadError("No microphone found on this device.");
+    } else {
+      setVoiceUploadError(`Could not start recording (${name || "unknown error"}). Try again or use a different browser.`);
     }
   }
 
@@ -1350,7 +1348,16 @@ function SendInner() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <button
                         type="button"
-                        onClick={() => void handleStartRecording()}
+                        onClick={() => {
+                          setVoiceUploadError(null);
+                          if (!navigator.mediaDevices?.getUserMedia) {
+                            setVoiceUploadError("Your browser doesn't support recording. Please use Chrome or Safari.");
+                            return;
+                          }
+                          navigator.mediaDevices.getUserMedia({ audio: true })
+                            .then(stream => startRecordingWithStream(stream))
+                            .catch(handleMicError);
+                        }}
                         style={{
                           display: "flex", alignItems: "center", gap: 8,
                           padding: "7px 16px", borderRadius: 8, cursor: "pointer",
@@ -1365,7 +1372,15 @@ function SendInner() {
                     </div>
                   )}
                   {voiceUploadError && (
-                    <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{voiceUploadError}</p>
+                    <div style={{
+                      marginTop: 8, padding: "10px 12px", borderRadius: 10,
+                      background: "rgba(248,113,113,0.12)",
+                      border: "1px solid rgba(248,113,113,0.4)",
+                      display: "flex", alignItems: "flex-start", gap: 8,
+                    }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>🎙️</span>
+                      <p style={{ fontSize: 12, color: "#fca5a5", margin: 0, lineHeight: 1.5 }}>{voiceUploadError}</p>
+                    </div>
                   )}
                 </div>
 
