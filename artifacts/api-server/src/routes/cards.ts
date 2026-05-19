@@ -228,21 +228,29 @@ router.post("/cards", async (req, res) => {
 
 /**
  * GET /api/cards/:id
- * Public — no auth. Returns minimal fields for recipient watermark check.
+ * Public — no auth. Returns card fields plus is_paid which reflects
+ * whether a real ₹99 payment exists in hs_received_payments for this card.
  */
 router.get("/cards/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      `SELECT id, is_watermarked, is_premium, template, photo_url, photo_urls, voice_note_url
-       FROM hs_cards WHERE id = $1`,
-      [id],
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "not_found" });
+    const [cardResult, paymentResult] = await Promise.all([
+      pool.query(
+        `SELECT id, is_watermarked, is_premium, template, photo_url, photo_urls, voice_note_url
+         FROM hs_cards WHERE id = $1`,
+        [id],
+      ),
+      pool.query(
+        `SELECT 1 FROM hs_received_payments WHERE card_id = $1 LIMIT 1`,
+        [id],
+      ),
+    ]);
+    const isPaid = paymentResult.rows.length > 0;
+    if (cardResult.rows.length === 0) {
+      res.json({ id, is_paid: isPaid });
       return;
     }
-    res.json(result.rows[0]);
+    res.json({ ...cardResult.rows[0], is_paid: isPaid });
   } catch (err) {
     console.error("[cards] GET /cards/:id error", err);
     res.status(500).json({ error: "internal_error" });

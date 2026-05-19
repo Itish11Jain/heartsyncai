@@ -1323,7 +1323,7 @@ export default function Card() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         clearTimeout(failOpen);
-        setRecipientPayStatus(data?.is_watermarked === false ? "paid" : "unpaid");
+        setRecipientPayStatus(data?.is_paid === true ? "paid" : "unpaid");
       })
       .catch(() => { clearTimeout(failOpen); setRecipientPayStatus("paid"); });
     return () => clearTimeout(failOpen);
