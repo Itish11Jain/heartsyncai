@@ -84,6 +84,7 @@ type AnalyticsData = {
   recipient_cta_funnel?: RecipientCtaFunnel;
   user_cards?: UserCardRow[];
   payment_funnel?: PaymentFunnelRow | null;
+  media_breakdown?: { cards_with_voice: string; cards_with_multi_photo: string } | null;
   range?: { from: string | null; to: string | null };
 };
 
@@ -788,6 +789,13 @@ export default function Analytics() {
           <Stat label="Share Without Photo Clicks" value={o.share_without_photo_users} sub={`${o.share_without_photo_clicked} total events`} />
           <Stat label="Cards Created with Photo" value={String(data.photo_breakdown?.photo_created ?? 0)} sub="from Photo vs No-Photo" />
           <Stat label="Cards Viewed with Photo" value={String(data.photo_breakdown?.photo_viewed ?? 0)} sub="recipient views" />
+        </div>
+
+        {/* ── Voice & Multi-Photo ── */}
+        <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Voice & Photos</h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
+          <Stat label="Cards with Voice Note" value={String(data.media_breakdown?.cards_with_voice ?? 0)} sub="recorded voice attached" />
+          <Stat label="Cards with 2+ Photos" value={String(data.media_breakdown?.cards_with_multi_photo ?? 0)} sub="multi-photo collage" />
         </div>
 
         {/* ── Photo Paywall Funnel ── */}

@@ -456,6 +456,7 @@ router.get("/events/analytics", async (req, res) => {
       recipientCtaFunnel,
       userCards,
       paymentFunnel,
+      mediaBreakdown,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -691,6 +692,14 @@ router.get("/events/analytics", async (req, res) => {
            FROM hs_card_events WHERE ${whereSql}`,
           params,
         ),
+        /* ── Voice & multi-photo breakdown from hs_cards (no date filter —
+           these are card-level attributes, not event-level) ── */
+        pool.query(
+          `SELECT
+             COUNT(*) FILTER (WHERE voice_note_url IS NOT NULL AND voice_note_url <> '') AS cards_with_voice,
+             COUNT(*) FILTER (WHERE cardinality(photo_urls) > 1)                         AS cards_with_multi_photo
+           FROM hs_cards`,
+        ),
       ]);
 
     return res.json({
@@ -706,6 +715,7 @@ router.get("/events/analytics", async (req, res) => {
       recipient_cta_funnel: recipientCtaFunnel.rows[0] ?? { clicks: 0, unique_clickers: 0, cards_after_click: 0 },
       user_cards: userCards.rows,
       payment_funnel: paymentFunnel.rows[0] ?? null,
+      media_breakdown: mediaBreakdown.rows[0] ?? null,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });
