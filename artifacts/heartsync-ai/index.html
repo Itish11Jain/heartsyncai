@@ -258,10 +258,14 @@
         //   never stare at the splash on a slow connection without seeing the form.
         //   Without any cap the 1 s default caused a blank screen while Clerk's
         //   88 KB chunk finished downloading after the splash cleared early.
-        // All other routes: 1 s is enough — React mounts well before then.
+        // /card + / (home): production data shows React mounts at ~1950ms p50 on
+        //   Android — so the old 1s cap was clearing the splash 950ms too early,
+        //   leaving a blank screen until React rendered.  3s matches /send and
+        //   is safe: SplashClearer fires first (at React mount time) on fast devices.
+        // All other routes: 1 s is still fine — they mount quickly.
         setTimeout(function () {
           if (window.__clearHsSplash) window.__clearHsSplash();
-        }, isSend ? 3000 : 1000);
+        }, (isSend || isCard || isHome) ? 3000 : 1000);
 
         // Preload personal photo as early as possible — the API takes ~3.5s
         // and React mounts 1-2s after HTML, so starting here saves ~1-2s of

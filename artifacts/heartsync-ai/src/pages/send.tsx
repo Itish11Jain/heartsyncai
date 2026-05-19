@@ -355,6 +355,33 @@ function SendInner() {
   const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  /* ─── Pre-warm the /card chunk once the page is idle ────────────────────
+     Almost every Send visitor navigates to /card right after generating.
+     Pre-fetching it now eliminates the lazy-load waterfall (~600ms on Indian
+     4G) that would otherwise delay the card page after "Generate my card".
+     We respect saveData and skip on slow-2g/2g to avoid competing with
+     the form's own resources on constrained connections. ──────────────── */
+  useEffect(() => {
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    };
+    const prefetch = () => {
+      try {
+        const conn = (navigator as unknown as {
+          connection?: { saveData?: boolean; effectiveType?: string };
+        }).connection;
+        if (conn?.saveData) return;
+        if (conn?.effectiveType === "slow-2g" || conn?.effectiveType === "2g") return;
+        void import("@/pages/card");
+      } catch { /* non-critical */ }
+    };
+    if (typeof w.requestIdleCallback === "function") {
+      w.requestIdleCallback(prefetch, { timeout: 3000 });
+    } else {
+      setTimeout(prefetch, 2000);
+    }
+  }, []);
+
   /* ─── Persist draft on every change ─────────────────────────────────── */
   useEffect(() => {
     const meaningful = step > 1 || recipientName.trim().length > 0 || relation.length > 0;
