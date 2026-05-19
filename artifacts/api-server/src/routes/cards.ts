@@ -151,7 +151,7 @@ router.post("/cards", async (req, res) => {
   }
 
   try {
-    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url } =
+    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url, photo_urls, voice_note_url } =
       req.body as Record<string, unknown>;
 
     // Allow callers to supply a pre-existing client-generated tracking ID
@@ -186,14 +186,16 @@ router.post("/cards", async (req, res) => {
         const freshId = await uniqueId();
         await pool.query(
           `INSERT INTO hs_cards
-             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url)
-           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7)`,
+             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url)
+           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9)`,
           [freshId, clerkUserId,
             typeof template === "string" ? template : null,
             typeof occasion === "string" ? occasion : null,
             typeof recipient_name === "string" ? recipient_name : null,
             typeof message_b64 === "string" ? message_b64 : null,
-            typeof photo_url === "string" ? photo_url : null],
+            typeof photo_url === "string" ? photo_url : null,
+            Array.isArray(photo_urls) ? photo_urls.filter((u): u is string => typeof u === "string") : null,
+            typeof voice_note_url === "string" ? voice_note_url : null],
         );
         res.json({ id: freshId });
         return;
@@ -202,8 +204,8 @@ router.post("/cards", async (req, res) => {
 
     await pool.query(
       `INSERT INTO hs_cards
-         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url)
-       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7)`,
+         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url)
+       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9)`,
       [
         id,
         clerkUserId,
@@ -212,6 +214,8 @@ router.post("/cards", async (req, res) => {
         typeof recipient_name === "string" ? recipient_name : null,
         typeof message_b64 === "string" ? message_b64 : null,
         typeof photo_url === "string" ? photo_url : null,
+        Array.isArray(photo_urls) ? photo_urls.filter((u): u is string => typeof u === "string") : null,
+        typeof voice_note_url === "string" ? voice_note_url : null,
       ],
     );
 
@@ -230,7 +234,7 @@ router.get("/cards/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT id, is_watermarked, is_premium, template, photo_url
+      `SELECT id, is_watermarked, is_premium, template, photo_url, photo_urls, voice_note_url
        FROM hs_cards WHERE id = $1`,
       [id],
     );

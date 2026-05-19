@@ -338,26 +338,34 @@ function SendInner() {
   const [watermarkUtrLoading, setWatermarkUtrLoading] = useState(false);
   const [watermarkUpiCopied, setWatermarkUpiCopied] = useState(false);
 
-  // Photo upload state
-  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
-  const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
+  // Multi-photo upload state (up to 4 photos)
+  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
+  const [photoPreviewSrcs, setPhotoPreviewSrcs] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
 
+  // Voice note recorder state
+  const [voiceNoteUrl, setVoiceNoteUrl] = useState<string | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const [voiceUploading, setVoiceUploading] = useState(false);
+  const [voiceUploadError, setVoiceUploadError] = useState<string | null>(null);
+  const [voiceRecordDuration, setVoiceRecordDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   /* ─── Persist draft on every change ─────────────────────────────────── */
   useEffect(() => {
-    // Don't bother saving the draft for empty / step-1 unless they've made progress.
-    const meaningful =
-      step > 1 || recipientName.trim().length > 0 || relation.length > 0 || likes.trim().length > 0;
+    const meaningful = step > 1 || recipientName.trim().length > 0 || relation.length > 0;
     if (!meaningful) return;
     try {
       const draft: SendDraft = {
-        occasion, relation, recipientName, likes, customMsg, selectedTemplate, step,
+        occasion, relation, recipientName, likes: "", customMsg, selectedTemplate, step,
         savedAt: Date.now(),
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch { /* ignore quota */ }
-  }, [occasion, relation, recipientName, likes, customMsg, selectedTemplate, step]);
+  }, [occasion, relation, recipientName, customMsg, selectedTemplate, step]);
 
   /* ─── Persist paywall state ─────────────────────────────────────────────
      The user often taps the QR / Copy → switches to their UPI app → makes
@@ -443,18 +451,31 @@ function SendInner() {
     });
   }
 
-  function buildCardUrl(name: string, msg: string, senderFlag = false, template: TemplateId = "envelope", cardId?: string, directShare = false, personalPictureUrl?: string) {
+  function buildCardUrl(
+    name: string,
+    msg: string,
+    senderFlag = false,
+    template: TemplateId = "envelope",
+    cardId?: string,
+    directShare = false,
+    personalPictureUrl?: string,
+    photoUrls?: string[],
+    voiceUrl?: string,
+  ) {
     const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
     const p = new URLSearchParams({ to: name, occasion, relation });
-    if (likes.trim()) p.set("likes", likes.trim());
     if (msg.trim() && msg.trim() !== defaultMsg) {
       try { p.set("msg", btoa(unescape(encodeURIComponent(msg.trim())))); } catch { /* ignore */ }
     }
     if (senderFlag) p.set("sender", "1");
     if (cardId) p.set("id", cardId);
     if (directShare) p.set("direct_share", "1");
-    if (personalPictureUrl) p.set("personalpicture", personalPictureUrl);
-    /* Each template uses its own .html file so WhatsApp reads template-specific OG tags */
+    const firstPhoto = photoUrls?.[0] ?? personalPictureUrl;
+    if (firstPhoto) p.set("personalpicture", firstPhoto);
+    if (photoUrls && photoUrls.length > 0) {
+      p.set("photos", photoUrls.map(u => encodeURIComponent(u)).join(","));
+    }
+    if (voiceUrl) p.set("voicenote", encodeURIComponent(voiceUrl));
     if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
     if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
     if (template === "vinyl")   return `${base}/vinyl.html?${p.toString()}`;
@@ -462,10 +483,11 @@ function SendInner() {
   }
 
   async function handlePhotoSelect(file: File) {
+    if (uploadedPhotoUrls.length >= 4 || photoUploading) return;
     setPhotoUploadError(null);
-    setPhotoPreviewSrc(URL.createObjectURL(file));
+    const previewSrc = URL.createObjectURL(file);
+    setPhotoPreviewSrcs(prev => [...prev, previewSrc]);
     setPhotoUploading(true);
-    setUploadedPhotoUrl(null);
     try {
       const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
       const fd = new FormData();
@@ -474,19 +496,79 @@ function SendInner() {
       if (!res.ok) {
         const d = await res.json().catch(() => ({})) as { error?: string };
         setPhotoUploadError(d.error ?? "Upload failed. Please try again.");
-        setPhotoPreviewSrc(null);
+        setPhotoPreviewSrcs(prev => prev.filter(s => s !== previewSrc));
         return;
       }
       const data = await res.json() as { url?: string };
       if (data.url) {
-        setUploadedPhotoUrl(data.url);
+        setUploadedPhotoUrls(prev => [...prev, data.url!]);
         trackEvent({ event: "photo_added", occasion, clerk_user_id: clerkUserId ?? undefined, email: userEmail ?? undefined, fingerprint: fingerprint ?? undefined, template: selectedTemplate });
       }
     } catch {
       setPhotoUploadError("Upload failed. Please try again.");
-      setPhotoPreviewSrc(null);
+      setPhotoPreviewSrcs(prev => prev.filter(s => s !== previewSrc));
     } finally {
       setPhotoUploading(false);
+    }
+  }
+
+  async function handleStartRecording() {
+    setVoiceUploadError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      voiceChunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(voiceChunksRef.current, { type: mimeType || "audio/webm" });
+        await uploadVoiceBlob(blob);
+      };
+      mr.start(200);
+      mediaRecorderRef.current = mr;
+      setVoiceRecording(true);
+      setVoiceRecordDuration(0);
+      voiceTimerRef.current = setInterval(() => {
+        setVoiceRecordDuration(d => d + 1);
+      }, 1000);
+    } catch {
+      setVoiceUploadError("Mic access denied. Please allow microphone access and try again.");
+    }
+  }
+
+  function handleStopRecording() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (voiceTimerRef.current) {
+      clearInterval(voiceTimerRef.current);
+      voiceTimerRef.current = null;
+    }
+    setVoiceRecording(false);
+  }
+
+  async function uploadVoiceBlob(blob: Blob) {
+    setVoiceUploading(true);
+    setVoiceUploadError(null);
+    try {
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const fd = new FormData();
+      fd.append("audio", blob, "voice.webm");
+      const res = await fetch(`${base}/api/upload/audio`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        setVoiceUploadError(d.error ?? "Upload failed. Please try again.");
+        return;
+      }
+      const data = await res.json() as { url?: string };
+      if (data.url) setVoiceNoteUrl(data.url);
+    } catch {
+      setVoiceUploadError("Upload failed. Please try again.");
+    } finally {
+      setVoiceUploading(false);
     }
   }
 
@@ -517,15 +599,15 @@ function SendInner() {
         fingerprint, clerk_user_id: clerkUserId ?? undefined,
         email: userEmail ?? undefined, occasion,
         template: selectedTemplate,
-        has_likes: likes.trim().length > 0,
+        has_likes: false,
         used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
         is_free: false,
         from_card_ref: fromCardRef,
         recipient_name: recipientName.trim() || undefined,
-        has_photo: !!(uploadedPhotoUrl),
+        has_photo: uploadedPhotoUrls.length > 0,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, false, uploadedPhotoUrl ?? undefined);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -556,7 +638,9 @@ function SendInner() {
             occasion,
             recipient_name: recipientName.trim() || undefined,
             message_b64,
-            photo_url: uploadedPhotoUrl ?? null,
+            photo_url: uploadedPhotoUrls[0] ?? null,
+            photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+            voice_note_url: voiceNoteUrl ?? null,
           }),
         });
         if (cardRes.ok) {
@@ -576,22 +660,22 @@ function SendInner() {
       fingerprint, clerk_user_id: clerkUserId ?? undefined,
       email: userEmail ?? undefined, occasion,
       template: "envelope",
-      has_likes: likes.trim().length > 0,
+      has_likes: false,
       used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
       is_free: true,
       from_card_ref: fromCardRef,
       recipient_name: recipientName.trim() || undefined,
       card_id: effectiveCardId,
-      has_photo: !!(uploadedPhotoUrl),
+      has_photo: uploadedPhotoUrls.length > 0,
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", effectiveCardId, false, uploadedPhotoUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", effectiveCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
-    selectedTemplate, customMsg, defaultMsg, occasion, recipientName, likes,
-    fingerprint, clerkUserId, userEmail, incrementUsage, getToken, uploadedPhotoUrl,
+    selectedTemplate, customMsg, defaultMsg, occasion, recipientName,
+    fingerprint, clerkUserId, userEmail, incrementUsage, getToken, uploadedPhotoUrls, voiceNoteUrl,
   ]);
 
   /* ─── Paywall: submit UTR for ₹49 bundle ───────────────────────────── */
@@ -635,7 +719,9 @@ function SendInner() {
             template: selectedTemplate, occasion,
             recipient_name: recipientName.trim() || undefined,
             message_b64,
-            photo_url: uploadedPhotoUrl ?? null,
+            photo_url: uploadedPhotoUrls[0] ?? null,
+            photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+            voice_note_url: voiceNoteUrl ?? null,
           }),
         });
         if (cardRes.ok) {
@@ -695,7 +781,7 @@ function SendInner() {
     const cardId = pendingCardId;
     clearDraft();
     clearPaywallSnapshot();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, uploadedPhotoUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowPaywall(false);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
@@ -705,7 +791,7 @@ function SendInner() {
   function handleWatermarkFree() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, uploadedPhotoUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -745,7 +831,7 @@ function SendInner() {
   function handleWatermarkComplete() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, uploadedPhotoUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -812,7 +898,7 @@ function SendInner() {
   };
 
   const generateButtonLabel = (() => {
-    if (uploadedPhotoUrl || isPremiumTemplate(selectedTemplate)) return "Preview Magic ✨";
+    if (uploadedPhotoUrls.length > 0 || voiceNoteUrl || isPremiumTemplate(selectedTemplate)) return "Preview Magic ✨";
     return "Generate my card 💌";
   })();
 
@@ -1025,24 +1111,6 @@ function SendInner() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: "rgba(255,215,0,0.75)" }}>
-                    ✨ What do they love?
-                  </label>
-                  <Input
-                    placeholder="e.g. travel, panda, cricket, pink, coffee…"
-                    value={likes}
-                    onChange={e => setLikes(e.target.value)}
-                    style={{
-                      background: "rgba(255,215,0,0.05)",
-                      border: "1.5px solid rgba(255,215,0,0.2)",
-                      color: "white",
-                      fontSize: 14,
-                      borderRadius: 12,
-                    }}
-                  />
-                </div>
-
-                <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
                     Message <span style={{ color: "rgba(255,255,255,0.3)" }}>(optional — edit to personalise)</span>
                   </label>
@@ -1065,98 +1133,176 @@ function SendInner() {
                   />
                 </div>
 
-                {/* ── Photo upload (premium feature) ── */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase" }}>
-                    Photo
-                  </span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-                    color: "rgba(255,255,255,0.4)",
-                    background: "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 20, padding: "2px 8px",
-                    textTransform: "uppercase",
-                  }}>
-                    Optional
-                  </span>
-                </div>
+                {/* ── Voice note recorder ── */}
                 <div style={{
                   borderRadius: 14,
-                  border: "1.5px solid rgba(255,215,0,0.18)",
+                  border: `1.5px solid ${voiceNoteUrl ? "rgba(255,215,0,0.4)" : "rgba(255,255,255,0.1)"}`,
+                  background: voiceNoteUrl ? "rgba(255,215,0,0.04)" : "rgba(255,255,255,0.03)",
+                  padding: "12px 14px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: voiceNoteUrl ? "rgba(255,215,0,0.8)" : "rgba(255,255,255,0.55)" }}>
+                      🎙️ Add a voice note
+                    </label>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "2px 8px" }}>
+                      Optional
+                    </span>
+                  </div>
+                  {voiceNoteUrl ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>✅</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 12, color: "#4ade80", fontWeight: 600, margin: 0 }}>Voice note ready</p>
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>Will play for them at the finale</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVoiceNoteUrl(null)}
+                        style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : voiceUploading ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Loader2 size={18} style={{ color: "rgba(255,215,0,0.7)", animation: "spin 1s linear infinite", flexShrink: 0 }} />
+                      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: 0 }}>Uploading voice note…</p>
+                    </div>
+                  ) : voiceRecording ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <motion.div
+                        animate={{ scale: [1, 1.25, 1], opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 1.2, repeat: Infinity }}
+                        style={{ width: 12, height: 12, borderRadius: "50%", background: "#f87171", flexShrink: 0 }}
+                      />
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontVariantNumeric: "tabular-nums" }}>
+                        {Math.floor(voiceRecordDuration / 60).toString().padStart(2, "0")}:{(voiceRecordDuration % 60).toString().padStart(2, "0")}
+                      </span>
+                      <div style={{ flex: 1 }} />
+                      <button
+                        type="button"
+                        onClick={handleStopRecording}
+                        style={{
+                          padding: "7px 14px", borderRadius: 8, cursor: "pointer",
+                          background: "rgba(248,113,113,0.15)",
+                          border: "1px solid rgba(248,113,113,0.4)",
+                          fontSize: 12, fontWeight: 700, color: "#f87171",
+                        }}
+                      >
+                        Stop
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button
+                        type="button"
+                        onClick={() => void handleStartRecording()}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          padding: "7px 16px", borderRadius: 8, cursor: "pointer",
+                          background: "rgba(255,215,0,0.08)",
+                          border: "1px solid rgba(255,215,0,0.25)",
+                          fontSize: 12, fontWeight: 700, color: "rgba(255,215,0,0.75)",
+                        }}
+                      >
+                        <span>🎤</span> Start recording
+                      </button>
+                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", margin: 0 }}>Max 60s</p>
+                    </div>
+                  )}
+                  {voiceUploadError && (
+                    <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{voiceUploadError}</p>
+                  )}
+                </div>
+
+                {/* ── Multi-photo upload (up to 4 photos) ── */}
+                <div style={{
+                  borderRadius: 14,
+                  border: `1.5px solid ${uploadedPhotoUrls.length > 0 ? "rgba(255,215,0,0.35)" : "rgba(255,215,0,0.18)"}`,
                   background: "rgba(255,215,0,0.04)",
                   padding: "12px 14px",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,215,0,0.75)" }}>
-                      📸 Add a picture of them
+                      📸 Add photos
                     </label>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+                      {uploadedPhotoUrls.length}/4
+                      {uploadedPhotoUrls.length === 0 && " · Optional"}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {/* Thumbnail or upload placeholder */}
-                    <div style={{
-                      width: 58, height: 58, borderRadius: 10, flexShrink: 0,
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1.5px dashed rgba(255,255,255,0.18)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      overflow: "hidden", position: "relative",
-                    }}>
-                      {photoUploading ? (
-                        <Loader2 size={20} style={{ color: "rgba(255,215,0,0.7)", animation: "spin 1s linear infinite" }} />
-                      ) : photoPreviewSrc ? (
-                        <img src={photoPreviewSrc} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <span style={{ fontSize: 22 }}>🖼️</span>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {photoPreviewSrc && !photoUploading && uploadedPhotoUrl ? (
-                        <div>
-                          <p style={{ fontSize: 11, color: "#4ade80", fontWeight: 600, marginBottom: 4 }}>
-                            ✓ Photo ready
-                          </p>
+
+                  {/* Thumbnail row */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {photoPreviewSrcs.map((src, i) => (
+                      <div
+                        key={src}
+                        style={{
+                          width: 58, height: 58, borderRadius: 10, position: "relative", flexShrink: 0,
+                          overflow: "hidden",
+                          border: "1.5px solid rgba(255,215,0,0.3)",
+                          opacity: photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length ? 0.5 : 1,
+                        }}
+                      >
+                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        {(i < uploadedPhotoUrls.length) && (
                           <button
                             type="button"
-                            onClick={() => { setUploadedPhotoUrl(null); setPhotoPreviewSrc(null); setPhotoUploadError(null); }}
-                            style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                          >
-                            Remove photo
-                          </button>
-                        </div>
-                      ) : (
-                        <label style={{ cursor: "pointer" }}>
-                          <span style={{
-                            display: "inline-block", padding: "7px 14px", borderRadius: 8,
-                            background: "rgba(255,215,0,0.1)",
-                            border: "1px solid rgba(255,215,0,0.3)",
-                            fontSize: 12, fontWeight: 700, color: "rgba(255,215,0,0.8)",
-                            cursor: photoUploading ? "default" : "pointer",
-                          }}>
-                            {photoUploading ? "Uploading…" : "Choose photo"}
-                          </span>
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            disabled={photoUploading}
-                            style={{ display: "none" }}
-                            onChange={e => {
-                              const f = e.target.files?.[0];
-                              if (f) void handlePhotoSelect(f);
-                              e.target.value = "";
+                            onClick={() => {
+                              setUploadedPhotoUrls(prev => prev.filter((_, j) => j !== i));
+                              setPhotoPreviewSrcs(prev => prev.filter((_, j) => j !== i));
                             }}
-                          />
-                        </label>
-                      )}
-                      {photoUploadError && (
-                        <p style={{ fontSize: 11, color: "#f87171", marginTop: 4 }}>{photoUploadError}</p>
-                      )}
-                      {!photoPreviewSrc && !photoUploading && (
-                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 4 }}>
-                          JPEG · PNG · WebP · max 5 MB
-                        </p>
-                      )}
-                    </div>
+                            style={{
+                              position: "absolute", top: 2, right: 2, width: 18, height: 18,
+                              borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none",
+                              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 9, color: "white", lineHeight: 1,
+                            }}
+                          >✕</button>
+                        )}
+                        {photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length && (
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Loader2 size={18} style={{ color: "rgba(255,215,0,0.9)", animation: "spin 1s linear infinite" }} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add photo button */}
+                    {uploadedPhotoUrls.length < 4 && !photoUploading && (
+                      <label style={{ cursor: "pointer" }}>
+                        <div style={{
+                          width: 58, height: 58, borderRadius: 10, flexShrink: 0,
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1.5px dashed rgba(255,255,255,0.18)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 22,
+                        }}>
+                          {photoPreviewSrcs.length === 0 ? "🖼️" : "+"}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={photoUploading}
+                          style={{ display: "none" }}
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (f) void handlePhotoSelect(f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    )}
                   </div>
+
+                  {photoUploadError && (
+                    <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{photoUploadError}</p>
+                  )}
+                  {photoPreviewSrcs.length === 0 && !photoUploading && (
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
+                      Up to 4 photos · JPEG · PNG · WebP · max 5 MB each
+                    </p>
+                  )}
                 </div>
 
                 <motion.button

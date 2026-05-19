@@ -130,6 +130,9 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS hs_card_unlock_card_idx ON hs_card_unlock_submissions(card_id);
     ALTER TABLE hs_card_unlock_submissions ADD COLUMN IF NOT EXISTS full_utr TEXT;
     ALTER TABLE hs_card_unlock_submissions ADD COLUMN IF NOT EXISTS unlock_method TEXT;
+    -- Voice notes + multi-photo collage
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS voice_note_url TEXT;
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS photo_urls TEXT[];
 
     -- Confirmed UPI payments received via Gmail/SMS forwarder
     CREATE TABLE IF NOT EXISTS hs_received_payments (

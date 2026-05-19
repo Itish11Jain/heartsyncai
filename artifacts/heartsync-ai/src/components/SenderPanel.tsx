@@ -13,7 +13,7 @@ import ClerkAuthLayer from "@/components/ClerkAuthLayer";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-type Phase = "envelope" | "opening" | "orbs" | "finale";
+type Phase = "envelope" | "opening" | "orbs" | "collage" | "finale";
 type ShareType = "whatsapp" | "instagram" | "link";
 
 interface SenderPanelProps {

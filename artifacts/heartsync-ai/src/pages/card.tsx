@@ -774,9 +774,112 @@ function FinalCard({
   );
 }
 
+/* ─────────────────────── MemoryCollage ────────────────────────── */
+
+function MemoryCollage({
+  photoUrls,
+  voiceNoteUrl,
+  recipientName,
+  titlePrefix,
+  finalMessage,
+}: {
+  photoUrls: string[];
+  voiceNoteUrl: string | null;
+  recipientName: string;
+  titlePrefix: string;
+  finalMessage: string;
+}) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const n = photoUrls.length;
+
+  function togglePlay() {
+    if (!voiceNoteUrl) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio(voiceNoteUrl);
+      audioRef.current.onended = () => setIsPlaying(false);
+    }
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      void audioRef.current.play().then(() => setIsPlaying(true)).catch(() => { setIsPlaying(false); });
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 30,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: "20px 16px 16px",
+        overflowY: "auto",
+        gap: 20,
+      }}
+    >
+      {n > 0 && (
+        <div style={{
+          width: "min(380px, 92vw)",
+          display: "grid",
+          gridTemplateColumns: n === 1 ? "1fr" : "1fr 1fr",
+          gap: 8,
+        }}>
+          {photoUrls.map((url, i) => (
+            <motion.div
+              key={url}
+              initial={{ opacity: 0, y: 40, scale: 0.85 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.4 + i * 0.18, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
+              style={{
+                borderRadius: n === 1 ? 22 : 14,
+                overflow: "hidden",
+                aspectRatio: n === 1 ? "4/3" : "1",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.55), 0 0 20px rgba(255,215,0,0.08)",
+                border: "1.5px solid rgba(255,215,0,0.2)",
+                gridColumn: n === 3 && i === 2 ? "1 / span 2" : undefined,
+              }}
+            >
+              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      <FinalCard recipientName={recipientName} titlePrefix={titlePrefix} finalMessage={finalMessage} />
+
+      {voiceNoteUrl && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: Math.max(n, 1) * 0.18 + 0.9, type: "spring", damping: 14 }}
+          onClick={togglePlay}
+          style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "14px 28px", borderRadius: 99, cursor: "pointer",
+            background: isPlaying
+              ? "linear-gradient(135deg, #FFD700, #FFA500)"
+              : "rgba(255,215,0,0.1)",
+            border: `1.5px solid ${isPlaying ? "#FFD700" : "rgba(255,215,0,0.4)"}`,
+            color: isPlaying ? "#000" : "rgba(255,215,0,0.9)",
+            fontSize: 15, fontWeight: 700,
+            boxShadow: isPlaying ? "0 0 30px rgba(255,215,0,0.35)" : "none",
+            transition: "all 0.3s ease",
+          }}
+        >
+          <span style={{ fontSize: 20 }}>{isPlaying ? "⏸" : "▶️"}</span>
+          {isPlaying ? "Pause" : "Play voice note"}
+        </motion.button>
+      )}
+    </motion.div>
+  );
+}
+
 /* ─────────────────────────── Main Page ────────────────────────── */
 
-type Phase = "envelope" | "opening" | "polaroid" | "orbs" | "finale";
+type Phase = "envelope" | "opening" | "polaroid" | "orbs" | "collage" | "finale";
 
 export default function Card() {
   const params = useQueryParams();
@@ -817,6 +920,22 @@ export default function Card() {
     if (!raw) return null;
     try { return decodeURIComponent(raw); } catch { return null; }
   })();
+
+  /* Multi-photo collage URLs — comma-separated, each URI-encoded */
+  const collagePhotoUrls = (() => {
+    const raw = params.get("photos");
+    if (!raw) return [] as string[];
+    return raw.split(",").map(u => { try { return decodeURIComponent(u.trim()); } catch { return u.trim(); } }).filter(Boolean);
+  })();
+
+  /* Voice note URL */
+  const voiceNoteUrl = (() => {
+    const raw = params.get("voicenote");
+    if (!raw) return null;
+    try { return decodeURIComponent(raw); } catch { return null; }
+  })();
+
+  const hasCollageMedia = collagePhotoUrls.length > 0 || !!voiceNoteUrl;
 
   /* Share URL — /api/share generates a personalised og:image for WhatsApp,
      then JS-redirects recipients to /envelope.html */
@@ -1025,13 +1144,13 @@ export default function Card() {
       if (newClicked.size === orbs.length) {
         setTimeout(() => {
           envelope.finale();
-          setPhase("finale");
+          setPhase(hasCollageMedia ? "collage" : "finale");
           setTimeout(fireConfetti, personalPictureUrl ? 500 : 800);
         }, 1500);
       }
       return newClicked;
     });
-  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl]);
+  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl, hasCollageMedia]);
 
   /* ── Autoplay mode: auto-advance all phases for the modal iframe preview ── */
   useEffect(() => {
@@ -1053,7 +1172,7 @@ export default function Card() {
           if (next.size === orbs.length) {
             setTimeout(() => {
               envelope.finale();
-              setPhase("finale");
+              setPhase(hasCollageMedia ? "collage" : "finale");
             }, 1200);
           }
           return next;
@@ -1185,14 +1304,14 @@ export default function Card() {
 
       {/* ════ PHASE 2.5: Polaroid ════ */}
       <AnimatePresence>
-        {personalPictureUrl && (phase === "polaroid" || phase === "orbs" || (phase === "finale" && !allClicked)) && (
-          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={phase === "orbs" || (phase === "finale" && !allClicked)} />
+        {personalPictureUrl && (phase === "polaroid" || phase === "orbs" || ((phase === "finale" || phase === "collage") && !allClicked)) && (
+          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={phase === "orbs" || ((phase === "finale" || phase === "collage") && !allClicked)} />
         )}
       </AnimatePresence>
 
       {/* ════ PHASE 3: Orbs ════ */}
       <AnimatePresence>
-        {(phase === "orbs" || phase === "finale") && (
+        {(phase === "orbs" || phase === "finale" || phase === "collage") && (
           <motion.div
             key="orbs-scene"
             initial={{ opacity: 0 }}
@@ -1247,7 +1366,65 @@ export default function Card() {
         )}
       </AnimatePresence>
 
-      {/* ════ PHASE 4: Final Card ════ */}
+      {/* ════ PHASE 4a: Memory Collage ════ */}
+      <AnimatePresence>
+        {phase === "collage" && (
+          <motion.div
+            key="collage-scene"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 30,
+              padding: isSender ? "0 0 270px" : "0",
+            }}
+          >
+            <MemoryCollage
+              photoUrls={collagePhotoUrls}
+              voiceNoteUrl={voiceNoteUrl}
+              recipientName={recipientName}
+              titlePrefix={template.title_prefix}
+              finalMessage={finalMessage}
+            />
+
+            {isRecipient && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 3, duration: 0.5 }}
+                style={{
+                  position: "fixed", bottom: 24, left: 0, right: 0,
+                  display: "flex", justifyContent: "center",
+                  padding: "0 16px", zIndex: 31,
+                }}
+              >
+                <div style={{ width: "min(300px, calc(100vw - 32px))", textAlign: "center" }}>
+                  <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
+                    Feeling the love? Send one back ✨
+                  </p>
+                  <Link href="/send?ref=card">
+                    <button
+                      onClick={() => { trackEvent({ event: "create_own_clicked" }); }}
+                      style={{
+                        width: "100%", padding: "14px",
+                        borderRadius: 14,
+                        background: "rgba(255,215,0,0.12)",
+                        border: "1.5px solid rgba(255,215,0,0.35)",
+                        color: "rgba(255,215,0,0.95)",
+                        fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: "0.02em",
+                      }}
+                    >
+                      💛 Create your own card — free!
+                    </button>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════ PHASE 4b: Final Card (no media) ════ */}
       <AnimatePresence>
         {phase === "finale" && (
           <motion.div
@@ -1259,9 +1436,6 @@ export default function Card() {
               position: "fixed", inset: 0,
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               zIndex: 30,
-              /* For senders the share panel (~260px) is fixed at the bottom.
-               * Shift the card up by adding equivalent bottom padding so it
-               * never gets covered by the buttons. */
               padding: isSender ? "16px 16px 280px" : "16px",
               overflowY: "auto",
               gap: 16,
@@ -1273,7 +1447,6 @@ export default function Card() {
               finalMessage={finalMessage}
             />
 
-            {/* ── Recipient CTA ── */}
             {isRecipient && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -1286,15 +1459,7 @@ export default function Card() {
                 </p>
                 <Link href="/send?ref=card">
                   <button
-                    onClick={() => {
-                      // Fires when a recipient taps the "Create your own
-                      // card" CTA on the end of their received card. Lets
-                      // us measure the recipient → creator conversion that
-                      // drives our viral loop. Conversion to an actual
-                      // card_created is computed server-side by joining on
-                      // fingerprint.
-                      trackEvent({ event: "create_own_clicked" });
-                    }}
+                    onClick={() => { trackEvent({ event: "create_own_clicked" }); }}
                     style={{
                       width: "100%", padding: "14px",
                       borderRadius: 14,
@@ -1350,7 +1515,7 @@ export default function Card() {
             recipientName={recipientName}
             occasion={occasion}
             cardId={params.get("id") ?? ""}
-            phase={phase as "envelope" | "opening" | "orbs" | "finale"}
+            phase={phase as "envelope" | "opening" | "orbs" | "collage" | "finale"}
           />
         </Suspense>
       )}
