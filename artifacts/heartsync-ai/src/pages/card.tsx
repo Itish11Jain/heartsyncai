@@ -734,11 +734,11 @@ function FinalCard({
         </span>
         {" "}
         <motion.span
-          animate={{ scale: [1, 1.35, 1], rotate: [0, 12, -8, 0] }}
-          transition={{ duration: 0.9, delay: 0.55, repeat: Infinity, repeatDelay: 2.5 }}
+          animate={{ scale: [1, 1.4, 1, 1.25, 1] }}
+          transition={{ duration: 0.7, delay: 0.55, repeat: Infinity, repeatDelay: 1.4 }}
           style={{ fontSize: "min(32px, 8vw)", display: "inline-block" }}
         >
-          🥹
+          ❤️
         </motion.span>
       </motion.div>
 
