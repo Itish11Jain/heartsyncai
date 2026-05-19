@@ -328,6 +328,7 @@ export default function UnlockModal({
                       border: "1.5px solid rgba(255,215,0,0.15)",
                       boxShadow: "0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04)",
                       flexShrink: 0,
+                      background: "#050210",
                     }}
                   >
                     <iframe
@@ -343,6 +344,7 @@ export default function UnlockModal({
                         transform: `scale(${scale})`,
                         pointerEvents: "none",
                         display: "block",
+                        background: "#050210",
                       }}
                     />
                     {/* Subtle gradient overlay at the bottom so the iframe blends in */}
