@@ -840,8 +840,25 @@ function MemoryCollage({
             <motion.div
               key={url}
               initial={{ opacity: 0, y: 50, scale: 0.8, rotate: 0 }}
-              animate={{ opacity: 1, y: 0, scale: 1, rotate: n === 1 ? 0 : PHOTO_ROTATIONS[i] ?? 0 }}
-              transition={{ delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
+              animate={{
+                opacity: 1,
+                y: [null, 0, -7, 0],
+                scale: 1,
+                rotate: n === 1 ? 0 : PHOTO_ROTATIONS[i] ?? 0,
+              }}
+              transition={{
+                opacity: { delay: 0.3 + i * 0.15, duration: 0.5 },
+                scale:   { delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] },
+                rotate:  { delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] },
+                y: {
+                  times: [0, 0.01, 0.5, 1],
+                  delay: 0.3 + i * 0.15,
+                  duration: 3.2 + i * 0.4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  repeatDelay: 0.1,
+                },
+              }}
               style={{
                 position: "relative",
                 background: "#fffcf0",
@@ -896,18 +913,17 @@ function MemoryCollage({
           <button
             onClick={togglePlay}
             style={{
-              width: 56, height: 56, borderRadius: "50%", cursor: "pointer",
+              width: 60, height: 60, borderRadius: "50%", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: isPlaying
-                ? "linear-gradient(135deg, #FFD700, #FFA500)"
-                : "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.12))",
-              border: `2px solid ${isPlaying ? "#FFD700" : "rgba(255,215,0,0.5)"}`,
+              background: "linear-gradient(135deg, #FFD700, #FFA500)",
+              border: "2px solid rgba(255,255,255,0.3)",
               boxShadow: isPlaying
-                ? "0 0 28px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)"
-                : "0 4px 16px rgba(0,0,0,0.3)",
-              transition: "all 0.3s ease",
-              fontSize: 20,
-              color: isPlaying ? "#3a2800" : "#FFD700",
+                ? "0 0 32px rgba(255,215,0,0.7), inset 0 1px 0 rgba(255,255,255,0.4)"
+                : "0 0 18px rgba(255,215,0,0.45), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
+              transition: "box-shadow 0.3s ease",
+              fontSize: 22,
+              color: "#3a2800",
+              flexShrink: 0,
             }}
           >
             {isPlaying ? "⏸" : "▶"}
@@ -940,23 +956,26 @@ function MemoryCollage({
           </div>
         )}
 
-        {/* Next arrow — always visible */}
+        {/* Next — subtle text button */}
         <motion.button
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: mediaDelay + 0.4, type: "spring", damping: 12 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: mediaDelay + 0.5, duration: 0.4 }}
           onClick={onContinue}
           style={{
-            width: 52, height: 52, borderRadius: "50%", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg, #FFD700, #FFA500)",
-            border: "none",
-            boxShadow: "0 4px 20px rgba(255,215,0,0.45), inset 0 1px 0 rgba(255,255,255,0.4)",
-            fontSize: 20, color: "#3a2800",
+            background: "none",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 99,
+            padding: "8px 18px",
+            cursor: "pointer",
+            color: "rgba(255,255,255,0.45)",
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: "0.04em",
             flexShrink: 0,
           }}
         >
-          →
+          Next →
         </motion.button>
       </motion.div>
     </motion.div>
