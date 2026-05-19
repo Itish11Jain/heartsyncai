@@ -182,6 +182,24 @@ router.post("/admin/revoke-premium", async (req, res) => {
   return res.json({ ok: true, user: result.rows[0] });
 });
 
+/** POST /api/admin/refund-payment — body: { key, payment_ids: number[], note? }
+ *  Marks one or more hs_received_payments rows as refunded. */
+router.post("/admin/refund-payment", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const { payment_ids, note } = req.body as { payment_ids?: number[]; note?: string };
+  if (!Array.isArray(payment_ids) || payment_ids.length === 0) {
+    return res.status(400).json({ error: "bad_request", message: "payment_ids array required." });
+  }
+  const result = await pool.query(
+    `UPDATE hs_received_payments
+     SET refunded_at = NOW(), refund_note = $1
+     WHERE id = ANY($2::int[])
+     RETURNING id, card_id, amount, utr, refunded_at`,
+    [note ?? null, payment_ids],
+  );
+  return res.json({ ok: true, refunded: result.rows });
+});
+
 /** DELETE /api/admin/purge-since?key=...&since=YYYY-MM-DD[&exclude_clerk_user_id=...]
  *  Deletes analytics + signup rows on/after `since`.
  *  If exclude_clerk_user_id is set, events from that user are kept;

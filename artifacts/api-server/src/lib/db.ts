@@ -151,6 +151,8 @@ export async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS hs_received_payments_utr_last4_idx ON hs_received_payments (RIGHT(utr, 4));
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS card_id TEXT;
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS unlock_method TEXT;
+    ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ;
+    ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS refund_note TEXT;
   `);
 
   /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal
