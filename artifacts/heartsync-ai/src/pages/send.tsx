@@ -1271,7 +1271,7 @@ function SendInner() {
                       📸 Add photos
                     </label>
                     <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
-                      {uploadedPhotoUrls.length}/4
+                      {uploadedPhotoUrls.length}/3
                       {uploadedPhotoUrls.length === 0 && " · Optional"}
                     </span>
                   </div>
@@ -1313,7 +1313,7 @@ function SendInner() {
                     ))}
 
                     {/* Add photo button */}
-                    {uploadedPhotoUrls.length < 4 && !photoUploading && (
+                    {uploadedPhotoUrls.length < 3 && !photoUploading && (
                       <label style={{ cursor: "pointer" }}>
                         <div style={{
                           width: 58, height: 58, borderRadius: 10, flexShrink: 0,
@@ -1332,7 +1332,7 @@ function SendInner() {
                           style={{ display: "none" }}
                           onChange={async e => {
                             const files = Array.from(e.target.files ?? []);
-                            const slotsLeft = Math.max(0, 4 - photoPreviewSrcs.length);
+                            const slotsLeft = Math.max(0, 3 - photoPreviewSrcs.length);
                             const toProcess = files.slice(0, slotsLeft);
                             e.target.value = "";
                             for (const f of toProcess) {

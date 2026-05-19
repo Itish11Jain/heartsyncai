@@ -795,30 +795,10 @@ function MemoryCollage({
   onContinue: () => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [allLoaded, setAllLoaded] = useState(photoUrls.length === 0);
+  const [loadedSet, setLoadedSet] = useState<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const loadedRef = useRef(0);
   const n = photoUrls.length;
-  const mediaDelay = allLoaded ? 0.5 : 1.5;
-
-  /* Preload all images before revealing the grid */
-  useEffect(() => {
-    if (n === 0) { setAllLoaded(true); return; }
-    loadedRef.current = 0;
-    const imgs = photoUrls.map(url => {
-      const img = new window.Image();
-      const done = () => {
-        loadedRef.current += 1;
-        if (loadedRef.current >= n) setAllLoaded(true);
-      };
-      img.onload  = done;
-      img.onerror = done;
-      img.src = url;
-      return img;
-    });
-    return () => imgs.forEach(img => { img.onload = null; img.onerror = null; });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const mediaDelay = 0.3 + n * 0.2 + 0.4;
 
   function togglePlay() {
     if (!voiceNoteUrl) return;
@@ -854,6 +834,24 @@ function MemoryCollage({
         overflow: "hidden",
       }}
     >
+      {/* Gold headline */}
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.55 }}
+        style={{
+          fontSize: 15, fontWeight: 700,
+          color: "#FFD700",
+          textAlign: "center",
+          letterSpacing: "0.01em",
+          lineHeight: 1.4,
+          padding: "0 20px",
+          textShadow: "0 0 20px rgba(255,215,0,0.4)",
+        }}
+      >
+        Every moment with you is incredible ✨
+      </motion.p>
+
       {/* Photos */}
       {n === 0 ? (
         <motion.div
@@ -871,12 +869,12 @@ function MemoryCollage({
           gap: 14,
         }}>
           {photoUrls.map((url, i) => (
-            /* Outer div: entrance (opacity + scale + rotate), fires once all loaded */
+            /* Outer div: entrance — staggered 200 ms apart, fires immediately */
             <motion.div
               key={url}
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={allLoaded ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.88 }}
-              transition={{ duration: 0.55, delay: 0.15, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
+              initial={{ opacity: 0, scale: 0.88, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 + i * 0.2, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
               style={{
                 position: "relative",
                 rotate: `${n === 1 ? 0 : (PHOTO_ROTATIONS[i] ?? 0)}deg`,
@@ -884,9 +882,9 @@ function MemoryCollage({
                 transformOrigin: "center bottom",
               }}
             >
-              {/* Inner div: gentle float loop — starts only after entrance settles */}
+              {/* Inner div: gentle float loop — starts after entrance */}
               <motion.div
-                animate={allLoaded ? { y: [0, -7, 0] } : { y: 0 }}
+                animate={{ y: [0, -7, 0] }}
                 transition={{
                   duration: 3.0 + i * 0.5,
                   repeat: Infinity,
@@ -903,20 +901,24 @@ function MemoryCollage({
                 <img
                   src={url}
                   alt=""
+                  onLoad={() => setLoadedSet(prev => new Set([...prev, i]))}
+                  onError={() => setLoadedSet(prev => new Set([...prev, i]))}
                   style={{
                     width: "100%",
                     aspectRatio: n === 1 ? "4/3" : "1",
                     objectFit: "cover",
                     display: "block",
                     borderRadius: 1,
+                    opacity: loadedSet.has(i) ? 1 : 0,
+                    transition: "opacity 0.3s ease",
                   }}
                 />
               </motion.div>
               {/* Per-photo sticker */}
               <motion.div
                 initial={{ opacity: 0, scale: 0, rotate: -30 }}
-                animate={allLoaded ? { opacity: 1, scale: 1, rotate: 12 } : { opacity: 0, scale: 0 }}
-                transition={{ delay: 0.5, type: "spring", damping: 10 }}
+                animate={{ opacity: 1, scale: 1, rotate: 12 }}
+                transition={{ delay: 0.4 + i * 0.2, type: "spring", damping: 10 }}
                 style={{
                   position: "absolute",
                   bottom: -6, right: -6,
@@ -1106,11 +1108,8 @@ export default function Card() {
     if (!raw) return [] as string[];
     return raw.split(",").map(u => { try { return decodeURIComponent(u.trim()); } catch { return u.trim(); } }).filter(Boolean);
   })();
-  const effectiveCollagePhotos: string[] = collagePhotoUrls.length > 0
-    ? collagePhotoUrls
-    : personalPictureUrl
-      ? [personalPictureUrl]
-      : [];
+  /* Photo[0] lives on the orbs screen (personalpicture); photos[1-2] go to collage */
+  const effectiveCollagePhotos: string[] = collagePhotoUrls.slice(1);
 
   /* Voice note URL */
   const voiceNoteUrl = (() => {
