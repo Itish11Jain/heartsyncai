@@ -907,6 +907,8 @@ function MemoryCollage({
                     width: "100%",
                     aspectRatio: n === 1 ? "4/3" : "1",
                     objectFit: "cover",
+                    objectPosition: "center 20%",
+                    imageOrientation: "from-image",
                     display: "block",
                     borderRadius: 1,
                     opacity: loadedSet.has(i) ? 1 : 0,

@@ -1134,6 +1134,101 @@ function SendInner() {
                   />
                 </div>
 
+                {/* ── Multi-photo upload ── */}
+                <div style={{
+                  borderRadius: 14,
+                  border: `1.5px solid ${uploadedPhotoUrls.length > 0 ? "rgba(255,215,0,0.35)" : "rgba(255,215,0,0.18)"}`,
+                  background: "rgba(255,215,0,0.04)",
+                  padding: "12px 14px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,215,0,0.75)" }}>
+                      📸 Add photos <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.3)", fontSize: 11 }}>(Upto 3)</span>
+                    </label>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+                      {uploadedPhotoUrls.length}/3
+                      {uploadedPhotoUrls.length === 0 && " · Optional"}
+                    </span>
+                  </div>
+
+                  {/* Thumbnail row */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {photoPreviewSrcs.map((src, i) => (
+                      <div
+                        key={src}
+                        style={{
+                          width: 58, height: 58, borderRadius: 10, position: "relative", flexShrink: 0,
+                          overflow: "hidden",
+                          border: "1.5px solid rgba(255,215,0,0.3)",
+                          opacity: photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length ? 0.5 : 1,
+                        }}
+                      >
+                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%", imageOrientation: "from-image" }} />
+                        {(i < uploadedPhotoUrls.length) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUploadedPhotoUrls(prev => prev.filter((_, j) => j !== i));
+                              setPhotoPreviewSrcs(prev => prev.filter((_, j) => j !== i));
+                            }}
+                            style={{
+                              position: "absolute", top: 2, right: 2, width: 18, height: 18,
+                              borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none",
+                              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 9, color: "white", lineHeight: 1,
+                            }}
+                          >✕</button>
+                        )}
+                        {photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length && (
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Loader2 size={18} style={{ color: "rgba(255,215,0,0.9)", animation: "spin 1s linear infinite" }} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add photo button */}
+                    {uploadedPhotoUrls.length < 3 && !photoUploading && (
+                      <label style={{ cursor: "pointer" }}>
+                        <div style={{
+                          width: 58, height: 58, borderRadius: 10, flexShrink: 0,
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1.5px dashed rgba(255,255,255,0.18)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 22,
+                        }}>
+                          {photoPreviewSrcs.length === 0 ? "🖼️" : "+"}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          disabled={photoUploading}
+                          style={{ display: "none" }}
+                          onChange={async e => {
+                            const files = Array.from(e.target.files ?? []);
+                            const slotsLeft = Math.max(0, 3 - photoPreviewSrcs.length);
+                            const toProcess = files.slice(0, slotsLeft);
+                            e.target.value = "";
+                            for (const f of toProcess) {
+                              await handlePhotoSelect(f);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {photoUploadError && (
+                    <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{photoUploadError}</p>
+                  )}
+                  {photoPreviewSrcs.length === 0 && !photoUploading && (
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
+                      Up to 3 photos · JPEG · PNG · WebP · max 5 MB each
+                    </p>
+                  )}
+                </div>
+
                 {/* ── Voice note recorder ── */}
                 <div style={{
                   borderRadius: 14,
@@ -1256,101 +1351,6 @@ function SendInner() {
                   )}
                   {voiceUploadError && (
                     <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{voiceUploadError}</p>
-                  )}
-                </div>
-
-                {/* ── Multi-photo upload (up to 4 photos) ── */}
-                <div style={{
-                  borderRadius: 14,
-                  border: `1.5px solid ${uploadedPhotoUrls.length > 0 ? "rgba(255,215,0,0.35)" : "rgba(255,215,0,0.18)"}`,
-                  background: "rgba(255,215,0,0.04)",
-                  padding: "12px 14px",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,215,0,0.75)" }}>
-                      📸 Add photos
-                    </label>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
-                      {uploadedPhotoUrls.length}/3
-                      {uploadedPhotoUrls.length === 0 && " · Optional"}
-                    </span>
-                  </div>
-
-                  {/* Thumbnail row */}
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {photoPreviewSrcs.map((src, i) => (
-                      <div
-                        key={src}
-                        style={{
-                          width: 58, height: 58, borderRadius: 10, position: "relative", flexShrink: 0,
-                          overflow: "hidden",
-                          border: "1.5px solid rgba(255,215,0,0.3)",
-                          opacity: photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length ? 0.5 : 1,
-                        }}
-                      >
-                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        {(i < uploadedPhotoUrls.length) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUploadedPhotoUrls(prev => prev.filter((_, j) => j !== i));
-                              setPhotoPreviewSrcs(prev => prev.filter((_, j) => j !== i));
-                            }}
-                            style={{
-                              position: "absolute", top: 2, right: 2, width: 18, height: 18,
-                              borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none",
-                              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 9, color: "white", lineHeight: 1,
-                            }}
-                          >✕</button>
-                        )}
-                        {photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length && (
-                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Loader2 size={18} style={{ color: "rgba(255,215,0,0.9)", animation: "spin 1s linear infinite" }} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {/* Add photo button */}
-                    {uploadedPhotoUrls.length < 3 && !photoUploading && (
-                      <label style={{ cursor: "pointer" }}>
-                        <div style={{
-                          width: 58, height: 58, borderRadius: 10, flexShrink: 0,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1.5px dashed rgba(255,255,255,0.18)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 22,
-                        }}>
-                          {photoPreviewSrcs.length === 0 ? "🖼️" : "+"}
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          multiple
-                          disabled={photoUploading}
-                          style={{ display: "none" }}
-                          onChange={async e => {
-                            const files = Array.from(e.target.files ?? []);
-                            const slotsLeft = Math.max(0, 3 - photoPreviewSrcs.length);
-                            const toProcess = files.slice(0, slotsLeft);
-                            e.target.value = "";
-                            for (const f of toProcess) {
-                              await handlePhotoSelect(f);
-                            }
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {photoUploadError && (
-                    <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{photoUploadError}</p>
-                  )}
-                  {photoPreviewSrcs.length === 0 && !photoUploading && (
-                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
-                      Up to 4 photos · JPEG · PNG · WebP · max 5 MB each
-                    </p>
                   )}
                 </div>
 

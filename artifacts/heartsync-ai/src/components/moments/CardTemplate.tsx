@@ -91,6 +91,8 @@ function LottieDecor({ templateId, preview, isStatic, gradient }: {
           height: "100%",
           opacity: 0.72,
           objectFit: "cover",
+          objectPosition: "center 20%",
+          imageOrientation: "from-image",
         }}
       />
     </div>

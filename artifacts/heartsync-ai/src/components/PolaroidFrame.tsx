@@ -150,6 +150,8 @@ export default function PolaroidFrame({ src }: Props) {
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            objectPosition: "center 20%",
+            imageOrientation: "from-image",
             display: "block",
             opacity: imgLoaded ? 1 : 0,
             transition: "opacity 0.6s ease",
