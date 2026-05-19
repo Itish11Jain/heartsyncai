@@ -84,14 +84,16 @@ export default function UnlockModal({
     try { return new URLSearchParams(window.location.search).has("personalpicture"); } catch { return false; }
   })();
 
-  /* Build the autoplay URL: current card page, sender stripped, autoplay=1 added.
-     This makes the iframe self-advance through envelope → opening → orbs → finale
-     without any touch input needed. */
+  /* Build the autoplay URL: current card page, sender stripped, autoplay=1 and
+     preview=1 added. preview=1 tells card.tsx this is an in-modal iframe so it
+     skips the recipient payment gate entirely (no "card isn't ready yet" screen).
+     autoplay=1 self-advances the animation through all phases and loops. */
   const autoplayUrl = (() => {
     try {
       const p = new URLSearchParams(window.location.search);
       p.delete("sender");
       p.set("autoplay", "1");
+      p.set("preview", "1");
       return `${window.location.origin}${window.location.pathname}?${p.toString()}`;
     } catch {
       return senderShareUrl;

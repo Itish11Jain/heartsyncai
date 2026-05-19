@@ -1424,6 +1424,20 @@ export default function Card() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);
 
+  /* Autoplay: loop back to envelope after a short pause at finale — the preview
+     in the paywall modal should never show "card isn't ready yet" and should
+     replay continuously so the sender can see the full experience. */
+  useEffect(() => {
+    if (!isAutoplay || phase !== "finale") return;
+    const t = setTimeout(() => {
+      setClickedOrbs(new Set());
+      setActiveTooltip(null);
+      setPhase("envelope");
+    }, 3500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase]);
+
   const orbPositions = useMemo(() => orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;
     return { x: orbRadius * Math.cos(angle), y: orbRadius * Math.sin(angle), angle };
