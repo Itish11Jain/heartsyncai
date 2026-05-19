@@ -670,106 +670,112 @@ function FinalCard({
 }) {
   return (
     <motion.div
-      initial={{ scale: 0.3, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", damping: 14, stiffness: 160 }}
+      initial={{ scale: 0.5, opacity: 0, rotate: -2 }}
+      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+      transition={{ type: "spring", damping: 16, stiffness: 140, delay: 0.1 }}
       style={{
-        width: "min(380px, 92vw)",
-        borderRadius: 28,
-        padding: "32px 24px 24px",
-        background: "linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,215,0,0.05) 50%, rgba(255,255,255,0.04) 100%)",
-        border: "1.5px solid rgba(255,215,0,0.3)",
-        backdropFilter: "blur(24px)",
-        boxShadow: "0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,215,0,0.12), inset 0 1px 1px rgba(255,255,255,0.12)",
+        width: "min(360px, 88vw)",
+        borderRadius: 24,
+        padding: "28px 22px 22px",
+        background: "linear-gradient(160deg, rgba(255,200,60,0.13) 0%, rgba(255,120,180,0.07) 60%, rgba(180,100,255,0.07) 100%)",
+        border: "1px solid rgba(255,215,0,0.22)",
+        backdropFilter: "blur(28px)",
+        boxShadow: "0 24px 70px rgba(0,0,0,0.55), 0 0 50px rgba(255,200,80,0.1), inset 0 1px 0 rgba(255,255,255,0.1)",
         textAlign: "center",
         zIndex: 30,
         position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Gold shimmer line */}
-      <div
-        style={{
-          position: "absolute", top: 0, left: "15%", right: "15%",
-          height: 2,
-          background: "linear-gradient(90deg, transparent, #FFD700, transparent)",
-          borderRadius: 99,
-        }}
-      />
+      {/* Soft corner deco */}
+      <div style={{ position: "absolute", top: 10, left: 14, fontSize: 18, opacity: 0.35, userSelect: "none" }}>🌸</div>
+      <div style={{ position: "absolute", top: 10, right: 14, fontSize: 18, opacity: 0.35, userSelect: "none" }}>✨</div>
+      <div style={{ position: "absolute", bottom: 14, left: 14, fontSize: 16, opacity: 0.25, userSelect: "none" }}>💛</div>
+      <div style={{ position: "absolute", bottom: 14, right: 14, fontSize: 16, opacity: 0.25, userSelect: "none" }}>🌙</div>
 
-      <p
+      {/* Tiny label */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.5 }}
         style={{
-          fontSize: 13,
-          color: "rgba(255,215,0,0.7)",
-          letterSpacing: "0.1em",
+          fontSize: 11,
+          color: "rgba(255,215,0,0.5)",
+          letterSpacing: "0.12em",
           textTransform: "uppercase",
-          marginBottom: 8,
-          fontWeight: 600,
+          marginBottom: 12,
+          fontWeight: 500,
         }}
       >
         {titlePrefix}
-      </p>
+      </motion.p>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 16 }}>
-        <motion.h1
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+      {/* Name — big & warm */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+        style={{ marginBottom: 16 }}
+      >
+        <span
           style={{
-            fontSize: "min(44px, 11vw)",
-            fontWeight: 800,
-            color: "white",
+            fontSize: "min(48px, 12vw)",
+            fontWeight: 700,
+            background: "linear-gradient(135deg, #FFD700 0%, #FFB347 60%, #FF8C69 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
             fontFamily: "Georgia, serif",
             lineHeight: 1.1,
+            letterSpacing: "-0.01em",
           }}
         >
           {recipientName}
-        </motion.h1>
+        </span>
+        {" "}
         <motion.span
-          animate={{ scale: [1, 1.4, 1], rotate: [0, 10, -10, 0] }}
-          transition={{ duration: 0.8, delay: 0.4, repeat: 3, repeatDelay: 1 }}
-          style={{ fontSize: "min(44px, 11vw)" }}
+          animate={{ scale: [1, 1.35, 1], rotate: [0, 12, -8, 0] }}
+          transition={{ duration: 0.9, delay: 0.55, repeat: Infinity, repeatDelay: 2.5 }}
+          style={{ fontSize: "min(32px, 8vw)", display: "inline-block" }}
         >
-          🎉
+          🥹
         </motion.span>
-      </div>
+      </motion.div>
 
-      <div
+      {/* Message */}
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, duration: 0.8 }}
         style={{
-          width: "100%", height: 1,
-          background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.25), transparent)",
+          color: "rgba(255,255,255,0.88)",
+          fontSize: "min(15px, 3.8vw)",
+          lineHeight: 1.8,
+          fontStyle: "italic",
+          fontFamily: "Georgia, serif",
           marginBottom: 18,
+          padding: "0 4px",
         }}
-      />
+      >
+        "{finalMessage}"
+      </motion.p>
+
+      {/* Wavy divider */}
+      <div style={{
+        fontSize: 14, letterSpacing: "0.25em", color: "rgba(255,215,0,0.3)",
+        marginBottom: 12, userSelect: "none",
+      }}>
+        ～ ✦ ～
+      </div>
 
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.8 }}
-        style={{
-          color: "rgba(255,255,255,0.85)",
-          fontSize: "min(16px, 4vw)",
-          lineHeight: 1.75,
-          fontStyle: "italic",
-          fontFamily: "Georgia, serif",
-          marginBottom: 22,
-        }}
+        transition={{ delay: 1.2, duration: 0.6 }}
+        style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.05em" }}
       >
-        {finalMessage}
+        made with love · heartsync.in
       </motion.p>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6, duration: 0.6 }}
-        style={{
-          marginTop: 8,
-          fontSize: 10,
-          color: "rgba(255,215,0,0.25)",
-          letterSpacing: "0.08em",
-        }}
-      >
-        ✦ Made with HeartSync AI ✦
-      </motion.div>
     </motion.div>
   );
 }
@@ -992,20 +998,24 @@ function FlowerBurst() {
         const dist = 130 + (i % 4) * 55;
         const x = Math.cos((angle * Math.PI) / 180) * dist;
         const y = Math.sin((angle * Math.PI) / 180) * dist;
+        const cycleDuration = 2.2 + (i % 4) * 0.3;
         return (
           <motion.div
             key={i}
             initial={{ opacity: 0, x: 0, y: 0, scale: 0, rotate: 0 }}
             animate={{
-              opacity: [0, 1, 1, 0],
-              x, y,
-              scale: [0, 1.3, 1.1, 0.6],
-              rotate: angle + 180,
+              opacity: [0, 1, 1, 0, 0],
+              x:       [0, x * 0.5, x, x * 1.05, 0],
+              y:       [0, y * 0.5, y, y * 1.05, 0],
+              scale:   [0, 1.2, 1.0, 0.5, 0],
+              rotate:  [0, angle / 2, angle + 180, angle + 270, angle + 360],
             }}
             transition={{
-              delay: 0.4 + i * 0.055,
-              duration: 1.6,
+              delay: 0.3 + i * 0.06,
+              duration: cycleDuration,
               ease: "easeOut",
+              repeat: Infinity,
+              repeatDelay: 0.1 + (i % 3) * 0.15,
             }}
             style={{
               position: "absolute",
