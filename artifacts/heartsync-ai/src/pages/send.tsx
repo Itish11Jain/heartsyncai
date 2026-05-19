@@ -517,10 +517,18 @@ function SendInner() {
     setVoiceUploadError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const mimeType = (
+        MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" :
+        MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" :
+        MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" :
+        MediaRecorder.isTypeSupported("audio/ogg;codecs=opus") ? "audio/ogg;codecs=opus" : ""
+      );
+      let mr: MediaRecorder;
+      try {
+        mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      } catch {
+        mr = new MediaRecorder(stream);
+      }
       voiceChunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
       mr.onstop = async () => {
@@ -535,8 +543,15 @@ function SendInner() {
       voiceTimerRef.current = setInterval(() => {
         setVoiceRecordDuration(d => d + 1);
       }, 1000);
-    } catch {
-      setVoiceUploadError("Mic access denied. Please allow microphone access and try again.");
+    } catch (err: unknown) {
+      const name = (err instanceof Error) ? err.name : "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setVoiceUploadError("Mic access denied. Please allow microphone access and try again.");
+      } else if (name === "NotFoundError") {
+        setVoiceUploadError("No microphone found. Please connect a mic and try again.");
+      } else {
+        setVoiceUploadError("Could not start recording. Please try again.");
+      }
     }
   }
 
@@ -1072,7 +1087,7 @@ function SendInner() {
               <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
                 We'll make it feel personal to them ✨
               </p>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 <div>
                   {/* When the name is empty we brighten the label and pulse a
                       gold glow around the input so the user immediately

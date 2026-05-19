@@ -954,6 +954,8 @@ function MemoryCollage({
               fontSize: 22,
               color: isPlaying ? "#FFD700" : "#000",
               flexShrink: 0,
+              outline: "none",
+              WebkitTapHighlightColor: "transparent",
             }}
           >
             {isPlaying ? "⏸" : "▶"}
@@ -1330,7 +1332,8 @@ export default function Card() {
       if (newClicked.size === orbs.length) {
         setTimeout(() => {
           envelope.finale();
-          setPhase("collage");
+          const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
+          setPhase(skipCollage ? "finale" : "collage");
           setTimeout(fireConfetti, personalPictureUrl ? 500 : 800);
         }, 1500);
       }
@@ -1358,7 +1361,8 @@ export default function Card() {
           if (next.size === orbs.length) {
             setTimeout(() => {
               envelope.finale();
-              setPhase("collage");
+              const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
+              setPhase(skipCollage ? "finale" : "collage");
             }, 1200);
           }
           return next;
