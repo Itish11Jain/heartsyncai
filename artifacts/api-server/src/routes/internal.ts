@@ -36,6 +36,13 @@ router.post("/internal/upi-payment", async (req, res) => {
   const cleanAmount = typeof amount === "string" ? amount.slice(0, 20) : null;
   const cleanSms = typeof raw_sms === "string" ? raw_sms.slice(0, 500) : null;
 
+  /* Permanently blocked senders — silently discard, never store. */
+  const BLOCKED = ["AYUSHI", "ITISHA"];
+  if (cleanSms && BLOCKED.some((name) => cleanSms.toUpperCase().includes(name))) {
+    res.json({ ok: true, utr: cleanUtr });
+    return;
+  }
+
   try {
     await pool.query(
       `INSERT INTO hs_received_payments (utr, amount, raw_sms)

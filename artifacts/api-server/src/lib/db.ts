@@ -152,4 +152,18 @@ export async function initDb(): Promise<void> {
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS card_id TEXT;
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS unlock_method TEXT;
   `);
+
+  /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal
+   * payments permanently. Uses hs_migrations so this runs exactly once. ── */
+  const already = await pool.query(
+    `SELECT 1 FROM hs_migrations WHERE name = 'remove_ayushi_itisha_payments'`
+  );
+  if (already.rowCount === 0) {
+    await pool.query(`
+      DELETE FROM hs_received_payments
+      WHERE UPPER(raw_sms) LIKE '%AYUSHI%'
+         OR UPPER(raw_sms) LIKE '%ITISHA%';
+      INSERT INTO hs_migrations (name) VALUES ('remove_ayushi_itisha_payments');
+    `);
+  }
 }
