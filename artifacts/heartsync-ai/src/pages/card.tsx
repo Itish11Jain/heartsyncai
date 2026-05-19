@@ -795,7 +795,6 @@ function MemoryCollage({
   onContinue: () => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [loadedSet, setLoadedSet] = useState<Set<number>>(new Set());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const n = photoUrls.length;
   const mediaDelay = 0.3 + n * 0.2 + 0.4;
@@ -901,8 +900,6 @@ function MemoryCollage({
                 <img
                   src={url}
                   alt=""
-                  onLoad={() => setLoadedSet(prev => new Set([...prev, i]))}
-                  onError={() => setLoadedSet(prev => new Set([...prev, i]))}
                   style={{
                     width: "100%",
                     aspectRatio: n === 1 ? "4/3" : "1",
@@ -911,8 +908,6 @@ function MemoryCollage({
                     imageOrientation: "from-image",
                     display: "block",
                     borderRadius: 1,
-                    opacity: loadedSet.has(i) ? 1 : 0,
-                    transition: "opacity 0.3s ease",
                   }}
                 />
               </motion.div>
