@@ -1369,6 +1369,14 @@ export default function Card() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);
 
+  /* Autoplay: advance from collage → finale after showing the photos + voice note */
+  useEffect(() => {
+    if (!isAutoplay || phase !== "collage") return;
+    const t = setTimeout(() => setPhase("finale"), 3000);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase]);
+
   const orbPositions = useMemo(() => orbs.map((_, i) => {
     const angle = (i / orbs.length) * 2 * Math.PI - Math.PI / 2;
     return { x: orbRadius * Math.cos(angle), y: orbRadius * Math.sin(angle), angle };
