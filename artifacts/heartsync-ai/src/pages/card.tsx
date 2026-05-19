@@ -776,6 +776,19 @@ function FinalCard({
 
 /* ─────────────────────── MemoryCollage ────────────────────────── */
 
+/* Floating sticker positions — deterministic so they don't jump on re-render */
+const COLLAGE_STICKERS = [
+  { emoji: "💛", top: "8%",  left: "7%",  rot: -18, scale: 1.0, delay: 0.6 },
+  { emoji: "✨", top: "12%", left: "78%", rot:  12, scale: 0.85, delay: 0.8 },
+  { emoji: "🌸", top: "72%", left: "5%",  rot: -10, scale: 0.9, delay: 1.0 },
+  { emoji: "💫", top: "80%", left: "80%", rot:  15, scale: 0.8, delay: 0.9 },
+  { emoji: "🎀", top: "45%", left: "3%",  rot: -8,  scale: 0.75, delay: 1.2 },
+  { emoji: "💕", top: "55%", left: "88%", rot:  10, scale: 0.75, delay: 1.1 },
+  { emoji: "🌟", top: "25%", left: "88%", rot: -5,  scale: 0.7, delay: 1.3 },
+];
+
+const PHOTO_ROTATIONS = [-2.5, 2, -1.5, 1.8];
+
 function MemoryCollage({
   photoUrls,
   voiceNoteUrl,
@@ -788,7 +801,7 @@ function MemoryCollage({
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const n = photoUrls.length;
-  const mediaDelay = Math.max(n, 1) * 0.18 + 0.9;
+  const mediaDelay = Math.max(n, 1) * 0.2 + 0.8;
 
   function togglePlay() {
     if (!voiceNoteUrl) return;
@@ -812,11 +825,37 @@ function MemoryCollage({
       style={{
         position: "fixed", inset: 0, zIndex: 30,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: "20px 16px 100px",
-        overflowY: "auto",
-        gap: 20,
+        padding: "32px 32px 90px",
+        gap: 28,
+        overflow: "hidden",
       }}
     >
+      {/* Floating stickers */}
+      {COLLAGE_STICKERS.map((s, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, scale: 0, rotate: s.rot - 20 }}
+          animate={{ opacity: 1, scale: s.scale, rotate: s.rot, y: [0, -8, 0] }}
+          transition={{
+            opacity: { delay: s.delay, duration: 0.5 },
+            scale:   { delay: s.delay, duration: 0.5, type: "spring", damping: 12 },
+            rotate:  { delay: s.delay, duration: 0.5 },
+            y: { delay: s.delay + 0.5, duration: 3, repeat: Infinity, ease: "easeInOut" },
+          }}
+          style={{
+            position: "absolute",
+            top: s.top, left: s.left,
+            fontSize: 26,
+            userSelect: "none",
+            pointerEvents: "none",
+            filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))",
+          }}
+        >
+          {s.emoji}
+        </motion.div>
+      ))}
+
+      {/* Photos */}
       {n === 0 ? (
         <motion.div
           animate={{ scale: [1, 1.14, 1] }}
@@ -827,76 +866,157 @@ function MemoryCollage({
         </motion.div>
       ) : (
         <div style={{
-          width: "min(380px, 92vw)",
+          width: "min(300px, 80vw)",
           display: "grid",
           gridTemplateColumns: n === 1 ? "1fr" : "1fr 1fr",
-          gap: 8,
+          gap: 14,
         }}>
           {photoUrls.map((url, i) => (
             <motion.div
               key={url}
-              initial={{ opacity: 0, y: 40, scale: 0.85 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.4 + i * 0.18, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
+              initial={{ opacity: 0, y: 50, scale: 0.8, rotate: 0 }}
+              animate={{ opacity: 1, y: 0, scale: 1, rotate: n === 1 ? 0 : PHOTO_ROTATIONS[i] ?? 0 }}
+              transition={{ delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
               style={{
-                borderRadius: n === 1 ? 22 : 14,
-                overflow: "hidden",
-                aspectRatio: n === 1 ? "4/3" : "1",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.55), 0 0 20px rgba(255,215,0,0.08)",
-                border: "1.5px solid rgba(255,215,0,0.2)",
+                background: "#fffcf0",
+                padding: n === 1 ? "8px 8px 28px" : "6px 6px 22px",
+                borderRadius: 3,
+                boxShadow: "0 10px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)",
                 gridColumn: n === 3 && i === 2 ? "1 / span 2" : undefined,
+                transformOrigin: "center bottom",
               }}
             >
-              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img
+                src={url}
+                alt=""
+                style={{
+                  width: "100%",
+                  aspectRatio: n === 1 ? "4/3" : "1",
+                  objectFit: "cover",
+                  display: "block",
+                  borderRadius: 1,
+                }}
+              />
             </motion.div>
           ))}
         </div>
       )}
 
-      {voiceNoteUrl && (
+      {/* Voice note player + next arrow */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: mediaDelay, duration: 0.5 }}
+        style={{ display: "flex", alignItems: "center", gap: 14 }}
+      >
+        {voiceNoteUrl && (
+          <button
+            onClick={togglePlay}
+            style={{
+              width: 56, height: 56, borderRadius: "50%", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: isPlaying
+                ? "linear-gradient(135deg, #FFD700, #FFA500)"
+                : "linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,165,0,0.12))",
+              border: `2px solid ${isPlaying ? "#FFD700" : "rgba(255,215,0,0.5)"}`,
+              boxShadow: isPlaying
+                ? "0 0 28px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)"
+                : "0 4px 16px rgba(0,0,0,0.3)",
+              transition: "all 0.3s ease",
+              fontSize: 20,
+              color: isPlaying ? "#3a2800" : "#FFD700",
+            }}
+          >
+            {isPlaying ? "⏸" : "▶"}
+          </button>
+        )}
+
+        {voiceNoteUrl && (
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>
+              Voice note
+            </div>
+            <div style={{
+              display: "flex", gap: 3, alignItems: "center", height: 18,
+            }}>
+              {Array.from({ length: 14 }).map((_, k) => (
+                <div
+                  key={k}
+                  style={{
+                    width: 2.5,
+                    height: `${6 + Math.sin(k * 1.3) * 5 + (k % 3) * 2}px`,
+                    borderRadius: 2,
+                    background: isPlaying
+                      ? `rgba(255,215,0,${0.5 + (k % 3) * 0.2})`
+                      : `rgba(255,215,0,${0.2 + (k % 4) * 0.08})`,
+                    transition: "background 0.3s",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Next arrow — always visible */}
         <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: mediaDelay, type: "spring", damping: 14 }}
-          onClick={togglePlay}
+          transition={{ delay: mediaDelay + 0.4, type: "spring", damping: 12 }}
+          onClick={onContinue}
           style={{
-            display: "flex", alignItems: "center", gap: 12,
-            padding: "14px 28px", borderRadius: 99, cursor: "pointer",
-            background: isPlaying
-              ? "linear-gradient(135deg, #FFD700, #FFA500)"
-              : "rgba(255,215,0,0.1)",
-            border: `1.5px solid ${isPlaying ? "#FFD700" : "rgba(255,215,0,0.4)"}`,
-            color: isPlaying ? "#000" : "rgba(255,215,0,0.9)",
-            fontSize: 15, fontWeight: 700,
-            boxShadow: isPlaying ? "0 0 30px rgba(255,215,0,0.35)" : "none",
-            transition: "all 0.3s ease",
+            width: 52, height: 52, borderRadius: "50%", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg, #FFD700, #FFA500)",
+            border: "none",
+            boxShadow: "0 4px 20px rgba(255,215,0,0.45), inset 0 1px 0 rgba(255,255,255,0.4)",
+            fontSize: 20, color: "#3a2800",
+            flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: 20 }}>{isPlaying ? "⏸" : "▶️"}</span>
-          {isPlaying ? "Pause" : "Play voice note"}
+          →
         </motion.button>
-      )}
-
-      {/* Continue to message */}
-      <motion.button
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: mediaDelay + 0.5, duration: 0.5 }}
-        onClick={onContinue}
-        style={{
-          position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "14px 32px", borderRadius: 99, cursor: "pointer",
-          background: "linear-gradient(135deg, #FFD700, #FFA500)",
-          border: "none", color: "#000",
-          fontSize: 15, fontWeight: 700,
-          boxShadow: "0 4px 24px rgba(255,215,0,0.35)",
-          whiteSpace: "nowrap",
-        }}
-      >
-        See your message ✨
-      </motion.button>
+      </motion.div>
     </motion.div>
+  );
+}
+
+/* ─────────────────────── FlowerBurst ────────────────────────── */
+const BURST_FLOWERS = ["🌼","🌻","💛","🌸","✨","🌼","🌻","💛","🌸","✨","🌼","💛","🌸","🌟","🌼","✨"];
+function FlowerBurst() {
+  return (
+    <div style={{ position: "fixed", top: "50%", left: "50%", zIndex: 45, pointerEvents: "none" }}>
+      {BURST_FLOWERS.map((f, i) => {
+        const angle = (i / BURST_FLOWERS.length) * 360;
+        const dist = 130 + (i % 4) * 55;
+        const x = Math.cos((angle * Math.PI) / 180) * dist;
+        const y = Math.sin((angle * Math.PI) / 180) * dist;
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0, rotate: 0 }}
+            animate={{
+              opacity: [0, 1, 1, 0],
+              x, y,
+              scale: [0, 1.3, 1.1, 0.6],
+              rotate: angle + 180,
+            }}
+            transition={{
+              delay: 0.4 + i * 0.055,
+              duration: 1.6,
+              ease: "easeOut",
+            }}
+            style={{
+              position: "absolute",
+              top: 0, left: 0,
+              fontSize: 22 + (i % 3) * 4,
+              lineHeight: 1,
+            }}
+          >
+            {f}
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1434,6 +1554,7 @@ export default function Card() {
               gap: 16,
             }}
           >
+            <FlowerBurst />
             <FinalCard
               recipientName={recipientName}
               titlePrefix={template.title_prefix}
