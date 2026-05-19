@@ -417,6 +417,17 @@ export const music = {
     } catch { /* */ }
     _music = null;
   },
+
+  setVolume(v: number, rampMs = 600): void {
+    if (!_music) return;
+    try {
+      const ac = getCtx();
+      const g = _music.masterGain;
+      g.gain.cancelScheduledValues(ac.currentTime);
+      g.gain.setValueAtTime(g.gain.value, ac.currentTime);
+      g.gain.linearRampToValueAtTime(Math.max(0.001, v), ac.currentTime + rampMs / 1000);
+    } catch { /* */ }
+  },
 };
 
 /* ══════════════════════════════════════════════════════════════

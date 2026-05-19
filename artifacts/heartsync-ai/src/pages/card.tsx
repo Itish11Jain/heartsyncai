@@ -795,21 +795,49 @@ function MemoryCollage({
   onContinue: () => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [allLoaded, setAllLoaded] = useState(photoUrls.length === 0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const loadedRef = useRef(0);
   const n = photoUrls.length;
-  const mediaDelay = Math.max(n, 1) * 0.2 + 0.8;
+  const mediaDelay = allLoaded ? 0.5 : 1.5;
+
+  /* Preload all images before revealing the grid */
+  useEffect(() => {
+    if (n === 0) { setAllLoaded(true); return; }
+    loadedRef.current = 0;
+    const imgs = photoUrls.map(url => {
+      const img = new window.Image();
+      const done = () => {
+        loadedRef.current += 1;
+        if (loadedRef.current >= n) setAllLoaded(true);
+      };
+      img.onload  = done;
+      img.onerror = done;
+      img.src = url;
+      return img;
+    });
+    return () => imgs.forEach(img => { img.onload = null; img.onerror = null; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function togglePlay() {
     if (!voiceNoteUrl) return;
     if (!audioRef.current) {
       audioRef.current = new Audio(voiceNoteUrl);
-      audioRef.current.onended = () => setIsPlaying(false);
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        music.setVolume(1.0);
+      };
     }
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
+      music.setVolume(1.0);
     } else {
-      void audioRef.current.play().then(() => setIsPlaying(true)).catch(() => { setIsPlaying(false); });
+      void audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        music.setVolume(0.1);
+      }).catch(() => { setIsPlaying(false); });
     }
   }
 
@@ -843,57 +871,55 @@ function MemoryCollage({
           gap: 14,
         }}>
           {photoUrls.map((url, i) => (
+            /* Outer div: entrance (opacity + scale + rotate), fires once all loaded */
             <motion.div
               key={url}
-              initial={{ opacity: 0, y: 50, scale: 0.8, rotate: 0 }}
-              animate={{
-                opacity: 1,
-                y: [null, 0, -7, 0],
-                scale: 1,
-                rotate: n === 1 ? 0 : PHOTO_ROTATIONS[i] ?? 0,
-              }}
-              transition={{
-                opacity: { delay: 0.3 + i * 0.15, duration: 0.5 },
-                scale:   { delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] },
-                rotate:  { delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] },
-                y: {
-                  times: [0, 0.01, 0.5, 1],
-                  delay: 0.3 + i * 0.15,
-                  duration: 3.2 + i * 0.4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  repeatDelay: 0.1,
-                },
-              }}
+              initial={{ opacity: 0, scale: 0.88 }}
+              animate={allLoaded ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.88 }}
+              transition={{ duration: 0.55, delay: 0.15, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
               style={{
                 position: "relative",
-                background: "#fffcf0",
-                padding: n === 1 ? "8px 8px 28px" : "6px 6px 22px",
-                borderRadius: 3,
-                boxShadow: "0 10px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)",
+                rotate: `${n === 1 ? 0 : (PHOTO_ROTATIONS[i] ?? 0)}deg`,
                 gridColumn: n === 3 && i === 2 ? "1 / span 2" : undefined,
                 transformOrigin: "center bottom",
               }}
             >
-              <img
-                src={url}
-                alt=""
-                style={{
-                  width: "100%",
-                  aspectRatio: n === 1 ? "4/3" : "1",
-                  objectFit: "cover",
-                  display: "block",
-                  borderRadius: 1,
+              {/* Inner div: gentle float loop — starts only after entrance settles */}
+              <motion.div
+                animate={allLoaded ? { y: [0, -7, 0] } : { y: 0 }}
+                transition={{
+                  duration: 3.0 + i * 0.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.8 + i * 0.4,
                 }}
-              />
+                style={{
+                  background: "#fffcf0",
+                  padding: n === 1 ? "8px 8px 28px" : "6px 6px 22px",
+                  borderRadius: 3,
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)",
+                }}
+              >
+                <img
+                  src={url}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    aspectRatio: n === 1 ? "4/3" : "1",
+                    objectFit: "cover",
+                    display: "block",
+                    borderRadius: 1,
+                  }}
+                />
+              </motion.div>
               {/* Per-photo sticker */}
               <motion.div
                 initial={{ opacity: 0, scale: 0, rotate: -30 }}
-                animate={{ opacity: 1, scale: 1, rotate: 12 }}
-                transition={{ delay: 0.5 + i * 0.15, type: "spring", damping: 10 }}
+                animate={allLoaded ? { opacity: 1, scale: 1, rotate: 12 } : { opacity: 0, scale: 0 }}
+                transition={{ delay: 0.5, type: "spring", damping: 10 }}
                 style={{
                   position: "absolute",
-                  bottom: -10, right: -10,
+                  bottom: -6, right: -6,
                   fontSize: 24,
                   filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
                   userSelect: "none",
@@ -923,10 +949,7 @@ function MemoryCollage({
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, #FFD700, #FFA500)",
               border: "2px solid rgba(255,255,255,0.3)",
-              boxShadow: isPlaying
-                ? "0 0 32px rgba(255,215,0,0.7), inset 0 1px 0 rgba(255,255,255,0.4)"
-                : "0 0 18px rgba(255,215,0,0.45), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)",
-              transition: "box-shadow 0.3s ease",
+              boxShadow: "0 0 22px rgba(255,215,0,0.55), 0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.35)",
               fontSize: 22,
               color: "#3a2800",
               flexShrink: 0,
