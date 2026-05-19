@@ -929,12 +929,18 @@ export default function Card() {
     try { return decodeURIComponent(raw); } catch { return null; }
   })();
 
-  /* Multi-photo collage URLs — comma-separated, each URI-encoded */
+  /* Multi-photo collage URLs — comma-separated, each URI-encoded.
+     Falls back to personalPictureUrl for legacy single-photo cards. */
   const collagePhotoUrls = (() => {
     const raw = params.get("photos");
     if (!raw) return [] as string[];
     return raw.split(",").map(u => { try { return decodeURIComponent(u.trim()); } catch { return u.trim(); } }).filter(Boolean);
   })();
+  const effectiveCollagePhotos: string[] = collagePhotoUrls.length > 0
+    ? collagePhotoUrls
+    : personalPictureUrl
+      ? [personalPictureUrl]
+      : [];
 
   /* Voice note URL */
   const voiceNoteUrl = (() => {
@@ -1317,11 +1323,13 @@ export default function Card() {
 
       {/* ════ PHASE 3: Orbs ════ */}
       <AnimatePresence>
-        {(phase === "orbs" || phase === "finale" || phase === "collage") && (
+        {(phase === "orbs" || phase === "finale") && (
           <motion.div
             key="orbs-scene"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
             style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: allClicked ? "none" : "auto" }}
           >
             <div style={{ position: "fixed", inset: 0, zIndex: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1386,7 +1394,7 @@ export default function Card() {
             }}
           >
             <MemoryCollage
-              photoUrls={collagePhotoUrls}
+              photoUrls={effectiveCollagePhotos}
               voiceNoteUrl={voiceNoteUrl}
               recipientName={recipientName}
               titlePrefix={template.title_prefix}
