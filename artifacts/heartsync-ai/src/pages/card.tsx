@@ -1162,12 +1162,15 @@ export default function Card() {
   const confettiRef = useRef<Particle[]>([]);
   const rafRef = useRef<number>(0);
 
-  /* ── Preload personal picture immediately so it's cached by the time the polaroid phase arrives ── */
+  /* ── Preload personal picture + all collage photos on mount so they are
+       cached well before those phases render. The envelope → orbs → collage
+       journey takes several seconds of user interaction, giving the browser
+       plenty of time to finish the downloads in the background. ── */
   useEffect(() => {
-    if (!personalPictureUrl) return;
-    const img = new Image();
-    img.src = personalPictureUrl;
-  }, [personalPictureUrl]);
+    const urls = [personalPictureUrl, ...effectiveCollagePhotos].filter(Boolean) as string[];
+    urls.forEach(url => { const img = new Image(); img.src = url; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── background music ── */
   useEffect(() => {
