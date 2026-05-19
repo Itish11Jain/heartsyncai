@@ -776,18 +776,8 @@ function FinalCard({
 
 /* ─────────────────────── MemoryCollage ────────────────────────── */
 
-/* Floating sticker positions — deterministic so they don't jump on re-render */
-const COLLAGE_STICKERS = [
-  { emoji: "💛", top: "8%",  left: "7%",  rot: -18, scale: 1.0, delay: 0.6 },
-  { emoji: "✨", top: "12%", left: "78%", rot:  12, scale: 0.85, delay: 0.8 },
-  { emoji: "🌸", top: "72%", left: "5%",  rot: -10, scale: 0.9, delay: 1.0 },
-  { emoji: "💫", top: "80%", left: "80%", rot:  15, scale: 0.8, delay: 0.9 },
-  { emoji: "🎀", top: "45%", left: "3%",  rot: -8,  scale: 0.75, delay: 1.2 },
-  { emoji: "💕", top: "55%", left: "88%", rot:  10, scale: 0.75, delay: 1.1 },
-  { emoji: "🌟", top: "25%", left: "88%", rot: -5,  scale: 0.7, delay: 1.3 },
-];
-
 const PHOTO_ROTATIONS = [-2.5, 2, -1.5, 1.8];
+const PHOTO_STICKERS  = ["💛", "🌸", "✨", "💫"];
 
 function MemoryCollage({
   photoUrls,
@@ -830,31 +820,6 @@ function MemoryCollage({
         overflow: "hidden",
       }}
     >
-      {/* Floating stickers */}
-      {COLLAGE_STICKERS.map((s, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, scale: 0, rotate: s.rot - 20 }}
-          animate={{ opacity: 1, scale: s.scale, rotate: s.rot, y: [0, -8, 0] }}
-          transition={{
-            opacity: { delay: s.delay, duration: 0.5 },
-            scale:   { delay: s.delay, duration: 0.5, type: "spring", damping: 12 },
-            rotate:  { delay: s.delay, duration: 0.5 },
-            y: { delay: s.delay + 0.5, duration: 3, repeat: Infinity, ease: "easeInOut" },
-          }}
-          style={{
-            position: "absolute",
-            top: s.top, left: s.left,
-            fontSize: 26,
-            userSelect: "none",
-            pointerEvents: "none",
-            filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))",
-          }}
-        >
-          {s.emoji}
-        </motion.div>
-      ))}
-
       {/* Photos */}
       {n === 0 ? (
         <motion.div
@@ -878,6 +843,7 @@ function MemoryCollage({
               animate={{ opacity: 1, y: 0, scale: 1, rotate: n === 1 ? 0 : PHOTO_ROTATIONS[i] ?? 0 }}
               transition={{ delay: 0.3 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] }}
               style={{
+                position: "relative",
                 background: "#fffcf0",
                 padding: n === 1 ? "8px 8px 28px" : "6px 6px 22px",
                 borderRadius: 3,
@@ -897,6 +863,23 @@ function MemoryCollage({
                   borderRadius: 1,
                 }}
               />
+              {/* Per-photo sticker */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0, rotate: -30 }}
+                animate={{ opacity: 1, scale: 1, rotate: 12 }}
+                transition={{ delay: 0.5 + i * 0.15, type: "spring", damping: 10 }}
+                style={{
+                  position: "absolute",
+                  bottom: -10, right: -10,
+                  fontSize: 24,
+                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
+                  userSelect: "none",
+                  pointerEvents: "none",
+                  lineHeight: 1,
+                }}
+              >
+                {PHOTO_STICKERS[i % PHOTO_STICKERS.length]}
+              </motion.div>
             </motion.div>
           ))}
         </div>
