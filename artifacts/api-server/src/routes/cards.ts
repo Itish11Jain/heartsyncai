@@ -273,9 +273,11 @@ router.patch("/cards/:id", async (req, res) => {
 
   try {
     const { id } = req.params;
-    const { is_watermarked, is_premium } = req.body as {
+    const { is_watermarked, is_premium, voice_note_url, photo_urls } = req.body as {
       is_watermarked?: unknown;
       is_premium?: unknown;
+      voice_note_url?: unknown;
+      photo_urls?: unknown;
     };
 
     // Reject downgrade attempts — paid state is permanent.
@@ -286,9 +288,21 @@ router.patch("/cards/:id", async (req, res) => {
 
     const wantPremium = is_premium === true;
     const wantClean   = is_watermarked === false;
+    const wantVoice   = voice_note_url !== undefined;
+    const wantPhotos  = photo_urls !== undefined;
 
-    if (!wantPremium && !wantClean) {
+    if (!wantPremium && !wantClean && !wantVoice && !wantPhotos) {
       res.status(400).json({ error: "nothing_to_update" });
+      return;
+    }
+
+    // Validate media field types if provided.
+    if (wantVoice && voice_note_url !== null && typeof voice_note_url !== "string") {
+      res.status(400).json({ error: "invalid_voice_note_url" });
+      return;
+    }
+    if (wantPhotos && (!Array.isArray(photo_urls) || (photo_urls as unknown[]).some(u => typeof u !== "string"))) {
+      res.status(400).json({ error: "invalid_photo_urls" });
       return;
     }
 
@@ -306,33 +320,34 @@ router.patch("/cards/:id", async (req, res) => {
       return;
     }
 
-    // Entitlement check.
+    // Entitlement check (only required for premium/watermark upgrades, not media updates).
     // Bundle path (is_premium=true or is_watermarked=false with is_premium):
     //   Require ALL of cosmic/crystal/vinyl in unlocked_templates (₹49 bundle paid).
     // Per-card watermark-only path (is_watermarked=false, no is_premium):
     //   Accept hs_watermark_payments row for this card OR bundle entitlement.
-    const ALL_PREMIUM = ["cosmic", "crystal", "vinyl"];
-    const userRow = await pool.query<{ unlocked_templates: string[] }>(
-      "SELECT unlocked_templates FROM hs_clerk_users WHERE clerk_user_id = $1",
-      [clerkUserId],
-    );
-    const unlocked: string[] = userRow.rows[0]?.unlocked_templates ?? [];
-    const hasBundle = ALL_PREMIUM.every((t) => unlocked.includes(t));
-
-    if (wantPremium && !hasBundle) {
-      res.status(403).json({ error: "payment_required", message: "Bundle payment (₹49) required." });
-      return;
-    }
-
-    if (wantClean && !hasBundle) {
-      // Only accept watermark removal if there's a recorded per-card payment.
-      const wmRow = await pool.query(
-        "SELECT 1 FROM hs_watermark_payments WHERE card_id = $1 AND clerk_user_id = $2 LIMIT 1",
-        [id, clerkUserId],
+    if (wantPremium || wantClean) {
+      const ALL_PREMIUM = ["cosmic", "crystal", "vinyl"];
+      const userRow = await pool.query<{ unlocked_templates: string[] }>(
+        "SELECT unlocked_templates FROM hs_clerk_users WHERE clerk_user_id = $1",
+        [clerkUserId],
       );
-      if (wmRow.rows.length === 0) {
-        res.status(403).json({ error: "payment_required", message: "Watermark payment (₹29) not found for this card." });
+      const unlocked: string[] = userRow.rows[0]?.unlocked_templates ?? [];
+      const hasBundle = ALL_PREMIUM.every((t) => unlocked.includes(t));
+
+      if (wantPremium && !hasBundle) {
+        res.status(403).json({ error: "payment_required", message: "Bundle payment (₹49) required." });
         return;
+      }
+
+      if (wantClean && !hasBundle) {
+        const wmRow = await pool.query(
+          "SELECT 1 FROM hs_watermark_payments WHERE card_id = $1 AND clerk_user_id = $2 LIMIT 1",
+          [id, clerkUserId],
+        );
+        if (wmRow.rows.length === 0) {
+          res.status(403).json({ error: "payment_required", message: "Watermark payment (₹29) not found for this card." });
+          return;
+        }
       }
     }
 
@@ -346,6 +361,14 @@ router.patch("/cards/:id", async (req, res) => {
     if (wantPremium) {
       params.push(true);
       updates.push(`is_premium = $${params.length}`);
+    }
+    if (wantVoice) {
+      params.push(voice_note_url ?? null);
+      updates.push(`voice_note_url = $${params.length}`);
+    }
+    if (wantPhotos) {
+      params.push(photo_urls as string[]);
+      updates.push(`photo_urls = $${params.length}`);
     }
 
     params.push(id);

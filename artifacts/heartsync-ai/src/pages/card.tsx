@@ -820,7 +820,15 @@ function MemoryCollage({
         gap: 20,
       }}
     >
-      {n > 0 && (
+      {n === 0 ? (
+        <motion.div
+          animate={{ scale: [1, 1.14, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{ fontSize: 80, lineHeight: 1, userSelect: "none" }}
+        >
+          💛
+        </motion.div>
+      ) : (
         <div style={{
           width: "min(380px, 92vw)",
           display: "grid",
@@ -960,7 +968,7 @@ export default function Card() {
   const confettiColors = getConfettiColors(likes);
 
   const skipToFinale = directShare && isSender;
-  const [phase, setPhase] = useState<Phase>(skipToFinale ? "finale" : "envelope");
+  const [phase, setPhase] = useState<Phase>(skipToFinale ? "collage" : "envelope");
   const [clickedOrbs, setClickedOrbs] = useState<Set<number>>(() =>
     skipToFinale ? new Set(orbs.map((_, i) => i)) : new Set()
   );
@@ -1144,13 +1152,13 @@ export default function Card() {
       if (newClicked.size === orbs.length) {
         setTimeout(() => {
           envelope.finale();
-          setPhase(hasCollageMedia ? "collage" : "finale");
+          setPhase("collage");
           setTimeout(fireConfetti, personalPictureUrl ? 500 : 800);
         }, 1500);
       }
       return newClicked;
     });
-  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl, hasCollageMedia]);
+  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl]);
 
   /* ── Autoplay mode: auto-advance all phases for the modal iframe preview ── */
   useEffect(() => {
@@ -1172,7 +1180,7 @@ export default function Card() {
           if (next.size === orbs.length) {
             setTimeout(() => {
               envelope.finale();
-              setPhase(hasCollageMedia ? "collage" : "finale");
+              setPhase("collage");
             }, 1200);
           }
           return next;

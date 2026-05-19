@@ -54,7 +54,7 @@ interface SendDraft {
   occasion: string;
   relation: string;
   recipientName: string;
-  likes: string;
+  likes?: string;
   customMsg: string;
   selectedTemplate: TemplateId;
   step: number;
@@ -305,7 +305,6 @@ function SendInner() {
   const [occasion, setOccasion] = useState(initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good");
   const [relation, setRelation] = useState(initialDraft?.relation ?? searchParams.get("relation") ?? "");
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
-  const [likes, setLikes] = useState(initialDraft?.likes ?? "");
   const [customMsg, setCustomMsg] = useState(initialDraft?.customMsg ?? "");
   // Template selection is intentionally NOT restored from draft — Envelope is always
   // the predictable default on a fresh load. Selections survive the in-page lifecycle
@@ -350,9 +349,11 @@ function SendInner() {
   const [voiceUploading, setVoiceUploading] = useState(false);
   const [voiceUploadError, setVoiceUploadError] = useState<string | null>(null);
   const [voiceRecordDuration, setVoiceRecordDuration] = useState(0);
+  const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
   const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   /* ─── Persist draft on every change ─────────────────────────────────── */
   useEffect(() => {
@@ -360,7 +361,7 @@ function SendInner() {
     if (!meaningful) return;
     try {
       const draft: SendDraft = {
-        occasion, relation, recipientName, likes: "", customMsg, selectedTemplate, step,
+        occasion, relation, recipientName, customMsg, selectedTemplate, step,
         savedAt: Date.now(),
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -859,7 +860,7 @@ function SendInner() {
     // Persist now (the redirect would skip our debounced effect on some browsers).
     try {
       const draft: SendDraft = {
-        occasion, relation, recipientName, likes, customMsg, selectedTemplate, step,
+        occasion, relation, recipientName, customMsg, selectedTemplate, step,
         savedAt: Date.now(),
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -1149,19 +1150,62 @@ function SendInner() {
                     </span>
                   </div>
                   {voiceNoteUrl ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 22 }}>✅</span>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 12, color: "#4ade80", fontWeight: 600, margin: 0 }}>Voice note ready</p>
-                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>Will play for them at the finale</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 20 }}>✅</span>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 12, color: "#4ade80", fontWeight: 600, margin: 0 }}>Voice note ready</p>
+                          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "2px 0 0" }}>Will play for them at the finale</p>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setVoiceNoteUrl(null)}
-                        style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
-                      >
-                        Remove
-                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!voicePreviewAudioRef.current) {
+                              voicePreviewAudioRef.current = new Audio(voiceNoteUrl);
+                              voicePreviewAudioRef.current.onended = () => setVoicePreviewPlaying(false);
+                            }
+                            if (voicePreviewPlaying) {
+                              voicePreviewAudioRef.current.pause();
+                              setVoicePreviewPlaying(false);
+                            } else {
+                              void voicePreviewAudioRef.current.play().then(() => setVoicePreviewPlaying(true)).catch(() => setVoicePreviewPlaying(false));
+                            }
+                          }}
+                          style={{
+                            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                            padding: "7px 0", borderRadius: 8, cursor: "pointer",
+                            background: voicePreviewPlaying ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.06)",
+                            border: `1px solid ${voicePreviewPlaying ? "rgba(255,215,0,0.4)" : "rgba(255,255,255,0.15)"}`,
+                            fontSize: 12, fontWeight: 700,
+                            color: voicePreviewPlaying ? "rgba(255,215,0,0.9)" : "rgba(255,255,255,0.55)",
+                          }}
+                        >
+                          {voicePreviewPlaying ? "⏸ Pause" : "▶ Preview"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (voicePreviewAudioRef.current) {
+                              voicePreviewAudioRef.current.pause();
+                              voicePreviewAudioRef.current = null;
+                            }
+                            setVoicePreviewPlaying(false);
+                            setVoiceNoteUrl(null);
+                            setVoiceRecordDuration(0);
+                          }}
+                          style={{
+                            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                            padding: "7px 0", borderRadius: 8, cursor: "pointer",
+                            background: "rgba(248,113,113,0.08)",
+                            border: "1px solid rgba(248,113,113,0.25)",
+                            fontSize: 12, fontWeight: 700, color: "rgba(248,113,113,0.75)",
+                          }}
+                        >
+                          🔄 Re-record
+                        </button>
+                      </div>
                     </div>
                   ) : voiceUploading ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
