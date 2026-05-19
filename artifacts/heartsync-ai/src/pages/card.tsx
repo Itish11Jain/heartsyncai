@@ -1155,7 +1155,11 @@ export default function Card() {
     isRecipient && cardId ? "checking" : "paid",
   );
 
-  const skipToFinale = directShare && isSender;
+  /* ?finale=1 is silently injected into the URL by history.replaceState when
+   * the sender reaches the finale phase (see useEffect below). Any subsequent
+   * fresh open of that URL — including copy-paste by someone who got it — skips
+   * straight to the finale+paywall without replaying the full animation. */
+  const skipToFinale = (directShare && isSender) || (isSender && params.get("finale") === "1");
   const [phase, setPhase] = useState<Phase>(skipToFinale ? "finale" : "envelope");
   const [clickedOrbs, setClickedOrbs] = useState<Set<number>>(() =>
     skipToFinale ? new Set(orbs.map((_, i) => i)) : new Set()
@@ -1314,6 +1318,19 @@ export default function Card() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
+
+  /* Stamp ?finale=1 into the URL the moment the sender reaches the finale phase.
+   * This is silent (history.replaceState — no navigation, no re-render).
+   * Effect: any copy-paste of the URL at the finale opens directly to the
+   * paywall screen, not the full animation. Totally invisible to the sender. */
+  useEffect(() => {
+    if (!isSender || phase !== "finale") return;
+    const u = new URL(window.location.href);
+    if (u.searchParams.get("finale") !== "1") {
+      u.searchParams.set("finale", "1");
+      window.history.replaceState(null, "", u.toString());
+    }
+  }, [isSender, phase]);
 
   /* Payment gate check — recipient views only, no-op for senders / previews */
   useEffect(() => {
