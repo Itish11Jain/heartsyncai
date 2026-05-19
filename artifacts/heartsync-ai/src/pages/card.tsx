@@ -943,8 +943,6 @@ export default function Card() {
     try { return decodeURIComponent(raw); } catch { return null; }
   })();
 
-  const hasCollageMedia = collagePhotoUrls.length > 0 || !!voiceNoteUrl;
-
   /* Share URL — /api/share generates a personalised og:image for WhatsApp,
      then JS-redirects recipients to /envelope.html */
   const senderShareUrl = (() => {
