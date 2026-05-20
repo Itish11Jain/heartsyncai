@@ -327,6 +327,48 @@ function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; e
   );
 }
 
+/* ─────────────────────── FloatingParticles ────────────────────────────── */
+
+const FLOAT_EMOJIS = ["✦", "⭐", "💫", "✨", "🌟", "🌠", "★", "✵", "✶", "🔆", "⚡", "🌟"];
+
+function FloatingParticles({ active }: { active: boolean }) {
+  const [particles, setParticles] = useState<{
+    id: number; emoji: string; x: number; top: number; size: number; dur: number;
+  }[]>([]);
+  const counter = useRef(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const iv = setInterval(() => {
+      const id = counter.current++;
+      const emoji = FLOAT_EMOJIS[Math.floor(Math.random() * FLOAT_EMOJIS.length)];
+      const x    = 6 + Math.random() * 88;
+      const top  = 20 + Math.random() * 60;
+      const size = 11 + Math.random() * 14;
+      const dur  = 2.0 + Math.random() * 2.2;
+      setParticles(prev => [...prev, { id, emoji, x, top, size, dur }]);
+      setTimeout(() => setParticles(prev => prev.filter(p => p.id !== id)), (dur + 0.4) * 1000);
+    }, 260);
+    return () => clearInterval(iv);
+  }, [active]);
+
+  return (
+    <>
+      {particles.map(p => (
+        <span key={p.id} style={{
+          position: "absolute",
+          left: `${p.x}%`,
+          top:  `${p.top}%`,
+          fontSize: p.size,
+          pointerEvents: "none",
+          zIndex: 10,
+          animation: `floatUp ${p.dur}s ease-out forwards`,
+        }}>{p.emoji}</span>
+      ))}
+    </>
+  );
+}
+
 /* ─────────────────────────── CosmicCard ────────────────────────────────── */
 
 export default function CosmicCard() {
@@ -660,6 +702,11 @@ export default function CosmicCard() {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
         }
+        @keyframes floatUp {
+          0%   { transform: translateY(0)      scale(1)    rotate(0deg);  opacity: 0.92; }
+          15%  { opacity: 1; }
+          100% { transform: translateY(-150px) scale(0.45) rotate(28deg); opacity: 0; }
+        }
         @keyframes sparkleGold {
           0%, 100% { opacity: 0;   transform: scale(0.4) rotate(0deg);   }
           40%       { opacity: 1;   transform: scale(1.4) rotate(18deg);  }
@@ -930,35 +977,61 @@ export default function CosmicCard() {
                   padding: "20px", overflowY: "auto",
                 }}
               >
-                {/* Final message — no card, text directly on the golden starfield */}
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                  style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}
-                >
-                  {tpl.title_prefix}
-                </motion.p>
+                {/* Final message inside glowing card with floating particles */}
+                <div style={{ position: "relative", width: "100%", maxWidth: 320 }}>
+                  <FloatingParticles active={true} />
 
-                <motion.h1
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                  style={{ fontSize: "clamp(28px, 8.5vw, 34px)", fontWeight: 800, color: "#FFD700", marginBottom: 22, letterSpacing: "0.02em", textAlign: "center" }}
-                >
-                  {recipientName}
-                </motion.h1>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 24 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ delay: 0.3, type: "spring", bounce: 0.3 }}
+                    style={{
+                      background: "linear-gradient(145deg, rgba(14,5,42,0.95) 0%, rgba(24,8,62,0.92) 100%)",
+                      border: "1.5px solid rgba(255,215,0,0.48)",
+                      borderRadius: 22,
+                      padding: "30px 26px 26px",
+                      boxShadow: "0 0 40px rgba(255,215,0,0.22), 0 0 80px rgba(120,60,220,0.28), inset 0 0 35px rgba(255,215,0,0.05)",
+                      backdropFilter: "blur(14px)",
+                      WebkitBackdropFilter: "blur(14px)",
+                      position: "relative",
+                      overflow: "visible",
+                    }}
+                  >
+                    {/* Top shimmer line */}
+                    <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 1, borderRadius: 1, background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.7), transparent)" }} />
+                    {/* Bottom shimmer line */}
+                    <div style={{ position: "absolute", bottom: 0, left: "10%", right: "10%", height: 1, borderRadius: 1, background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.5), transparent)" }} />
 
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-                  style={{ fontSize: "clamp(14px, 3.9vw, 15px)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, textAlign: "center" }}
-                >
-                  {finalMessage}
-                </motion.p>
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                      style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}
+                    >
+                      {tpl.title_prefix}
+                    </motion.p>
 
-                <motion.div
-                  animate={{ opacity: [0.35, 0.75, 0.35] }}
-                  transition={{ duration: 2.8, repeat: Infinity }}
-                  style={{ marginTop: 26, fontSize: 15, color: "rgba(255,215,0,0.45)", letterSpacing: "0.35em", textAlign: "center" }}
-                >
-                  ✦ ✦ ✦
-                </motion.div>
+                    <motion.h1
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+                      style={{ fontSize: "clamp(28px, 8.5vw, 34px)", fontWeight: 800, color: "#FFD700", marginBottom: 22, letterSpacing: "0.02em", textAlign: "center" }}
+                    >
+                      {recipientName}
+                    </motion.h1>
+
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.72 }}
+                      style={{ fontSize: "clamp(14px, 3.9vw, 15px)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, textAlign: "center" }}
+                    >
+                      {finalMessage}
+                    </motion.p>
+
+                    <motion.div
+                      animate={{ opacity: [0.35, 0.75, 0.35] }}
+                      transition={{ duration: 2.8, repeat: Infinity }}
+                      style={{ marginTop: 24, fontSize: 15, color: "rgba(255,215,0,0.5)", letterSpacing: "0.35em", textAlign: "center" }}
+                    >
+                      ✦ ✦ ✦
+                    </motion.div>
+                  </motion.div>
+                </div>
 
                 {/* Sender share panel */}
                 {isSender && (
