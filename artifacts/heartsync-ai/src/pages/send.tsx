@@ -316,12 +316,12 @@ function SendInner() {
   // Viral reply skips step 1 (occasion) — pre-filled as feel_good.
   const [step, setStep] = useState<number>(isViralReply ? 2 : Math.min(initialDraft?.step ?? 1, 3));
   const [dir, setDir] = useState(1);
-  // Viral reply always uses feel_good regardless of URL params or draft state.
-  const [occasion, setOccasion] = useState(isViralReply ? "feel_good" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"));
+  // Viral reply always uses thank_you regardless of URL params or draft state.
+  const [occasion, setOccasion] = useState(isViralReply ? "thank_you" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"));
   // Viral reply pre-selects "partner" so the user can tap through quickly.
   const [relation, setRelation] = useState(isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""));
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
-  const [customMsg, setCustomMsg] = useState(initialDraft?.customMsg ?? "");
+  const [customMsg, setCustomMsg] = useState(isViralReply ? "Thank you for this cute gesture!" : (initialDraft?.customMsg ?? ""));
   // Template selection is intentionally NOT restored from draft — Envelope is always
   // the predictable default on a fresh load. Selections survive the in-page lifecycle
   // (signin modal, paywall modal) via React state, which is what matters for the flow.

@@ -94,10 +94,27 @@ function buildSmartQueue(
 
 /* ─────────────────────────── AudioPlayer ────────────────────────────────── */
 
-function AudioPlayer({ audioUrl }: { audioUrl: string }) {
+function AudioPlayer({ audioUrl, onEnded: onEndedProp, autoPlay }: {
+  audioUrl: string;
+  onEnded?: () => void;
+  autoPlay?: boolean;
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const onEndedRef = useRef(onEndedProp);
+  onEndedRef.current = onEndedProp;
+
+  /* Auto-play on mount when requested */
+  useEffect(() => {
+    if (!autoPlay) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.play()
+      .then(() => setIsPlaying(true))
+      .catch((err) => { console.warn("Audio autoplay failed:", err); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -118,7 +135,11 @@ function AudioPlayer({ audioUrl }: { audioUrl: string }) {
     if (!audio) return;
     const onTime = () =>
       setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
-    const onEnded = () => { setIsPlaying(false); setProgress(0); };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+      onEndedRef.current?.();
+    };
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("ended", onEnded);
     return () => {
@@ -455,6 +476,16 @@ export default function CosmicCard() {
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStartRef = useRef<number>(0);
   const queueIndexRef = useRef(0);
+  const audioSupernovaRef = useRef<(() => void) | null>(null);
+
+  /* ── preload photos so they appear instantly in the polaroid ── */
+  useEffect(() => {
+    photoUrls.forEach(url => {
+      const img = new window.Image();
+      img.src = url;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── tracking ── */
   useEffect(() => {
@@ -634,10 +665,19 @@ export default function CosmicCard() {
 
     /* After all 4 stars are tapped, go straight to supernova */
     if (clickedStarIds.length + 1 >= 4) {
-      setTimeout(() => {
-        setActiveMemory(null);
-        triggerSupernova();
-      }, 2500);
+      if (item?.type === "audio") {
+        /* Let AudioPlayer.onEnded drive the transition so the voice note plays fully */
+        audioSupernovaRef.current = () => {
+          audioSupernovaRef.current = null;
+          setActiveMemory(null);
+          triggerSupernova();
+        };
+      } else {
+        setTimeout(() => {
+          setActiveMemory(null);
+          triggerSupernova();
+        }, 2500);
+      }
     }
   }
 
@@ -1221,7 +1261,11 @@ export default function CosmicCard() {
                   }}>
                     🎙 Listen to this:
                   </p>
-                  <AudioPlayer audioUrl={activeMemory.audioUrl} />
+                  <AudioPlayer
+                    audioUrl={activeMemory.audioUrl}
+                    autoPlay
+                    onEnded={audioSupernovaRef.current ?? undefined}
+                  />
                 </div>
               )}
 
