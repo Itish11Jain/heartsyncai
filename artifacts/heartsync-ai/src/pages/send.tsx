@@ -1156,17 +1156,26 @@ function SendInner() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
-                    Message <span style={{ color: "rgba(255,255,255,0.3)" }}>(optional — edit to personalise)</span>
-                  </label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                    <label className="block text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      Message <span style={{ color: "rgba(255,255,255,0.3)" }}>(optional — edit to personalise)</span>
+                    </label>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600,
+                      color: customMsg.length > 270 ? (customMsg.length >= 300 ? "#ef4444" : "#f59e0b") : "rgba(255,255,255,0.25)",
+                    }}>
+                      {customMsg.length}/300
+                    </span>
+                  </div>
                   <textarea
                     value={customMsg}
-                    onChange={e => setCustomMsg(e.target.value)}
+                    onChange={e => setCustomMsg(e.target.value.slice(0, 300))}
+                    maxLength={300}
                     rows={3}
                     style={{
                       width: "100%",
                       background: "rgba(255,255,255,0.06)",
-                      border: "1.5px solid rgba(255,255,255,0.12)",
+                      border: `1.5px solid ${customMsg.length >= 300 ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.12)"}`,
                       color: "rgba(255,255,255,0.9)",
                       fontSize: 14,
                       borderRadius: 12,

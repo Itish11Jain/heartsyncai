@@ -1750,12 +1750,12 @@ export default function Card() {
               padding: "32px 24px",
             }}
           >
-            <div style={{ fontSize: 44, marginBottom: 20 }}>✉️</div>
+            <div style={{ fontSize: 44, marginBottom: 20 }}>🔒</div>
             <p style={{
               fontSize: 20, fontWeight: 800, color: "#FFD700",
               textAlign: "center", marginBottom: 10,
             }}>
-              This card isn't ready yet
+              Card is locked 🔒
             </p>
             <p style={{
               fontSize: 14, color: "rgba(255,255,255,0.55)",
