@@ -316,7 +316,8 @@ function SendInner() {
   // Viral reply skips step 1 (occasion) — pre-filled as feel_good.
   const [step, setStep] = useState<number>(isViralReply ? 2 : Math.min(initialDraft?.step ?? 1, 3));
   const [dir, setDir] = useState(1);
-  const [occasion, setOccasion] = useState(initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good");
+  // Viral reply always uses feel_good regardless of URL params or draft state.
+  const [occasion, setOccasion] = useState(isViralReply ? "feel_good" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"));
   // Viral reply pre-selects "partner" so the user can tap through quickly.
   const [relation, setRelation] = useState(isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""));
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
@@ -1012,7 +1013,8 @@ function SendInner() {
           (home). This is the only Back affordance — inline backs were
           removed to keep the form fully on one screen fold. */}
       <div className="w-full flex items-center justify-between px-4 pt-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1 }}>
-        {step > 1 ? (
+        {/* In viral reply mode step 2 is the first visible step — Back goes home, not to the hidden occasion step. */}
+        {step > 1 && !(isViralReply && step === 2) ? (
           <button
             onClick={() => goTo(step - 1, -1)}
             className="flex items-center gap-1 text-sm"
