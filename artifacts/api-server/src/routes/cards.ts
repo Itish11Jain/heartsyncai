@@ -5,6 +5,48 @@ import { pool } from "../lib/db";
 
 const router = Router();
 
+const META_PIXEL_ID = "1510201040837057";
+
+async function fireMetaCapi(
+  eventId: string,
+  cardId: string,
+  ip: string,
+  userAgent: string,
+): Promise<void> {
+  const token = process.env["META_PIXEL_ACCESS_TOKEN"];
+  if (!token) return;
+  try {
+    await fetch(
+      `https://graph.facebook.com/v19.0/${META_PIXEL_ID}/events?access_token=${token}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: [
+            {
+              event_name: "Purchase",
+              event_time: Math.floor(Date.now() / 1000),
+              event_id: eventId,
+              action_source: "website",
+              user_data: {
+                client_ip_address: ip,
+                client_user_agent: userAgent,
+              },
+              custom_data: {
+                value: 99.0,
+                currency: "INR",
+              },
+            },
+          ],
+        }),
+      },
+    );
+    console.log(`[capi] Purchase fired event_id=${eventId} card=${cardId}`);
+  } catch (err) {
+    console.warn("[capi] Non-blocking CAPI call failed", err);
+  }
+}
+
 const ID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 /** Generate a cryptographically random 8-char alphanumeric ID (CSPRNG-backed). */
@@ -426,6 +468,7 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
  */
 router.post("/cards/:id/auto-unlock", async (req, res) => {
   const { id } = req.params;
+  const { eventId } = (req.body ?? {}) as { eventId?: string };
 
   try {
     const { rows } = await pool.query<{ id: number; utr: string }>(
@@ -472,6 +515,8 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     );
 
     console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
+    const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
+    void fireMetaCapi(capiEventId, id, req.ip ?? "", String(req.headers["user-agent"] ?? ""));
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/auto-unlock error", err);
@@ -488,7 +533,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
  */
 router.post("/cards/:id/pay-unlock", async (req, res) => {
   const { id } = req.params;
-  const { utr } = req.body as { utr?: unknown };
+  const { utr, eventId } = req.body as { utr?: unknown; eventId?: string };
 
   if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
     res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
@@ -551,6 +596,8 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     );
 
     console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);
+    const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
+    void fireMetaCapi(capiEventId, id, req.ip ?? "", String(req.headers["user-agent"] ?? ""));
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/pay-unlock error", err);

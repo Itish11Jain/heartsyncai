@@ -134,17 +134,20 @@ export default function UnlockModal({
       setAutoCountdown(null);
     };
 
+    const autoEventId = `hs_${cardId}_${Date.now()}`;
+
     while (Date.now() < deadline) {
       try {
         const res = await fetch(`${BASE}/api/cards/${cardId}/auto-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId: autoEventId }),
         });
         if (res.ok) {
           cleanup();
           trackEvent({ event: "card_paid", occasion, card_id: cardId });
           if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" });
+            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" }, { eventID: autoEventId });
           }
           setPhase("success");
           return;
@@ -188,19 +191,21 @@ export default function UnlockModal({
       setUtrCountdown(null);
     };
 
+    const utrEventId = `hs_${cardId}_${Date.now()}`;
+
     // Poll until success or timeout
     while (Date.now() < deadline) {
       try {
         const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ utr: trimmed }),
+          body: JSON.stringify({ utr: trimmed, eventId: utrEventId }),
         });
         if (res.ok) {
           cleanup();
           trackEvent({ event: "card_paid", occasion, card_id: cardId });
           if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" });
+            (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" }, { eventID: utrEventId });
           }
           setPhase("success");
           return;
