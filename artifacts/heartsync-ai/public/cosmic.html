@@ -69,10 +69,9 @@
           setTimeout(function () { el.style.display = 'none'; }, 420);
         };
 
-        setTimeout(function () {
-          if (window.__clearHsSplash) window.__clearHsSplash();
-        }, 3000);
-
+        /* React's useEffect clears the splash once the component mounts.
+           No timer fallback — a premature clear on slow mobile connections
+           causes a blank black screen before the JS bundle finishes loading. */
         try { fetch('/api/healthz', { priority: 'low', cache: 'no-store' }).catch(function(){}); } catch(e) {}
       })();
     </script>

@@ -6,8 +6,6 @@ export const modules: ModuleMap = {
   "./components/mockups/greeting-cards/LottieHearts.tsx": () => import("../components/mockups/greeting-cards/LottieHearts.tsx"),
   "./components/mockups/greeting-cards/UnboxCard.tsx": () => import("../components/mockups/greeting-cards/UnboxCard.tsx"),
   "./components/mockups/greeting-cards/Warm.tsx": () => import("../components/mockups/greeting-cards/Warm.tsx"),
-  "./components/mockups/share-panel/ShareBadge.tsx": () => import("../components/mockups/share-panel/ShareBadge.tsx"),
-  "./components/mockups/share-panel/ShareClean.tsx": () => import("../components/mockups/share-panel/ShareClean.tsx"),
   "./components/mockups/heartsync-v2/AnalyticsUtmTile.tsx": () => import("../components/mockups/heartsync-v2/AnalyticsUtmTile.tsx"),
   "./components/mockups/heartsync-v2/CardIllustration.tsx": () => import("../components/mockups/heartsync-v2/CardIllustration.tsx"),
   "./components/mockups/heartsync-v2/HomeDesktop.tsx": () => import("../components/mockups/heartsync-v2/HomeDesktop.tsx"),
@@ -15,5 +13,7 @@ export const modules: ModuleMap = {
   "./components/mockups/heartsync-v2/SendOccasion.tsx": () => import("../components/mockups/heartsync-v2/SendOccasion.tsx"),
   "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx"),
   "./components/mockups/new-flow/FormScreen.tsx": () => import("../components/mockups/new-flow/FormScreen.tsx"),
-  "./components/mockups/new-flow/PaywallPreview.tsx": () => import("../components/mockups/new-flow/PaywallPreview.tsx")
+  "./components/mockups/new-flow/PaywallPreview.tsx": () => import("../components/mockups/new-flow/PaywallPreview.tsx"),
+  "./components/mockups/share-panel/ShareBadge.tsx": () => import("../components/mockups/share-panel/ShareBadge.tsx"),
+  "./components/mockups/share-panel/ShareClean.tsx": () => import("../components/mockups/share-panel/ShareClean.tsx")
 };
