@@ -56,7 +56,7 @@ const ClerkAuthLayer = lazy(() => import("@/components/ClerkAuthLayer"));
  * /send is intentionally absent: Send renders outside ClerkAuthLayer for
  * instant first paint, and mounts its own lazy ClerkBridgeForSend to get
  * auth state once Clerk resolves. See src/pages/send.tsx for details. */
-const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/analytics", "/remove-watermark", "/crystal", "/cosmic", "/vinyl"];
+const AUTH_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/sign-out", "/account", "/analytics", "/remove-watermark"];
 
 function SuspenseFallback() {
   /* The HTML splash (`#hs-splash`) is still on screen for the very first paint,

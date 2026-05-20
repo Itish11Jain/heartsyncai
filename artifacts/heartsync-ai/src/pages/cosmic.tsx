@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PolaroidFrame from "@/components/PolaroidFrame";
 import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
 import { cosmic, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
-import PremiumLockPanel from "@/components/PremiumLockPanel";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
+
+const UnlockModal = lazy(() => import("@/components/UnlockModal"));
+const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallModal"));
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -120,9 +122,12 @@ export default function CosmicCard() {
   const [senderIgCopied, setSenderIgCopied] = useState(false);
   /* ── Premium unlock ── */
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [showDesktopPaywall, setShowDesktopPaywall] = useState(false);
+  const localCardId = useRef(`hs${Math.random().toString(36).slice(2, 9)}`).current;
 
   /* Share URL — /api/share generates a personalised og:image for WhatsApp,
-     then JS-redirects recipients to /cosmic.html. Updated after unlock. */
+     then JS-redirects recipients to /cosmic.html. */
   const buildShareUrl = (cardId?: string) => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search);
@@ -131,7 +136,7 @@ export default function CosmicCard() {
     if (cardId) p.set("id", cardId);
     return window.location.origin + "/api/share?" + p.toString();
   };
-  const [senderShareUrl, setSenderShareUrl] = useState(() => buildShareUrl());
+  const [senderShareUrl] = useState(() => buildShareUrl(localCardId));
 
   /* ── canvas refs ── */
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -673,16 +678,33 @@ export default function CosmicCard() {
                   </div>
                 </motion.div>
               ) : (
-                <PremiumLockPanel
-                  template="cosmic"
-                  occasion={occasion}
-                  recipientName={recipientName}
-                  locationSearch={window.location.search}
-                  onUnlocked={(cardId) => {
-                    setSenderShareUrl(buildShareUrl(cardId));
-                    setIsUnlocked(true);
-                  }}
-                />
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{ width: "min(340px, 90vw)", marginTop: 22 }}
+                >
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+                      if (isMobile) { setShowUnlockModal(true); }
+                      else { setShowDesktopPaywall(true); }
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", height: 56, borderRadius: 16,
+                      background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                      color: "#000", fontWeight: 800, fontSize: 17,
+                      border: "none", cursor: "pointer",
+                      boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
+                    }}
+                  >
+                    🔓 Unlock &amp; Share the card
+                  </motion.button>
+                  <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
+                    ₹99 one-time · No sign-in required
+                  </p>
+                </motion.div>
               )
             )}
 
@@ -716,6 +738,34 @@ export default function CosmicCard() {
           ← make your own
         </motion.div>
       </Link>
+
+      {/* ── Payment modals ── */}
+      <AnimatePresence>
+        {showUnlockModal && (
+          <Suspense fallback={null}>
+            <UnlockModal
+              cardId={localCardId}
+              recipientName={recipientName}
+              occasion={occasion}
+              senderShareUrl={senderShareUrl}
+              onClose={() => setShowUnlockModal(false)}
+              onSuccess={() => { setIsUnlocked(true); setShowUnlockModal(false); }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showDesktopPaywall && (
+          <Suspense fallback={null}>
+            <WatermarkPaywallModal
+              mode="photo"
+              cardId={localCardId}
+              onClose={() => setShowDesktopPaywall(false)}
+              onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
 
     </div>
   );

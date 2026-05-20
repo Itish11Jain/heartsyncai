@@ -1068,26 +1068,17 @@ type Phase = "envelope" | "opening" | "polaroid" | "orbs" | "collage" | "finale"
 
 export default function Card() {
   const params = useQueryParams();
-  /* isSender drives whether we load Clerk (for PremiumLockPanel) or skip it (LCP for recipients). */
-  const isSenderParam = params.get("sender") === "1";
-
   /* Route to Cosmic template if requested — lazy chunk, only loads for cosmic visitors */
   if (params.get("template") === "cosmic") {
-    const card = <Suspense fallback={null}><CosmicCard /></Suspense>;
-    if (isSenderParam) return <Suspense fallback={null}><ClerkAuthLayer>{card}</ClerkAuthLayer></Suspense>;
-    return card;
+    return <Suspense fallback={null}><CosmicCard /></Suspense>;
   }
   /* Route to Vinyl template if requested — lazy chunk, only loads for vinyl visitors */
   if (params.get("template") === "vinyl") {
-    const card = <Suspense fallback={null}><VinylCard /></Suspense>;
-    if (isSenderParam) return <Suspense fallback={null}><ClerkAuthLayer>{card}</ClerkAuthLayer></Suspense>;
-    return card;
+    return <Suspense fallback={null}><VinylCard /></Suspense>;
   }
   /* Route to Crystal Ball template if requested — lazy chunk, only loads for crystal visitors */
   if (params.get("template") === "crystal") {
-    const card = <Suspense fallback={null}><CrystalCard /></Suspense>;
-    if (isSenderParam) return <Suspense fallback={null}><ClerkAuthLayer>{card}</ClerkAuthLayer></Suspense>;
-    return card;
+    return <Suspense fallback={null}><CrystalCard /></Suspense>;
   }
 
   const recipientName = params.get("to") || "Friend";

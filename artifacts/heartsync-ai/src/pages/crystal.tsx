@@ -10,15 +10,17 @@
  * Canvas: single fixed RAF loop; phaseRef + clearProgressRef prevent stale closures.
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PolaroidFrame from "@/components/PolaroidFrame";
 import { Link, useSearch } from "wouter";
 import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
 import { trackEvent } from "../lib/trackEvent";
-import PremiumLockPanel from "../components/PremiumLockPanel";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
+
+const UnlockModal = lazy(() => import("@/components/UnlockModal"));
+const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallModal"));
 
 function useQueryParams() {
   const search = useSearch();
@@ -114,8 +116,10 @@ export default function CrystalCard() {
   const [senderCopied,   setSenderCopied]   = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
   /* ── Premium unlock ── */
-  const [isUnlocked,    setIsUnlocked]    = useState(false);
-  const [overrideCardId, setOverrideCardId] = useState<string | undefined>();
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [showDesktopPaywall, setShowDesktopPaywall] = useState(false);
+  const localCardId = useRef(`hs${Math.random().toString(36).slice(2, 9)}`).current;
 
   /* ── Canvas ── */
   const canvasRef    = useRef<HTMLCanvasElement>(null);
@@ -464,8 +468,8 @@ export default function CrystalCard() {
     const msgP = params.get("msg"); if (msgP) p.set("msg", msgP);
     if (likesParam) p.set("likes", likesParam);
     const refP = params.get("ref"); if (refP) p.set("ref", refP);
-    const cardId = overrideCardId ?? params.get("id");
-    if (cardId) p.set("id", cardId);
+    const urlCardId = localCardId ?? params.get("id");
+    if (urlCardId) p.set("id", urlCardId);
     return `${window.location.origin}/api/share?${p.toString()}`;
   }
 
@@ -940,16 +944,33 @@ export default function CrystalCard() {
                   </div>
                 </motion.div>
               ) : (
-                <PremiumLockPanel
-                  template="crystal"
-                  occasion={occasion}
-                  recipientName={recipientName}
-                  locationSearch={window.location.search}
-                  onUnlocked={(cardId) => {
-                    setOverrideCardId(cardId);
-                    setIsUnlocked(true);
-                  }}
-                />
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{ width: "min(340px, 90vw)", marginTop: 22 }}
+                >
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+                      if (isMobile) { setShowUnlockModal(true); }
+                      else { setShowDesktopPaywall(true); }
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", height: 56, borderRadius: 16,
+                      background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                      color: "#000", fontWeight: 800, fontSize: 17,
+                      border: "none", cursor: "pointer",
+                      boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
+                    }}
+                  >
+                    🔓 Unlock &amp; Share the card
+                  </motion.button>
+                  <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
+                    ₹99 one-time · No sign-in required
+                  </p>
+                </motion.div>
               )
             )}
 
@@ -983,6 +1004,34 @@ export default function CrystalCard() {
           ← make your own card
         </motion.div>
       </Link>
+
+      {/* ── Payment modals ── */}
+      <AnimatePresence>
+        {showUnlockModal && (
+          <Suspense fallback={null}>
+            <UnlockModal
+              cardId={localCardId}
+              recipientName={recipientName}
+              occasion={occasion}
+              senderShareUrl={cardUrl()}
+              onClose={() => setShowUnlockModal(false)}
+              onSuccess={() => { setIsUnlocked(true); setShowUnlockModal(false); }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showDesktopPaywall && (
+          <Suspense fallback={null}>
+            <WatermarkPaywallModal
+              mode="photo"
+              cardId={localCardId}
+              onClose={() => setShowDesktopPaywall(false)}
+              onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
 
     </div>
   );
