@@ -469,7 +469,6 @@ export default function CosmicCard() {
   function handleStarClick(starId: number) {
     if (phase !== "tapping") return;
     if (clickedStarIds.includes(starId)) return;
-    if (activeMemory) return;
 
     const star = THUMB_STARS[starId];
     cosmicAudio.starClick(clickedStarIds.length);
@@ -520,6 +519,14 @@ export default function CosmicCard() {
     const item = smartQueue[queueIndexRef.current] ?? null;
     queueIndexRef.current += 1;
     setActiveMemory(item);
+
+    /* After all 4 stars are tapped, auto-advance to finale */
+    if (clickedStarIds.length + 1 >= 4) {
+      setTimeout(() => {
+        setActiveMemory(null);
+        setShowFinaleCTA(true);
+      }, 2500);
+    }
   }
 
   /* ── dismiss memory modal ── */
@@ -747,7 +754,7 @@ export default function CosmicCard() {
                 {/* Fixed thumb-zone stars */}
                 {THUMB_STARS.map(star => {
                   const clicked = clickedStarIds.includes(star.id);
-                  const canTap = phase === "tapping" && !clicked && !activeMemory;
+                  const canTap = phase === "tapping" && !clicked;
                   return (
                     <motion.div
                       key={star.id}
@@ -1019,43 +1026,40 @@ export default function CosmicCard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.28 }}
+            transition={{ duration: 0.22 }}
             style={{
-              position: "fixed", inset: 0, zIndex: 40,
-              background: "rgba(4,1,18,0.80)",
-              backdropFilter: "blur(5px)",
-              WebkitBackdropFilter: "blur(5px)",
+              position: "absolute", inset: 0, zIndex: 40,
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
               padding: "20px",
+              pointerEvents: "none",
             }}
-            onClick={dismissMemory}
           >
-            {/* Memory card */}
+            {/* Memory card — floats over the stars */}
             <motion.div
-              key={`mem-${memoriesShownCount}`}
-              initial={{ opacity: 0, scale: 0.88, y: 22 }}
+              key={`mem-${clickedStarIds.length}`}
+              initial={{ opacity: 0, scale: 0.84, y: 28 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.93, y: -12 }}
-              transition={{ duration: 0.32, type: "spring", bounce: 0.22 }}
+              exit={{ opacity: 0, scale: 0.93, y: -10 }}
+              transition={{ duration: 0.35, type: "spring", bounce: 0.28 }}
               style={{
-                width: "100%", maxWidth: 340,
-                background: "rgba(15,6,40,0.96)",
-                borderRadius: 24,
-                border: "1px solid rgba(180,150,255,0.28)",
-                boxShadow: "0 0 70px rgba(90,40,200,0.45), 0 10px 50px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07)",
-                padding: "34px 28px",
+                width: "100%", maxWidth: 320,
+                background: "rgba(10,3,28,0.92)",
+                borderRadius: 22,
+                border: "1px solid rgba(180,150,255,0.32)",
+                boxShadow: "0 0 80px rgba(90,40,200,0.5), 0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.07)",
+                padding: "28px 24px",
                 textAlign: "center",
+                pointerEvents: "none",
               }}
-              onClick={e => e.stopPropagation()}
             >
               {/* Memory number indicator */}
               <p style={{
                 fontSize: 10, color: "rgba(180,150,255,0.45)",
                 letterSpacing: "0.14em", textTransform: "uppercase",
-                marginBottom: 20, marginTop: 0,
+                marginBottom: 18, marginTop: 0,
               }}>
-                Memory {memoriesShownCount + 1} of 4
+                Memory {clickedStarIds.length} of 4
               </p>
 
               {activeMemory.type === "text" && (
@@ -1065,11 +1069,11 @@ export default function CosmicCard() {
               {activeMemory.type === "photo" && activeMemory.photoUrl && (
                 <div>
                   <div style={{
-                    borderRadius: 16, overflow: "hidden",
+                    borderRadius: 14, overflow: "hidden",
                     border: "1.5px solid rgba(200,160,255,0.28)",
                     boxShadow: "0 0 35px rgba(130,70,255,0.28)",
                     aspectRatio: "9 / 16",
-                    maxHeight: "52vh",
+                    maxHeight: "44vh",
                     background: "#080318",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
@@ -1086,22 +1090,21 @@ export default function CosmicCard() {
               {activeMemory.type === "audio" && activeMemory.audioUrl && (
                 <AudioPlayer audioUrl={activeMemory.audioUrl} />
               )}
-            </motion.div>
 
-            {/* Dismiss hint */}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.65, 0.35, 0.65] }}
-              transition={{ delay: 1.0, duration: 2.2, repeat: Infinity }}
-              style={{
-                marginTop: 22, fontSize: 12,
-                color: "rgba(200,180,255,0.55)",
-                letterSpacing: "0.08em",
-                pointerEvents: "none",
-              }}
-            >
-              Tap anywhere to continue
-            </motion.p>
+              {/* Hint to tap another star */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.5, 0.3, 0.5] }}
+                transition={{ delay: 1.2, duration: 2.4, repeat: Infinity }}
+                style={{
+                  marginTop: 18, marginBottom: 0, fontSize: 11,
+                  color: "rgba(180,150,255,0.45)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                tap another star ✦
+              </motion.p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
