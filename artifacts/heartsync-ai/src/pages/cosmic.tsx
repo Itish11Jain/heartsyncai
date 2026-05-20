@@ -329,7 +329,7 @@ function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; e
 
 /* ─────────────────────── FloatingParticles ────────────────────────────── */
 
-const FLOAT_EMOJIS = ["✦", "⭐", "💫", "✨", "🌟", "🌠", "★", "✵", "✶", "🔆", "⚡", "🌟"];
+const FLOAT_EMOJIS = ["⭐", "💫", "✨", "🌟", "🔆", "⚡"];
 
 function FloatingParticles({ active }: { active: boolean }) {
   const [particles, setParticles] = useState<{

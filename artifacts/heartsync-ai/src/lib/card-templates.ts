@@ -325,7 +325,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
       title_prefix: "To the brightest star",
       stars: [
         { emoji: "✨", text: "Thank you, brilliant stardust." },
-        { emoji: "🌟", text: "Your energy illuminates this space." },
+        { emoji: "🌟", text: "Your energy illuminates all." },
         { emoji: "🧑‍🚀", text: "Keep shining, cosmic traveler." },
         { emoji: "🪐", text: "The universe favors you." },
       ],
@@ -357,7 +357,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
       hook_title: "✨ You Made My World Brighter ✨",
       title_prefix: "To someone wonderful",
       stars: [
-        { emoji: "🌟", text: "Your energy illuminates this space." },
+        { emoji: "🌟", text: "Your energy illuminates all." },
         { emoji: "🧑‍🚀", text: "Keep shining, cosmic traveler." },
         { emoji: "🪐", text: "The universe favors you." },
         { emoji: "💫", text: "You are made of stardust." },
@@ -533,7 +533,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "💫", text: "You are made of stardust." },
         { emoji: "⭐", text: "Your unique spark matters." },
         { emoji: "🪐", text: "The universe favors you." },
-        { emoji: "🌟", text: "Your energy illuminates this space." },
+        { emoji: "🌟", text: "Your energy illuminates all." },
       ],
       final_message: "You are my everything. I hope you never forget that.",
     },
