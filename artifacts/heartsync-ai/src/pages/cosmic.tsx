@@ -497,19 +497,7 @@ export default function CosmicCard() {
         })
       );
 
-      /* Constellation line (normalized 0-100 coords for viewBox SVG) */
       const newClickedIds = [...clickedStarIds, starId];
-      if (clickedStarIds.length > 0) {
-        const prevId = clickedStarIds[clickedStarIds.length - 1];
-        const prev = THUMB_STARS[prevId];
-        setLines(ls => [...ls, {
-          key: `${prevId}-${starId}`,
-          x1: prev.leftPct * 100,
-          y1: prev.topPct * 100,
-          x2: star.leftPct * 100,
-          y2: star.topPct * 100,
-        }]);
-      }
       setClickedStarIds(newClickedIds);
     } else {
       setClickedStarIds(prev => [...prev, starId]);
@@ -520,11 +508,11 @@ export default function CosmicCard() {
     queueIndexRef.current += 1;
     setActiveMemory(item);
 
-    /* After all 4 stars are tapped, auto-advance to finale */
+    /* After all 4 stars are tapped, go straight to supernova */
     if (clickedStarIds.length + 1 >= 4) {
       setTimeout(() => {
         setActiveMemory(null);
-        setShowFinaleCTA(true);
+        triggerSupernova();
       }, 2500);
     }
   }
@@ -794,49 +782,16 @@ export default function CosmicCard() {
                   );
                 })}
 
-                {/* Constellation lines (normalized viewBox 0-100) */}
-                <svg
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  style={{
-                    position: "absolute", inset: 0,
-                    width: "100%", height: "100%",
-                    pointerEvents: "none", zIndex: 3, overflow: "visible",
-                  }}
-                >
-                  {lines.map(line => (
-                    <motion.path
-                      key={line.key}
-                      d={`M ${line.x1} ${line.y1} L ${line.x2} ${line.y2}`}
-                      stroke="rgba(255,215,0,0.5)"
-                      strokeWidth={0.5}
-                      fill="none"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 0.85, ease: "easeOut" }}
-                      style={{ filter: "drop-shadow(0 0 1px rgba(255,200,0,0.8))" }}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  ))}
-                </svg>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ══ Reveal Finale CTA (after all 4 memories dismissed) ══ */}
+          {/* ══ Reveal Finale CTA — removed ══ */}
           <AnimatePresence>
-            {showFinaleCTA && !showFlash && (
+            {false && !showFlash && (
               <motion.div
                 key="finale-cta"
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.55, type: "spring", bounce: 0.3 }}
-                style={{
-                  position: "absolute", inset: 0,
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  gap: 18, zIndex: 6,
-                }}
+                style={{ display: "none" }}
               >
                 {/* Golden nebula glow */}
                 <div style={{
@@ -887,57 +842,34 @@ export default function CosmicCard() {
                   padding: "20px", overflowY: "auto",
                 }}
               >
-                {/* Holographic floating card */}
-                <motion.div
-                  animate={{ y: [0, -7, 0] }}
-                  transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                  style={{
-                    width: "100%",
-                    background: "linear-gradient(145deg, rgba(38,15,70,0.98) 0%, rgba(18,6,40,0.99) 100%)",
-                    borderRadius: 26,
-                    border: "1.5px solid rgba(190,155,255,0.42)",
-                    padding: "36px 28px",
-                    textAlign: "center",
-                    boxShadow: "0 0 60px rgba(120,60,220,0.38), 0 0 140px rgba(90,40,180,0.18), inset 0 1px 0 rgba(255,255,255,0.1)",
-                    position: "relative", overflow: "hidden",
-                  }}
+                {/* Final message — no card, text directly on the golden starfield */}
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                  style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}
                 >
-                  {/* Inner nebula */}
-                  <div style={{
-                    position: "absolute", top: "35%", left: "50%", transform: "translate(-50%,-50%)",
-                    width: "75%", height: "60%",
-                    background: "radial-gradient(ellipse, rgba(110,50,210,0.12) 0%, transparent 70%)",
-                    pointerEvents: "none",
-                  }} />
+                  {tpl.title_prefix}
+                </motion.p>
 
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                    style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, zIndex: 1, position: "relative" }}
-                  >
-                    {tpl.title_prefix}
-                  </motion.p>
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                  style={{ fontSize: "clamp(28px, 8.5vw, 34px)", fontWeight: 800, color: "#FFD700", marginBottom: 22, letterSpacing: "0.02em", textAlign: "center" }}
+                >
+                  {recipientName}
+                </motion.h1>
 
-                  <motion.h1
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                    style={{ fontSize: "clamp(28px, 8.5vw, 34px)", fontWeight: 800, color: "#FFD700", marginBottom: 22, letterSpacing: "0.02em", zIndex: 1, position: "relative" }}
-                  >
-                    {recipientName}
-                  </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+                  style={{ fontSize: "clamp(14px, 3.9vw, 15px)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, textAlign: "center" }}
+                >
+                  {finalMessage}
+                </motion.p>
 
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-                    style={{ fontSize: "clamp(14px, 3.9vw, 15px)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, zIndex: 1, position: "relative" }}
-                  >
-                    {finalMessage}
-                  </motion.p>
-
-                  <motion.div
-                    animate={{ opacity: [0.35, 0.75, 0.35] }}
-                    transition={{ duration: 2.8, repeat: Infinity }}
-                    style={{ marginTop: 26, fontSize: 15, color: "rgba(255,215,0,0.45)", letterSpacing: "0.35em", position: "relative", zIndex: 1 }}
-                  >
-                    ✦ ✦ ✦
-                  </motion.div>
+                <motion.div
+                  animate={{ opacity: [0.35, 0.75, 0.35] }}
+                  transition={{ duration: 2.8, repeat: Infinity }}
+                  style={{ marginTop: 26, fontSize: 15, color: "rgba(255,215,0,0.45)", letterSpacing: "0.35em", textAlign: "center" }}
+                >
+                  ✦ ✦ ✦
                 </motion.div>
 
                 {/* Sender share panel */}
