@@ -49,10 +49,10 @@ interface DustDot {
 
 /* PRD-specified thumb-zone positions (normalized 0-1 within the 400px container) */
 const THUMB_STARS = [
-  { id: 0, leftPct: 0.15, topPct: 0.28 },
-  { id: 1, leftPct: 0.85, topPct: 0.42 },
-  { id: 2, leftPct: 0.20, topPct: 0.68 },
-  { id: 3, leftPct: 0.80, topPct: 0.78 },
+  { id: 0, leftPct: 0.15, topPct: 0.12 },
+  { id: 1, leftPct: 0.82, topPct: 0.24 },
+  { id: 2, leftPct: 0.20, topPct: 0.38 },
+  { id: 3, leftPct: 0.78, topPct: 0.50 },
 ] as const;
 
 const RING_R = 34;
@@ -78,9 +78,11 @@ function buildSmartQueue(
     .slice(0, paddingNeeded)
     .map(s => ({ type: "text" as const, text: s.text, emoji: s.emoji }));
 
-  const photoItems: QueueItem[] = photos.map(url => ({
+  const photoItems: QueueItem[] = photos.map((url, i) => ({
     type: "photo" as const,
     photoUrl: url,
+    text: starTexts[paddingNeeded + i]?.text,
+    emoji: starTexts[paddingNeeded + i]?.emoji,
   }));
 
   const audioItem: QueueItem[] = voiceUrl
@@ -135,7 +137,6 @@ function AudioPlayer({ audioUrl }: { audioUrl: string }) {
       <div
         style={{ position: "relative", width: 120, height: 120, cursor: "pointer" }}
         onClick={togglePlay}
-        onTouchEnd={togglePlay}
       >
         {/* Expanding pulse rings (only while playing) */}
         {isPlaying && [0, 1, 2].map(i => (
@@ -962,8 +963,8 @@ export default function CosmicCard() {
             style={{
               position: "absolute", inset: 0, zIndex: 40,
               display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              padding: "20px",
+              alignItems: "center", justifyContent: "flex-end",
+              padding: "0 20px 36px",
               pointerEvents: "none",
             }}
           >
@@ -995,13 +996,13 @@ export default function CosmicCard() {
               )}
 
               {activeMemory.type === "photo" && activeMemory.photoUrl && (
-                <div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
                   <div style={{
                     borderRadius: 14, overflow: "hidden",
                     border: "1.5px solid rgba(200,160,255,0.28)",
                     boxShadow: "0 0 35px rgba(130,70,255,0.28)",
-                    aspectRatio: "9 / 16",
-                    maxHeight: "44vh",
+                    width: "100%", maxWidth: 220,
+                    aspectRatio: "4 / 5",
                     background: "#080318",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
@@ -1012,6 +1013,9 @@ export default function CosmicCard() {
                       draggable={false}
                     />
                   </div>
+                  {activeMemory.text && (
+                    <SilverTypewriter text={activeMemory.text} emoji={activeMemory.emoji} />
+                  )}
                 </div>
               )}
 
