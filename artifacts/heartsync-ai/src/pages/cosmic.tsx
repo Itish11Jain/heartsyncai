@@ -1035,7 +1035,7 @@ export default function CosmicCard() {
               pointerEvents: "none",
             }}
           >
-            {/* Memory card — floats over the stars */}
+            {/* Memory text — no box, rendered directly on the starfield */}
             <motion.div
               key={`mem-${clickedStarIds.length}`}
               initial={{ opacity: 0, scale: 0.84, y: 28 }}
@@ -1044,11 +1044,7 @@ export default function CosmicCard() {
               transition={{ duration: 0.35, type: "spring", bounce: 0.28 }}
               style={{
                 width: "100%", maxWidth: 320,
-                background: "rgba(10,3,28,0.92)",
-                borderRadius: 22,
-                border: "1px solid rgba(180,150,255,0.32)",
-                boxShadow: "0 0 80px rgba(90,40,200,0.5), 0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.07)",
-                padding: "28px 24px",
+                padding: "0 24px",
                 textAlign: "center",
                 pointerEvents: "none",
               }}
