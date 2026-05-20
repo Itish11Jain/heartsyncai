@@ -147,8 +147,12 @@ function App() {
     <WouterRouter base={basePath}>
       {/* QueryWrapper is lazy — React Query is not needed for the landing page
           or card experience. It loads in parallel with Home/Card chunks so
-          pages that do need queries (analytics, history…) never see a delay. */}
-      <Suspense fallback={<AppRoutes />}>
+          pages that do need queries (analytics, history…) never see a delay.
+          Fallback is null (not <AppRoutes />) because rendering AppRoutes here
+          can mount ClerkAuthLayer → ClerkQueryClientCacheInvalidator →
+          useQueryClient() with no QueryClientProvider yet → runtime crash.
+          The HTML splash covers the screen during the brief loading window. */}
+      <Suspense fallback={<SuspenseFallback />}>
         <QueryWrapper>
           {/* AppShellProvider (Radix TooltipProvider + Toaster) loads lazily.
               While it fetches, the fallback renders routes without tooltip/toast

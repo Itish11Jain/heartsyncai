@@ -16,19 +16,25 @@
     <meta name="twitter:description" content="Someone special is revealing a vision just for you. Rub the crystal ball to uncover your message." />
     <meta name="twitter:image" content="https://heartsync.in/crystal-og.jpg" />
     <style>
-      html, body { background: #050210; margin: 0; padding: 0; }
+      html, body, #root { background: #050210; margin: 0; padding: 0; min-height: 100%; }
       #hs-splash {
-        position: fixed; inset: 0;
+        position: fixed; inset: 0; z-index: 9999;
         background: radial-gradient(ellipse at 50% 42%, #2a0a5a 0%, #0d0320 55%, #050210 100%);
         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+        transition: opacity 0.4s ease;
       }
-      #hs-splash-emoji { font-size: 76px; line-height: 1; }
+      #hs-splash-emoji { font-size: 76px; line-height: 1; transition: opacity 0.25s ease; }
       #hs-splash-title { font-size: 20px; font-weight: 700; color: #c8a0ff; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; letter-spacing: 0.06em; text-align: center; }
       #hs-splash-sub { font-size: 13px; color: rgba(200,160,255,0.45); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; text-align: center; }
     </style>
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://www.clarity.ms" />
+    <link rel="dns-prefetch" href="https://www.clarity.ms" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-variable-latin.woff2" crossorigin="anonymous" />
+    <!-- HS_INJECT_ASSETS -->
   </head>
   <body>
-    <!-- Shown briefly while JS runs; social bots never execute JS so they only see OG tags above -->
     <div id="hs-splash">
       <div id="hs-splash-emoji">🔮</div>
       <p id="hs-splash-title">The crystal is awakening…</p>
@@ -38,8 +44,40 @@
       (function () {
         var p = new URLSearchParams(window.location.search);
         p.set('template', 'crystal');
-        window.location.replace('/card?' + p.toString());
+
+        /* Rewrite URL in-place — zero HTTP round-trip cost.
+           Wouter will see /card when React mounts and route correctly. */
+        try { history.replaceState(null, '', '/card?' + p.toString()); } catch(e) {}
+
+        /* Splash lifecycle */
+        var el = document.getElementById('hs-splash');
+        var emojiEl = document.getElementById('hs-splash-emoji');
+        var emojis = ['🔮', '✨', '💎', '🌟', '🪄', '💜', '⭐'];
+        var idx = 0;
+        var iv = setInterval(function () {
+          emojiEl.style.opacity = '0';
+          setTimeout(function () {
+            idx = (idx + 1) % emojis.length;
+            emojiEl.textContent = emojis[idx];
+            emojiEl.style.opacity = '1';
+          }, 250);
+        }, 650);
+
+        window.__clearHsSplash = function () {
+          clearInterval(iv);
+          el.style.transition = 'opacity 0.4s ease';
+          el.style.opacity = '0';
+          setTimeout(function () { el.style.display = 'none'; }, 420);
+        };
+
+        setTimeout(function () {
+          if (window.__clearHsSplash) window.__clearHsSplash();
+        }, 3000);
+
+        try { fetch('/api/healthz', { priority: 'low', cache: 'no-store' }).catch(function(){}); } catch(e) {}
       })();
     </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

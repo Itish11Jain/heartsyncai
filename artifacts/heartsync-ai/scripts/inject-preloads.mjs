@@ -28,6 +28,15 @@
  * preloaded by Vite). By the time JS executes and lazy() resolves, every
  * chunk is already in the module cache → zero extra RTTs.
  *
+ * SATELLITE HTML FILES (envelope.html, crystal.html, cosmic.html, vinyl.html)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * These files previously did window.location.replace() — a full HTTP round-trip
+ * costing ~300-500 ms on Indian 4G before the React app even started loading.
+ * They now use history.replaceState() (zero network cost) and mount the React
+ * app directly. inject-preloads.mjs patches them with the correct built asset
+ * references (CSS + entry JS + all modulepreload links) so they are fully
+ * self-contained SPA entry points.
+ *
  * UNIVERSAL PRELOADS  (downloaded for every visitor)
  *   motion          — framer-motion; used by home / card / crystal / cosmic / vinyl
  *   AppShellProvider— Radix app shell; needed by every route once it mounts
@@ -42,7 +51,7 @@
  *   sd  = send            — 43 KB gzip; the card-builder page
  */
 
-import { readFileSync, writeFileSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -80,7 +89,7 @@ if (clerkFile)          hsChunks.ck  = `/assets/${clerkFile}`;
 if (clerkAuthLayerFile) hsChunks.cal = `/assets/${clerkAuthLayerFile}`;
 if (sendFile)           hsChunks.sd  = `/assets/${sendFile}`;
 
-// ── Build the HTML insertion ──────────────────────────────────────────────
+// ── Build the HTML insertion for index.html ──────────────────────────────
 const lines = [
   '    <!-- hs-preloads-done -->',
   '    <!-- Critical chunk preloads: eliminates sequential waterfall (each hop = ~300 ms Indian RTT) -->',
@@ -117,4 +126,69 @@ writeFileSync(htmlPath, html);
 console.log('\ninjected modulepreload hints into dist/public/index.html:');
 for (const f of universalFiles) console.log(`  universal  /assets/${f}`);
 for (const [k, v] of Object.entries(hsChunks)) console.log(`  __hsChunks[${k}] ${v}  (route-specific via inline script)`);
+console.log();
+
+// ── Patch satellite HTML files ────────────────────────────────────────────
+// envelope.html, crystal.html, cosmic.html, vinyl.html now load the React
+// app directly (using history.replaceState instead of location.replace).
+// They have <!-- HS_INJECT_ASSETS --> and <script type="module" src="/src/main.tsx">
+// placeholders that we replace here with the real built asset references.
+
+// Re-read the patched index.html to extract asset references
+const patchedIndex = readFileSync(htmlPath, 'utf-8');
+
+// Extract the CSS <link> tag
+const cssMatch = patchedIndex.match(/<link rel="stylesheet" crossorigin href="\/assets\/[^"]+\.css">/);
+const cssTag = cssMatch ? cssMatch[0] : '';
+
+// Extract all <link rel="modulepreload"> tags
+const preloadMatches = [...patchedIndex.matchAll(/<link rel="modulepreload" crossorigin href="\/assets\/[^"]+\.js">/g)];
+const preloadTags = preloadMatches.map(m => m[0]);
+
+// Extract the <script>window.__hsChunks=...</script> tag if present
+const hsChunksTagMatch = patchedIndex.match(/<script>window\.__hsChunks=\{[^<]+\}<\/script>/);
+const hsChunksTag = hsChunksTagMatch ? hsChunksTagMatch[0] : '';
+
+// Extract the entry JS <script type="module" crossorigin src="..."> tag
+// Vite outputs something like: <script type="module" crossorigin src="/assets/index-HASH.js"></script>
+const entryJsMatch = patchedIndex.match(/<script type="module" crossorigin src="\/assets\/[^"]+\.js"><\/script>/);
+const entryJsTag = entryJsMatch ? entryJsMatch[0] : '';
+
+// Build the assets block that replaces <!-- HS_INJECT_ASSETS -->
+// Includes: CSS link + all modulepreload tags + __hsChunks script
+const assetParts = [];
+if (cssTag) assetParts.push('    ' + cssTag);
+for (const tag of preloadTags) assetParts.push('    ' + tag);
+if (hsChunksTag) assetParts.push('    ' + hsChunksTag);
+const assetsBlock = assetParts.join('\n');
+
+// The dev entry placeholder to replace
+const DEV_ENTRY = '    <script type="module" src="/src/main.tsx"></script>';
+const PROD_ENTRY = entryJsTag ? '    ' + entryJsTag : '';
+
+const satelliteFiles = ['envelope.html', 'crystal.html', 'cosmic.html', 'vinyl.html'];
+
+console.log('patching satellite HTML files:');
+for (const filename of satelliteFiles) {
+  const filePath = resolve(distDir, filename);
+  if (!existsSync(filePath)) {
+    console.warn(`  ⚠  ${filename} not found in dist — skipping`);
+    continue;
+  }
+
+  let sat = readFileSync(filePath, 'utf-8');
+
+  // Replace <!-- HS_INJECT_ASSETS --> with CSS + preloads + hsChunks
+  if (assetsBlock) {
+    sat = sat.replace('    <!-- HS_INJECT_ASSETS -->', assetsBlock);
+  }
+
+  // Replace dev entry script with prod entry script
+  if (PROD_ENTRY) {
+    sat = sat.replace(DEV_ENTRY, PROD_ENTRY);
+  }
+
+  writeFileSync(filePath, sat);
+  console.log(`  ✓  ${filename} (${assetParts.length} asset tags injected)`);
+}
 console.log();
