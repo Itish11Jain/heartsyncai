@@ -382,6 +382,7 @@ export default function CosmicCard() {
     try { return decodeURIComponent(escape(atob(m))); } catch { return null; }
   })();
   const isSender = params.get("sender") === "1";
+  const isAutoplay = params.get("autoplay") === "1";
   const isPreview = params.get("preview") === "1";
   const isRecipient = !isSender && !isPreview;
 
@@ -416,7 +417,7 @@ export default function CosmicCard() {
   ).current;
 
   /* ── state ── */
-  const [phase, setPhase] = useState<Phase>(isPreview ? "final" : "hook");
+  const [phase, setPhase] = useState<Phase>((isPreview && !isAutoplay) ? "final" : "hook");
   const [clickedStarIds, setClickedStarIds] = useState<number[]>([]);
   const [lines, setLines] = useState<ConstellationLine[]>([]);
   const [activeMemory, setActiveMemory] = useState<QueueItem | null>(null);
@@ -587,6 +588,8 @@ export default function CosmicCard() {
   }
 
   /* ── star tap → memory reveal ── */
+  const handleStarClickRef = useRef<(id: number) => void>(() => {});
+
   function handleStarClick(starId: number) {
     if (phase !== "tapping") return;
     if (clickedStarIds.includes(starId)) return;
@@ -637,6 +640,26 @@ export default function CosmicCard() {
       }, 2500);
     }
   }
+
+  /* ── keep ref current so autoplay timeout always calls latest version ── */
+  handleStarClickRef.current = handleStarClick;
+
+  /* ── auto-advance for preview iframe (autoplay=1) ── */
+  useEffect(() => {
+    if (!isAutoplay) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    // hook → spawning → tapping
+    timers.push(setTimeout(() => {
+      setPhase("spawning");
+      setTimeout(() => setPhase("tapping"), 900);
+    }, 1500));
+    // click each of the 4 stars in turn, 2.5 s apart
+    [0, 1, 2, 3].forEach((starId, i) => {
+      timers.push(setTimeout(() => handleStarClickRef.current(starId), 2600 + i * 2600));
+    });
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay]);
 
   /* ── dismiss memory modal ── */
   function dismissMemory() {
@@ -1121,7 +1144,7 @@ export default function CosmicCard() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
             style={{
-              position: "absolute", inset: 0, zIndex: 40,
+              position: "fixed", inset: 0, zIndex: 40,
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
               padding: "20px",
