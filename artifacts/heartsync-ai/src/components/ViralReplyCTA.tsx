@@ -36,6 +36,7 @@ export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
       animation: "hsViralFadeIn 0.6s ease forwards",
       animationDelay: "2.5s",
       width: "min(300px, calc(100vw - 32px))",
+      margin: "0 auto",
       textAlign: "center",
       paddingBottom: 8,
     }}>

@@ -50,9 +50,9 @@ interface DustDot {
 /* PRD-specified thumb-zone positions (normalized 0-1 within the 400px container) */
 const THUMB_STARS = [
   { id: 0, leftPct: 0.14, topPct: 0.16 },
-  { id: 1, leftPct: 0.86, topPct: 0.16 },
+  { id: 1, leftPct: 0.82, topPct: 0.16 },
   { id: 2, leftPct: 0.14, topPct: 0.80 },
-  { id: 3, leftPct: 0.86, topPct: 0.80 },
+  { id: 3, leftPct: 0.82, topPct: 0.80 },
 ] as const;
 
 const RING_R = 34;
