@@ -188,3 +188,13 @@ pnpm --filter @workspace/api-spec run codegen
 pnpm --filter @workspace/api-server run dev   # API server
 pnpm --filter @workspace/heartsync-ai run dev  # Frontend
 ```
+
+## Future Improvements
+
+### Persist media URLs to hs_cards at card creation time
+Currently, `photo_urls` and `voice_note_url` are embedded only in the card sharing URL as query params — they are never saved to `hs_cards`. This means:
+- If a sender loses their sharing URL (closes the tab, clears history), the card URL with their photo/voice is unrecoverable from the server
+- Analytics for "Cards with Voice Note" and "Cards with 2+ Photos" only works for cards created *after* the new tracking was deployed (May 20 2026) — historical data is lost
+- The root cause: the `POST /api/cards` call that could persist media only runs when the user is **signed in** at card creation time. Anonymous creators (the majority) never hit this API, so no media URLs are ever stored
+
+**Fix**: After a successful upload (`/api/upload/photo`, `/api/upload/audio`), the upload endpoint should accept an optional `card_id` and immediately write/update the `hs_cards` row with the returned URL. Alternatively, persist media URLs to the card row during the payment unlock flow (when `card_paid` is processed by the SMS forwarder), by including the URLs in the payment metadata.
