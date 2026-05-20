@@ -238,6 +238,51 @@ function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; e
     );
   }
 
+  if (variant === "cosmic") {
+    const starsBg = [
+      "radial-gradient(circle at 8% 20%, rgba(255,255,255,0.92) 0.8px, transparent 0.8px)",
+      "radial-gradient(circle at 22% 8%, rgba(255,255,255,0.72) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 38% 35%, rgba(255,255,255,0.88) 0.7px, transparent 0.7px)",
+      "radial-gradient(circle at 55% 12%, rgba(255,255,255,0.82) 0.8px, transparent 0.8px)",
+      "radial-gradient(circle at 72% 42%, rgba(255,255,255,0.78) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 88% 22%, rgba(255,255,255,0.68) 0.7px, transparent 0.7px)",
+      "radial-gradient(circle at 15% 58%, rgba(255,255,255,0.72) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 35% 72%, rgba(255,255,255,0.82) 0.8px, transparent 0.8px)",
+      "radial-gradient(circle at 58% 65%, rgba(255,255,255,0.62) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 80% 78%, rgba(255,255,255,0.88) 0.7px, transparent 0.7px)",
+      "radial-gradient(circle at 5% 88%, rgba(255,255,255,0.72) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 48% 92%, rgba(255,255,255,0.78) 0.8px, transparent 0.8px)",
+      "radial-gradient(circle at 95% 90%, rgba(255,255,255,0.68) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 28% 48%, rgba(200,170,255,0.58) 0.6px, transparent 0.6px)",
+      "radial-gradient(circle at 68% 30%, rgba(200,170,255,0.68) 0.7px, transparent 0.7px)",
+      "linear-gradient(135deg, #0a0320 0%, #130438 42%, #06021a 100%)",
+    ].join(", ");
+    return (
+      <div style={{ textAlign: "center" }}>
+        {emoji && <div style={{ fontSize: 54, marginBottom: 18, lineHeight: 1 }}>{emoji}</div>}
+        <div style={{ filter: "drop-shadow(0 0 9px rgba(160,120,255,0.72)) drop-shadow(0 0 22px rgba(100,60,200,0.42))" }}>
+          <p style={{
+            fontSize: "clamp(15px, 4.2vw, 17px)",
+            fontWeight: 700,
+            lineHeight: 1.7,
+            minHeight: "4.5em",
+            margin: 0,
+            background: starsBg,
+            backgroundSize: "300% 300%",
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            WebkitTextStroke: "0.6px rgba(190,150,255,0.65)",
+            animation: "cosmicTwinkle 6s ease-in-out infinite",
+          } as React.CSSProperties}>
+            {displayed}
+            <span style={{ opacity: displayed.length < text.length ? 0.6 : 0, WebkitTextFillColor: "rgba(200,180,255,0.6)" as any }}>▌</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ textAlign: "center" }}>
       {emoji && (
@@ -591,6 +636,13 @@ export default function CosmicCard() {
         @keyframes silverShine {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
+        }
+        @keyframes cosmicTwinkle {
+          0%   { background-position: 0% 0%; }
+          25%  { background-position: 60% 30%; }
+          50%  { background-position: 100% 60%; }
+          75%  { background-position: 40% 90%; }
+          100% { background-position: 0% 0%; }
         }
         @keyframes ringPulse {
           0%   { transform: scale(0.75); opacity: 0.75; }
@@ -1006,7 +1058,7 @@ export default function CosmicCard() {
               </p>
 
               {activeMemory.type === "text" && (
-                <SilverTypewriter text={activeMemory.text ?? ""} emoji={activeMemory.emoji} />
+                <SilverTypewriter text={activeMemory.text ?? ""} emoji={activeMemory.emoji} variant="cosmic" />
               )}
 
               {activeMemory.type === "photo" && activeMemory.photoUrl && (
