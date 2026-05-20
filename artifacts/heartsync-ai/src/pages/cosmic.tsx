@@ -49,10 +49,10 @@ interface DustDot {
 
 /* PRD-specified thumb-zone positions (normalized 0-1 within the 400px container) */
 const THUMB_STARS = [
-  { id: 0, leftPct: 0.10, topPct: 0.08 },
-  { id: 1, leftPct: 0.90, topPct: 0.08 },
-  { id: 2, leftPct: 0.10, topPct: 0.87 },
-  { id: 3, leftPct: 0.90, topPct: 0.87 },
+  { id: 0, leftPct: 0.14, topPct: 0.16 },
+  { id: 1, leftPct: 0.86, topPct: 0.16 },
+  { id: 2, leftPct: 0.14, topPct: 0.80 },
+  { id: 3, leftPct: 0.86, topPct: 0.80 },
 ] as const;
 
 const RING_R = 34;
@@ -1016,7 +1016,6 @@ export default function CosmicCard() {
                   padding: "8px 8px 0 8px",
                   borderRadius: 2,
                   boxShadow: "0 8px 32px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.35)",
-                  transform: "rotate(-1.5deg)",
                   maxWidth: 210,
                 }}>
                   <div style={{
@@ -1045,7 +1044,16 @@ export default function CosmicCard() {
               )}
 
               {activeMemory.type === "audio" && activeMemory.audioUrl && (
-                <AudioPlayer audioUrl={activeMemory.audioUrl} />
+                <div style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                  <p style={{
+                    margin: 0, fontSize: 15, fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    color: "rgba(220,200,255,0.92)",
+                  }}>
+                    🎙 Listen to this:
+                  </p>
+                  <AudioPlayer audioUrl={activeMemory.audioUrl} />
+                </div>
               )}
 
               {/* Hint to tap another star */}
