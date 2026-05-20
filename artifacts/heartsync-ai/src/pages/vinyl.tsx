@@ -141,7 +141,7 @@ export default function VinylCard() {
   const finalMessage = customMsg ?? tpl.final_message;
 
   /* ── state ── */
-  const [phase, setPhase] = useState<VinylPhase>(isPreview ? "sleeve" : "hook");
+  const [phase, setPhase] = useState<VinylPhase>((isPreview || isSender) ? "sleeve" : "hook");
   const [spinning, setSpinning] = useState(false);
   const [hyperSpin, setHyperSpin] = useState(false);
   const [tonearmDown, setTonearmDown] = useState(false);
@@ -149,7 +149,7 @@ export default function VinylCard() {
   const [tooltip, setTooltip] = useState<{ emoji: string; text: string } | null>(null);
   const [eqIntensity, setEqIntensity] = useState(1);
   const [playerExiting, setPlayerExiting] = useState(false);
-  const [sleeveVisible, setSleeveVisible] = useState(isPreview);
+  const [sleeveVisible, setSleeveVisible] = useState(isPreview || isSender);
   const [sleeveReady, setSleeveReady] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
@@ -176,7 +176,7 @@ export default function VinylCard() {
   const dustRef = useRef<DustDot[]>([]);
   const canvasModeRef = useRef<"ambient" | "golden">("ambient");
   const rafRef = useRef<number>(0);
-  const phaseRef = useRef<VinylPhase>(isPreview ? "sleeve" : "hook");
+  const phaseRef = useRef<VinylPhase>((isPreview || isSender) ? "sleeve" : "hook");
   const eqIntensityRef = useRef(1);
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eqRingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
