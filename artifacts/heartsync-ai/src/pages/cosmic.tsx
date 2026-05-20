@@ -111,7 +111,7 @@ export default function CosmicCard() {
   const finalMessage = customMsg ?? tpl.final_message;
 
   /* ── state ── */
-  const [phase, setPhase] = useState<CosmicPhase>((isPreview || isSender) ? "final" : "hook");
+  const [phase, setPhase] = useState<CosmicPhase>(isPreview ? "final" : "hook");
   const [stars, setStars] = useState<PlottedStar[]>([]);
   const [clickedIds, setClickedIds] = useState<number[]>([]);
   const [lines, setLines] = useState<ConstellationLine[]>([]);

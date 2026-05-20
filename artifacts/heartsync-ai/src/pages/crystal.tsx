@@ -87,8 +87,8 @@ export default function CrystalCard() {
   }, []);
 
   /* ── Phase ── */
-  const [phase, setPhase]   = useState<CrystalPhase>(isSender ? "revelation" : isPreview ? "visions" : "hook");
-  const phaseRef            = useRef<CrystalPhase>(isSender ? "revelation" : isPreview ? "visions" : "hook");
+  const [phase, setPhase]   = useState<CrystalPhase>(isPreview ? "visions" : "hook");
+  const phaseRef            = useRef<CrystalPhase>(isPreview ? "visions" : "hook");
   function advancePhase(p: CrystalPhase) { phaseRef.current = p; setPhase(p); }
 
   /* ── Rub mechanic ── */
@@ -801,7 +801,7 @@ export default function CrystalCard() {
         {phase === "revelation" && (
           <motion.div
             key="revelation"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
+            initial={{ opacity: 1 }} animate={{ opacity: 1 }}
             style={{
               position: "fixed", inset: 0, zIndex: 30,
               display: "flex", flexDirection: "column",
