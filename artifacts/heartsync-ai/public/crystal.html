@@ -63,16 +63,28 @@
           }, 250);
         }, 650);
 
+        var reactMounted = false;
         window.__clearHsSplash = function () {
+          reactMounted = true;
           clearInterval(iv);
           el.style.transition = 'opacity 0.4s ease';
           el.style.opacity = '0';
           setTimeout(function () { el.style.display = 'none'; }, 420);
         };
 
-        /* React's useEffect clears the splash once the component mounts.
-           No timer fallback — a premature clear on slow mobile connections
-           causes a blank black screen before the JS bundle finishes loading. */
+        /* If React hasn't mounted within 8s (slow mobile / network issue),
+           show a "tap to reload" hint instead of a blank black screen. */
+        setTimeout(function () {
+          if (reactMounted) return;
+          clearInterval(iv);
+          emojiEl.style.opacity = '1';
+          emojiEl.textContent = '🔄';
+          document.getElementById('hs-splash-title').textContent = 'Taking longer than usual…';
+          document.getElementById('hs-splash-sub').textContent = 'Tap anywhere to reload';
+          el.style.cursor = 'pointer';
+          el.onclick = function () { window.location.reload(); };
+        }, 8000);
+
         try { fetch('/api/healthz', { priority: 'low', cache: 'no-store' }).catch(function(){}); } catch(e) {}
       })();
     </script>
