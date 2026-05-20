@@ -87,8 +87,8 @@ export default function CrystalCard() {
   }, []);
 
   /* ── Phase ── */
-  const [phase, setPhase]   = useState<CrystalPhase>((isPreview || isSender) ? "visions" : "hook");
-  const phaseRef            = useRef<CrystalPhase>((isPreview || isSender) ? "visions" : "hook");
+  const [phase, setPhase]   = useState<CrystalPhase>(isSender ? "revelation" : isPreview ? "visions" : "hook");
+  const phaseRef            = useRef<CrystalPhase>(isSender ? "revelation" : isPreview ? "visions" : "hook");
   function advancePhase(p: CrystalPhase) { phaseRef.current = p; setPhase(p); }
 
   /* ── Rub mechanic ── */
