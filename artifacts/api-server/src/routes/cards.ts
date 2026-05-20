@@ -516,7 +516,8 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
 
     console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
     const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
-    void fireMetaCapi(capiEventId, id, req.ip ?? "", String(req.headers["user-agent"] ?? ""));
+    const clientIp = ((req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
+    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""));
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/auto-unlock error", err);
@@ -597,7 +598,8 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
 
     console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);
     const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
-    void fireMetaCapi(capiEventId, id, req.ip ?? "", String(req.headers["user-agent"] ?? ""));
+    const clientIp = ((req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
+    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""));
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/pay-unlock error", err);
