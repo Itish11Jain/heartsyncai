@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import PolaroidFrame from "@/components/PolaroidFrame";
 import { Link } from "wouter";
-import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/card-templates";
-import { cosmic, music } from "@/lib/audio";
+import { getCosmicTemplate, getCosmicFallback } from "@/lib/card-templates";
+import { cosmic as cosmicAudio, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
 
@@ -12,78 +11,241 @@ const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallMo
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
-type CosmicPhase = "hook" | "spawning" | "tapping" | "supernova" | "final";
+type Phase = "hook" | "spawning" | "tapping" | "supernova" | "final";
 
-interface PlottedStar extends CosmicStar {
-  id: number;
-  x: number;
-  y: number;
+interface QueueItem {
+  type: "text" | "photo" | "audio";
+  text?: string;
+  emoji?: string;
+  photoUrl?: string;
+  audioUrl?: string;
 }
 
 interface ConstellationLine {
   key: string;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+  x1: number; y1: number;
+  x2: number; y2: number;
 }
 
 interface AmbientDot {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  opacity: number;
+  x: number; y: number;
+  vx: number; vy: number;
+  r: number; opacity: number;
 }
 
 interface BurstDot {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  opacity: number;
-  decay: number;
-  hue: number;
+  x: number; y: number;
+  vx: number; vy: number;
+  r: number; opacity: number; decay: number; hue: number;
 }
 
 interface DustDot {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  hue: number;
-  life: number;
+  x: number; y: number;
+  vx: number; vy: number;
+  r: number; hue: number; life: number;
 }
 
 /* ─────────────────────────── constants ──────────────────────────────────── */
 
-const SAFE_ZONES = [
-  { minX: 0.10, maxX: 0.44, minY: 0.18, maxY: 0.44 },
-  { minX: 0.56, maxX: 0.90, minY: 0.18, maxY: 0.44 },
-  { minX: 0.10, maxX: 0.44, minY: 0.56, maxY: 0.82 },
-  { minX: 0.56, maxX: 0.90, minY: 0.56, maxY: 0.82 },
-];
+/* PRD-specified thumb-zone positions (normalized 0-1 within the 400px container) */
+const THUMB_STARS = [
+  { id: 0, leftPct: 0.15, topPct: 0.28 },
+  { id: 1, leftPct: 0.85, topPct: 0.42 },
+  { id: 2, leftPct: 0.20, topPct: 0.68 },
+  { id: 3, leftPct: 0.80, topPct: 0.78 },
+] as const;
 
-function plotStars(stars: CosmicStar[]): PlottedStar[] {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  return stars.slice(0, 4).map((s, i) => {
-    const z = SAFE_ZONES[i];
-    return {
-      ...s,
-      id: i,
-      x: (z.minX + Math.random() * (z.maxX - z.minX)) * W,
-      y: (z.minY + Math.random() * (z.maxY - z.minY)) * H,
-    };
-  });
-}
+const RING_R = 34;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
+/* ─────────────────────────── helpers ────────────────────────────────────── */
 
 function useQueryParams() {
   if (typeof window === "undefined") return new URLSearchParams();
   return new URLSearchParams(window.location.search);
+}
+
+function buildSmartQueue(
+  starTexts: Array<{ emoji: string; text: string }>,
+  photoUrls: string[],
+  voiceUrl: string | null,
+): QueueItem[] {
+  const photos = photoUrls.slice(0, 3);
+  const mediaCount = photos.length + (voiceUrl ? 1 : 0);
+  const paddingNeeded = Math.max(0, 4 - mediaCount);
+
+  const textItems: QueueItem[] = starTexts
+    .slice(0, paddingNeeded)
+    .map(s => ({ type: "text" as const, text: s.text, emoji: s.emoji }));
+
+  const photoItems: QueueItem[] = photos.map(url => ({
+    type: "photo" as const,
+    photoUrl: url,
+  }));
+
+  const audioItem: QueueItem[] = voiceUrl
+    ? [{ type: "audio" as const, audioUrl: voiceUrl }]
+    : [];
+
+  return [...textItems, ...photoItems, ...audioItem].slice(0, 4);
+}
+
+/* ─────────────────────────── AudioPlayer ────────────────────────────────── */
+
+function AudioPlayer({ audioUrl }: { audioUrl: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const togglePlay = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(() => {});
+      setIsPlaying(true);
+    }
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () =>
+      setProgress(audio.duration ? audio.currentTime / audio.duration : 0);
+    const onEnded = () => { setIsPlaying(false); setProgress(0); };
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("ended", onEnded);
+    return () => {
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, []);
+
+  const cx = 60, cy = 60, trackR = 44, circ = 2 * Math.PI * trackR;
+  const barInner = 26, BARS = 24;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <p style={{ fontSize: 13, color: "rgba(200,180,255,0.75)", margin: 0, letterSpacing: "0.06em" }}>
+        🎤 Voice note
+      </p>
+      <div
+        style={{ position: "relative", width: 120, height: 120, cursor: "pointer" }}
+        onClick={togglePlay}
+        onTouchEnd={togglePlay}
+      >
+        {/* Expanding pulse rings (only while playing) */}
+        {isPlaying && [0, 1, 2].map(i => (
+          <div key={i} style={{
+            position: "absolute", inset: 0, borderRadius: "50%",
+            border: "1.5px solid rgba(180,140,255,0.55)",
+            animation: "ringPulse 1.8s ease-out infinite",
+            animationDelay: `${i * 0.6}s`,
+            pointerEvents: "none",
+          }} />
+        ))}
+
+        <svg width={120} height={120} viewBox="0 0 120 120" style={{ position: "absolute", inset: 0 }}>
+          {/* Track ring */}
+          <circle cx={cx} cy={cy} r={trackR} fill="none" stroke="rgba(100,60,160,0.35)" strokeWidth={3.5} />
+
+          {/* Progress arc */}
+          {progress > 0 && (
+            <circle
+              cx={cx} cy={cy} r={trackR}
+              fill="none" stroke="rgba(190,150,255,0.85)" strokeWidth={3.5}
+              strokeDasharray={circ}
+              strokeDashoffset={circ * (1 - progress)}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${cx} ${cy})`}
+            />
+          )}
+
+          {/* Circular waveform bars */}
+          {Array.from({ length: BARS }, (_, i) => {
+            const angle = (i / BARS) * Math.PI * 2 - Math.PI / 2;
+            const barLen = isPlaying
+              ? 6 + Math.abs(Math.sin(i * 1.3)) * 8
+              : 3;
+            const x1 = cx + barInner * Math.cos(angle);
+            const y1 = cy + barInner * Math.sin(angle);
+            const x2 = cx + (barInner + barLen) * Math.cos(angle);
+            const y2 = cy + (barInner + barLen) * Math.sin(angle);
+            return (
+              <line key={i}
+                x1={x1} y1={y1} x2={x2} y2={y2}
+                stroke={`rgba(170,130,255,${isPlaying ? 0.85 : 0.3})`}
+                strokeWidth={2.2} strokeLinecap="round"
+              />
+            );
+          })}
+        </svg>
+
+        {/* Play/pause center button */}
+        <div style={{
+          position: "absolute",
+          top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+          width: 44, height: 44, borderRadius: "50%",
+          background: "radial-gradient(circle at 38% 35%, rgba(130,70,230,0.95), rgba(60,20,140,0.95))",
+          border: "1.5px solid rgba(200,160,255,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: isPlaying ? 15 : 17,
+          boxShadow: isPlaying ? "0 0 22px rgba(160,100,255,0.65)" : "none",
+          transition: "box-shadow 0.3s",
+          userSelect: "none",
+        }}>
+          {isPlaying ? "⏸" : "▶"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── SilverTypewriter ───────────────────────────── */
+
+function SilverTypewriter({ text, emoji }: { text: string; emoji?: string }) {
+  const [displayed, setDisplayed] = useState("");
+
+  useEffect(() => {
+    setDisplayed("");
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i < text.length) {
+        setDisplayed(text.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(iv);
+      }
+    }, 80);
+    return () => clearInterval(iv);
+  }, [text]);
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      {emoji && (
+        <div style={{ fontSize: 54, marginBottom: 18, lineHeight: 1 }}>{emoji}</div>
+      )}
+      <p style={{
+        fontSize: "clamp(15px, 4.2vw, 17px)",
+        fontWeight: 600,
+        lineHeight: 1.7,
+        minHeight: "4.5em",
+        margin: 0,
+        background: "linear-gradient(90deg, rgba(170,150,255,0.7) 0%, rgba(255,255,255,1) 22%, rgba(210,190,255,0.85) 45%, rgba(150,120,255,0.9) 65%, rgba(255,255,255,1) 82%, rgba(170,150,255,0.7) 100%)",
+        backgroundSize: "200% auto",
+        WebkitBackgroundClip: "text",
+        backgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        animation: "silverShine 2.5s linear infinite",
+      } as React.CSSProperties}>
+        {displayed}
+        <span style={{ opacity: displayed.length < text.length ? 0.6 : 0, WebkitTextFillColor: "rgba(200,180,255,0.6)" as any }}>▌</span>
+      </p>
+    </div>
+  );
 }
 
 /* ─────────────────────────── CosmicCard ────────────────────────────────── */
@@ -101,33 +263,55 @@ export default function CosmicCard() {
   const isSender = params.get("sender") === "1";
   const isPreview = params.get("preview") === "1";
   const isRecipient = !isSender && !isPreview;
-  const personalPictureUrl = (() => {
-    const raw = params.get("personalpicture");
+
+  /* Parse multi-photo URLs — supports "photos" (multi) or legacy "personalpicture" */
+  const photoUrls = (() => {
+    const raw = params.get("photos");
+    if (raw) {
+      return raw.split(",")
+        .map(s => { try { return decodeURIComponent(s); } catch { return s; } })
+        .filter(Boolean);
+    }
+    const single = params.get("personalpicture");
+    if (single) {
+      try { return [decodeURIComponent(single)]; } catch { return [single]; }
+    }
+    return [] as string[];
+  })();
+
+  /* Parse voice note URL */
+  const voiceUrl = (() => {
+    const raw = params.get("voicenote");
     if (!raw) return null;
-    try { return decodeURIComponent(raw); } catch { return null; }
+    try { return decodeURIComponent(raw); } catch { return raw; }
   })();
 
   const tpl = getCosmicTemplate(occasion, relation) ?? getCosmicFallback(occasion);
   const finalMessage = customMsg ?? tpl.final_message;
 
+  /* Build smart queue once from URL params (stable) */
+  const smartQueue = useRef<QueueItem[]>(
+    buildSmartQueue(tpl.stars.slice(0, 4), photoUrls, voiceUrl)
+  ).current;
+
   /* ── state ── */
-  const [phase, setPhase] = useState<CosmicPhase>(isPreview ? "final" : "hook");
-  const [stars, setStars] = useState<PlottedStar[]>([]);
-  const [clickedIds, setClickedIds] = useState<number[]>([]);
+  const [phase, setPhase] = useState<Phase>(isPreview ? "final" : "hook");
+  const [clickedStarIds, setClickedStarIds] = useState<number[]>([]);
   const [lines, setLines] = useState<ConstellationLine[]>([]);
-  const [tooltip, setTooltip] = useState<{ emoji: string; text: string } | null>(null);
+  const [activeMemory, setActiveMemory] = useState<QueueItem | null>(null);
+  const [memoriesShownCount, setMemoriesShownCount] = useState(0);
+  const [showFinaleCTA, setShowFinaleCTA] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [showFlash, setShowFlash] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
-  /* ── Premium unlock ── */
+
+  /* Premium unlock */
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showDesktopPaywall, setShowDesktopPaywall] = useState(false);
   const localCardId = useRef(`hs${Math.random().toString(36).slice(2, 9)}`).current;
 
-  /* Share URL — /api/share generates a personalised og:image for WhatsApp,
-     then JS-redirects recipients to /cosmic.html. */
   const buildShareUrl = (cardId?: string) => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search);
@@ -138,8 +322,9 @@ export default function CosmicCard() {
   };
   const [senderShareUrl] = useState(() => buildShareUrl(localCardId));
 
-  /* ── canvas refs ── */
+  /* ── refs ── */
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const ambientRef = useRef<AmbientDot[]>([]);
   const burstRef = useRef<BurstDot[]>([]);
   const dustRef = useRef<DustDot[]>([]);
@@ -147,9 +332,9 @@ export default function CosmicCard() {
   const rafRef = useRef<number>(0);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStartRef = useRef<number>(0);
-  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueIndexRef = useRef(0);
 
-  /* ── background music ── */
+  /* ── tracking ── */
   useEffect(() => {
     if (isRecipient) {
       const cardId = params.get("id") ?? undefined;
@@ -158,6 +343,7 @@ export default function CosmicCard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── background music ── */
   useEffect(() => {
     music.start("cosmic", occasion);
     return () => { music.stop(); };
@@ -167,7 +353,10 @@ export default function CosmicCard() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const onResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    const onResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
     onResize();
     window.addEventListener("resize", onResize);
     ambientRef.current = Array.from({ length: 200 }, () => ({
@@ -181,7 +370,7 @@ export default function CosmicCard() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  /* ── clear native pre-React splash ── */
+  /* ── clear pre-React splash ── */
   useEffect(() => {
     if (typeof window !== "undefined" && (window as any).__clearHsSplash) {
       (window as any).__clearHsSplash();
@@ -208,7 +397,7 @@ export default function CosmicCard() {
       ctx.fill();
     }
 
-    /* click burst particles */
+    /* burst particles */
     for (let i = burstRef.current.length - 1; i >= 0; i--) {
       const b = burstRef.current[i];
       b.x += b.vx; b.y += b.vy; b.vy += 0.06;
@@ -256,7 +445,7 @@ export default function CosmicCard() {
   function startHold(e: React.PointerEvent) {
     e.preventDefault();
     if (phase !== "hook") return;
-    cosmic.holdPulse();
+    cosmicAudio.holdPulse();
     holdStartRef.current = Date.now();
     holdTimerRef.current = setInterval(() => {
       const p = Math.min((Date.now() - holdStartRef.current) / 1500, 1);
@@ -271,55 +460,88 @@ export default function CosmicCard() {
   }
 
   function launchStarMap() {
-    cosmic.launch();
-    const placed = plotStars(tpl.stars);
-    setStars(placed);
+    cosmicAudio.launch();
     setPhase("spawning");
     setTimeout(() => setPhase("tapping"), 900);
   }
 
-  /* ── star click ── */
-  function handleStarClick(star: PlottedStar) {
-    if (phase !== "tapping" || clickedIds.includes(star.id)) return;
-    cosmic.starClick(clickedIds.length);
+  /* ── star tap → memory reveal ── */
+  function handleStarClick(starId: number) {
+    if (phase !== "tapping") return;
+    if (clickedStarIds.includes(starId)) return;
+    if (activeMemory) return;
 
-    /* burst particles from star position */
-    const burst: BurstDot[] = Array.from({ length: 28 }, () => {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 3.5 + 1.2;
-      return {
-        x: star.x, y: star.y,
-        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-        r: Math.random() * 2 + 0.8,
-        opacity: 0.95,
-        decay: 0.025 + Math.random() * 0.025,
-        hue: 38 + Math.random() * 20,
-      };
-    });
-    burstRef.current.push(...burst);
+    const star = THUMB_STARS[starId];
+    cosmicAudio.starClick(clickedStarIds.length);
+    trackEvent({ event: "memory_unlocked", template: "cosmic", index: clickedStarIds.length });
 
-    /* tooltip */
-    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
-    setTooltip({ emoji: star.emoji, text: star.text });
-    tooltipTimerRef.current = setTimeout(() => setTooltip(null), 2000);
+    /* Burst particles — compute screen-space pixel position from container */
+    const container = containerRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const px = rect.left + star.leftPct * rect.width;
+      const py = rect.top + star.topPct * rect.height;
 
-    /* constellation line from last clicked star */
-    const newClickedIds = [...clickedIds, star.id];
-    if (clickedIds.length > 0) {
-      const prevStar = stars.find(s => s.id === clickedIds[clickedIds.length - 1])!;
-      setLines(ls => [...ls, { key: `${prevStar.id}-${star.id}`, x1: prevStar.x, y1: prevStar.y, x2: star.x, y2: star.y }]);
+      burstRef.current.push(
+        ...Array.from({ length: 32 }, () => {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 4.5 + 1.5;
+          return {
+            x: px, y: py,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            r: Math.random() * 2.5 + 0.8,
+            opacity: 0.95,
+            decay: 0.02 + Math.random() * 0.02,
+            hue: 38 + Math.random() * 22,
+          } as BurstDot;
+        })
+      );
+
+      /* Constellation line (normalized 0-100 coords for viewBox SVG) */
+      const newClickedIds = [...clickedStarIds, starId];
+      if (clickedStarIds.length > 0) {
+        const prevId = clickedStarIds[clickedStarIds.length - 1];
+        const prev = THUMB_STARS[prevId];
+        setLines(ls => [...ls, {
+          key: `${prevId}-${starId}`,
+          x1: prev.leftPct * 100,
+          y1: prev.topPct * 100,
+          x2: star.leftPct * 100,
+          y2: star.topPct * 100,
+        }]);
+      }
+      setClickedStarIds(newClickedIds);
+    } else {
+      setClickedStarIds(prev => [...prev, starId]);
     }
-    setClickedIds(newClickedIds);
 
-    /* trigger supernova when all stars clicked */
-    if (newClickedIds.length === stars.length) {
-      setTimeout(() => triggerSupernova(), 1500);
+    /* Pop next item from smart queue */
+    const item = smartQueue[queueIndexRef.current] ?? null;
+    queueIndexRef.current += 1;
+    setActiveMemory(item);
+  }
+
+  /* ── dismiss memory modal ── */
+  function dismissMemory() {
+    setActiveMemory(null);
+    const newCount = memoriesShownCount + 1;
+    setMemoriesShownCount(newCount);
+    if (newCount >= 4) {
+      setShowFinaleCTA(true);
     }
+  }
+
+  /* ── finale CTA → supernova ── */
+  function handleFinaleCTA() {
+    trackEvent({ event: "finale_revealed", template: "cosmic" });
+    setShowFinaleCTA(false);
+    triggerSupernova();
   }
 
   /* ── supernova sequence ── */
   function triggerSupernova() {
-    cosmic.supernova();
+    cosmicAudio.supernova();
     setShowFlash(true);
     setTimeout(() => { canvasModeRef.current = "golden"; setPhase("supernova"); }, 500);
     setTimeout(() => { setShowFlash(false); setPhase("final"); }, 1100);
@@ -327,25 +549,23 @@ export default function CosmicCard() {
 
   /* ── sender share ── */
   function shareSenderWhatsApp() {
-    cosmic.copy();
+    cosmicAudio.copy();
     trackEvent({ event: "card_shared", channel: "whatsapp", occasion, template: "cosmic" });
     const text = `💌 Hey ${recipientName}, I made you something special!\n\nYour surprise is waiting 👇\n${senderShareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
   async function copySenderLinkForInstagram() {
-    cosmic.copy();
+    cosmicAudio.copy();
     trackEvent({ event: "card_shared", channel: "instagram", occasion, template: "cosmic" });
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderIgCopied(true); setTimeout(() => setSenderIgCopied(false), 2500); } catch {}
   }
   async function copySenderLink() {
-    cosmic.copy();
+    cosmicAudio.copy();
     trackEvent({ event: "card_shared", channel: "link", occasion, template: "cosmic" });
     try { await navigator.clipboard.writeText(senderShareUrl); setSenderCopied(true); setTimeout(() => setSenderCopied(false), 2500); } catch {}
   }
 
-  const totalStars = stars.length || 4;
-  const RING_R = 34;
-  const RING_CIRC = 2 * Math.PI * RING_R;
+  const showStarMap = (phase === "spawning" || phase === "tapping") && !showFlash;
 
   /* ─────────────────────────── render ────────────────────────────────────── */
   return (
@@ -355,210 +575,538 @@ export default function CosmicCard() {
       fontFamily: "'Segoe UI', system-ui, sans-serif",
       userSelect: "none", WebkitUserSelect: "none",
     } as React.CSSProperties}>
-      {/* Background canvas */}
+
+      {/* ── CSS keyframes ── */}
+      <style>{`
+        @keyframes silverShine {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
+        @keyframes ringPulse {
+          0%   { transform: scale(0.75); opacity: 0.75; }
+          100% { transform: scale(1.65); opacity: 0; }
+        }
+        @keyframes starPulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.85; }
+          50%       { transform: translate(-50%, -50%) scale(1.25); opacity: 1; }
+        }
+        @keyframes finaleGlow {
+          0%, 100% { box-shadow: 0 0 20px rgba(255,215,0,0.45), 0 0 50px rgba(255,165,0,0.25); }
+          50%       { box-shadow: 0 0 35px rgba(255,215,0,0.9),  0 0 80px rgba(255,165,0,0.55); }
+        }
+        @keyframes nebulaBreath {
+          0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+          50%       { opacity: 0.75; transform: translate(-50%, -50%) scale(1.08); }
+        }
+      `}</style>
+
+      {/* ── Full-screen background canvas ── */}
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }} />
 
-      {/* ══ PHASE 1: Hook ══ */}
-      <AnimatePresence>
-        {phase === "hook" && (
-          <motion.div key="hook"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.7 } }}
-            style={{ position: "fixed", inset: 0, zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center" }}
-          >
-            {/* Nebula glow */}
-            <div style={{
-              position: "absolute", top: "35%", left: "50%", transform: "translate(-50%,-50%)",
-              width: "min(360px,75vw)", height: "min(360px,75vw)", borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(90,20,160,0.55) 0%, rgba(40,10,80,0.3) 45%, transparent 70%)",
-              filter: "blur(50px)", pointerEvents: "none",
-            }} />
+      {/* ── max-w-400 centered container (mobile-first) ── */}
+      <div style={{
+        position: "fixed", inset: 0,
+        display: "flex", flexDirection: "column", alignItems: "center",
+        zIndex: 10,
+      }}>
+        <div
+          ref={containerRef}
+          style={{
+            width: "100%", maxWidth: 400,
+            height: "100%",
+            position: "relative",
+          }}
+        >
 
-            {/* Hook text */}
-            <motion.div
-              initial={{ opacity: 0, y: -18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.9 }}
-              style={{ marginTop: "max(48px, 11vh)", textAlign: "center", padding: "0 28px", zIndex: 2 }}
-            >
-              <h1 style={{ fontSize: "min(21px,5.4vw)", fontWeight: 700, color: "#FFD700", letterSpacing: "0.04em", marginBottom: 10, lineHeight: 1.35 }}>
-                {tpl.hook_title}
-              </h1>
-              <p style={{ fontSize: "min(14px,3.6vw)", color: "rgba(200,175,255,0.6)", letterSpacing: "0.07em" }}>
-                A stellar surprise awaits…
-              </p>
-            </motion.div>
-
-            {/* Press & hold energy core */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.75 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.7, duration: 0.6 }}
-              style={{ position: "absolute", bottom: "max(60px,14vh)", display: "flex", flexDirection: "column", alignItems: "center", gap: 14, zIndex: 2 }}
-            >
-              <div
-                style={{
-                  position: "relative", width: 84, height: 84, cursor: "pointer",
-                  touchAction: "none", userSelect: "none",
-                  WebkitUserSelect: "none", WebkitTouchCallout: "none",
-                } as React.CSSProperties}
-                onPointerDown={startHold}
-                onPointerUp={releaseHold}
-                onPointerLeave={releaseHold}
-                onPointerCancel={releaseHold}
-                onContextMenu={e => e.preventDefault()}
+          {/* ══ PHASE 1: Hook ══ */}
+          <AnimatePresence>
+            {phase === "hook" && (
+              <motion.div key="hook"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.7 } }}
+                style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center" }}
               >
-                {/* Charging ring */}
-                <svg width={84} height={84} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
-                  <circle cx={42} cy={42} r={RING_R} fill="none" stroke="rgba(150,100,255,0.14)" strokeWidth={3.5} />
-                  <circle cx={42} cy={42} r={RING_R}
-                    fill="none" stroke="rgba(255,215,0,0.92)" strokeWidth={3.5}
-                    strokeDasharray={RING_CIRC}
-                    strokeDashoffset={RING_CIRC * (1 - holdProgress)}
-                    strokeLinecap="round"
-                    style={{ transition: "stroke-dashoffset 0.05s linear", filter: "drop-shadow(0 0 6px rgba(255,215,0,0.85))" }}
-                  />
-                </svg>
-                {/* Core orb */}
+                {/* Nebula glow */}
+                <div style={{
+                  position: "absolute", top: "35%", left: "50%",
+                  width: "min(300px, 78vw)", height: "min(300px, 78vw)",
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(90,20,160,0.55) 0%, rgba(40,10,80,0.3) 45%, transparent 70%)",
+                  filter: "blur(52px)", pointerEvents: "none",
+                  animation: "nebulaBreath 4s ease-in-out infinite",
+                }} />
+
+                {/* Hook title */}
                 <motion.div
-                  animate={{ scale: [1, 1.12, 1], boxShadow: ["0 0 18px rgba(120,60,255,0.55)", "0 0 32px rgba(160,100,255,0.85)", "0 0 18px rgba(120,60,255,0.55)"] }}
-                  transition={{ duration: 1.9, repeat: Infinity, ease: "easeInOut" }}
-                  style={{
-                    position: "absolute", inset: 12, borderRadius: "50%",
-                    background: `radial-gradient(circle at 38% 35%, hsl(260,70%,${55 + holdProgress * 30}%), hsl(270,90%,${28 + holdProgress * 15}%))`,
-                  }}
-                />
-              </div>
-              <p style={{ fontSize: 11, color: "rgba(240,225,255,0.78)", letterSpacing: "0.12em", fontWeight: 600 }}>
-                PRESS &amp; HOLD TO IGNITE
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ══ PHASES 2+3: Star map ══ */}
-      <AnimatePresence>
-        {(phase === "spawning" || phase === "tapping") && (
-          <motion.div key="starmap"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.5 } }}
-            style={{ position: "fixed", inset: 0, zIndex: 10 }}
-          >
-            {/* Progress prompt — spans full width so it can never overflow */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              style={{
-                position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))",
-                left: 0, right: 0,
-                display: "flex", justifyContent: "center", padding: "0 20px",
-                zIndex: 15, pointerEvents: "none",
-              }}
-            >
-              <span style={{
-                display: "inline-block",
-                fontSize: 13, color: "rgba(220,200,255,0.9)", letterSpacing: "0.06em", fontWeight: 600,
-                background: "rgba(40,20,80,0.75)", borderRadius: 999, padding: "8px 20px",
-                border: "1px solid rgba(180,150,255,0.25)",
-                backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-                whiteSpace: "nowrap",
-              }}>
-                Discover the stars ({clickedIds.length} / {totalStars})
-              </span>
-            </motion.div>
-
-            {/* Stars */}
-            {stars.map(star => {
-              const clicked = clickedIds.includes(star.id);
-              return (
-                <motion.div key={star.id}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: star.id * 0.13, duration: 0.5, type: "spring", bounce: 0.5 }}
-                  style={{
-                    position: "absolute",
-                    left: star.x, top: star.y,
-                    transform: "translate(-50%,-50%)",
-                    zIndex: 12,
-                    cursor: phase === "tapping" && !clicked ? "pointer" : "default",
-                  }}
-                  onClick={() => handleStarClick(star)}
+                  initial={{ opacity: 0, y: -18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.9 }}
+                  style={{ marginTop: "max(52px, 11vh)", textAlign: "center", padding: "0 28px", zIndex: 2 }}
                 >
-                  <motion.div
-                    animate={clicked ? {} : { scale: [1, 1.22, 1], opacity: [0.8, 1, 0.8] }}
-                    transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut", delay: star.id * 0.28 }}
-                    style={{
-                      width: "min(60px,14.5vw)", height: "min(60px,14.5vw)",
-                      borderRadius: "50%",
-                      background: clicked
-                        ? "radial-gradient(circle, #FFE566 0%, #FFA500 65%, rgba(255,140,0,0.3) 100%)"
-                        : "radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(180,140,255,0.35) 70%)",
-                      boxShadow: clicked
-                        ? "0 0 14px #FFD700, 0 0 40px rgba(255,165,0,0.55), 0 0 80px rgba(255,200,0,0.2)"
-                        : "0 0 10px rgba(255,255,255,0.5), 0 0 28px rgba(180,140,255,0.3)",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "min(26px,6.5vw)", transition: "all 0.3s",
-                    }}
-                  >
-                    {clicked ? star.emoji : "✦"}
-                  </motion.div>
-                </motion.div>
-              );
-            })}
-
-            {/* SVG constellation lines */}
-            <svg style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 11, overflow: "visible" }}>
-              {lines.map(line => (
-                <motion.path
-                  key={line.key}
-                  d={`M ${line.x1} ${line.y1} L ${line.x2} ${line.y2}`}
-                  stroke="rgba(255,215,0,0.5)"
-                  strokeWidth={1.5}
-                  fill="none"
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  transition={{ duration: 0.85, ease: "easeOut" }}
-                  style={{ filter: "drop-shadow(0 0 5px rgba(255,200,0,0.7))" }}
-                />
-              ))}
-            </svg>
-
-            {/* Glassmorphism tooltip */}
-            <AnimatePresence>
-              {tooltip && (
-                <motion.div key={tooltip.text}
-                  initial={{ opacity: 0, scale: 0.8, y: 18 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.82, y: -10 }}
-                  transition={{ duration: 0.32 }}
-                  style={{
-                    position: "fixed",
-                    bottom: "max(24px, env(safe-area-inset-bottom, 24px))",
-                    left: 16, right: 16,
-                    zIndex: 20, pointerEvents: "none",
-                    background: "rgba(14,6,30,0.55)",
-                    borderRadius: 18,
-                    border: "1px solid rgba(200,175,255,0.22)",
-                    padding: "16px 22px",
-                    textAlign: "center",
-                    boxShadow: "0 4px 30px rgba(70,20,120,0.3)",
-                  }}
-                >
-                  <div style={{ fontSize: 44, marginBottom: 12 }}>{tooltip.emoji}</div>
-                  <p style={{ fontSize: "min(15px,3.8vw)", color: "rgba(225,215,255,0.9)", fontWeight: 500, lineHeight: 1.55, margin: 0 }}>
-                    {tooltip.text}
+                  <h1 style={{
+                    fontSize: "clamp(19px, 5.4vw, 22px)",
+                    fontWeight: 700, color: "#FFD700",
+                    letterSpacing: "0.04em", marginBottom: 10, lineHeight: 1.35,
+                  }}>
+                    {tpl.hook_title}
+                  </h1>
+                  <p style={{ fontSize: "clamp(12px, 3.5vw, 14px)", color: "rgba(200,175,255,0.6)", letterSpacing: "0.07em" }}>
+                    A stellar surprise awaits…
                   </p>
                 </motion.div>
+
+                {/* Press & hold energy core */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.75 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.7, duration: 0.6 }}
+                  style={{
+                    position: "absolute", bottom: "max(64px, 13vh)",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 14, zIndex: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "relative", width: 84, height: 84, cursor: "pointer",
+                      touchAction: "none", userSelect: "none",
+                      WebkitUserSelect: "none", WebkitTouchCallout: "none",
+                    } as React.CSSProperties}
+                    onPointerDown={startHold}
+                    onPointerUp={releaseHold}
+                    onPointerLeave={releaseHold}
+                    onPointerCancel={releaseHold}
+                    onContextMenu={e => e.preventDefault()}
+                  >
+                    {/* Charging ring */}
+                    <svg width={84} height={84} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+                      <circle cx={42} cy={42} r={RING_R} fill="none" stroke="rgba(150,100,255,0.14)" strokeWidth={3.5} />
+                      <circle cx={42} cy={42} r={RING_R}
+                        fill="none" stroke="rgba(255,215,0,0.92)" strokeWidth={3.5}
+                        strokeDasharray={RING_CIRC}
+                        strokeDashoffset={RING_CIRC * (1 - holdProgress)}
+                        strokeLinecap="round"
+                        style={{ transition: "stroke-dashoffset 0.05s linear", filter: "drop-shadow(0 0 6px rgba(255,215,0,0.85))" }}
+                      />
+                    </svg>
+                    {/* Core orb */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.12, 1],
+                        boxShadow: ["0 0 18px rgba(120,60,255,0.55)", "0 0 32px rgba(160,100,255,0.85)", "0 0 18px rgba(120,60,255,0.55)"],
+                      }}
+                      transition={{ duration: 1.9, repeat: Infinity, ease: "easeInOut" }}
+                      style={{
+                        position: "absolute", inset: 12, borderRadius: "50%",
+                        background: `radial-gradient(circle at 38% 35%, hsl(260,70%,${55 + holdProgress * 30}%), hsl(270,90%,${28 + holdProgress * 15}%))`,
+                      }}
+                    />
+                  </div>
+                  <p style={{ fontSize: 11, color: "rgba(240,225,255,0.78)", letterSpacing: "0.12em", fontWeight: 600 }}>
+                    PRESS &amp; HOLD TO IGNITE
+                  </p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ══ PHASES 2+3: Star map ══ */}
+          <AnimatePresence>
+            {showStarMap && (
+              <motion.div key="starmap"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.5 } }}
+                style={{ position: "absolute", inset: 0 }}
+              >
+                {/* Discover counter */}
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  style={{
+                    position: "absolute",
+                    top: "max(18px, env(safe-area-inset-top, 18px))",
+                    left: 0, right: 0,
+                    display: "flex", justifyContent: "center", padding: "0 20px",
+                    zIndex: 5, pointerEvents: "none",
+                  }}
+                >
+                  <span style={{
+                    display: "inline-block",
+                    fontSize: 13, color: "rgba(220,200,255,0.9)",
+                    letterSpacing: "0.06em", fontWeight: 600,
+                    background: "rgba(30,12,65,0.8)", borderRadius: 999, padding: "8px 22px",
+                    border: "1px solid rgba(180,150,255,0.25)",
+                    backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+                    whiteSpace: "nowrap",
+                  }}>
+                    Discover ({clickedStarIds.length} / 4)
+                  </span>
+                </motion.div>
+
+                {/* Fixed thumb-zone stars */}
+                {THUMB_STARS.map(star => {
+                  const clicked = clickedStarIds.includes(star.id);
+                  const canTap = phase === "tapping" && !clicked && !activeMemory;
+                  return (
+                    <motion.div
+                      key={star.id}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={clicked
+                        ? { opacity: 0, scale: 0, transition: { duration: 0.25 } }
+                        : { opacity: 1, scale: 1, transition: { delay: star.id * 0.14, duration: 0.5, type: "spring", bounce: 0.48 } }
+                      }
+                      style={{
+                        position: "absolute",
+                        left: `${star.leftPct * 100}%`,
+                        top: `${star.topPct * 100}%`,
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 4,
+                        cursor: canTap ? "pointer" : "default",
+                        pointerEvents: canTap ? "auto" : "none",
+                      }}
+                      onClick={() => handleStarClick(star.id)}
+                    >
+                      <motion.div
+                        animate={!clicked ? {
+                          scale: [1, 1.24, 1],
+                          opacity: [0.82, 1, 0.82],
+                        } : {}}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: star.id * 0.32 }}
+                        style={{
+                          width: 62, height: 62, borderRadius: "50%",
+                          background: "radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(210,170,255,0.45) 55%, transparent 100%)",
+                          boxShadow: "0 0 14px rgba(255,255,255,0.65), 0 0 36px rgba(200,160,255,0.45)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 26,
+                        }}
+                      >
+                        ✦
+                      </motion.div>
+                    </motion.div>
+                  );
+                })}
+
+                {/* Constellation lines (normalized viewBox 0-100) */}
+                <svg
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  style={{
+                    position: "absolute", inset: 0,
+                    width: "100%", height: "100%",
+                    pointerEvents: "none", zIndex: 3, overflow: "visible",
+                  }}
+                >
+                  {lines.map(line => (
+                    <motion.path
+                      key={line.key}
+                      d={`M ${line.x1} ${line.y1} L ${line.x2} ${line.y2}`}
+                      stroke="rgba(255,215,0,0.5)"
+                      strokeWidth={0.5}
+                      fill="none"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 0.85, ease: "easeOut" }}
+                      style={{ filter: "drop-shadow(0 0 1px rgba(255,200,0,0.8))" }}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))}
+                </svg>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ══ Reveal Finale CTA (after all 4 memories dismissed) ══ */}
+          <AnimatePresence>
+            {showFinaleCTA && !showFlash && (
+              <motion.div
+                key="finale-cta"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.55, type: "spring", bounce: 0.3 }}
+                style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 18, zIndex: 6,
+                }}
+              >
+                {/* Golden nebula glow */}
+                <div style={{
+                  position: "absolute", top: "50%", left: "50%",
+                  width: 280, height: 280, borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(255,215,0,0.14) 0%, transparent 70%)",
+                  filter: "blur(28px)", pointerEvents: "none",
+                  transform: "translate(-50%, -50%)",
+                }} />
+
+                <p style={{
+                  fontSize: 12, color: "rgba(255,215,0,0.65)",
+                  letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600,
+                  position: "relative", zIndex: 1,
+                }}>
+                  All stars discovered ✦
+                </p>
+
+                <motion.button
+                  onClick={handleFinaleCTA}
+                  whileTap={{ scale: 0.94 }}
+                  style={{
+                    padding: "18px 40px", borderRadius: 50,
+                    background: "linear-gradient(135deg, #FFD700 0%, #FFAB00 55%, #FF8C00 100%)",
+                    color: "#1a0800", fontWeight: 800, fontSize: 18,
+                    border: "none", cursor: "pointer",
+                    letterSpacing: "0.04em",
+                    animation: "finaleGlow 2s ease-in-out infinite",
+                    position: "relative", zIndex: 1,
+                  }}
+                >
+                  Reveal Finale ✨
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ══ Final card ══ */}
+          <AnimatePresence>
+            {phase === "final" && (
+              <motion.div key="final"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+                style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  padding: "20px", overflowY: "auto",
+                }}
+              >
+                {/* Holographic floating card */}
+                <motion.div
+                  animate={{ y: [0, -7, 0] }}
+                  transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(145deg, rgba(38,15,70,0.98) 0%, rgba(18,6,40,0.99) 100%)",
+                    borderRadius: 26,
+                    border: "1.5px solid rgba(190,155,255,0.42)",
+                    padding: "36px 28px",
+                    textAlign: "center",
+                    boxShadow: "0 0 60px rgba(120,60,220,0.38), 0 0 140px rgba(90,40,180,0.18), inset 0 1px 0 rgba(255,255,255,0.1)",
+                    position: "relative", overflow: "hidden",
+                  }}
+                >
+                  {/* Inner nebula */}
+                  <div style={{
+                    position: "absolute", top: "35%", left: "50%", transform: "translate(-50%,-50%)",
+                    width: "75%", height: "60%",
+                    background: "radial-gradient(ellipse, rgba(110,50,210,0.12) 0%, transparent 70%)",
+                    pointerEvents: "none",
+                  }} />
+
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                    style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, zIndex: 1, position: "relative" }}
+                  >
+                    {tpl.title_prefix}
+                  </motion.p>
+
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                    style={{ fontSize: "clamp(28px, 8.5vw, 34px)", fontWeight: 800, color: "#FFD700", marginBottom: 22, letterSpacing: "0.02em", zIndex: 1, position: "relative" }}
+                  >
+                    {recipientName}
+                  </motion.h1>
+
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+                    style={{ fontSize: "clamp(14px, 3.9vw, 15px)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, zIndex: 1, position: "relative" }}
+                  >
+                    {finalMessage}
+                  </motion.p>
+
+                  <motion.div
+                    animate={{ opacity: [0.35, 0.75, 0.35] }}
+                    transition={{ duration: 2.8, repeat: Infinity }}
+                    style={{ marginTop: 26, fontSize: 15, color: "rgba(255,215,0,0.45)", letterSpacing: "0.35em", position: "relative", zIndex: 1 }}
+                  >
+                    ✦ ✦ ✦
+                  </motion.div>
+                </motion.div>
+
+                {/* Sender share panel */}
+                {isSender && (
+                  isUnlocked ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                      style={{ width: "100%", marginTop: 20 }}
+                    >
+                      <p style={{ fontSize: 12, color: "rgba(190,170,255,0.4)", textAlign: "center", marginBottom: 12, letterSpacing: "0.06em" }}>
+                        ✦ Share this card
+                      </p>
+                      <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                        <button onClick={shareSenderWhatsApp} style={{
+                          flex: 1, padding: "12px 8px", borderRadius: 12,
+                          background: "rgba(37,211,102,0.1)", border: "1.5px solid rgba(37,211,102,0.28)",
+                          color: "rgba(37,211,102,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                        }}>💬 WhatsApp</button>
+                        <button onClick={copySenderLinkForInstagram} style={{
+                          flex: 1, padding: "12px 8px", borderRadius: 12,
+                          background: "rgba(200,100,200,0.1)", border: "1.5px solid rgba(200,100,200,0.28)",
+                          color: "rgba(220,140,255,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                        }}>{senderIgCopied ? "✅ Copied!" : "📸 Instagram"}</button>
+                      </div>
+                      <button onClick={copySenderLink} style={{
+                        width: "100%", padding: "11px", borderRadius: 12,
+                        background: "rgba(255,215,0,0.07)", border: "1.5px solid rgba(255,215,0,0.18)",
+                        color: "rgba(255,215,0,0.7)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                      }}>{senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}</button>
+                      <div style={{ textAlign: "center", marginTop: 14 }}>
+                        <Link href="/send">
+                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", cursor: "pointer" }}>
+                            Make another card
+                          </span>
+                        </Link>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ width: "100%", marginTop: 22 }}
+                    >
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => {
+                          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+                          if (isMobile) setShowUnlockModal(true);
+                          else setShowDesktopPaywall(true);
+                        }}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          width: "100%", height: 56, borderRadius: 16,
+                          background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                          color: "#000", fontWeight: 800, fontSize: 17,
+                          border: "none", cursor: "pointer",
+                          boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
+                        }}
+                      >
+                        🔓 Unlock &amp; Share the card
+                      </motion.button>
+                      <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
+                        ₹99 one-time · No sign-in required
+                      </p>
+                    </motion.div>
+                  )
+                )}
+
+                {/* Recipient viral CTA */}
+                {isRecipient && (
+                  <div style={{ marginTop: 16, width: "100%" }}>
+                    <ViralReplyCTA template="cosmic" />
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+        </div>{/* /inner 400px container */}
+      </div>{/* /outer centering wrapper */}
+
+      {/* ══ Memory modal — full-screen glassmorphism overlay ══ */}
+      <AnimatePresence>
+        {activeMemory && (
+          <motion.div
+            key="memory-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.28 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 40,
+              background: "rgba(4,1,18,0.80)",
+              backdropFilter: "blur(5px)",
+              WebkitBackdropFilter: "blur(5px)",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              padding: "20px",
+            }}
+            onClick={dismissMemory}
+          >
+            {/* Memory card */}
+            <motion.div
+              key={`mem-${memoriesShownCount}`}
+              initial={{ opacity: 0, scale: 0.88, y: 22 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: -12 }}
+              transition={{ duration: 0.32, type: "spring", bounce: 0.22 }}
+              style={{
+                width: "100%", maxWidth: 340,
+                background: "rgba(15,6,40,0.96)",
+                borderRadius: 24,
+                border: "1px solid rgba(180,150,255,0.28)",
+                boxShadow: "0 0 70px rgba(90,40,200,0.45), 0 10px 50px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07)",
+                padding: "34px 28px",
+                textAlign: "center",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Memory number indicator */}
+              <p style={{
+                fontSize: 10, color: "rgba(180,150,255,0.45)",
+                letterSpacing: "0.14em", textTransform: "uppercase",
+                marginBottom: 20, marginTop: 0,
+              }}>
+                Memory {memoriesShownCount + 1} of 4
+              </p>
+
+              {activeMemory.type === "text" && (
+                <SilverTypewriter text={activeMemory.text ?? ""} emoji={activeMemory.emoji} />
               )}
-            </AnimatePresence>
+
+              {activeMemory.type === "photo" && activeMemory.photoUrl && (
+                <div>
+                  <div style={{
+                    borderRadius: 16, overflow: "hidden",
+                    border: "1.5px solid rgba(200,160,255,0.28)",
+                    boxShadow: "0 0 35px rgba(130,70,255,0.28)",
+                    aspectRatio: "9 / 16",
+                    maxHeight: "52vh",
+                    background: "#080318",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <img
+                      src={activeMemory.photoUrl}
+                      alt="Memory"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      draggable={false}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeMemory.type === "audio" && activeMemory.audioUrl && (
+                <AudioPlayer audioUrl={activeMemory.audioUrl} />
+              )}
+            </motion.div>
+
+            {/* Dismiss hint */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.65, 0.35, 0.65] }}
+              transition={{ delay: 1.0, duration: 2.2, repeat: Infinity }}
+              style={{
+                marginTop: 22, fontSize: 12,
+                color: "rgba(200,180,255,0.55)",
+                letterSpacing: "0.08em",
+                pointerEvents: "none",
+              }}
+            >
+              Tap anywhere to continue
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ══ Supernova white flash ══ */}
+      {/* ══ Supernova white-out flash ══ */}
       <AnimatePresence>
         {showFlash && (
           <motion.div key="flash"
@@ -567,161 +1115,6 @@ export default function CosmicCard() {
             transition={{ duration: 1.1, times: [0, 0.28, 0.6, 1], ease: "easeInOut" }}
             style={{ position: "fixed", inset: 0, background: "white", zIndex: 50, pointerEvents: "none" }}
           />
-        )}
-      </AnimatePresence>
-
-      {/* ══ Final card ══ */}
-      <AnimatePresence>
-        {phase === "final" && (
-          <motion.div key="final"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 30,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: "0 20px", overflowY: "auto",
-            }}
-          >
-            {/* Floating holographic card */}
-            <motion.div
-              animate={{ y: [0, -7, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-              style={{
-                width: "min(350px,calc(100vw - 40px))",
-                background: "linear-gradient(145deg, rgba(38,15,70,0.98) 0%, rgba(18,6,40,0.99) 100%)",
-                borderRadius: 26,
-                border: "1.5px solid rgba(190,155,255,0.42)",
-                padding: "36px 28px",
-                textAlign: "center",
-                boxShadow: "0 0 60px rgba(120,60,220,0.38), 0 0 140px rgba(90,40,180,0.18), inset 0 1px 0 rgba(255,255,255,0.1)",
-                position: "relative", overflow: "hidden",
-              }}
-            >
-              {/* Inner nebula */}
-              <div style={{
-                position: "absolute", top: "35%", left: "50%", transform: "translate(-50%,-50%)",
-                width: "75%", height: "60%",
-                background: "radial-gradient(ellipse, rgba(110,50,210,0.12) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }} />
-
-              <motion.p
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                style={{ fontSize: 11, color: "rgba(210,190,255,0.82)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8, zIndex: 1, position: "relative" }}
-              >
-                {tpl.title_prefix}
-              </motion.p>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                style={{ fontSize: "min(34px,8.5vw)", fontWeight: 800, color: "#FFD700", marginBottom: 22, letterSpacing: "0.02em", zIndex: 1, position: "relative" }}
-              >
-                {recipientName}
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-                style={{ fontSize: "min(15px,3.9vw)", color: "rgba(238,228,255,0.96)", lineHeight: 1.72, margin: 0, zIndex: 1, position: "relative" }}
-              >
-                {finalMessage}
-              </motion.p>
-
-              <motion.div
-                animate={{ opacity: [0.35, 0.75, 0.35] }}
-                transition={{ duration: 2.8, repeat: Infinity }}
-                style={{ marginTop: 26, fontSize: 15, color: "rgba(255,215,0,0.45)", letterSpacing: "0.35em", position: "relative", zIndex: 1 }}
-              >
-                ✦ ✦ ✦
-              </motion.div>
-            </motion.div>
-
-            {/* ── Sender share panel ── */}
-            {isSender && (
-              isUnlocked ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}
-                  style={{ width: "min(350px,calc(100vw - 40px))", marginTop: 20 }}
-                >
-                  <p style={{ fontSize: 12, color: "rgba(190,170,255,0.4)", textAlign: "center", marginBottom: 12, letterSpacing: "0.06em" }}>
-                    ✦ Share this card
-                  </p>
-                  <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-                    <button onClick={shareSenderWhatsApp} style={{
-                      flex: 1, padding: "12px 8px", borderRadius: 12,
-                      background: "rgba(37,211,102,0.1)", border: "1.5px solid rgba(37,211,102,0.28)",
-                      color: "rgba(37,211,102,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                    }}>
-                      💬 WhatsApp
-                    </button>
-                    <button onClick={copySenderLinkForInstagram} style={{
-                      flex: 1, padding: "12px 8px", borderRadius: 12,
-                      background: "rgba(200,100,200,0.1)", border: "1.5px solid rgba(200,100,200,0.28)",
-                      color: "rgba(220,140,255,0.9)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                    }}>
-                      {senderIgCopied ? "✅ Copied!" : "📸 Instagram"}
-                    </button>
-                  </div>
-                  <button onClick={copySenderLink} style={{
-                    width: "100%", padding: "11px", borderRadius: 12,
-                    background: "rgba(255,215,0,0.07)", border: "1.5px solid rgba(255,215,0,0.18)",
-                    color: "rgba(255,215,0,0.7)", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  }}>
-                    {senderCopied ? "✅ Link Copied!" : "🔗 Copy Link"}
-                  </button>
-                  <div style={{ textAlign: "center", marginTop: 14 }}>
-                    <Link href="/send">
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", cursor: "pointer" }}>
-                        Make another card
-                      </span>
-                    </Link>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{ width: "min(340px, 90vw)", marginTop: 22 }}
-                >
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => {
-                      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
-                      if (isMobile) { setShowUnlockModal(true); }
-                      else { setShowDesktopPaywall(true); }
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      width: "100%", height: 56, borderRadius: 16,
-                      background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
-                      color: "#000", fontWeight: 800, fontSize: 17,
-                      border: "none", cursor: "pointer",
-                      boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
-                    }}
-                  >
-                    🔓 Unlock &amp; Share the card
-                  </motion.button>
-                  <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
-                    ₹99 one-time · No sign-in required
-                  </p>
-                </motion.div>
-              )
-            )}
-
-            {/* ── Recipient CTA ── */}
-            {isRecipient && (
-              <div style={{ marginTop: 16 }}>
-                <ViralReplyCTA template="cosmic" />
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ══ Polaroid photo ══ */}
-      <AnimatePresence>
-        {personalPictureUrl && (phase === "spawning" || phase === "tapping") && (
-          <PolaroidFrame key="polaroid-frame" src={personalPictureUrl} isFramed={false} />
         )}
       </AnimatePresence>
 
