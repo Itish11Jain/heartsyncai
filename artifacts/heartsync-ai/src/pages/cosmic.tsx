@@ -99,15 +99,17 @@ function AudioPlayer({ audioUrl }: { audioUrl: string }) {
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const togglePlay = (e: React.MouseEvent | React.TouchEvent) => {
+  const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
     if (isPlaying) {
-      audioRef.current.pause();
+      audio.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play().catch(() => {});
-      setIsPlaying(true);
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => { console.warn("Audio play failed:", err); setIsPlaying(false); });
     }
   };
 
@@ -225,58 +227,75 @@ function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; e
   }, [text]);
 
   if (variant === "ink") {
+    const inkSparkles = [
+      { x: -14, y: 15, d: 1.4, delay: 0.0 }, { x: 112, y: 10, d: 1.7, delay: 0.5 },
+      { x: -10, y: 60, d: 1.3, delay: 0.9 }, { x: 114, y: 65, d: 1.6, delay: 0.3 },
+      { x: 25,  y: -14, d: 1.5, delay: 0.7 }, { x: 75,  y: 112, d: 1.4, delay: 0.2 },
+      { x: 55,  y: -12, d: 1.6, delay: 1.0 }, { x: -12, y: 88,  d: 1.8, delay: 0.6 },
+    ];
     return (
-      <p style={{
-        fontSize: 13, fontWeight: 500, lineHeight: 1.55,
-        color: "#2a1605", margin: 0, textAlign: "center",
-        fontFamily: "Georgia, 'Times New Roman', serif",
-        minHeight: "2.8em",
-      }}>
-        {displayed}
-        <span style={{ opacity: displayed.length < text.length ? 0.45 : 0, color: "#5a3a10" }}>|</span>
-      </p>
+      <div style={{ position: "relative", width: "100%", textAlign: "center" }}>
+        {inkSparkles.map((s, i) => (
+          <span key={i} style={{
+            position: "absolute", left: `${s.x}%`, top: `${s.y}%`,
+            fontSize: i % 2 === 0 ? "7px" : "5px",
+            color: i % 3 === 0 ? "#ffd700" : i % 3 === 1 ? "#daa520" : "#fffbe6",
+            animation: `sparkleGold ${s.d}s ease-in-out ${s.delay}s infinite`,
+            opacity: 0, pointerEvents: "none",
+          }}>✦</span>
+        ))}
+        <p style={{
+          fontSize: 13, fontWeight: 500, lineHeight: 1.6,
+          color: "#08031a", margin: 0, textAlign: "center",
+          fontFamily: "'Palatino Linotype', Palatino, Georgia, serif",
+          fontStyle: "italic", letterSpacing: "0.02em",
+          minHeight: "2.8em", position: "relative", zIndex: 0,
+        }}>
+          {displayed}
+          <span style={{ opacity: displayed.length < text.length ? 0.5 : 0, color: "#b8860b" }}>|</span>
+        </p>
+      </div>
     );
   }
 
   if (variant === "cosmic") {
-    const starsBg = [
-      "radial-gradient(circle at 8% 20%, rgba(255,255,255,0.92) 0.8px, transparent 0.8px)",
-      "radial-gradient(circle at 22% 8%, rgba(255,255,255,0.72) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 38% 35%, rgba(255,255,255,0.88) 0.7px, transparent 0.7px)",
-      "radial-gradient(circle at 55% 12%, rgba(255,255,255,0.82) 0.8px, transparent 0.8px)",
-      "radial-gradient(circle at 72% 42%, rgba(255,255,255,0.78) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 88% 22%, rgba(255,255,255,0.68) 0.7px, transparent 0.7px)",
-      "radial-gradient(circle at 15% 58%, rgba(255,255,255,0.72) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 35% 72%, rgba(255,255,255,0.82) 0.8px, transparent 0.8px)",
-      "radial-gradient(circle at 58% 65%, rgba(255,255,255,0.62) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 80% 78%, rgba(255,255,255,0.88) 0.7px, transparent 0.7px)",
-      "radial-gradient(circle at 5% 88%, rgba(255,255,255,0.72) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 48% 92%, rgba(255,255,255,0.78) 0.8px, transparent 0.8px)",
-      "radial-gradient(circle at 95% 90%, rgba(255,255,255,0.68) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 28% 48%, rgba(200,170,255,0.58) 0.6px, transparent 0.6px)",
-      "radial-gradient(circle at 68% 30%, rgba(200,170,255,0.68) 0.7px, transparent 0.7px)",
-      "linear-gradient(135deg, #0a0320 0%, #130438 42%, #06021a 100%)",
-    ].join(", ");
+    const cosmicSparkles = [
+      { x: -16, y: 5,   d: 1.5, delay: 0.0 }, { x: 115, y: 10,  d: 1.8, delay: 0.4 },
+      { x: -14, y: 40,  d: 1.3, delay: 0.8 }, { x: 113, y: 45,  d: 1.6, delay: 0.2 },
+      { x: -12, y: 75,  d: 1.7, delay: 0.6 }, { x: 114, y: 80,  d: 1.4, delay: 1.0 },
+      { x: 20,  y: -16, d: 1.4, delay: 0.3 }, { x: 60,  y: -14, d: 1.9, delay: 0.9 },
+      { x: 80,  y: -12, d: 1.3, delay: 0.1 }, { x: 10,  y: 110, d: 1.6, delay: 0.7 },
+      { x: 50,  y: 112, d: 1.5, delay: 0.5 }, { x: 88,  y: 108, d: 1.8, delay: 1.1 },
+    ];
     return (
       <div style={{ textAlign: "center" }}>
         {emoji && <div style={{ fontSize: 54, marginBottom: 18, lineHeight: 1 }}>{emoji}</div>}
-        <div style={{ filter: "drop-shadow(0 0 9px rgba(160,120,255,0.72)) drop-shadow(0 0 22px rgba(100,60,200,0.42))" }}>
+        <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+          {cosmicSparkles.map((s, i) => (
+            <span key={i} style={{
+              position: "absolute", left: `${s.x}%`, top: `${s.y}%`,
+              fontSize: i % 3 === 0 ? "9px" : i % 3 === 1 ? "7px" : "6px",
+              color: i % 3 === 0 ? "#ffd700" : i % 3 === 1 ? "#fffbe6" : "#daa520",
+              animation: `sparkleGold ${s.d}s ease-in-out ${s.delay}s infinite`,
+              opacity: 0, pointerEvents: "none",
+            }}>✦</span>
+          ))}
           <p style={{
             fontSize: "clamp(15px, 4.2vw, 17px)",
             fontWeight: 700,
             lineHeight: 1.7,
             minHeight: "4.5em",
             margin: 0,
-            background: starsBg,
-            backgroundSize: "300% 300%",
+            background: "linear-gradient(90deg, #b8860b 0%, #ffd700 22%, #fffbe6 50%, #ffd700 78%, #b8860b 100%)",
+            backgroundSize: "300% auto",
             backgroundClip: "text",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            WebkitTextStroke: "0.6px rgba(190,150,255,0.65)",
-            animation: "cosmicTwinkle 6s ease-in-out infinite",
+            animation: "goldShimmer 2.5s linear infinite",
+            filter: "drop-shadow(0 0 6px rgba(255,200,50,0.55))",
           } as React.CSSProperties}>
             {displayed}
-            <span style={{ opacity: displayed.length < text.length ? 0.6 : 0, WebkitTextFillColor: "rgba(200,180,255,0.6)" as any }}>▌</span>
+            <span style={{ opacity: displayed.length < text.length ? 0.6 : 0, WebkitTextFillColor: "rgba(255,200,80,0.7)" as any }}>▌</span>
           </p>
         </div>
       </div>
@@ -637,12 +656,14 @@ export default function CosmicCard() {
           0%   { background-position: -200% center; }
           100% { background-position:  200% center; }
         }
-        @keyframes cosmicTwinkle {
-          0%   { background-position: 0% 0%; }
-          25%  { background-position: 60% 30%; }
-          50%  { background-position: 100% 60%; }
-          75%  { background-position: 40% 90%; }
-          100% { background-position: 0% 0%; }
+        @keyframes goldShimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
+        @keyframes sparkleGold {
+          0%, 100% { opacity: 0;   transform: scale(0.4) rotate(0deg);   }
+          40%       { opacity: 1;   transform: scale(1.4) rotate(18deg);  }
+          65%       { opacity: 0.7; transform: scale(1.1) rotate(-12deg); }
         }
         @keyframes ringPulse {
           0%   { transform: scale(0.75); opacity: 0.75; }
