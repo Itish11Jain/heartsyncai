@@ -6,6 +6,7 @@ import { getCosmicTemplate, getCosmicFallback, type CosmicStar } from "@/lib/car
 import { cosmic, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import PremiumLockPanel from "@/components/PremiumLockPanel";
+import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 /* ─────────────────────────── types ──────────────────────────────────────── */
 
@@ -687,23 +688,9 @@ export default function CosmicCard() {
 
             {/* ── Recipient CTA ── */}
             {isRecipient && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2, duration: 0.5 }}
-                style={{ width: "min(300px,calc(100vw - 40px))", textAlign: "center", marginTop: 16, paddingBottom: 8 }}
-              >
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
-                  Feeling the love? Send one back ✨
-                </p>
-                <Link href="/send?ref=card">
-                  <button style={{
-                    width: "100%", padding: "14px", borderRadius: 14,
-                    background: "rgba(120,60,200,0.16)", border: "1.5px solid rgba(180,140,255,0.32)",
-                    color: "rgba(200,180,255,0.9)", fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: "0.02em",
-                  }}>
-                    💫 Create your own card — free!
-                  </button>
-                </Link>
-              </motion.div>
+              <div style={{ marginTop: 16 }}>
+                <ViralReplyCTA template="cosmic" />
+              </div>
             )}
           </motion.div>
         )}

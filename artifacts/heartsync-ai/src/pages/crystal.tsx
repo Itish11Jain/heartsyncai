@@ -18,6 +18,7 @@ import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
 import { trackEvent } from "../lib/trackEvent";
 import PremiumLockPanel from "../components/PremiumLockPanel";
+import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 function useQueryParams() {
   const search = useSearch();
@@ -954,21 +955,9 @@ export default function CrystalCard() {
 
             {/* Recipient CTA */}
             {isRecipient && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.2, duration: 0.5 }}
-                style={{ width: "min(300px, calc(100vw - 40px))", textAlign: "center", marginTop: 18, paddingBottom: 8 }}
-              >
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.46)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
-                  Feeling the magic? Send one back ✦
-                </p>
-                <Link href="/send?ref=card">
-                  <button style={{
-                    width: "100%", padding: "14px", borderRadius: 14,
-                    background: "rgba(120,60,200,0.13)", border: "1.5px solid rgba(180,120,255,0.28)",
-                    color: "rgba(210,185,255,0.9)", fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: "0.02em",
-                  }}>🔮 Create your own card — free!</button>
-                </Link>
-              </motion.div>
+              <div style={{ marginTop: 18 }}>
+                <ViralReplyCTA template="crystal" />
+              </div>
             )}
           </motion.div>
         )}

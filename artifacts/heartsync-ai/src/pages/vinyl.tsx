@@ -8,6 +8,7 @@ import {
 import { vinyl, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import PremiumLockPanel from "@/components/PremiumLockPanel";
+import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -926,16 +927,7 @@ export default function VinylCard() {
                   >
                     {recipCopied ? "✓ Link Saved!" : "🔗 Save this card"}
                   </motion.button>
-                  <Link href="/send?ref=card">
-                    <button style={{
-                      width: "100%", padding: "11px", borderRadius: 14,
-                      background: "linear-gradient(135deg, #C8832E, #B8762A)",
-                      color: "#F4ECE1", fontWeight: 600, fontSize: 14,
-                      border: "none", cursor: "pointer",
-                    }}>
-                      🎵 Create your own card — free!
-                    </button>
-                  </Link>
+                  <ViralReplyCTA template="vinyl" />
                 </motion.div>
               )}
 

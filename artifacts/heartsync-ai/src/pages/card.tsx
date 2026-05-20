@@ -6,6 +6,7 @@ import { envelope, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 
 import PolaroidFrame from "@/components/PolaroidFrame";
+import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 /* Premium templates and sender auth features lazy-load only when needed.
  * Recipients of the default envelope card never download these chunks. */
@@ -1669,33 +1670,7 @@ export default function Card() {
               finalMessage={finalMessage}
             />
 
-            {isRecipient && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2, duration: 0.5 }}
-                style={{ width: "min(300px, calc(100vw - 32px))", textAlign: "center", paddingBottom: 8 }}
-              >
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: 12, letterSpacing: "0.02em", fontWeight: 500 }}>
-                  Feeling the love? Send one back ✨
-                </p>
-                <Link href="/send?ref=card">
-                  <button
-                    onClick={() => { trackEvent({ event: "create_own_clicked" }); }}
-                    style={{
-                      width: "100%", padding: "14px",
-                      borderRadius: 14,
-                      background: "rgba(255,215,0,0.12)",
-                      border: "1.5px solid rgba(255,215,0,0.35)",
-                      color: "rgba(255,215,0,0.95)",
-                      fontWeight: 700, fontSize: 15, cursor: "pointer", letterSpacing: "0.02em",
-                    }}
-                  >
-                    💛 Create your own card — free!
-                  </button>
-                </Link>
-              </motion.div>
-            )}
+            {isRecipient && <ViralReplyCTA template="envelope" />}
           </motion.div>
         )}
       </AnimatePresence>

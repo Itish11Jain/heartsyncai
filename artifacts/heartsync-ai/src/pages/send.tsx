@@ -31,6 +31,13 @@ import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
 
+const VIRAL_NEXT: Record<string, TemplateId> = {
+  envelope: "cosmic",
+  cosmic: "vinyl",
+  vinyl: "crystal",
+  crystal: "envelope",
+};
+
 const DRAFT_KEY = "hs_send_draft_v1";
 const DRAFT_TTL_MS = 30 * 60 * 1000; // 30 minutes — long enough for a sign-in detour
 
@@ -288,6 +295,11 @@ function clearPaywallSnapshot() {
 
 function SendInner() {
   const searchParams = useSearchParams();
+
+  // Viral reply flow: source=reply&received=<template>&utm_source=viral_reply
+  const isViralReply = searchParams.get("source") === "reply";
+  const receivedTemplate = (searchParams.get("received") ?? "envelope") as TemplateId;
+
   const { isSignedIn, isLoaded, getToken, clerkUserId, userEmail, openSignIn } = useSendAuth();
 
   const { usage, loading: usageLoading, incrementUsage, fingerprint, refetch: refetchUsage } = useCardUsageWithAuth({ isLoaded, isSignedIn, getToken, userEmail });
@@ -298,12 +310,15 @@ function SendInner() {
   })();
 
   // Restore draft (e.g. after a Clerk sign-in redirect bounced us back here).
-  const initialDraft = loadDraft();
+  // When arriving via viral reply flow, skip the draft to start fresh.
+  const initialDraft = isViralReply ? null : loadDraft();
 
-  const [step, setStep] = useState<number>(Math.min(initialDraft?.step ?? 1, 3));
+  // Viral reply skips step 1 (occasion) — pre-filled as feel_good.
+  const [step, setStep] = useState<number>(isViralReply ? 2 : Math.min(initialDraft?.step ?? 1, 3));
   const [dir, setDir] = useState(1);
   const [occasion, setOccasion] = useState(initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good");
-  const [relation, setRelation] = useState(initialDraft?.relation ?? searchParams.get("relation") ?? "");
+  // Viral reply pre-selects "partner" so the user can tap through quickly.
+  const [relation, setRelation] = useState(isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""));
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
   const [customMsg, setCustomMsg] = useState(initialDraft?.customMsg ?? "");
   // Template selection is intentionally NOT restored from draft — Envelope is always
@@ -630,16 +645,21 @@ function SendInner() {
   const doGenerateCard = useCallback(async () => {
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
 
+    // Viral reply: force the next template in the progression regardless of user selection.
+    const effectiveTemplate: TemplateId = isViralReply
+      ? (VIRAL_NEXT[receivedTemplate] ?? selectedTemplate)
+      : selectedTemplate;
+
     /* ── Premium templates: redirect immediately for preview + pay-wall ─ */
     /* The card page (crystal/cosmic/vinyl) handles sign-in + paywall.     */
     /* We do NOT create a DB card or increment usage here — that happens   */
     /* in PremiumLockPanel after the ₹49 payment is confirmed.             */
-    if (isPremiumTemplate(selectedTemplate)) {
+    if (isPremiumTemplate(effectiveTemplate)) {
       trackEvent({
         event: "card_created",
         fingerprint, clerk_user_id: clerkUserId ?? undefined,
         email: userEmail ?? undefined, occasion,
-        template: selectedTemplate,
+        template: effectiveTemplate,
         has_likes: false,
         used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
         is_free: false,
@@ -650,7 +670,7 @@ function SendInner() {
         photo_count: uploadedPhotoUrls.length,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, undefined, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -702,7 +722,7 @@ function SendInner() {
       event: "card_created",
       fingerprint, clerk_user_id: clerkUserId ?? undefined,
       email: userEmail ?? undefined, occasion,
-      template: "envelope",
+      template: effectiveTemplate,
       has_likes: false,
       used_custom_msg: customMsg.trim() !== defaultMsg.trim(),
       is_free: true,
@@ -715,11 +735,11 @@ function SendInner() {
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", effectiveCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, effectiveCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
-    selectedTemplate, customMsg, defaultMsg, occasion, recipientName,
+    isViralReply, receivedTemplate, selectedTemplate, customMsg, defaultMsg, occasion, recipientName,
     fingerprint, clerkUserId, userEmail, incrementUsage, getToken, uploadedPhotoUrls, voiceNoteUrl,
   ]);
 
@@ -1008,7 +1028,7 @@ function SendInner() {
           </Link>
         )}
         <span className="text-sm font-semibold" style={{ color: "rgba(255,215,0,0.7)", letterSpacing: "0.04em" }}>
-          ✨ Create 3D Card
+          {isViralReply ? "✨ Unlock Your Secret Reply" : "✨ Create 3D Card"}
         </span>
         <div className="flex gap-1">
           {[1, 2, 3].map(i => (
