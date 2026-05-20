@@ -49,10 +49,10 @@ interface DustDot {
 
 /* PRD-specified thumb-zone positions (normalized 0-1 within the 400px container) */
 const THUMB_STARS = [
-  { id: 0, leftPct: 0.15, topPct: 0.12 },
-  { id: 1, leftPct: 0.82, topPct: 0.24 },
-  { id: 2, leftPct: 0.20, topPct: 0.38 },
-  { id: 3, leftPct: 0.78, topPct: 0.50 },
+  { id: 0, leftPct: 0.10, topPct: 0.08 },
+  { id: 1, leftPct: 0.90, topPct: 0.08 },
+  { id: 2, leftPct: 0.10, topPct: 0.87 },
+  { id: 3, leftPct: 0.90, topPct: 0.87 },
 ] as const;
 
 const RING_R = 34;
@@ -207,7 +207,7 @@ function AudioPlayer({ audioUrl }: { audioUrl: string }) {
 
 /* ─────────────────────────── SilverTypewriter ───────────────────────────── */
 
-function SilverTypewriter({ text, emoji }: { text: string; emoji?: string }) {
+function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; emoji?: string; variant?: "silver" | "ink" }) {
   const [displayed, setDisplayed] = useState("");
 
   useEffect(() => {
@@ -220,9 +220,23 @@ function SilverTypewriter({ text, emoji }: { text: string; emoji?: string }) {
       } else {
         clearInterval(iv);
       }
-    }, 80);
+    }, 35);
     return () => clearInterval(iv);
   }, [text]);
+
+  if (variant === "ink") {
+    return (
+      <p style={{
+        fontSize: 13, fontWeight: 500, lineHeight: 1.55,
+        color: "#2a1605", margin: 0, textAlign: "center",
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        minHeight: "2.8em",
+      }}>
+        {displayed}
+        <span style={{ opacity: displayed.length < text.length ? 0.45 : 0, color: "#5a3a10" }}>|</span>
+      </p>
+    );
+  }
 
   return (
     <div style={{ textAlign: "center" }}>
@@ -770,11 +784,11 @@ export default function CosmicCard() {
                         } : {}}
                         transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", delay: star.id * 0.32 }}
                         style={{
-                          width: 62, height: 62, borderRadius: "50%",
+                          width: 40, height: 40, borderRadius: "50%",
                           background: "radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(210,170,255,0.45) 55%, transparent 100%)",
-                          boxShadow: "0 0 14px rgba(255,255,255,0.65), 0 0 36px rgba(200,160,255,0.45)",
+                          boxShadow: "0 0 10px rgba(255,255,255,0.65), 0 0 24px rgba(200,160,255,0.45)",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 26,
+                          fontSize: 18,
                         }}
                       >
                         ✦
@@ -963,8 +977,8 @@ export default function CosmicCard() {
             style={{
               position: "absolute", inset: 0, zIndex: 40,
               display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "flex-end",
-              padding: "0 20px 36px",
+              alignItems: "center", justifyContent: "center",
+              padding: "20px",
               pointerEvents: "none",
             }}
           >
@@ -996,15 +1010,19 @@ export default function CosmicCard() {
               )}
 
               {activeMemory.type === "photo" && activeMemory.photoUrl && (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+                <div style={{
+                  display: "inline-block",
+                  background: "#fff",
+                  padding: "8px 8px 0 8px",
+                  borderRadius: 2,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.55), 0 2px 10px rgba(0,0,0,0.35)",
+                  transform: "rotate(-1.5deg)",
+                  maxWidth: 210,
+                }}>
                   <div style={{
-                    borderRadius: 14, overflow: "hidden",
-                    border: "1.5px solid rgba(200,160,255,0.28)",
-                    boxShadow: "0 0 35px rgba(130,70,255,0.28)",
-                    width: "100%", maxWidth: 220,
-                    aspectRatio: "4 / 5",
-                    background: "#080318",
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 194, height: 180,
+                    overflow: "hidden",
+                    background: "#111",
                   }}>
                     <img
                       src={activeMemory.photoUrl}
@@ -1013,9 +1031,16 @@ export default function CosmicCard() {
                       draggable={false}
                     />
                   </div>
-                  {activeMemory.text && (
-                    <SilverTypewriter text={activeMemory.text} emoji={activeMemory.emoji} />
-                  )}
+                  <div style={{
+                    padding: "10px 8px 14px",
+                    minHeight: 54,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "#fff",
+                  }}>
+                    {activeMemory.text && (
+                      <SilverTypewriter text={activeMemory.text} variant="ink" />
+                    )}
+                  </div>
                 </div>
               )}
 
