@@ -62,11 +62,12 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
     trackEvent({ event: "confirm_unlock_clicked", card_id: cardId });
     setBundleUtrError("");
     setBundleLoading(true);
+    const wmEventId = `hs_${cardId}_${Date.now()}`;
     try {
       const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ utr: bundleUtr.trim() }),
+        body: JSON.stringify({ utr: bundleUtr.trim(), eventId: wmEventId }),
       });
       const data = await res.json() as { ok?: boolean; message?: string };
       if (!res.ok) {
@@ -74,6 +75,9 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
         return;
       }
       trackEvent({ event: "paywall_paid", card_id: cardId });
+      if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
+        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" }, { eventID: wmEventId });
+      }
       setStage("done-bundle");
     } catch {
       setBundleUtrError("Submission failed. Please try again.");
