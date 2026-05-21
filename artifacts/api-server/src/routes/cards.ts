@@ -495,7 +495,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     const { rows } = await pool.query<{ id: number; utr: string }>(
       `SELECT id, utr FROM hs_received_payments
        WHERE used_at IS NULL
-         AND created_at > NOW() - INTERVAL '60 minutes'
+         AND created_at > NOW() - INTERVAL '5 minutes'
        ORDER BY created_at DESC LIMIT 1`,
     );
 
