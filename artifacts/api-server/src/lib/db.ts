@@ -153,6 +153,10 @@ export async function initDb(): Promise<void> {
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS unlock_method TEXT;
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ;
     ALTER TABLE hs_received_payments ADD COLUMN IF NOT EXISTS refund_note TEXT;
+    -- Meta Conversions API match quality: store browser cookies at card-creation
+    -- time so server-side Purchase events can include fbp/fbc in user_data.
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS fbp TEXT;
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS fbc TEXT;
   `);
 
   /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal

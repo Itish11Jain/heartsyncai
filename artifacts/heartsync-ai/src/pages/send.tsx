@@ -241,6 +241,32 @@ function useSearchParams() {
   return new URLSearchParams(window.location.search);
 }
 
+/** Read Meta browser cookies for server-side CAPI match quality improvement.
+ *  _fbp: Meta pixel cookie set on site visit.
+ *  _fbc: Facebook click cookie (set when arriving from an ad).
+ *  Falls back to building fbc from the fbclid URL param if the cookie is absent. */
+function getMetaCookies(): { fbp: string | null; fbc: string | null } {
+  try {
+    const cookieMap = Object.fromEntries(
+      document.cookie.split(";").map((c) => {
+        const eq = c.indexOf("=");
+        return eq === -1
+          ? [c.trim(), ""]
+          : [c.slice(0, eq).trim(), c.slice(eq + 1).trim()];
+      }),
+    );
+    const fbp = cookieMap["_fbp"] ?? null;
+    let fbc = cookieMap["_fbc"] ?? null;
+    if (!fbc) {
+      const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+    }
+    return { fbp: fbp || null, fbc: fbc || null };
+  } catch {
+    return { fbp: null, fbc: null };
+  }
+}
+
 function loadDraft(): SendDraft | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
@@ -694,6 +720,7 @@ function SendInner() {
         const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
           ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
           : null;
+        const { fbp, fbc } = getMetaCookies();
         const cardRes = await fetch(`${base}/api/cards`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -705,6 +732,8 @@ function SendInner() {
             photo_url: uploadedPhotoUrls[0] ?? null,
             photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
             voice_note_url: voiceNoteUrl ?? null,
+            fbp,
+            fbc,
           }),
         });
         if (cardRes.ok) {

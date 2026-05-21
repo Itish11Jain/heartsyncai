@@ -16,6 +16,26 @@ async function fireMetaCapi(
   const token = process.env["META_PIXEL_ACCESS_TOKEN"];
   if (!token) return;
   try {
+    // Fetch the Meta browser cookies stored at card-creation time.
+    // These dramatically improve CAPI match quality without requiring PII.
+    let fbp: string | null = null;
+    let fbc: string | null = null;
+    try {
+      const row = await pool.query<{ fbp: string | null; fbc: string | null }>(
+        "SELECT fbp, fbc FROM hs_cards WHERE id = $1",
+        [cardId],
+      );
+      fbp = row.rows[0]?.fbp ?? null;
+      fbc = row.rows[0]?.fbc ?? null;
+    } catch { /* non-blocking — proceed without fbp/fbc */ }
+
+    const userData: Record<string, string> = {
+      client_ip_address: ip,
+      client_user_agent: userAgent,
+    };
+    if (fbp) userData["fbp"] = fbp;
+    if (fbc) userData["fbc"] = fbc;
+
     await fetch(
       `https://graph.facebook.com/v19.0/${META_PIXEL_ID}/events?access_token=${token}`,
       {
@@ -28,10 +48,7 @@ async function fireMetaCapi(
               event_time: Math.floor(Date.now() / 1000),
               event_id: eventId,
               action_source: "website",
-              user_data: {
-                client_ip_address: ip,
-                client_user_agent: userAgent,
-              },
+              user_data: userData,
               custom_data: {
                 value: 99.0,
                 currency: "INR",
@@ -41,7 +58,7 @@ async function fireMetaCapi(
         }),
       },
     );
-    console.log(`[capi] Purchase fired event_id=${eventId} card=${cardId}`);
+    console.log(`[capi] Purchase fired event_id=${eventId} card=${cardId} fbp=${!!fbp} fbc=${!!fbc}`);
   } catch (err) {
     console.warn("[capi] Non-blocking CAPI call failed", err);
   }
@@ -193,7 +210,7 @@ router.post("/cards", async (req, res) => {
   }
 
   try {
-    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url, photo_urls, voice_note_url } =
+    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url, photo_urls, voice_note_url, fbp, fbc } =
       req.body as Record<string, unknown>;
 
     // Allow callers to supply a pre-existing client-generated tracking ID
@@ -228,8 +245,8 @@ router.post("/cards", async (req, res) => {
         const freshId = await uniqueId();
         await pool.query(
           `INSERT INTO hs_cards
-             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url)
-           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9)`,
+             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url, fbp, fbc)
+           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9,$10,$11)`,
           [freshId, clerkUserId,
             typeof template === "string" ? template : null,
             typeof occasion === "string" ? occasion : null,
@@ -237,7 +254,9 @@ router.post("/cards", async (req, res) => {
             typeof message_b64 === "string" ? message_b64 : null,
             typeof photo_url === "string" ? photo_url : null,
             Array.isArray(photo_urls) ? photo_urls.filter((u): u is string => typeof u === "string") : null,
-            typeof voice_note_url === "string" ? voice_note_url : null],
+            typeof voice_note_url === "string" ? voice_note_url : null,
+            typeof fbp === "string" && fbp ? fbp : null,
+            typeof fbc === "string" && fbc ? fbc : null],
         );
         res.json({ id: freshId });
         return;
@@ -246,8 +265,8 @@ router.post("/cards", async (req, res) => {
 
     await pool.query(
       `INSERT INTO hs_cards
-         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url)
-       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9)`,
+         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url, fbp, fbc)
+       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9,$10,$11)`,
       [
         id,
         clerkUserId,
@@ -258,6 +277,8 @@ router.post("/cards", async (req, res) => {
         typeof photo_url === "string" ? photo_url : null,
         Array.isArray(photo_urls) ? photo_urls.filter((u): u is string => typeof u === "string") : null,
         typeof voice_note_url === "string" ? voice_note_url : null,
+        typeof fbp === "string" && fbp ? fbp : null,
+        typeof fbc === "string" && fbc ? fbc : null,
       ],
     );
 
