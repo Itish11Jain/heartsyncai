@@ -489,7 +489,7 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
  */
 router.post("/cards/:id/auto-unlock", async (req, res) => {
   const { id } = req.params;
-  const { eventId } = (req.body ?? {}) as { eventId?: string };
+  const { eventId, fbp, fbc } = (req.body ?? {}) as { eventId?: string; fbp?: string | null; fbc?: string | null };
 
   try {
     const { rows } = await pool.query<{ id: number; utr: string }>(
@@ -512,10 +512,12 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     );
 
     await pool.query(
-      `INSERT INTO hs_cards (id, is_watermarked, is_premium)
-       VALUES ($1, FALSE, TRUE)
-       ON CONFLICT (id) DO UPDATE SET is_watermarked = FALSE, is_premium = TRUE`,
-      [id],
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium, fbp, fbc)
+       VALUES ($1, FALSE, TRUE, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET is_watermarked = FALSE, is_premium = TRUE,
+         fbp = COALESCE(EXCLUDED.fbp, hs_cards.fbp),
+         fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc)`,
+      [id, fbp ?? null, fbc ?? null],
     );
 
     const cardRow = await pool.query<{ occasion: string }>(
@@ -555,7 +557,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
  */
 router.post("/cards/:id/pay-unlock", async (req, res) => {
   const { id } = req.params;
-  const { utr, eventId } = req.body as { utr?: unknown; eventId?: string };
+  const { utr, eventId, fbp, fbc } = req.body as { utr?: unknown; eventId?: string; fbp?: string | null; fbc?: string | null };
 
   if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
     res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
@@ -589,13 +591,15 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
       [matchedUtr, id],
     );
 
-    // Upsert card as unlocked
+    // Upsert card as unlocked — store fbp/fbc for CAPI match quality
     await pool.query(
-      `INSERT INTO hs_cards (id, is_watermarked, is_premium)
-       VALUES ($1, FALSE, TRUE)
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium, fbp, fbc)
+       VALUES ($1, FALSE, TRUE, $2, $3)
        ON CONFLICT (id) DO UPDATE
-         SET is_watermarked = FALSE, is_premium = TRUE`,
-      [id],
+         SET is_watermarked = FALSE, is_premium = TRUE,
+           fbp = COALESCE(EXCLUDED.fbp, hs_cards.fbp),
+           fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc)`,
+      [id, fbp ?? null, fbc ?? null],
     );
 
     const cardRow = await pool.query<{ occasion: string }>(

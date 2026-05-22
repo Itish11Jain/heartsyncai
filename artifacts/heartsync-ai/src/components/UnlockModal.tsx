@@ -11,6 +11,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
+function getMetaCookies(): { fbp: string | null; fbc: string | null } {
+  try {
+    const cookieMap = Object.fromEntries(
+      document.cookie.split(";").map((c) => {
+        const eq = c.indexOf("=");
+        return eq === -1 ? [c.trim(), ""] : [c.slice(0, eq).trim(), c.slice(eq + 1).trim()];
+      }),
+    );
+    const fbp = cookieMap["_fbp"] ?? null;
+    let fbc = cookieMap["_fbc"] ?? null;
+    if (!fbc) {
+      const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+    }
+    return { fbp: fbp || null, fbc: fbc || null };
+  } catch {
+    return { fbp: null, fbc: null };
+  }
+}
+
 const UPI_ID = "9706900714@pthdfc";
 const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=99&cu=INR&tn=HeartSyncWebsitePayment`;
 
@@ -135,13 +156,14 @@ export default function UnlockModal({
     };
 
     const autoEventId = `hs_${cardId}_${Date.now()}`;
+    const { fbp: autoFbp, fbc: autoFbc } = getMetaCookies();
 
     while (Date.now() < deadline) {
       try {
         const res = await fetch(`${BASE}/api/cards/${cardId}/auto-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId: autoEventId }),
+          body: JSON.stringify({ eventId: autoEventId, fbp: autoFbp, fbc: autoFbc }),
         });
         if (res.ok) {
           cleanup();
@@ -192,6 +214,7 @@ export default function UnlockModal({
     };
 
     const utrEventId = `hs_${cardId}_${Date.now()}`;
+    const { fbp: utrFbp, fbc: utrFbc } = getMetaCookies();
 
     // Poll until success or timeout
     while (Date.now() < deadline) {
@@ -199,7 +222,7 @@ export default function UnlockModal({
         const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ utr: trimmed, eventId: utrEventId }),
+          body: JSON.stringify({ utr: trimmed, eventId: utrEventId, fbp: utrFbp, fbc: utrFbc }),
         });
         if (res.ok) {
           cleanup();
