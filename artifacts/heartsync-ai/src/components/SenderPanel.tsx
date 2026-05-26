@@ -314,10 +314,6 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   </p>
                 </div>
 
-                <p style={{ fontSize: 12, color: "rgba(255,215,0,0.55)", textAlign: "center", marginBottom: 14, fontWeight: 600, letterSpacing: "0.04em" }}>
-                  Make {recipientName} smile ✨
-                </p>
-
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
@@ -338,7 +334,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
                   }}
                 >
-                  Send to {recipientName} ❤️
+                  Make {recipientName} smile. Send now. ❤️
                 </motion.button>
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
