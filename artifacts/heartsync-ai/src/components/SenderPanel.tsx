@@ -305,8 +305,17 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.3 }}
               >
+                <div style={{ textAlign: "center", marginBottom: 14 }}>
+                  <p style={{ fontSize: 15, color: "#FFD700", fontWeight: 800, letterSpacing: "0.01em", marginBottom: 4 }}>
+                    Your card for {recipientName} is ready ✨
+                  </p>
+                  <p style={{ fontSize: 11, color: "rgba(255,215,0,0.55)", fontWeight: 500 }}>
+                    Send the full surprise privately on WhatsApp instantly!
+                  </p>
+                </div>
+
                 <p style={{ fontSize: 12, color: "rgba(255,215,0,0.55)", textAlign: "center", marginBottom: 14, fontWeight: 600, letterSpacing: "0.04em" }}>
-                  ✨ Your card is ready — unlock it to share!
+                  Make {recipientName} smile ✨
                 </p>
 
                 <motion.button
@@ -329,7 +338,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
                   }}
                 >
-                  🔓 Unlock &amp; Share the card
+                  Send to {recipientName} ❤️
                 </motion.button>
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
