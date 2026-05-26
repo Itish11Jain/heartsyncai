@@ -80,7 +80,7 @@ export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
           boxShadow: "0 4px 18px rgba(255,180,0,0.35)",
         }}
       >
-        🔓 Unlock &amp; Reply
+        Send love back ❤️
       </button>
     </div>
   );
