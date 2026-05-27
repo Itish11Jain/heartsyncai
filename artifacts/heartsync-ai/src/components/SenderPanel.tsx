@@ -310,7 +310,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                     You've created a stunning card! ✨
                   </p>
                   <p style={{ fontSize: 17, color: "#FFD700", fontWeight: 800, letterSpacing: "0.01em" }}>
-                    Don't leave it unsent.
+                    Don't leave it now.
                   </p>
                 </div>
 
