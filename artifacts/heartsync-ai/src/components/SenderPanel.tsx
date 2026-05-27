@@ -41,6 +41,13 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   const [showBundlePaywall, setShowBundlePaywall] = useState(false);
 
+  // Auto-open bottom sheet once per card/session
+  const autoOpenKey = cardId ? `hs_ao_${cardId}` : null;
+  const [hasAutoOpened, setHasAutoOpened] = useState(() => {
+    if (!autoOpenKey) return true;
+    try { return !!sessionStorage.getItem(autoOpenKey); } catch { return false; }
+  });
+
   // Inline sign-in state
   type SignInAction = "paywall" | "watermark";
   const [showSignIn, setShowSignIn] = useState(false);
@@ -63,6 +70,27 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       .then(data => { if (data && data.is_watermarked === false) setWatermarkRemoved(true); })
       .catch(() => { /* ignore */ });
   }, [cardId]);
+
+  /* Auto-open the bottom sheet once per card/session when finale starts. */
+  useEffect(() => {
+    if (phase !== "finale") return;
+    if (isPremiumUser || watermarkRemoved) return;
+    if (hasAutoOpened) return;
+    if (!autoOpenKey) return;
+    const delay = 800 + Math.random() * 700; // 800–1500 ms
+    const timer = setTimeout(() => {
+      try { sessionStorage.setItem(autoOpenKey, "1"); } catch { /* ignore */ }
+      setHasAutoOpened(true);
+      const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+      if (isMobile) {
+        setShowUnlockModal(true);
+      } else {
+        trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+        setShowBundlePaywall(true);
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [phase, isPremiumUser, watermarkRemoved, hasAutoOpened, autoOpenKey, occasion, cardId]);
 
   /* Call the free-removal API — no payment needed, just auth.
    * For anonymous cards (no DB row), we send the card's metadata in the
@@ -281,7 +309,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.6, duration: 0.55 }}
+          transition={{ delay: isPremiumUser || watermarkRemoved ? 1.6 : 0, duration: 0.55 }}
           style={{
             position: "fixed",
             bottom: "max(96px, calc(env(safe-area-inset-bottom, 16px) + 76px))",
@@ -296,8 +324,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
         >
           <AnimatePresence mode="wait">
 
-            {/* ── LOCKED: Unlock & Share CTA ── */}
-            {!isPremiumUser && !watermarkRemoved && (
+            {/* ── LOCKED: Unlock & Share CTA — only shown after auto-open has fired ── */}
+            {!isPremiumUser && !watermarkRemoved && hasAutoOpened && (
               <motion.div
                 key="pay-cta"
                 initial={{ opacity: 0, y: 8 }}
