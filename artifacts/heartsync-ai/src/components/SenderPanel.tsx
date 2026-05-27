@@ -306,11 +306,11 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                 transition={{ duration: 0.3 }}
               >
                 <div style={{ textAlign: "center", marginBottom: 14 }}>
-                  <p style={{ fontSize: 15, color: "#FFD700", fontWeight: 800, letterSpacing: "0.01em", marginBottom: 4 }}>
-                    Your card for {recipientName} is ready ✨
+                  <p style={{ fontSize: 12, color: "#FFD700", fontWeight: 600, letterSpacing: "0.01em", marginBottom: 4 }}>
+                    You've created a stunning card! ✨
                   </p>
-                  <p style={{ fontSize: 11, color: "rgba(255,215,0,0.55)", fontWeight: 500 }}>
-                    Send the full surprise privately on WhatsApp instantly!
+                  <p style={{ fontSize: 17, color: "#FFD700", fontWeight: 800, letterSpacing: "0.01em" }}>
+                    Don't leave it unsent.
                   </p>
                 </div>
 
