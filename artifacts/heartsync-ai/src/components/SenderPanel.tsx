@@ -38,6 +38,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   // Unlock modal state
   const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockModalSlowOpen, setUnlockModalSlowOpen] = useState(false);
 
   const [showBundlePaywall, setShowBundlePaywall] = useState(false);
 
@@ -77,12 +78,13 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     if (isPremiumUser || watermarkRemoved) return;
     if (hasAutoOpened) return;
     if (!autoOpenKey) return;
-    const delay = 3500; // 3.5 seconds
+    const delay = 4000; // 4 seconds
     const timer = setTimeout(() => {
       try { sessionStorage.setItem(autoOpenKey, "1"); } catch { /* ignore */ }
       setHasAutoOpened(true);
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
       if (isMobile) {
+        setUnlockModalSlowOpen(true);
         setShowUnlockModal(true);
       } else {
         trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
@@ -347,6 +349,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   onClick={() => {
                     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
                     if (isMobile) {
+                      setUnlockModalSlowOpen(false);
                       setShowUnlockModal(true);
                     } else {
                       trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
@@ -496,6 +499,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
             recipientName={recipientName}
             occasion={occasion}
             senderShareUrl={senderShareUrl}
+            slowOpen={unlockModalSlowOpen}
             onClose={() => setShowUnlockModal(false)}
             onSuccess={() => {
               setWatermarkRemoved(true);

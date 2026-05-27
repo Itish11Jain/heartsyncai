@@ -63,6 +63,7 @@ interface Props {
   senderShareUrl: string;
   onClose: () => void;
   onSuccess: () => void;
+  slowOpen?: boolean;
 }
 
 export default function UnlockModal({
@@ -72,6 +73,7 @@ export default function UnlockModal({
   senderShareUrl,
   onClose,
   onSuccess,
+  slowOpen = false,
 }: Props) {
   const [phase, setPhase] = useState<ModalPhase>("preview");
   const [utrVisible, setUtrVisible] = useState(false);
@@ -278,7 +280,9 @@ export default function UnlockModal({
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        transition={{ type: "spring", stiffness: 300, damping: 35 }}
+        transition={slowOpen
+          ? { type: "spring", stiffness: 192, damping: 28 }
+          : { type: "spring", stiffness: 300, damping: 35 }}
         style={{
           width: "100%",
           maxWidth: 480,
