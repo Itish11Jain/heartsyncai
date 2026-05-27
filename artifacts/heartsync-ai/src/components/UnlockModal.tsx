@@ -326,7 +326,7 @@ export default function UnlockModal({
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 0 }}>
                       <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 13, fontWeight: 500 }}>₹149</span>
                       <span style={{ color: "rgba(255,215,0,0.9)", fontSize: 14, fontWeight: 800 }}>₹99</span>
-                      <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 12, fontWeight: 600 }}>· yours forever ✨</span>
+                      <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 12, fontWeight: 600 }}>· Get Link. Send on WhatsApp Instantly</span>
                     </div>
                   </div>
                   <button
