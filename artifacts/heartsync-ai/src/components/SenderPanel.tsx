@@ -84,6 +84,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       setHasAutoOpened(true);
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
       if (isMobile) {
+        trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
         setUnlockModalSlowOpen(true);
         setShowUnlockModal(true);
       } else {
