@@ -77,7 +77,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
     if (isPremiumUser || watermarkRemoved) return;
     if (hasAutoOpened) return;
     if (!autoOpenKey) return;
-    const delay = 2000; // 2 seconds
+    const delay = 3500; // 3.5 seconds
     const timer = setTimeout(() => {
       try { sessionStorage.setItem(autoOpenKey, "1"); } catch { /* ignore */ }
       setHasAutoOpened(true);
