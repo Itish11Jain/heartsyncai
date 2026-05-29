@@ -1,7 +1,7 @@
 /**
  * HeartSync AI — Gmail UTR Auto-Forwarder (final version)
  *
- * Finds HDFC ₹99 credit emails, extracts the UPI Reference No.,
+ * Finds HDFC ₹49 credit emails, extracts the UPI Reference No.,
  * and POSTs it to the HeartSync API so customers can unlock instantly.
  *
  * Uses PropertiesService to track processed message IDs so new payments
@@ -13,12 +13,12 @@
  * 2. Fill in HEARTSYNC_API_SECRET below
  * 3. Run → setupTrigger (approve Gmail permission)
  * 4. Run → reprocessPast  (catches any missed past emails)
- * Done — every new ₹99 credit is forwarded within 1 minute automatically.
+ * Done — every new ₹49 credit is forwarded within 1 minute automatically.
  */
 
 var HEARTSYNC_API_URL    = "https://heartsync.in/api/internal/upi-payment";
 var HEARTSYNC_API_SECRET = "PASTE_YOUR_ADMIN_SECRET_HERE";  // ← fill this in
-var AMOUNT_FILTER        = "99";
+var AMOUNT_FILTER        = "49";
 
 // ─── Main — runs every 1 minute ─────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ function processMessage(msg) {
 
   var amount = amountMatch[1].replace(/,/g, "");
   if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
-    Logger.log("Skipping non-₹99 payment: Rs." + amount + " | UTR " + utr);
+    Logger.log("Skipping non-₹49 payment: Rs." + amount + " | UTR " + utr);
     markProcessed(msg.getId());  // mark so we don't check again
     return;
   }

@@ -1719,7 +1719,7 @@ function SendInner() {
                     <h1 className="text-xl font-bold text-white mb-1 leading-tight">Remove Watermark | Go Premium</h1>
                     <p className="text-white/55 text-sm flex items-center justify-center gap-1.5 flex-wrap">
                       <span className="line-through text-white/25">₹149</span>
-                      <span className="text-yellow-300/80 font-bold">₹99</span>
+                      <span className="text-yellow-300/80 font-bold">₹49</span>
                       — yours forever.
                     </p>
                   </div>
@@ -1734,7 +1734,7 @@ function SendInner() {
                   >
                     <div>
                       <div className="flex items-baseline gap-2 mb-0.5">
-                        <div className="text-white font-extrabold text-xl leading-tight">₹99</div>
+                        <div className="text-white font-extrabold text-xl leading-tight">₹49</div>
                         <span className="line-through text-white/30 text-sm font-normal">₹149</span>
                         <span style={{ background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)", color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 99, letterSpacing: "0.04em" }}>⚡ Limited Time</span>
                       </div>
@@ -1749,7 +1749,7 @@ function SendInner() {
                     {(() => {
                       const UPI_DISPLAY = "110193250";
                       const UPI_VPA = "8905158970@upi";
-                      const amount = 99;
+                      const amount = 49;
                       const upiParams = [
                         `pa=${encodeURIComponent(UPI_VPA)}`,
                         `pn=${encodeURIComponent("HeartSync AI")}`,
@@ -1778,7 +1778,7 @@ function SendInner() {
                         <>
                           <div className="flex gap-3 items-center mb-4">
                             <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
-                              <img src={qrSrc} alt="UPI QR Code ₹99" className="w-24 h-24 rounded-lg" />
+                              <img src={qrSrc} alt="UPI QR Code ₹49" className="w-24 h-24 rounded-lg" />
                             </a>
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-[10px] text-white/45 mb-1 leading-tight">
@@ -1802,7 +1802,7 @@ function SendInner() {
                               </div>
                               <div className="flex items-center gap-1 mt-1">
                                 <Info className="w-3 h-3 text-white/25 shrink-0" />
-                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹99</span> — scan, tap, or copy</p>
+                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹49</span> — scan, tap, or copy</p>
                               </div>
                             </div>
                           </div>
@@ -2019,7 +2019,7 @@ function SendInner() {
                     <div className="flex flex-col items-end gap-0.5 shrink-0 mt-0.5">
                       <div className="flex items-center gap-1">
                         <span className="line-through text-white/25 text-xs">₹149</span>
-                        <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹99</span>
+                        <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹49</span>
                         <ArrowRight size={15} className="text-purple-300/50" />
                       </div>
                       <span style={{ background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)", color: "#ff7d5c", fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 99, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>⚡ Limited Time</span>

@@ -1155,7 +1155,7 @@ export default function CosmicCard() {
                         🔓 Unlock &amp; Share the card
                       </motion.button>
                       <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
-                        ₹99 one-time · No sign-in required
+                        ₹49 one-time · No sign-in required
                       </p>
                     </motion.div>
                   )

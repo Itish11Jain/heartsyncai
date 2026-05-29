@@ -33,7 +33,7 @@ function getMetaCookies(): { fbp: string | null; fbc: string | null } {
 }
 
 const UPI_ID = "9706900714@pthdfc";
-const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=99&cu=INR&tn=HeartSyncWebsitePayment`;
+const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment`;
 
 const UPI_APPS = [
   { label: "PhonePe", emoji: "💜", scheme: `phonepe://pay?${UPI_PARAMS}` },
@@ -329,7 +329,7 @@ export default function UnlockModal({
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 0 }}>
                       <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 13, fontWeight: 500 }}>₹149</span>
-                      <span style={{ color: "rgba(255,215,0,0.9)", fontSize: 14, fontWeight: 800 }}>₹99</span>
+                      <span style={{ color: "rgba(255,215,0,0.9)", fontSize: 14, fontWeight: 800 }}>₹49</span>
                       <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 12, fontWeight: 600 }}>· Get Link. Send on WhatsApp Instantly</span>
                     </div>
                   </div>
@@ -412,7 +412,7 @@ export default function UnlockModal({
                 >
                   🔓{" "}
                   <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 14, marginRight: 2 }}>₹149</span>
-                  {" "}Pay ₹99 &amp; Share
+                  {" "}Pay ₹49 &amp; Share
                 </motion.button>
               </motion.div>
             )}
@@ -460,7 +460,7 @@ export default function UnlockModal({
                           Pay{" "}
                           <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 15, fontWeight: 500 }}>₹149</span>
                           {" "}
-                          <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹99</span>
+                          <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹49</span>
                           {" "}via any UPI App
                         </div>
                         <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 22, lineHeight: 1.6 }}>
@@ -515,7 +515,7 @@ export default function UnlockModal({
                         {idCopied && (
                           <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "6px 0 2px", whiteSpace: "nowrap", fontWeight: 600 }}>
                             {autoLoading
-                              ? "Please pay Rs. 99 now if you have not paid yet."
+                              ? "Please pay Rs. 49 now if you have not paid yet."
                               : "Only click this if you have made the payment successfully"}
                           </p>
                         )}
@@ -544,7 +544,7 @@ export default function UnlockModal({
                         >
                           {autoLoading
                             ? `Checking payment… ${autoCountdown !== null ? `(${autoCountdown}s)` : ""}`
-                            : "I've Paid ₹99 →"}
+                            : "I've Paid ₹49 →"}
                         </motion.button>
 
                       </motion.div>

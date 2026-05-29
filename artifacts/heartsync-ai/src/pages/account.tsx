@@ -196,7 +196,7 @@ export default function Account() {
                   asChild
                   className="ml-auto shrink-0 h-8 px-4 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-400 text-black font-semibold text-xs hover:opacity-90"
                 >
-                  <Link href="/send">Upgrade ₹99</Link>
+                  <Link href="/send">Upgrade ₹49</Link>
                 </Button>
               )}
             </div>
