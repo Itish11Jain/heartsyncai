@@ -636,8 +636,8 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                   </div>
                 </div>
 
-                {/* Bundle upsell — shown when user doesn't already have a bundle */}
-                {!bundleToken && (
+                {/* Bundle upsell — shown when no bundle token OR credits exhausted */}
+                {(!bundleToken || bundleCredits === 0) && (
                   <div style={{ marginTop: 12 }}>
                     <Link href="/bundle">
                       <div

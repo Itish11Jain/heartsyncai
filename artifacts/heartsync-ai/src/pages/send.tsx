@@ -335,6 +335,16 @@ function SendInner() {
     return raw.trim().slice(0, 40);
   })();
 
+  // Persist bundle_token from URL into localStorage so SenderPanel can pick it up
+  // even after card.tsx redirects strip query params.
+  useEffect(() => {
+    const urlToken = searchParams.get("bundle_token");
+    if (urlToken && /^[0-9a-f-]{36}$/.test(urlToken)) {
+      try { localStorage.setItem("hs_bundle_token", urlToken); } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Restore draft (e.g. after a Clerk sign-in redirect bounced us back here).
   // When arriving via viral reply flow, skip the draft to start fresh.
   const initialDraft = isViralReply ? null : loadDraft();

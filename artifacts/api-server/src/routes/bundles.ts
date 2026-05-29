@@ -190,7 +190,7 @@ router.post("/bundles/:token/use-credit", async (req, res) => {
 
     if (bundle.cards_remaining <= 0) {
       await client.query("ROLLBACK");
-      res.status(409).json({ error: "no_credits", message: "No bundle credits remaining." });
+      res.status(400).json({ error: "no_credits", message: "No bundle credits remaining." });
       return;
     }
 
@@ -227,7 +227,7 @@ router.post("/bundles/:token/use-credit", async (req, res) => {
 
     if (updated.rows.length === 0) {
       await client.query("ROLLBACK");
-      res.status(409).json({ error: "no_credits", message: "No bundle credits remaining." });
+      res.status(400).json({ error: "no_credits", message: "No bundle credits remaining." });
       return;
     }
 
