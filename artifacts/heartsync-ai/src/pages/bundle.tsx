@@ -36,6 +36,8 @@ type Phase = "info" | "paying" | "success";
 export default function BundlePage() {
   const [, navigate] = useLocation();
   const [phase, setPhase] = useState<Phase>("info");
+  const [successToken, setSuccessToken] = useState<string | null>(null);
+  const [dashLinkCopied, setDashLinkCopied] = useState(false);
   const [upiCopied, setUpiCopied] = useState(false);
   const [utrVisible, setUtrVisible] = useState(false);
   const [utr, setUtr] = useState("");
@@ -57,6 +59,13 @@ export default function BundlePage() {
     setUpiCopied(true);
     trackEvent({ event: "bundle_upi_copied" });
   }, []);
+
+  function activateBundle(token: string, fromUtr: boolean) {
+    try { localStorage.setItem("hs_bundle_token", token); } catch { /* ignore */ }
+    trackEvent({ event: fromUtr ? "bundle_created_utr" : "bundle_created" });
+    setSuccessToken(token);
+    setPhase("success");
+  }
 
   async function handlePaymentDone() {
     if (autoLoading) return;
@@ -80,14 +89,15 @@ export default function BundlePage() {
 
     while (Date.now() < deadline) {
       try {
-        const res = await fetch(`${BASE}/api/bundles/create`, { method: "POST" });
+        const res = await fetch(`${BASE}/api/bundles/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
         if (res.ok) {
           const data = await res.json() as { token: string };
           cleanup();
-          try { localStorage.setItem("hs_bundle_token", data.token); } catch { /* ignore */ }
-          trackEvent({ event: "bundle_created" });
-          setPhase("success");
-          setTimeout(() => { navigate(`/my-cards/${data.token}`); }, 1800);
+          activateBundle(data.token, false);
           return;
         }
         if (res.status !== 402) {
@@ -126,18 +136,21 @@ export default function BundlePage() {
 
     while (Date.now() < deadline) {
       try {
-        const res = await fetch(`${BASE}/api/bundles/create`, { method: "POST" });
+        const res = await fetch(`${BASE}/api/bundles/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ utr_last4: trimmed }),
+        });
         if (res.ok) {
           const data = await res.json() as { token: string };
           cleanup();
-          try { localStorage.setItem("hs_bundle_token", data.token); } catch { /* ignore */ }
-          trackEvent({ event: "bundle_created_utr" });
-          setPhase("success");
-          setTimeout(() => { navigate(`/my-cards/${data.token}`); }, 1800);
+          activateBundle(data.token, true);
           return;
         }
-        if (res.status !== 402) {
-          const d = await res.json() as { message?: string };
+        if (res.status === 402) {
+          // keep polling — payment may arrive shortly
+        } else {
+          const d = await res.json().catch(() => ({})) as { message?: string };
           cleanup();
           setUtrError(d.message ?? "Verification failed. Please check your digits.");
           return;
@@ -148,6 +161,25 @@ export default function BundlePage() {
 
     cleanup();
     setUtrError("Payment not found yet. Wait a moment and try again.");
+  }
+
+  function copyDashLink() {
+    if (!successToken) return;
+    const url = `${window.location.origin}${BASE}/my-cards/${successToken}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setDashLinkCopied(true);
+    trackEvent({ event: "bundle_dashboard_link_copied" });
+  }
+
+  function shareDashWhatsApp() {
+    if (!successToken) return;
+    const url = `${window.location.origin}${BASE}/my-cards/${successToken}`;
+    const text = `💌 My HeartSync card bundle dashboard:\n${url}\n\nBookmark this link — it's my personal dashboard!`;
+    const a = document.createElement("a");
+    a.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    a.target = "_blank"; a.rel = "noopener noreferrer";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    trackEvent({ event: "bundle_dashboard_shared_wa" });
   }
 
   return (
@@ -361,11 +393,81 @@ export default function BundlePage() {
           )}
 
           {/* ── Success phase ── */}
-          {phase === "success" && (
-            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ textAlign: "center", padding: "60px 0" }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-              <div style={{ color: "#FFD700", fontWeight: 900, fontSize: 24, marginBottom: 10 }}>Bundle activated!</div>
-              <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 14 }}>Taking you to your card dashboard…</div>
+          {phase === "success" && successToken && (
+            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ padding: "40px 0" }}>
+              <div style={{ textAlign: "center", marginBottom: 28 }}>
+                <div style={{ fontSize: 60, marginBottom: 14 }}>🎉</div>
+                <div style={{ color: "#FFD700", fontWeight: 900, fontSize: 24, marginBottom: 8 }}>Bundle activated!</div>
+                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, lineHeight: 1.6 }}>
+                  You have <strong style={{ color: "#FFD700" }}>2 card unlocks</strong>.<br />
+                  Save your personal dashboard link below.
+                </div>
+              </div>
+
+              {/* Personal dashboard link — prominent */}
+              <div style={{
+                background: "rgba(255,215,0,0.07)", border: "1.5px solid rgba(255,215,0,0.25)",
+                borderRadius: 18, padding: "18px 20px", marginBottom: 14,
+              }}>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                  Your Personal Dashboard
+                </div>
+                <div style={{
+                  color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "monospace",
+                  wordBreak: "break-all", marginBottom: 14, lineHeight: 1.5,
+                }}>
+                  {`${window.location.origin}${BASE}/my-cards/${successToken}`}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={copyDashLink}
+                    style={{
+                      flex: 1, height: 44, borderRadius: 12,
+                      background: dashLinkCopied ? "rgba(74,222,128,0.15)" : "linear-gradient(135deg,#FFD700,#FFA500)",
+                      border: dashLinkCopied ? "1px solid rgba(74,222,128,0.35)" : "none",
+                      color: dashLinkCopied ? "#4ade80" : "#000",
+                      fontWeight: 800, fontSize: 14, cursor: "pointer",
+                    }}
+                  >
+                    {dashLinkCopied ? "Copied ✓" : "📋 Copy Link"}
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={shareDashWhatsApp}
+                    style={{
+                      flex: 1, height: 44, borderRadius: 12,
+                      background: "linear-gradient(135deg,#25D366,#128C7E)",
+                      border: "none", color: "#fff",
+                      fontWeight: 800, fontSize: 14, cursor: "pointer",
+                    }}
+                  >
+                    📲 WhatsApp
+                  </motion.button>
+                </div>
+              </div>
+
+              <div style={{
+                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 14, padding: "12px 16px", marginBottom: 22,
+                fontSize: 12, color: "rgba(255,255,255,0.35)", textAlign: "center", lineHeight: 1.6,
+              }}>
+                🔖 Bookmark this link — it's your secret dashboard.<br />
+                You'll come back here to manage your cards.
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate(`/my-cards/${successToken}`)}
+                style={{
+                  width: "100%", height: 52, borderRadius: 16,
+                  background: "linear-gradient(135deg,#FFD700,#FFAA00)",
+                  border: "none", color: "#000", fontWeight: 900, fontSize: 17,
+                  cursor: "pointer", boxShadow: "0 6px 24px rgba(255,165,0,0.4)",
+                }}
+              >
+                Go to My Dashboard →
+              </motion.button>
             </motion.div>
           )}
 

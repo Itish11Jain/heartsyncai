@@ -5,59 +5,100 @@ const router = Router();
 
 /**
  * POST /api/bundles/create
- * No auth required. Finds the most recent unused ₹49 payment (within last
- * 5 minutes) and creates a bundle with 2 card unlocks. Marks the payment
- * as used with unlock_method='bundle_purchase'.
- * Returns { token, cards_remaining: 2 }
+ * No auth required. Two modes:
+ *   - With utr_last4 (4 digits): matches against RIGHT(utr,4) in hs_received_payments.
+ *   - Without utr_last4: auto-detect most recent unused payment within last 5 minutes.
+ * Everything runs in a single transaction with a FOR UPDATE row lock so concurrent
+ * callers cannot claim the same payment. Returns { token, cards_remaining: 2 }.
  */
 router.post("/bundles/create", async (req, res) => {
-  try {
-    const { rows } = await pool.query<{ id: number; utr: string; raw_sms: string | null }>(
-      `SELECT id, utr, raw_sms FROM hs_received_payments
-       WHERE used_at IS NULL
-         AND created_at > NOW() - INTERVAL '5 minutes'
-       ORDER BY created_at DESC LIMIT 1`,
-    );
+  const { utr_last4 } = (req.body ?? {}) as { utr_last4?: unknown };
 
-    if (rows.length === 0) {
-      res.status(402).json({ error: "payment_not_found", message: "No recent payment detected yet." });
-      return;
+  const hasExplicitUtr =
+    typeof utr_last4 === "string" && /^\d{4}$/.test(utr_last4.trim());
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    let payment: { id: number; utr: string; raw_sms: string | null } | null = null;
+
+    if (hasExplicitUtr) {
+      const { rows } = await client.query<{ id: number; utr: string; raw_sms: string | null }>(
+        `SELECT id, utr, raw_sms FROM hs_received_payments
+         WHERE RIGHT(utr, 4) = $1
+           AND used_at IS NULL
+         ORDER BY created_at DESC LIMIT 1
+         FOR UPDATE`,
+        [(utr_last4 as string).trim()],
+      );
+      if (rows.length === 0) {
+        await client.query("ROLLBACK");
+        res.status(402).json({
+          error: "payment_not_found",
+          message: "Payment not verified. Please check your last 4 digits and try again.",
+        });
+        return;
+      }
+      payment = rows[0]!;
+    } else {
+      const { rows } = await client.query<{ id: number; utr: string; raw_sms: string | null }>(
+        `SELECT id, utr, raw_sms FROM hs_received_payments
+         WHERE used_at IS NULL
+           AND created_at > NOW() - INTERVAL '5 minutes'
+         ORDER BY created_at DESC LIMIT 1
+         FOR UPDATE`,
+      );
+      if (rows.length === 0) {
+        await client.query("ROLLBACK");
+        res.status(402).json({ error: "payment_not_found", message: "No recent payment detected yet." });
+        return;
+      }
+      payment = rows[0]!;
     }
 
-    const payment = rows[0]!;
-
-    // Extract payer name from raw SMS (optional, for display)
+    // Extract payer name from raw SMS for the dashboard
     let upiName: string | null = null;
     if (payment.raw_sms) {
       const nameMatch = payment.raw_sms.match(/from\s+([A-Za-z\s]+?)(?:\s+via|\s+on|\s+UPI|$)/i);
       if (nameMatch?.[1]) upiName = nameMatch[1].trim().slice(0, 60);
     }
 
-    const bundleResult = await pool.query<{ id: string }>(
+    // Insert bundle — utr is UNIQUE so ON CONFLICT catches duplicate claims
+    const bundleResult = await client.query<{ id: string }>(
       `INSERT INTO hs_card_bundles (utr, upi_name, cards_remaining)
        VALUES ($1, $2, 2)
-       ON CONFLICT DO NOTHING
+       ON CONFLICT (utr) DO NOTHING
        RETURNING id`,
       [payment.utr, upiName],
     );
 
     if (bundleResult.rows.length === 0) {
-      res.status(409).json({ error: "duplicate_payment", message: "This payment has already been used." });
+      await client.query("ROLLBACK");
+      res.status(409).json({ error: "duplicate_payment", message: "This payment has already been used for a bundle." });
       return;
     }
 
     const token = bundleResult.rows[0]!.id;
 
-    await pool.query(
-      `UPDATE hs_received_payments SET used_at = NOW(), unlock_method = 'bundle_purchase' WHERE utr = $1`,
+    // Mark the payment as consumed in the same transaction
+    await client.query(
+      `UPDATE hs_received_payments
+       SET used_at = NOW(), unlock_method = 'bundle_purchase'
+       WHERE utr = $1`,
       [payment.utr],
     );
 
-    console.log(`[bundles] created bundle=${token} utr=${payment.utr}`);
+    await client.query("COMMIT");
+
+    console.log(`[bundles] created bundle=${token} utr=${payment.utr} explicit_utr=${hasExplicitUtr}`);
     res.json({ ok: true, token, cards_remaining: 2 });
   } catch (err) {
+    try { await client.query("ROLLBACK"); } catch { /* ignore */ }
     console.error("[bundles] POST /bundles/create error", err);
     res.status(500).json({ error: "internal_error", message: "Something went wrong. Please try again." });
+  } finally {
+    client.release();
   }
 });
 
@@ -120,9 +161,9 @@ router.get("/bundles/:token", async (req, res) => {
 
 /**
  * POST /api/bundles/:token/use-credit
- * No auth required. Decrements cards_remaining and unlocks the specified card.
+ * No auth required. Decrements cards_remaining (row-locked) and unlocks the
+ * specified card. Returns { ok: true, cards_remaining: number }.
  * Body: { card_id: string }
- * Returns { ok: true, cards_remaining: number }
  */
 router.post("/bundles/:token/use-credit", async (req, res) => {
   const { token } = req.params;
@@ -142,6 +183,7 @@ router.post("/bundles/:token/use-credit", async (req, res) => {
   try {
     await client.query("BEGIN");
 
+    // Lock the bundle row to prevent concurrent double-spend
     const bundleRow = await client.query<{ id: string; cards_remaining: number }>(
       `SELECT id, cards_remaining FROM hs_card_bundles WHERE id = $1 FOR UPDATE`,
       [token],
@@ -172,7 +214,7 @@ router.post("/bundles/:token/use-credit", async (req, res) => {
       return;
     }
 
-    // Check if card is already unlocked by any means
+    // Check if card is already unlocked by any other means
     const cardRow = await client.query<{ is_watermarked: boolean }>(
       `SELECT is_watermarked FROM hs_cards WHERE id = $1`,
       [card_id],
@@ -183,9 +225,10 @@ router.post("/bundles/:token/use-credit", async (req, res) => {
       return;
     }
 
-    // Decrement credits
+    // Decrement credits — re-check > 0 inside UPDATE for safety
     const updated = await client.query<{ cards_remaining: number }>(
-      `UPDATE hs_card_bundles SET cards_remaining = cards_remaining - 1
+      `UPDATE hs_card_bundles
+       SET cards_remaining = cards_remaining - 1
        WHERE id = $1 AND cards_remaining > 0
        RETURNING cards_remaining`,
       [token],
@@ -199,7 +242,7 @@ router.post("/bundles/:token/use-credit", async (req, res) => {
 
     const newRemaining = updated.rows[0]!.cards_remaining;
 
-    // Unlock card
+    // Unlock card and associate with this bundle
     await client.query(
       `INSERT INTO hs_cards (id, is_watermarked, is_premium, bundle_id)
        VALUES ($1, FALSE, TRUE, $2)

@@ -50,8 +50,13 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   useEffect(() => {
     try {
-      const token = localStorage.getItem("hs_bundle_token");
+      // Prefer bundle_token from URL params (set by /my-cards create link), fallback to localStorage
+      const urlToken = new URLSearchParams(window.location.search).get("bundle_token");
+      const stored = localStorage.getItem("hs_bundle_token");
+      const token = (urlToken && /^[0-9a-f-]{36}$/.test(urlToken)) ? urlToken : stored;
       if (!token || !/^[0-9a-f-]{36}$/.test(token)) return;
+      // Persist whichever token we resolved so later visits work
+      try { localStorage.setItem("hs_bundle_token", token); } catch { /* ignore */ }
       setBundleToken(token);
       // Fetch current credit balance
       fetch(`${BASE}/api/bundles/${token}`)

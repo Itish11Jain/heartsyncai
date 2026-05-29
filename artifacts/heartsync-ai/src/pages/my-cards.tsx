@@ -195,7 +195,7 @@ export default function MyCardsPage() {
         {/* Create card CTA */}
         {creditsRemaining > 0 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Link href="/send">
+            <Link href={`/send?bundle_token=${token}`}>
               <motion.div
                 whileTap={{ scale: 0.97 }}
                 style={{
@@ -303,24 +303,31 @@ export default function MyCardsPage() {
           </div>
         )}
 
-        {!hasUnlockedCards && creditsRemaining === 0 && (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, marginBottom: 20 }}>
-              All credits used — get another bundle to keep going!
-            </div>
+        {creditsRemaining === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            style={{ textAlign: "center", padding: "8px 0 24px" }}
+          >
+            {!hasUnlockedCards && (
+              <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, marginBottom: 16 }}>
+                All credits used — get another bundle to keep going!
+              </div>
+            )}
             <Link href="/bundle">
               <motion.div
                 whileTap={{ scale: 0.97 }}
                 style={{
-                  display: "inline-block", padding: "14px 32px", borderRadius: 14,
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "14px 32px", borderRadius: 14,
                   background: "linear-gradient(135deg,#FFD700,#FFAA00)",
                   color: "#000", fontWeight: 800, fontSize: 16, cursor: "pointer",
+                  boxShadow: "0 4px 20px rgba(255,165,0,0.3)",
                 }}
               >
-                Get Another Bundle
+                💌 Get 2 more cards · ₹49
               </motion.div>
             </Link>
-          </div>
+          </motion.div>
         )}
 
         {/* Bookmark reminder */}

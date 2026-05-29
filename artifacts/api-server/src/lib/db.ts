@@ -161,7 +161,7 @@ export async function initDb(): Promise<void> {
     -- Bundle upsell: 2-card unlocks for ₹49, keyed by secret UUID token.
     CREATE TABLE IF NOT EXISTS hs_card_bundles (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      utr           TEXT NOT NULL,
+      utr           TEXT NOT NULL UNIQUE,
       upi_name      TEXT,
       cards_remaining INTEGER NOT NULL DEFAULT 2,
       created_at    TIMESTAMPTZ DEFAULT NOW()
