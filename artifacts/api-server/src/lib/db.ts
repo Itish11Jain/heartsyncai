@@ -167,6 +167,16 @@ export async function initDb(): Promise<void> {
       created_at    TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS hs_card_bundles_utr_idx ON hs_card_bundles(utr);
+    -- Ensure UNIQUE constraint exists (idempotent — safe to run on existing tables)
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name = 'hs_card_bundles' AND constraint_type = 'UNIQUE'
+        AND constraint_name = 'hs_card_bundles_utr_key'
+      ) THEN
+        ALTER TABLE hs_card_bundles ADD CONSTRAINT hs_card_bundles_utr_key UNIQUE (utr);
+      END IF;
+    END $$;
     -- Track which bundle was used to unlock a card (NULL = paid individually)
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS bundle_id UUID;
   `);
