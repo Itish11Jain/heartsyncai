@@ -42,6 +42,29 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   const [showBundlePaywall, setShowBundlePaywall] = useState(false);
 
+  // Bundle credit state — read from localStorage (set when visiting /my-cards/:token)
+  const [bundleToken, setBundleToken] = useState<string | null>(null);
+  const [bundleCredits, setBundleCredits] = useState<number>(0);
+  const [bundleLoading, setBundleLoading] = useState(false);
+  const [bundleError, setBundleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("hs_bundle_token");
+      if (!token || !/^[0-9a-f-]{36}$/.test(token)) return;
+      setBundleToken(token);
+      // Fetch current credit balance
+      fetch(`${BASE}/api/bundles/${token}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data: { cards_remaining?: number } | null) => {
+          if (data && typeof data.cards_remaining === "number") {
+            setBundleCredits(data.cards_remaining);
+          }
+        })
+        .catch(() => { /* ignore */ });
+    } catch { /* ignore */ }
+  }, []);
+
   // Auto-open bottom sheet once per card/session
   const autoOpenKey = cardId ? `hs_ao_${cardId}` : null;
   const [hasAutoOpened, setHasAutoOpened] = useState(() => {
@@ -220,6 +243,33 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn, showSignIn]);
 
+  async function handleBundleUnlock() {
+    if (!bundleToken || bundleCredits <= 0 || bundleLoading) return;
+    setBundleLoading(true);
+    setBundleError(null);
+    try {
+      const res = await fetch(`${BASE}/api/bundles/${bundleToken}/use-credit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ card_id: cardId }),
+      });
+      const data = await res.json() as { ok?: boolean; cards_remaining?: number; error?: string; message?: string };
+      if (res.ok && data.ok) {
+        setBundleCredits(data.cards_remaining ?? 0);
+        setWatermarkRemoved(true);
+        trackEvent({ event: "bundle_credit_used", card_id: cardId, occasion });
+      } else if (data.error === "already_unlocked" || data.error === "already_used") {
+        setWatermarkRemoved(true);
+      } else {
+        setBundleError(data.message ?? "Something went wrong. Please try again.");
+      }
+    } catch {
+      setBundleError("Network error. Please try again.");
+    } finally {
+      setBundleLoading(false);
+    }
+  }
+
   function handleRemoveWatermarkClick() {
     if (isLoaded && isSignedIn) {
       removeWatermarkFree();
@@ -336,46 +386,94 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.3 }}
               >
-                <div style={{ textAlign: "center", marginBottom: 14 }}>
-                  <p style={{ fontSize: 12, color: "#FFD700", fontWeight: 600, letterSpacing: "0.01em", marginBottom: 4 }}>
-                    You've created a stunning card! ✨
-                  </p>
-                  <p style={{ fontSize: 17, color: "#FFD700", fontWeight: 800, letterSpacing: "0.01em" }}>
-                    Don't leave it now.
-                  </p>
-                </div>
+                {/* Bundle credit unlock — shown when user has a bundle token */}
+                {bundleToken && bundleCredits > 0 ? (
+                  <>
+                    <div style={{ textAlign: "center", marginBottom: 12 }}>
+                      <p style={{ fontSize: 12, color: "#4ade80", fontWeight: 700, marginBottom: 2 }}>
+                        💌 You have {bundleCredits} bundle credit{bundleCredits !== 1 ? "s" : ""} left
+                      </p>
+                      <p style={{ fontSize: 15, color: "#fff", fontWeight: 700 }}>
+                        Unlock this card for free!
+                      </p>
+                    </div>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => void handleBundleUnlock()}
+                      disabled={bundleLoading}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        width: "100%", height: 56, borderRadius: 16,
+                        background: bundleLoading ? "rgba(74,222,128,0.2)" : "linear-gradient(135deg,#22c55e,#16a34a)",
+                        color: "#fff", fontWeight: 800, fontSize: 17,
+                        border: "none", cursor: bundleLoading ? "default" : "pointer",
+                        boxShadow: "0 6px 28px rgba(34,197,94,0.4)",
+                      }}
+                    >
+                      {bundleLoading ? "Unlocking…" : "✓ Use Bundle Credit — Free"}
+                    </motion.button>
+                    {bundleError && (
+                      <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginTop: 8, fontWeight: 600 }}>
+                        {bundleError}
+                      </p>
+                    )}
+                    <div style={{ marginTop: 10, textAlign: "center" }}>
+                      <button
+                        onClick={() => {
+                          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+                          if (isMobile) { setUnlockModalSlowOpen(false); setShowUnlockModal(true); }
+                          else { trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId }); setShowBundlePaywall(true); }
+                        }}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "rgba(255,255,255,0.2)" }}
+                      >
+                        Pay ₹49 instead
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ textAlign: "center", marginBottom: 14 }}>
+                      <p style={{ fontSize: 12, color: "#FFD700", fontWeight: 600, letterSpacing: "0.01em", marginBottom: 4 }}>
+                        You've created a stunning card! ✨
+                      </p>
+                      <p style={{ fontSize: 17, color: "#FFD700", fontWeight: 800, letterSpacing: "0.01em" }}>
+                        Don't leave it now.
+                      </p>
+                    </div>
 
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => {
-                    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
-                    if (isMobile) {
-                      setUnlockModalSlowOpen(false);
-                      setShowUnlockModal(true);
-                    } else {
-                      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
-                      setShowBundlePaywall(true);
-                    }
-                  }}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    width: "100%", height: 56, borderRadius: 16,
-                    background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
-                    color: "#000", fontWeight: 800, fontSize: 17,
-                    border: "none", cursor: "pointer",
-                    boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
-                  }}
-                >
-                  Make {recipientName} smile. Send now. ❤️
-                </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => {
+                        const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+                        if (isMobile) {
+                          setUnlockModalSlowOpen(false);
+                          setShowUnlockModal(true);
+                        } else {
+                          trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+                          setShowBundlePaywall(true);
+                        }
+                      }}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        width: "100%", height: 56, borderRadius: 16,
+                        background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                        color: "#000", fontWeight: 800, fontSize: 17,
+                        border: "none", cursor: "pointer",
+                        boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
+                      }}
+                    >
+                      Make {recipientName} smile. Send now. ❤️
+                    </motion.button>
 
-                <div style={{ marginTop: 10, textAlign: "center" }}>
-                  <Link href="/send">
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", cursor: "pointer" }}>
-                      Make another card
-                    </span>
-                  </Link>
-                </div>
+                    <div style={{ marginTop: 10, textAlign: "center" }}>
+                      <Link href="/send">
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", cursor: "pointer" }}>
+                          Make another card
+                        </span>
+                      </Link>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
 
@@ -477,6 +575,32 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
                   </div>
                 </div>
+
+                {/* Bundle upsell — shown when user doesn't already have a bundle */}
+                {!bundleToken && (
+                  <div style={{ marginTop: 12 }}>
+                    <Link href="/bundle">
+                      <div
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "11px 16px", borderRadius: 14,
+                          background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.15)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: "#FFD700", marginBottom: 1 }}>
+                            💌 2 cards for ₹49
+                          </div>
+                          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                            Next card is on us — get a bundle
+                          </div>
+                        </div>
+                        <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 14 }}>→</span>
+                      </div>
+                    </Link>
+                  </div>
+                )}
 
                 <div style={{ marginTop: 10, textAlign: "center" }}>
                   <Link href="/send">

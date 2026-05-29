@@ -11,6 +11,7 @@ import shareRouter from "./share";
 import cardsRouter from "./cards";
 import uploadRouter from "./upload";
 import internalRouter from "./internal";
+import bundlesRouter from "./bundles";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(shareRouter);
 router.use(cardsRouter);
 router.use(uploadRouter);
 router.use(internalRouter);
+router.use(bundlesRouter);
 
 export default router;

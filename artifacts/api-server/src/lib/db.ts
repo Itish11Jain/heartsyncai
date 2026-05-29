@@ -157,6 +157,18 @@ export async function initDb(): Promise<void> {
     -- time so server-side Purchase events can include fbp/fbc in user_data.
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS fbp TEXT;
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS fbc TEXT;
+
+    -- Bundle upsell: 2-card unlocks for ₹49, keyed by secret UUID token.
+    CREATE TABLE IF NOT EXISTS hs_card_bundles (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      utr           TEXT NOT NULL,
+      upi_name      TEXT,
+      cards_remaining INTEGER NOT NULL DEFAULT 2,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_card_bundles_utr_idx ON hs_card_bundles(utr);
+    -- Track which bundle was used to unlock a card (NULL = paid individually)
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS bundle_id UUID;
   `);
 
   /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal

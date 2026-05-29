@@ -41,6 +41,8 @@ const Send = lazy(() => import("@/pages/send"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const RemoveWatermark = lazy(() => import("@/pages/remove-watermark"));
 const Account = lazy(() => import("@/pages/account"));
+const BundlePage = lazy(() => import("@/pages/bundle"));
+const MyCardsPage = lazy(() => import("@/pages/my-cards"));
 
 /* ── Admin (secret key gate, no Clerk needed) ───────────────────────── */
 const AdminPage = lazy(() => import("@/pages/admin"));
@@ -114,6 +116,8 @@ function AppRoutes() {
           Clerk is mounted concurrently via ClerkBridgeForSend inside the Send
           component itself. Auth state is bridged via SendAuthCtx. */}
       <Route path="/send"><L><Send /></L></Route>
+      <Route path="/bundle"><L><BundlePage /></L></Route>
+      <Route path="/my-cards/:token"><L><MyCardsPage /></L></Route>
       <Route path="/hs-admin"><L><AdminPage /></L></Route>
 
       {/* Auth-required — only matched when ClerkAuthLayer is mounted around the Switch. */}
