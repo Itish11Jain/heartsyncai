@@ -29,12 +29,6 @@ const OCCASIONS = [
   { id: "sorry", emoji: "💔", label: "Sorry" },
 ];
 
-const UPI_APPS = [
-  { label: "PhonePe", emoji: "💜", scheme: `phonepe://pay?${UPI_PARAMS}` },
-  { label: "GPay",    emoji: "🔵", scheme: `tez://upi/pay?${UPI_PARAMS}` },
-  { label: "Paytm",   emoji: "🔷", scheme: `paytmmp://pay?${UPI_PARAMS}` },
-  { label: "BHIM",    emoji: "🟠", scheme: `upi://pay?${UPI_PARAMS}` },
-];
 
 function isSequential(v: string): boolean {
   const d = v.trim().split("").map(Number);
@@ -324,26 +318,6 @@ export default function BundlePage() {
                     {upiCopied ? "Copied ✓" : "Copy"}
                   </motion.button>
                 </div>
-              </div>
-
-              {/* UPI app deep links */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                {UPI_APPS.map((app) => (
-                  <motion.a
-                    key={app.label}
-                    href={app.scheme}
-                    whileTap={{ scale: 0.92 }}
-                    style={{
-                      flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-                      gap: 4, padding: "12px 4px",
-                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
-                      borderRadius: 12, cursor: "pointer", textDecoration: "none",
-                    }}
-                  >
-                    <span style={{ fontSize: 22 }}>{app.emoji}</span>
-                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>{app.label}</span>
-                  </motion.a>
-                ))}
               </div>
 
               {/* Payment done / UTR entry */}
