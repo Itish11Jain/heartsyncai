@@ -14,48 +14,39 @@ const router = Router();
 router.post("/bundles/create", async (req, res) => {
   const { utr_last4 } = (req.body ?? {}) as { utr_last4?: unknown };
 
-  const hasExplicitUtr =
-    typeof utr_last4 === "string" && /^\d{4}$/.test(utr_last4.trim());
+  if (typeof utr_last4 !== "string" || !/^\d{4}$/.test(utr_last4.trim())) {
+    res.status(400).json({
+      error: "utr_required",
+      message: "Please enter the last 4 digits of your UPI transaction ID.",
+    });
+    return;
+  }
+
+  const utr4 = utr_last4.trim();
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    let payment: { id: number; utr: string; raw_sms: string | null } | null = null;
+    const { rows } = await client.query<{ id: number; utr: string; raw_sms: string | null }>(
+      `SELECT id, utr, raw_sms FROM hs_received_payments
+       WHERE RIGHT(utr, 4) = $1
+         AND used_at IS NULL
+       ORDER BY created_at DESC LIMIT 1
+       FOR UPDATE`,
+      [utr4],
+    );
 
-    if (hasExplicitUtr) {
-      const { rows } = await client.query<{ id: number; utr: string; raw_sms: string | null }>(
-        `SELECT id, utr, raw_sms FROM hs_received_payments
-         WHERE RIGHT(utr, 4) = $1
-           AND used_at IS NULL
-         ORDER BY created_at DESC LIMIT 1
-         FOR UPDATE`,
-        [(utr_last4 as string).trim()],
-      );
-      if (rows.length === 0) {
-        await client.query("ROLLBACK");
-        res.status(402).json({
-          error: "payment_not_found",
-          message: "Payment not verified. Please check your last 4 digits and try again.",
-        });
-        return;
-      }
-      payment = rows[0]!;
-    } else {
-      const { rows } = await client.query<{ id: number; utr: string; raw_sms: string | null }>(
-        `SELECT id, utr, raw_sms FROM hs_received_payments
-         WHERE used_at IS NULL
-           AND created_at > NOW() - INTERVAL '5 minutes'
-         ORDER BY created_at DESC LIMIT 1
-         FOR UPDATE`,
-      );
-      if (rows.length === 0) {
-        await client.query("ROLLBACK");
-        res.status(402).json({ error: "payment_not_found", message: "No recent payment detected yet." });
-        return;
-      }
-      payment = rows[0]!;
+    if (rows.length === 0) {
+      await client.query("ROLLBACK");
+      res.status(402).json({
+        error: "payment_not_found",
+        message: "Payment not verified. Please check your last 4 digits and try again.",
+      });
+      return;
     }
+
+    const payment = rows[0]!;
 
     // Extract payer name from raw SMS for the dashboard
     let upiName: string | null = null;

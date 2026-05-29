@@ -6,6 +6,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
+import { TemplatePreview } from "@/components/template-preview";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -13,42 +14,10 @@ const UPI_ID = "9706900714@pthdfc";
 const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncBundlePayment`;
 
 const TEMPLATE_PREVIEWS = [
-  {
-    id: "envelope",
-    label: "Envelope",
-    badge: "FREE",
-    badgeColor: "#4ade80",
-    gradient: "linear-gradient(135deg, #2d1b69 0%, #6b21a8 60%, #9d174d 100%)",
-    icon: "💌",
-    desc: "Classic, heartfelt",
-  },
-  {
-    id: "cosmic",
-    label: "Cosmic",
-    badge: "PREMIUM",
-    badgeColor: "#FFD700",
-    gradient: "linear-gradient(135deg, #0a0020 0%, #1a0050 40%, #2d0080 70%, #0a0040 100%)",
-    icon: "🌌",
-    desc: "Starry & magical",
-  },
-  {
-    id: "crystal",
-    label: "Crystal",
-    badge: "PREMIUM",
-    badgeColor: "#FFD700",
-    gradient: "linear-gradient(135deg, #042f4e 0%, #0e7490 40%, #06b6d4 70%, #0369a1 100%)",
-    icon: "🔮",
-    desc: "Mystical & glowing",
-  },
-  {
-    id: "vinyl",
-    label: "Vinyl",
-    badge: "PREMIUM",
-    badgeColor: "#FFD700",
-    gradient: "linear-gradient(135deg, #1c1008 0%, #451a03 40%, #92400e 70%, #78350f 100%)",
-    icon: "🎵",
-    desc: "Warm & nostalgic",
-  },
+  { id: "envelope" as const, label: "Envelope", badge: "FREE",    badgeColor: "#4ade80", desc: "Classic, heartfelt",  bg: "linear-gradient(145deg,#1a0a30,#3d1a5e)" },
+  { id: "cosmic"   as const, label: "Cosmic",   badge: "PREMIUM", badgeColor: "#FFD700", desc: "Starry & magical",   bg: "linear-gradient(145deg,#04001a,#0d0034)" },
+  { id: "crystal"  as const, label: "Crystal",  badge: "PREMIUM", badgeColor: "#FFD700", desc: "Mystical & glowing", bg: "linear-gradient(145deg,#04091a,#0a1e3d)" },
+  { id: "vinyl"    as const, label: "Vinyl",     badge: "PREMIUM", badgeColor: "#FFD700", desc: "Warm & nostalgic",   bg: "linear-gradient(145deg,#120a04,#2a1608)" },
 ];
 
 const OCCASIONS = [
@@ -263,7 +232,7 @@ export default function BundlePage() {
                 </div>
               </div>
 
-              {/* Template carousel */}
+              {/* Template carousel — uses real animated TemplatePreview components */}
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 12 }}>
                   Choose any template
@@ -280,23 +249,26 @@ export default function BundlePage() {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.07 }}
                       style={{
-                        flexShrink: 0, width: 140, borderRadius: 18,
-                        background: tpl.gradient,
-                        padding: "18px 14px 14px",
+                        flexShrink: 0, width: 136, borderRadius: 18,
+                        background: tpl.bg,
+                        padding: "16px 12px 12px",
                         border: "1px solid rgba(255,255,255,0.1)",
                         boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-                        cursor: "default",
+                        display: "flex", flexDirection: "column", alignItems: "center",
                       }}
                     >
-                      <div style={{ fontSize: 38, marginBottom: 10, textAlign: "center" }}>{tpl.icon}</div>
-                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 14, marginBottom: 4, textAlign: "center" }}>
+                      {/* Live animated template preview */}
+                      <div style={{ marginBottom: 10, width: 88, height: 88, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <TemplatePreview id={tpl.id} size={tpl.id === "envelope" ? 88 : 80} />
+                      </div>
+                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, marginBottom: 3, textAlign: "center" }}>
                         {tpl.label}
                       </div>
-                      <div style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                      <div style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
                         {tpl.desc}
                       </div>
                       <div style={{
-                        display: "inline-block", padding: "2px 8px", borderRadius: 99,
+                        padding: "2px 8px", borderRadius: 99,
                         background: tpl.badge === "FREE" ? "rgba(74,222,128,0.18)" : "rgba(255,215,0,0.15)",
                         border: `1px solid ${tpl.badge === "FREE" ? "rgba(74,222,128,0.4)" : "rgba(255,215,0,0.35)"}`,
                         fontSize: 9, fontWeight: 800, color: tpl.badgeColor,
@@ -427,29 +399,18 @@ export default function BundlePage() {
               <AnimatePresence mode="wait">
                 {!utrVisible ? (
                   <motion.div key="done-btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    {autoLoading ? (
-                      <div style={{ textAlign: "center", padding: "14px 0" }}>
-                        <div style={{ color: "#FFD700", fontWeight: 700, fontSize: 15, marginBottom: 6 }}>
-                          Checking payment… {autoCountdown !== null ? `(${autoCountdown}s)` : ""}
-                        </div>
-                        <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>
-                          Hang on while we verify your payment
-                        </div>
-                      </div>
-                    ) : (
-                      <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={handlePaymentDone}
-                        style={{
-                          width: "100%", height: 54, borderRadius: 16,
-                          background: "linear-gradient(135deg,#FFD700,#FFAA00)",
-                          border: "none", color: "#000", fontWeight: 800, fontSize: 17,
-                          cursor: "pointer", boxShadow: "0 6px 24px rgba(255,165,0,0.4)",
-                        }}
-                      >
-                        I've paid ₹49 ✓
-                      </motion.button>
-                    )}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setUtrVisible(true)}
+                      style={{
+                        width: "100%", height: 54, borderRadius: 16,
+                        background: "linear-gradient(135deg,#FFD700,#FFAA00)",
+                        border: "none", color: "#000", fontWeight: 800, fontSize: 17,
+                        cursor: "pointer", boxShadow: "0 6px 24px rgba(255,165,0,0.4)",
+                      }}
+                    >
+                      I've paid ₹49 ✓
+                    </motion.button>
                   </motion.div>
                 ) : (
                   <motion.div key="utr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>

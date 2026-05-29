@@ -77,6 +77,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   useEffect(() => {
     if (!isLoaded) return;
+    if (phase !== "finale") return;  // only consume credits at finale, not earlier
     if (autoUnlockDoneRef.current) return;
     if (!bundleToken || bundleCredits <= 0) return;
     if (isPremiumUser || watermarkRemoved) return;
@@ -103,7 +104,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
       .catch(() => { /* ignore */ })
       .finally(() => setBundleLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, bundleToken, bundleCredits, isPremiumUser, watermarkRemoved]);
+  }, [isLoaded, phase, bundleToken, bundleCredits, isPremiumUser, watermarkRemoved]);
 
   const autoOpenKey = cardId ? `hs_ao_${cardId}` : null;
   const [hasAutoOpened, setHasAutoOpened] = useState(() => {
