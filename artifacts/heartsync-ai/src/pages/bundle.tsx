@@ -60,10 +60,7 @@ export default function BundlePage() {
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
-  const [autoLoading, setAutoLoading] = useState(false);
-  const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
   const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -82,52 +79,6 @@ export default function BundlePage() {
     trackEvent({ event: fromUtr ? "bundle_created_utr" : "bundle_created" });
     setSuccessToken(token);
     setPhase("success");
-  }
-
-  async function handlePaymentDone() {
-    if (autoLoading) return;
-    trackEvent({ event: "bundle_payment_done_clicked" });
-    setAutoLoading(true);
-
-    const TIMEOUT_S = 60;
-    const POLL_MS   = 3000;
-    const deadline  = Date.now() + TIMEOUT_S * 1000;
-
-    setAutoCountdown(TIMEOUT_S);
-    const ticker = setInterval(() => {
-      setAutoCountdown(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
-    }, 1000);
-
-    const cleanup = () => {
-      clearInterval(ticker);
-      setAutoLoading(false);
-      setAutoCountdown(null);
-    };
-
-    while (Date.now() < deadline) {
-      try {
-        const res = await fetch(`${BASE}/api/bundles/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        if (res.ok) {
-          const data = await res.json() as { token: string };
-          cleanup();
-          activateBundle(data.token, false);
-          return;
-        }
-        if (res.status !== 402) {
-          cleanup();
-          setUtrVisible(true);
-          return;
-        }
-      } catch { /* network blip */ }
-      await new Promise<void>((r) => setTimeout(r, Math.min(POLL_MS, deadline - Date.now())));
-    }
-
-    cleanup();
-    setUtrVisible(true);
   }
 
   async function handleConfirm() {
