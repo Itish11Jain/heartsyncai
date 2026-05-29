@@ -328,7 +328,7 @@ export default function UnlockModal({
                       }}>⚡ Limited Time</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 0 }}>
-                      <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 13, fontWeight: 500 }}>₹149</span>
+                      <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 13, fontWeight: 500 }}>₹99</span>
                       <span style={{ color: "rgba(255,215,0,0.9)", fontSize: 14, fontWeight: 800 }}>₹49</span>
                       <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 12, fontWeight: 600 }}>· Get Link. Send on WhatsApp Instantly</span>
                     </div>
@@ -411,7 +411,7 @@ export default function UnlockModal({
                   }}
                 >
                   🔓{" "}
-                  <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 14, marginRight: 2 }}>₹149</span>
+                  <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 14, marginRight: 2 }}>₹99</span>
                   {" "}Pay ₹49 &amp; Share
                 </motion.button>
               </motion.div>
@@ -458,7 +458,7 @@ export default function UnlockModal({
                         <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
                         <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
                           Pay{" "}
-                          <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 15, fontWeight: 500 }}>₹149</span>
+                          <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 15, fontWeight: 500 }}>₹99</span>
                           {" "}
                           <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹49</span>
                           {" "}via any UPI App

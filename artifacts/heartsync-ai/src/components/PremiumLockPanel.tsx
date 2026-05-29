@@ -327,7 +327,7 @@ export default function PremiumLockPanel({
           }}
         >
           ✨{" "}
-          <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹149</span>
+          <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹99</span>
           {" "}₹49 · Unlock &amp; Share
           {" "}<span style={{
             background: "rgba(255,80,50,0.22)", border: "1px solid rgba(255,80,50,0.45)",
@@ -336,7 +336,7 @@ export default function PremiumLockPanel({
           }}>⚡ Limited Time</span>
         </button>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
-          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹149</span>
+          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹99</span>
           <span style={{ color: "rgba(255,255,255,0.35)" }}>₹49 one-time · All 3 premium templates forever</span>
           <span style={{
             background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
@@ -454,7 +454,7 @@ export default function PremiumLockPanel({
               Unlock &amp; Share Your Card
             </h1>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
-              <span style={{ color: "rgba(255,255,255,0.28)", textDecoration: "line-through" }}>₹149</span>
+              <span style={{ color: "rgba(255,255,255,0.28)", textDecoration: "line-through" }}>₹99</span>
               <span style={{ color: "rgba(255,215,0,0.75)", fontWeight: 700 }}>₹49</span>
               — yours forever.
             </p>
@@ -470,7 +470,7 @@ export default function PremiumLockPanel({
             <div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
                 <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹49</div>
-                <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 15, fontWeight: 400 }}>₹149</span>
+                <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 15, fontWeight: 400 }}>₹99</span>
                 <span style={{
                   background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
                   color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px",

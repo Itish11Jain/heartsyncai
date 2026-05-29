@@ -136,7 +136,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                   }}>⚡ Limited Time</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
-                  <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹149</span>
+                  <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹99</span>
                   <span style={{ color: "rgba(255,215,0,0.85)", fontSize: 11, fontWeight: 700 }}>₹49</span>
                   <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>· instant unlock</span>
                 </div>
@@ -197,7 +197,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     ))}
                     <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
                       All for{" "}
-                      <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹149</span>
+                      <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹99</span>
                       {" "}₹49 — pay once, yours forever
                     </span>
                   </div>
@@ -238,7 +238,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
                     }}
                   >
-                    <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹149</span>
+                    <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹99</span>
                     {" "}Pay ₹49 Now <ArrowRight style={{ width: 18, height: 18 }} />
                   </a>
 
