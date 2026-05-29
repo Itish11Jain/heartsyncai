@@ -71,6 +71,40 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
   }, []);
 
   // Auto-open bottom sheet once per card/session
+  // Auto-apply bundle credit: when credits arrive and card is locked, unlock immediately
+  const autoUnlockDoneRef = useRef(false);
+  const [bundleCreditToast, setBundleCreditToast] = useState(false);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (autoUnlockDoneRef.current) return;
+    if (!bundleToken || bundleCredits <= 0) return;
+    if (isPremiumUser || watermarkRemoved) return;
+    if (!cardId || !/^[a-z0-9]{4,20}$/.test(cardId)) return;
+
+    autoUnlockDoneRef.current = true;
+    setBundleLoading(true);
+
+    fetch(`${BASE}/api/bundles/${bundleToken}/use-credit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ card_id: cardId }),
+    })
+      .then((r) => r.json() as Promise<{ ok?: boolean; cards_remaining?: number; error?: string }>)
+      .then((data) => {
+        if (data.ok || data.error === "already_unlocked" || data.error === "already_used") {
+          if (typeof data.cards_remaining === "number") setBundleCredits(data.cards_remaining);
+          setWatermarkRemoved(true);
+          setBundleCreditToast(true);
+          setTimeout(() => setBundleCreditToast(false), 3500);
+          trackEvent({ event: "bundle_credit_auto_used", card_id: cardId, occasion });
+        }
+      })
+      .catch(() => { /* ignore */ })
+      .finally(() => setBundleLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, bundleToken, bundleCredits, isPremiumUser, watermarkRemoved]);
+
   const autoOpenKey = cardId ? `hs_ao_${cardId}` : null;
   const [hasAutoOpened, setHasAutoOpened] = useState(() => {
     if (!autoOpenKey) return true;
@@ -362,6 +396,26 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
 
   return (
     <>
+      {/* ── Bundle credit used toast ── */}
+      {bundleCreditToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          style={{
+            position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+            background: "rgba(34,197,94,0.92)", backdropFilter: "blur(8px)",
+            borderRadius: 99, padding: "10px 22px", zIndex: 999,
+            display: "flex", alignItems: "center", gap: 8,
+            boxShadow: "0 4px 20px rgba(34,197,94,0.4)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: 16 }}>✓</span>
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>1 card credit used</span>
+        </motion.div>
+      )}
+
       {/* ── Sender share panel (finale only) ── */}
       {phase === "finale" && (
         <motion.div

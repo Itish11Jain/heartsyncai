@@ -12,6 +12,54 @@ const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const UPI_ID = "9706900714@pthdfc";
 const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncBundlePayment`;
 
+const TEMPLATE_PREVIEWS = [
+  {
+    id: "envelope",
+    label: "Envelope",
+    badge: "FREE",
+    badgeColor: "#4ade80",
+    gradient: "linear-gradient(135deg, #2d1b69 0%, #6b21a8 60%, #9d174d 100%)",
+    icon: "💌",
+    desc: "Classic, heartfelt",
+  },
+  {
+    id: "cosmic",
+    label: "Cosmic",
+    badge: "PREMIUM",
+    badgeColor: "#FFD700",
+    gradient: "linear-gradient(135deg, #0a0020 0%, #1a0050 40%, #2d0080 70%, #0a0040 100%)",
+    icon: "🌌",
+    desc: "Starry & magical",
+  },
+  {
+    id: "crystal",
+    label: "Crystal",
+    badge: "PREMIUM",
+    badgeColor: "#FFD700",
+    gradient: "linear-gradient(135deg, #042f4e 0%, #0e7490 40%, #06b6d4 70%, #0369a1 100%)",
+    icon: "🔮",
+    desc: "Mystical & glowing",
+  },
+  {
+    id: "vinyl",
+    label: "Vinyl",
+    badge: "PREMIUM",
+    badgeColor: "#FFD700",
+    gradient: "linear-gradient(135deg, #1c1008 0%, #451a03 40%, #92400e 70%, #78350f 100%)",
+    icon: "🎵",
+    desc: "Warm & nostalgic",
+  },
+];
+
+const OCCASIONS = [
+  { id: "feel_good", emoji: "🌟", label: "Feel Good" },
+  { id: "birthday", emoji: "🎂", label: "Birthday" },
+  { id: "anniversary", emoji: "🥂", label: "Anniversary" },
+  { id: "congratulations", emoji: "🏆", label: "Congrats" },
+  { id: "thank_you", emoji: "🙏", label: "Thank You" },
+  { id: "sorry", emoji: "💔", label: "Sorry" },
+];
+
 const UPI_APPS = [
   { label: "PhonePe", emoji: "💜", scheme: `phonepe://pay?${UPI_PARAMS}` },
   { label: "GPay",    emoji: "🔵", scheme: `tez://upi/pay?${UPI_PARAMS}` },
@@ -203,44 +251,101 @@ export default function BundlePage() {
       <div style={{ width: "100%", maxWidth: 460, padding: "0 20px" }}>
         <AnimatePresence mode="wait">
 
-          {/* ── Info phase ── */}
+          {/* ── Preview phase ── */}
           {phase === "info" && (
             <motion.div key="info" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div style={{ textAlign: "center", padding: "36px 0 28px" }}>
-                <div style={{ fontSize: 52, marginBottom: 12 }}>💌💌</div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: "#FFD700", marginBottom: 8 }}>
+              <div style={{ textAlign: "center", padding: "28px 0 20px" }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: "#FFD700", marginBottom: 6 }}>
                   2 Cards for ₹49
                 </div>
-                <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.65, maxWidth: 300, margin: "0 auto" }}>
-                  One payment. Two beautiful cards unlocked.<br />
-                  Share with two people who matter.
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                  One payment · Any template · Any occasion
                 </div>
               </div>
 
-              {/* Value breakdown */}
+              {/* Template carousel */}
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 12 }}>
+                  Choose any template
+                </div>
+                <div style={{
+                  display: "flex", gap: 12, overflowX: "auto",
+                  paddingBottom: 6, scrollbarWidth: "none",
+                  WebkitOverflowScrolling: "touch",
+                }}>
+                  {TEMPLATE_PREVIEWS.map((tpl, i) => (
+                    <motion.div
+                      key={tpl.id}
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.07 }}
+                      style={{
+                        flexShrink: 0, width: 140, borderRadius: 18,
+                        background: tpl.gradient,
+                        padding: "18px 14px 14px",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+                        cursor: "default",
+                      }}
+                    >
+                      <div style={{ fontSize: 38, marginBottom: 10, textAlign: "center" }}>{tpl.icon}</div>
+                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 14, marginBottom: 4, textAlign: "center" }}>
+                        {tpl.label}
+                      </div>
+                      <div style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
+                        {tpl.desc}
+                      </div>
+                      <div style={{
+                        display: "inline-block", padding: "2px 8px", borderRadius: 99,
+                        background: tpl.badge === "FREE" ? "rgba(74,222,128,0.18)" : "rgba(255,215,0,0.15)",
+                        border: `1px solid ${tpl.badge === "FREE" ? "rgba(74,222,128,0.4)" : "rgba(255,215,0,0.35)"}`,
+                        fontSize: 9, fontWeight: 800, color: tpl.badgeColor,
+                        letterSpacing: "0.06em",
+                      }}>
+                        {tpl.badge}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Occasions */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 10 }}>
+                  Any occasion
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {OCCASIONS.map((occ) => (
+                    <div key={occ.id} style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "6px 14px", borderRadius: 99,
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.09)",
+                      fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 600,
+                    }}>
+                      <span style={{ fontSize: 14 }}>{occ.emoji}</span>
+                      {occ.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Value summary */}
               <div style={{
-                background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.15)",
-                borderRadius: 20, padding: "22px 24px", marginBottom: 24,
+                background: "rgba(255,215,0,0.05)", border: "1px solid rgba(255,215,0,0.12)",
+                borderRadius: 16, padding: "14px 18px", marginBottom: 20,
+                display: "flex", flexDirection: "column", gap: 8,
               }}>
                 {[
-                  { emoji: "💌", text: "Unlock any 2 premium cards" },
-                  { emoji: "🔗", text: "Your personal dashboard link" },
-                  { emoji: "♾️", text: "Share anytime — links never expire" },
-                  { emoji: "🚫", text: "No login. No account needed." },
+                  { emoji: "🔗", text: "Secret personal dashboard — no login needed" },
+                  { emoji: "♾️", text: "Links never expire" },
+                  { emoji: "✅", text: "₹98 worth · Pay only ₹49 — save ₹49" },
                 ].map((item) => (
-                  <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                    <span style={{ fontSize: 20 }}>{item.emoji}</span>
-                    <span style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{item.text}</span>
+                  <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>{item.emoji}</span>
+                    <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", fontWeight: 600 }}>{item.text}</span>
                   </div>
                 ))}
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 20 }}>✅</span>
-                  <span style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>
-                    <span style={{ textDecoration: "line-through", color: "rgba(255,255,255,0.3)" }}>₹98</span>
-                    {" "}
-                    <span style={{ color: "#FFD700" }}>₹49 total — you save ₹49</span>
-                  </span>
-                </div>
               </div>
 
               <motion.button

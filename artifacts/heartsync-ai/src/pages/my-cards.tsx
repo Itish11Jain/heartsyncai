@@ -192,26 +192,29 @@ export default function MyCardsPage() {
           </div>
         </motion.div>
 
-        {/* Create card CTA */}
+        {/* Create card CTAs — two buttons as per bundle spec */}
         {creditsRemaining > 0 && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Link href={`/send?bundle_token=${token}`}>
-              <motion.div
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  width: "100%", height: 54, borderRadius: 16,
-                  background: "linear-gradient(135deg,#FFD700,#FFAA00)",
-                  color: "#000", fontWeight: 800, fontSize: 17,
-                  cursor: "pointer", boxShadow: "0 6px 24px rgba(255,165,0,0.38)",
-                  marginBottom: 10,
-                }}
-              >
-                ✨ Create a new card
-              </motion.div>
-            </Link>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              {[1, 2].slice(0, creditsRemaining).map((_, i) => (
+                <Link key={i} href={`/send?bundle_token=${token}`} style={{ flex: 1, textDecoration: "none" }}>
+                  <motion.div
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      width: "100%", height: 54, borderRadius: 16,
+                      background: "linear-gradient(135deg,#FFD700,#FFAA00)",
+                      color: "#000", fontWeight: 800, fontSize: 15,
+                      cursor: "pointer", boxShadow: "0 6px 24px rgba(255,165,0,0.38)",
+                    }}
+                  >
+                    ✨ Create a card →
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
             <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginBottom: 24 }}>
-              After creating, tap "Use bundle credit" on your card page
+              Credits are applied automatically when the card loads
             </p>
           </motion.div>
         )}

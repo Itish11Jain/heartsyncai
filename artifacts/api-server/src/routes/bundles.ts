@@ -92,7 +92,7 @@ router.post("/bundles/create", async (req, res) => {
     await client.query("COMMIT");
 
     console.log(`[bundles] created bundle=${token} utr=${payment.utr} explicit_utr=${hasExplicitUtr}`);
-    res.json({ ok: true, token, cards_remaining: 2 });
+    res.json({ ok: true, token, upi_name: upiName, cards_remaining: 2 });
   } catch (err) {
     try { await client.query("ROLLBACK"); } catch { /* ignore */ }
     console.error("[bundles] POST /bundles/create error", err);
