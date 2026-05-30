@@ -1378,7 +1378,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
           <motion.button key="arrow5"
             onClick={onReplay}
             style={{
-              position:"absolute", bottom:32, right:26, zIndex:22,
+              position:"absolute", top:260, left:"calc(50% - 27px)", zIndex:22,
               width:54, height:54, borderRadius:"50%",
               background:"linear-gradient(135deg,#C4913A,#D4AF37)",
               border:"none", cursor:"pointer",
