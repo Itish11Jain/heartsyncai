@@ -1188,19 +1188,33 @@ function Scene4({ onNext }: { onNext:()=>void }) {
           transition={{ duration:1.8+i*0.45, repeat:Infinity, delay:i*0.38 }}>✦</motion.div>
       ))}
 
+      {/* Heading */}
+      <motion.h1 style={{
+          position:"absolute", top:48, left:0, right:0, textAlign:"center",
+          fontFamily:"'Great Vibes', cursive",
+          fontSize:56, lineHeight:1, margin:0,
+          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+          pointerEvents:"none",
+        }}
+        initial={{ opacity:0, y:-14 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.15, duration:0.6 }}>
+        Happy Birthday
+      </motion.h1>
+
       {/* 3 Floating polaroids */}
-      <PolaroidFrame idx={0} top={155} left={6}  rotate={-7} floatDelay={0}   imageSrc={photo1Src}/>
-      <PolaroidFrame idx={1} top={328} left={34} rotate={-2} floatDelay={0.6} imageSrc={photo2Src}/>
-      <PolaroidFrame idx={2} top={505} left={6}  rotate={-5} floatDelay={1.1} imageSrc={photo3Src}/>
+      <PolaroidFrame idx={0} top={168} left={6}  rotate={-7} floatDelay={0}   imageSrc={photo1Src}/>
+      <PolaroidFrame idx={1} top={341} left={34} rotate={-2} floatDelay={0.6} imageSrc={photo2Src}/>
+      <PolaroidFrame idx={2} top={514} left={6}  rotate={-5} floatDelay={1.1} imageSrc={photo3Src}/>
 
       {/* Right-side caption */}
-      <motion.div style={{ position:"absolute", right:10, top:480, width:148, textAlign:"right" }}
+      <motion.div style={{ position:"absolute", right:10, top:492, width:148, textAlign:"right" }}
         initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
         transition={{ delay:0.9, duration:0.7 }}>
         <p style={{
           fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
-          fontSize:11, lineHeight:1.65, color:"rgba(212,175,55,0.65)",
-          margin:0,
+          fontSize:14, lineHeight:1.7, color:"#D4AF37",
+          margin:0, textShadow:"0 0 18px rgba(212,175,55,0.35)",
         }}>Cheers to another year of fun, laughter &amp; unforgettable memories!</p>
       </motion.div>
 
