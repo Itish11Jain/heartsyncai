@@ -1350,18 +1350,19 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
         <VoiceNote onDone={() => setShowArrow(true)}/>
       </motion.div>
 
-      {/* ── Photo sticker — full-width, bottom-pinned, 2× size ── */}
+      {/* ── Photo sticker — covers lower half, bottom-pinned ── */}
       <motion.div style={{
-        position:"absolute", bottom:0,
+        position:"absolute", top:"42%", bottom:0,
         left:0, right:0, zIndex:10,
         display:"flex", alignItems:"flex-end", justifyContent:"center",
+        overflow:"hidden",
       }}
         initial={{ opacity:0, y:30 }}
         animate={{ opacity:1, y:0 }}
         transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
         <img src={photo1StickerSrc} alt=""
           style={{
-            width:"96%", height:"auto", display:"block",
+            height:"100%", width:"auto", maxWidth:"100%", display:"block",
             filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.75)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
           }}/>
       </motion.div>
