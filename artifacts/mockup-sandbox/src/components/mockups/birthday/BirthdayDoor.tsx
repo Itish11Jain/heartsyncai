@@ -426,32 +426,32 @@ function HappyBirthdayBanner() {
           const sy     = hbStrY(cx);
           const THREAD = 14;
           const rot    = HB_ROTS[i];
-          const floatY = sy + THREAD + 38;
+          const pivot  = sy + THREAD;
+          const floatY = pivot + 38;
           return (
-            <g key={i} transform={`rotate(${rot},${cx},${sy+THREAD})`}>
-              {/* Thread */}
-              <line x1={cx} y1={sy} x2={cx} y2={sy+THREAD}
+            <g key={i}>
+              {/* Thread — OUTSIDE rotation so it always hangs straight from the string */}
+              <line x1={cx} y1={sy} x2={cx} y2={pivot + 5}
                 stroke="#D4AF37" strokeWidth={1.2} opacity={0.85}/>
-              {/* Letter — solid gold fill (gradient on SVG text unreliable cross-browser) */}
-              <motion.g
-                animate={{ y:[0,-2.5,0] }}
-                transition={{ duration:2.6+i*0.22, repeat:Infinity, ease:"easeInOut", delay:i*0.14 }}>
-                {/* Subtle shadow for depth */}
-                <text x={cx+1} y={floatY+1} textAnchor="middle"
-                  fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
-                  fontStyle="italic" fontWeight="bold" fontSize={40}
-                  fill="#5C3500" opacity={0.45}>{ch}</text>
-                {/* Main letter */}
-                <text x={cx} y={floatY} textAnchor="middle"
-                  fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
-                  fontStyle="italic" fontWeight="bold" fontSize={40}
-                  fill="#D4AF37" filter="url(#lttrGlow)">{ch}</text>
-                {/* Highlight shimmer */}
-                <text x={cx} y={floatY} textAnchor="middle"
-                  fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
-                  fontStyle="italic" fontWeight="bold" fontSize={40}
-                  fill="#FFF4B0" opacity={0.28}>{ch}</text>
-              </motion.g>
+              {/* Letter card — rotated around the pivot (string attachment point) */}
+              <g transform={`rotate(${rot},${cx},${pivot})`}>
+                <motion.g
+                  animate={{ y:[0,-2.5,0] }}
+                  transition={{ duration:2.6+i*0.22, repeat:Infinity, ease:"easeInOut", delay:i*0.14 }}>
+                  <text x={cx+1} y={floatY+1} textAnchor="middle"
+                    fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                    fontStyle="italic" fontWeight="bold" fontSize={40}
+                    fill="#5C3500" opacity={0.45}>{ch}</text>
+                  <text x={cx} y={floatY} textAnchor="middle"
+                    fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                    fontStyle="italic" fontWeight="bold" fontSize={40}
+                    fill="#D4AF37" filter="url(#lttrGlow)">{ch}</text>
+                  <text x={cx} y={floatY} textAnchor="middle"
+                    fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                    fontStyle="italic" fontWeight="bold" fontSize={40}
+                    fill="#FFF4B0" opacity={0.28}>{ch}</text>
+                </motion.g>
+              </g>
             </g>
           );
         })}
