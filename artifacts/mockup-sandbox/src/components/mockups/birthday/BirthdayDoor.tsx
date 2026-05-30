@@ -153,15 +153,15 @@ function Nebulae() {
 ══════════════════════════════════════════ */
 const FOLD_FABRIC = `repeating-linear-gradient(
   to right,
-  #4A2E00  0px,
-  #8B5A00  6px,
-  #C9920A 12px,
-  #E8B820 17px,
-  #F5CE50 20px,
-  #E8B820 23px,
-  #C9920A 28px,
-  #8B5A00 34px,
-  #4A2E00 40px
+  #1A0005  0px,
+  #5C0015  6px,
+  #900020 12px,
+  #B8002C 17px,
+  #CC0032 20px,
+  #B8002C 23px,
+  #900020 28px,
+  #5C0015 34px,
+  #1A0005 40px
 )`;
 
 function Curtain({ open }: { open: boolean }) {
@@ -377,6 +377,116 @@ function Confetto({ x, color, delay }: { x:number; color:string; delay:number })
 }
 
 /* ══════════════════════════════════════════
+   HAPPY BIRTHDAY BANNER
+══════════════════════════════════════════ */
+function HappyBirthdayBanner() {
+  return (
+    <motion.div style={{ position:"absolute", top:48, left:0, right:0, zIndex:25, pointerEvents:"none" }}
+      initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.7 }}>
+      <svg width={390} height={96} viewBox="0 0 390 96">
+        <defs>
+          <linearGradient id="bannerG" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"  stopColor="#6B4A00"/>
+            <stop offset="28%" stopColor="#D4AF37"/>
+            <stop offset="50%" stopColor="#FFF0A0"/>
+            <stop offset="72%" stopColor="#D4AF37"/>
+            <stop offset="100%" stopColor="#6B4A00"/>
+          </linearGradient>
+          <filter id="bannerGlow">
+            <feGaussianBlur stdDeviation="2.5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        {/* Sagging string */}
+        <motion.path d="M 16 22 Q 195 58 374 22" fill="none"
+          stroke="#D4AF37" strokeWidth={1.5} opacity={0.9}
+          animate={{ d:["M 16 22 Q 195 60 374 22","M 16 22 Q 195 50 374 22","M 16 22 Q 195 60 374 22"] }}
+          transition={{ duration:4, repeat:Infinity, ease:"easeInOut" }} />
+        <circle cx={16}  cy={22} r={3.5} fill="#C9A840" opacity={0.85}/>
+        <circle cx={374} cy={22} r={3.5} fill="#C9A840" opacity={0.85}/>
+
+        {/* Connector threads — 5 evenly spaced */}
+        {[75,148,195,248,318].map((x,i) => {
+          const t=(x-16)/(374-16), sy=22+38*4*t*(1-t);
+          return <line key={i} x1={x} y1={sy} x2={x} y2={52}
+            stroke="#D4AF37" strokeWidth={0.9} opacity={0.55}/>;
+        })}
+
+        {/* "Happy" — left half */}
+        <text x={105} y={90} textAnchor="middle"
+          fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic" fontWeight="bold"
+          fontSize={44} fill="url(#bannerG)" filter="url(#bannerGlow)"
+          transform="rotate(-4,105,72)">Happy</text>
+
+        {/* "Birthday" — right half */}
+        <text x={272} y={88} textAnchor="middle"
+          fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic" fontWeight="bold"
+          fontSize={44} fill="url(#bannerG)" filter="url(#bannerGlow)"
+          transform="rotate(3,272,72)">Birthday</text>
+      </svg>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   BOTTOM BALLOON BUNCHES (Scene 2)
+══════════════════════════════════════════ */
+const BUNCHES_DEF = [
+  { ax:50,  balls:[{dx:-16,dy:-58,r:22,pi:0},{dx:10,dy:-90,r:26,pi:1},{dx:-4,dy:-118,r:20,pi:2},{dx:20,dy:-74,r:18,pi:3}] },
+  { ax:125, balls:[{dx:-14,dy:-55,r:24,pi:1},{dx:14,dy:-92,r:28,pi:2},{dx:-10,dy:-122,r:22,pi:3},{dx:24,dy:-76,r:18,pi:0},{dx:0,dy:-148,r:16,pi:4}] },
+  { ax:195, balls:[{dx:-22,dy:-52,r:24,pi:2},{dx:8,dy:-92,r:30,pi:3},{dx:-10,dy:-124,r:22,pi:0},{dx:24,dy:-78,r:20,pi:1},{dx:0,dy:-152,r:18,pi:4}] },
+  { ax:265, balls:[{dx:14,dy:-55,r:24,pi:3},{dx:-14,dy:-92,r:28,pi:0},{dx:10,dy:-122,r:22,pi:1},{dx:-24,dy:-76,r:18,pi:2},{dx:0,dy:-148,r:16,pi:4}] },
+  { ax:340, balls:[{dx:16,dy:-58,r:22,pi:0},{dx:-10,dy:-90,r:26,pi:1},{dx:4,dy:-118,r:20,pi:4},{dx:-20,dy:-74,r:18,pi:3}] },
+];
+
+function BunchBalloons({ flyUp }: { flyUp: boolean }) {
+  const AY = 900;
+  return (
+    <motion.div style={{ position:"absolute", left:0, top:0, width:390, height:844, zIndex:14, pointerEvents:"none" }}
+      animate={flyUp ? { y:-1050 } : { y:0 }}
+      transition={flyUp ? { duration:2.6, ease:[0.25,0,0.65,1] } : {}}>
+      <svg width={390} height={AY+60} viewBox={`0 0 390 ${AY+60}`}
+        style={{ position:"absolute", top:0, left:0 }}>
+        <defs>
+          {P.map((p,i)=>(
+            <radialGradient key={i} id={`bpg${i}`} cx="34%" cy="28%" r="62%">
+              <stop offset="0%"   stopColor={p.s}/>
+              <stop offset="52%"  stopColor={p.c}/>
+              <stop offset="100%" stopColor={p.c} stopOpacity={0.75}/>
+            </radialGradient>
+          ))}
+        </defs>
+        {BUNCHES_DEF.map((bunch,bi)=>
+          bunch.balls.map((ball,li)=>{
+            const bx=bunch.ax+ball.dx, by=AY+ball.dy, r=ball.r;
+            const ci=ball.pi%P.length;
+            return (
+              <g key={`${bi}-${li}`}>
+                <line x1={bx} y1={by+r} x2={bunch.ax} y2={AY}
+                  stroke="#C9A840" strokeWidth={0.9} opacity={0.5}/>
+                <motion.g
+                  animate={{ y:[0,-3-li*0.5,0] }}
+                  transition={{ duration:2.2+bi*0.28, repeat:Infinity, ease:"easeInOut", delay:bi*0.18+li*0.1 }}>
+                  <circle cx={bx} cy={by} r={r} fill={`url(#bpg${ci})`}/>
+                  {(ci===1||ci===4) && [[-0.2,-0.1],[0.2,0.15],[-0.05,0.25]].map(([ddx,ddy],k)=>(
+                    <circle key={k} cx={bx+ddx*r*2} cy={by+ddy*r*2} r={r*0.09}
+                      fill={P[(ci+k+1)%P.length].c} opacity={0.8}/>
+                  ))}
+                  <ellipse cx={bx-r*0.4} cy={by-r*0.62} rx={r*0.2} ry={r*0.13}
+                    fill="white" opacity={0.5}
+                    transform={`rotate(-30,${bx-r*0.4},${by-r*0.62})`}/>
+                </motion.g>
+              </g>
+            );
+          })
+        )}
+      </svg>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
    MAIN
 ══════════════════════════════════════════ */
 export function BirthdayDoor() {
@@ -386,6 +496,7 @@ export function BirthdayDoor() {
   const [cakePhase, setCakePhase] = useState<"cta"|"counting"|"blown">("cta");
   const [countdown, setCountdown] = useState(3);
   const [blown, setBlown]         = useState(false);
+  const [flyUp, setFlyUp]         = useState(false);
 
   const cfPieces = Array.from({ length:55 }, (_,i) => ({
     id:i, x:(i*18.7)%100, color:P[i%P.length].c, delay:i*0.065,
@@ -400,7 +511,7 @@ export function BirthdayDoor() {
     setCakePhase("counting");
     setCountdown(3);
     setTimeout(() => setCountdown(2), 800);
-    setTimeout(() => setCountdown(1), 1600);
+    setTimeout(() => { setCountdown(1); setFlyUp(true); }, 1600);
     setTimeout(() => {
       setCakePhase("blown");
       setBlown(true);
@@ -409,7 +520,7 @@ export function BirthdayDoor() {
     setTimeout(() => setConfetti(false), 5200);
   }
   function handleReplay() {
-    setShowCake(false); setConfetti(false); setBlown(false);
+    setShowCake(false); setConfetti(false); setBlown(false); setFlyUp(false);
     setCakePhase("cta"); setCountdown(3);
     setTimeout(() => setOpen(false), 80);
   }
@@ -439,21 +550,6 @@ export function BirthdayDoor() {
             style={{ position:"absolute", inset:0, zIndex:10 }}
             exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
 
-            {/* Header text — sits above golden curtain */}
-            <motion.div style={{ position:"absolute", top:72, left:0, right:0, textAlign:"center", zIndex:20 }}
-              initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
-              <p style={{ color:"rgba(255,255,255,0.75)", fontSize:10, letterSpacing:4, textTransform:"uppercase", marginBottom:3, fontFamily:"sans-serif", textShadow:"0 1px 6px rgba(0,0,0,0.6)" }}>
-                YOU'RE INVITED TO
-              </p>
-              <h1 style={{ fontSize:26, fontWeight:"bold", lineHeight:1.15, margin:"0 0 2px", color:"#fff", textShadow:"0 2px 12px rgba(0,0,0,0.7)", ...gradText }}>
-                {name}'s Birthday
-              </h1>
-              <motion.p style={{ color:"rgba(255,255,255,0.8)", fontSize:11, fontFamily:"sans-serif", textShadow:"0 1px 6px rgba(0,0,0,0.55)" }}
-                animate={{ opacity:[0.55,1,0.55] }} transition={{ duration:2.5, repeat:Infinity }}>
-                ✨ A special surprise awaits ✨
-              </motion.p>
-            </motion.div>
-
             <Curtain open={open} />
 
             {/* Tap zone — full screen */}
@@ -468,8 +564,8 @@ export function BirthdayDoor() {
         )}
       </AnimatePresence>
 
-      {/* Balloon garland — persists across both scenes, pops when candles blown */}
-      {GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
+      {/* Balloon garland — scene 1 only */}
+      {!showCake && GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
 
       {/* ══ SCENE 2 : CAKE ══ */}
       <AnimatePresence>
@@ -481,6 +577,8 @@ export function BirthdayDoor() {
             transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
 
             <TwinkleBackground />
+            <HappyBirthdayBanner />
+            <BunchBalloons flyUp={flyUp} />
 
             {/* Cake */}
             <motion.div style={{
@@ -501,12 +599,12 @@ export function BirthdayDoor() {
                   onClick={handleBlow}
                   style={{
                     position:"absolute",
-                    top: C_TOP + C_H/2 - 134 - 80 + 268 + 36,
+                    top: C_TOP + C_H/2 - 134 - 80 + 268 + 32,
                     left:"50%", transform:"translateX(-50%)",
                     background:"rgba(212,175,55,0.1)",
                     border:"1.5px solid rgba(212,175,55,0.55)",
-                    borderRadius:32, padding:"14px 36px",
-                    color:"#F0D060", fontSize:15, letterSpacing:2,
+                    borderRadius:32, padding:"13px 32px",
+                    color:"#F0D060", fontSize:14, letterSpacing:2,
                     textTransform:"uppercase", fontFamily:"sans-serif", cursor:"pointer",
                     whiteSpace:"nowrap",
                   }}
