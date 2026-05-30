@@ -578,11 +578,28 @@ export function BirthdayDoor() {
             ))}
 
             <motion.p
-              style={{ position: "absolute", bottom: 44, color: "#7c6aaa", fontSize: 12, letterSpacing: 1.5, fontFamily: "sans-serif" }}
+              style={{ position: "absolute", bottom: 80, color: "#7c6aaa", fontSize: 12, letterSpacing: 1.5, fontFamily: "sans-serif" }}
               animate={{ opacity: [0.35, 1, 0.35] }}
               transition={{ duration: 3, repeat: Infinity }}>
               ✨ wishing you the world ✨
             </motion.p>
+
+            {/* Replay button */}
+            <motion.button
+              onClick={() => setPhase("door")}
+              style={{
+                position: "absolute", bottom: 32,
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(180,130,255,0.35)",
+                borderRadius: 24, padding: "8px 22px", color: "#9370cc",
+                fontSize: 11, letterSpacing: 2, textTransform: "uppercase",
+                fontFamily: "sans-serif", cursor: "pointer",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5 }}
+              whileHover={{ background: "rgba(180,130,255,0.15)", color: "#c084fc" }}>
+              ↩ Replay
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
