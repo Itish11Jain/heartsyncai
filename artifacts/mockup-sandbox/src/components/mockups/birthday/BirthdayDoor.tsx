@@ -127,60 +127,6 @@ function GiftBoxSVG() {
       {/* Ribbon shimmer */}
       <rect x={x-2} y={ty+3} width={3} height={h-6} fill="rgba(255,248,140,0.45)" rx={1}/>
 
-      {/* ── Bow — rotated-ellipse loops ── */}
-      {/* Trailing ribbons (behind everything) */}
-      <path d={`M${x-5} ${BOW_CY+7} Q${x-28} ${BOW_CY+34} ${x-22} ${BOW_CY+58}`}
-        stroke="#B8810A" strokeWidth={11} fill="none" strokeLinecap="round"/>
-      <path d={`M${x+5} ${BOW_CY+7} Q${x+28} ${BOW_CY+34} ${x+22} ${BOW_CY+58}`}
-        stroke="#B8810A" strokeWidth={11} fill="none" strokeLinecap="round"/>
-      <path d={`M${x-5} ${BOW_CY+7} Q${x-28} ${BOW_CY+34} ${x-22} ${BOW_CY+58}`}
-        stroke="#D4AF37" strokeWidth={9} fill="none" strokeLinecap="round" opacity={0.92}/>
-      <path d={`M${x+5} ${BOW_CY+7} Q${x+28} ${BOW_CY+34} ${x+22} ${BOW_CY+58}`}
-        stroke="#D4AF37" strokeWidth={9} fill="none" strokeLinecap="round" opacity={0.92}/>
-      {/* Tail sheen */}
-      <path d={`M${x-3} ${BOW_CY+8} Q${x-16} ${BOW_CY+30} ${x-12} ${BOW_CY+50}`}
-        stroke="rgba(255,248,140,0.45)" strokeWidth={3} fill="none" strokeLinecap="round"/>
-      <path d={`M${x+3} ${BOW_CY+8} Q${x+16} ${BOW_CY+30} ${x+12} ${BOW_CY+50}`}
-        stroke="rgba(255,248,140,0.45)" strokeWidth={3} fill="none" strokeLinecap="round"/>
-
-      {/* Left loop — shadow */}
-      <ellipse cx={x-22} cy={BOW_CY-14} rx={30} ry={17}
-        fill="#A87208" opacity={0.7}
-        transform={`rotate(-34,${x-22},${BOW_CY-14})`}/>
-      {/* Left loop — main */}
-      <ellipse cx={x-22} cy={BOW_CY-16} rx={29} ry={16}
-        fill="#D4AF37"
-        transform={`rotate(-34,${x-22},${BOW_CY-16})`}/>
-      {/* Left loop — inner fold (darker centre crease) */}
-      <ellipse cx={x-24} cy={BOW_CY-17} rx={14} ry={7}
-        fill="#C09828" opacity={0.5}
-        transform={`rotate(-34,${x-24},${BOW_CY-17})`}/>
-      {/* Left loop — sheen */}
-      <ellipse cx={x-30} cy={BOW_CY-24} rx={11} ry={5}
-        fill="rgba(255,248,140,0.45)"
-        transform={`rotate(-34,${x-30},${BOW_CY-24})`}/>
-
-      {/* Right loop — shadow */}
-      <ellipse cx={x+22} cy={BOW_CY-14} rx={30} ry={17}
-        fill="#A87208" opacity={0.7}
-        transform={`rotate(34,${x+22},${BOW_CY-14})`}/>
-      {/* Right loop — main */}
-      <ellipse cx={x+22} cy={BOW_CY-16} rx={29} ry={16}
-        fill="#D4AF37"
-        transform={`rotate(34,${x+22},${BOW_CY-16})`}/>
-      {/* Right loop — inner fold */}
-      <ellipse cx={x+24} cy={BOW_CY-17} rx={14} ry={7}
-        fill="#C09828" opacity={0.5}
-        transform={`rotate(34,${x+24},${BOW_CY-17})`}/>
-      {/* Right loop — sheen */}
-      <ellipse cx={x+30} cy={BOW_CY-24} rx={11} ry={5}
-        fill="rgba(255,248,140,0.45)"
-        transform={`rotate(34,${x+30},${BOW_CY-24})`}/>
-
-      {/* Center knot */}
-      <ellipse cx={x} cy={BOW_CY+1} rx={12} ry={10} fill="#A87208"/>
-      <ellipse cx={x} cy={BOW_CY+1} rx={11} ry={9} fill="#C4913A"/>
-      <ellipse cx={x-1} cy={BOW_CY-1} rx={5} ry={3.5} fill="rgba(255,248,140,0.65)"/>
     </motion.g>
   );
 }
