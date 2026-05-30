@@ -173,8 +173,6 @@ function Curtain({ open }: { open: boolean }) {
         transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
         {/* Gold shimmer */}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,rgba(212,175,55,0.15) 0%,rgba(212,175,55,0.03) 50%,transparent 75%)", pointerEvents:"none" }} />
-        {/* Top gather glow */}
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:22, background:"linear-gradient(to bottom,rgba(212,175,55,0.28),transparent)" }} />
         {/* Animated flowing shimmer */}
         <motion.div style={{
           position:"absolute", inset:0,
@@ -205,7 +203,6 @@ function Curtain({ open }: { open: boolean }) {
         animate={open ? { x:(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
         transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(225deg,rgba(212,175,55,0.15) 0%,rgba(212,175,55,0.03) 50%,transparent 75%)", pointerEvents:"none" }} />
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:22, background:"linear-gradient(to bottom,rgba(212,175,55,0.28),transparent)" }} />
         <motion.div style={{
           position:"absolute", inset:0,
           background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.13) 48%,rgba(255,255,255,0.06) 58%,transparent 75%)",
