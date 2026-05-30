@@ -287,10 +287,36 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
 /* ══════════════════════════════════════════
    SCENE 1 — Main component
 ══════════════════════════════════════════ */
+const S1_TWINKLES = [
+  // [left%, top%, size, color, delay, duration]
+  ["12%","8%",  14,"#D4AF37",0.3,2.0],  ["85%","6%",  11,"#F0D060",0.8,2.4],
+  ["5%", "28%", 10,"#C9846A",1.1,1.8],  ["91%","32%", 13,"#FFF4B0",0.5,2.2],
+  ["18%","42%", 9, "#D4AF37",1.6,2.6],  ["78%","48%", 12,"#E8A060",0.2,1.9],
+  ["6%", "60%", 11,"#F0D060",1.9,2.1],  ["88%","62%", 10,"#D4AF37",0.7,2.3],
+  ["25%","72%", 13,"#C9846A",1.3,1.7],  ["70%","70%", 9, "#FFF4B0",1.0,2.5],
+  ["50%","6%",  10,"#D4AF37",2.0,2.0],  ["40%","78%", 12,"#F0D060",0.4,2.2],
+  ["14%","86%", 8, "#C9846A",1.7,1.8],  ["82%","84%", 11,"#D4AF37",0.9,2.4],
+] as const;
+
 function Scene1({ onNext }: { onNext:()=>void }) {
   return (
     <motion.div key="scene1new" style={{ position:"absolute", inset:0, zIndex:10 }}
       exit={{ opacity:0 }} transition={{ duration:0.6 }}>
+
+      {/* Full twinkle layer — same as Scene 5 */}
+      <TwinkleBackground />
+
+      {/* Extra scattered sparkles all over the screen */}
+      {S1_TWINKLES.map(([l,t,sz,col,dl,dur],i) => (
+        <motion.span key={`s1tw${i}`} style={{
+          position:"absolute", left:l, top:t, zIndex:6, pointerEvents:"none",
+          fontSize:sz, color:col, lineHeight:1,
+        }}
+          animate={{ opacity:[0,1,0.4,0.9,0], scale:[0,1.2,0.8,1.1,0], rotate:[0,30,-20,15,0] }}
+          transition={{ delay:dl, duration:dur, repeat:Infinity, repeatDelay:0.4+(i%4)*0.3 }}>
+          {i%3===0?"✦":i%3===1?"✧":"·"}
+        </motion.span>
+      ))}
 
       {/* Handwritten "Happy Birthday" — left-to-right reveal */}
       <div style={{ position:"absolute", left:0, right:0, top:50,
