@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>HeartSync AI — You have a Birthday Surprise waiting 🎂</title>
+    <meta name="description" content="Someone special made you a birthday card. Tap to reveal your surprise!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="You have a Birthday Surprise waiting 🎂" />
+    <meta property="og:description" content="Someone made you something special. Open your birthday card!" />
+    <meta property="og:image" content="https://heartsync.in/opengraph.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="You have a Birthday Surprise waiting 🎂" />
+    <meta name="twitter:description" content="Someone made you something special. Open your birthday card!" />
+    <meta name="twitter:image" content="https://heartsync.in/opengraph.jpg" />
+    <style>
+      html, body, #root { background: #0e0502; margin: 0; padding: 0; min-height: 100%; }
+      #hs-splash {
+        position: fixed; inset: 0; z-index: 9999;
+        background: radial-gradient(ellipse at 50% 42%, #3a1008 0%, #1c0a06 55%, #0e0502 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+        transition: opacity 0.4s ease;
+      }
+      #hs-splash-emoji { font-size: 64px; line-height: 1; transition: opacity 0.25s ease; }
+      #hs-splash-title { font-size: 18px; font-weight: 700; color: #D4AF37; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; letter-spacing: 0.06em; text-align: center; }
+      #hs-splash-sub { font-size: 13px; color: rgba(212,175,55,0.4); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; text-align: center; }
+    </style>
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-variable-latin.woff2" crossorigin="anonymous" />
+    <!-- HS_INJECT_ASSETS -->
+  </head>
+  <body>
+    <div id="hs-splash">
+      <div id="hs-splash-emoji">🎂</div>
+      <p id="hs-splash-title">Your birthday surprise is waiting…</p>
+      <p id="hs-splash-sub">Tap to reveal your special card ✨</p>
+    </div>
+    <script>
+      (function () {
+        var p = new URLSearchParams(window.location.search);
+        try { history.replaceState(null, '', '/birthday?' + p.toString()); } catch(e) {}
+
+        var el = document.getElementById('hs-splash');
+        var emojiEl = document.getElementById('hs-splash-emoji');
+        var EMOJIS = ['🎂','🎉','🎊','🎈','🥂'];
+        var ei = 0;
+        var iv = setInterval(function () {
+          ei = (ei + 1) % EMOJIS.length;
+          emojiEl.style.opacity = '0';
+          setTimeout(function () { emojiEl.textContent = EMOJIS[ei]; emojiEl.style.opacity = '1'; }, 200);
+        }, 900);
+
+        var reactMounted = false;
+        window.__clearHsSplash = function () {
+          reactMounted = true;
+          clearInterval(iv);
+          el.style.transition = 'opacity 0.4s ease';
+          el.style.opacity = '0';
+          setTimeout(function () { el.style.display = 'none'; }, 420);
+        };
+
+        setTimeout(function () {
+          if (reactMounted) return;
+          clearInterval(iv);
+          emojiEl.style.opacity = '1';
+          emojiEl.textContent = '🔄';
+          document.getElementById('hs-splash-title').textContent = 'Taking longer than usual…';
+          document.getElementById('hs-splash-sub').textContent = 'Tap anywhere to reload';
+          el.style.cursor = 'pointer';
+          el.onclick = function () { window.location.reload(); };
+        }, 8000);
+
+        try { fetch('/api/healthz', { priority: 'low', cache: 'no-store' }).catch(function(){}); } catch(e) {}
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

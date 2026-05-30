@@ -556,9 +556,10 @@ function SendInner() {
       p.set("photos", photoUrls.map(u => encodeURIComponent(u)).join(","));
     }
     if (voiceUrl) p.set("voicenote", encodeURIComponent(voiceUrl));
-    if (template === "crystal") return `${base}/crystal.html?${p.toString()}`;
-    if (template === "cosmic")  return `${base}/cosmic.html?${p.toString()}`;
-    if (template === "vinyl")   return `${base}/vinyl.html?${p.toString()}`;
+    if (template === "crystal")  return `${base}/crystal.html?${p.toString()}`;
+    if (template === "cosmic")   return `${base}/cosmic.html?${p.toString()}`;
+    if (template === "vinyl")    return `${base}/vinyl.html?${p.toString()}`;
+    if (template === "birthday") return `${base}/birthday.html?${p.toString()}`;
     return `${base}/envelope.html?${p.toString()}`;
   }
 
@@ -683,9 +684,12 @@ function SendInner() {
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
 
     // Viral reply: force the next template in the progression regardless of user selection.
+    // Birthday occasion always uses the birthday template.
     const effectiveTemplate: TemplateId = isViralReply
       ? (VIRAL_NEXT[receivedTemplate] ?? selectedTemplate)
-      : selectedTemplate;
+      : occasion === "birthday"
+        ? "birthday"
+        : selectedTemplate;
 
     /* ── Premium templates: redirect immediately for preview + pay-wall ─ */
     /* The card page (crystal/cosmic/vinyl) handles sign-in + paywall.     */

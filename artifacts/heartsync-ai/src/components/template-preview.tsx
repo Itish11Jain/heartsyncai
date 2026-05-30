@@ -14,7 +14,7 @@
  * only animate transform/opacity so the browser keeps them on the GPU.
  */
 
-type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl";
+type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday";
 
 interface Props {
   id: TemplateId;
@@ -24,10 +24,11 @@ interface Props {
 
 export function TemplatePreview({ id, size = 64 }: Props) {
   switch (id) {
-    case "envelope": return <EnvelopePreview size={size} />;
-    case "cosmic":   return <CosmicPreview   size={size} />;
-    case "crystal":  return <CrystalPreview  size={size} />;
-    case "vinyl":    return <VinylPreview    size={size} />;
+    case "envelope": return <EnvelopePreview  size={size} />;
+    case "cosmic":   return <CosmicPreview    size={size} />;
+    case "crystal":  return <CrystalPreview   size={size} />;
+    case "vinyl":    return <VinylPreview     size={size} />;
+    case "birthday": return <BirthdayPreview  size={size} />;
   }
 }
 
@@ -355,6 +356,57 @@ function VinylPreview({ size }: { size: number }) {
           }} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Birthday: mini cake with candles over a dark maroon bg. ─────── */
+function BirthdayPreview({ size }: { size: number }) {
+  const cakeW = Math.round(size * 0.72);
+  const cakeH = Math.round(size * 0.52);
+  const tier1H = Math.round(cakeH * 0.48);
+  const tier2H = Math.round(cakeH * 0.38);
+  const tier2W = Math.round(cakeW * 0.66);
+  const tier2X = Math.round((cakeW - tier2W) / 2);
+  const candleW = Math.max(2, Math.round(size * 0.045));
+  const candleH = Math.round(size * 0.12);
+  const candlePositions = [0.22, 0.42, 0.58, 0.78].map(p => Math.round(tier2X + p * tier2W));
+  return (
+    <div className="hs-tpl-anim" style={{
+      position: "relative", width: size, height: size,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      animation: "hs-bob 3s ease-in-out infinite",
+    }}>
+      {/* Cake body */}
+      <svg width={cakeW} height={cakeH + Math.round(size * 0.16)} viewBox={`0 0 ${cakeW} ${cakeH + Math.round(size * 0.16)}`}
+        style={{ overflow: "visible" }}>
+        {/* Bottom tier */}
+        <rect x={0} y={tier2H} width={cakeW} height={tier1H} rx={Math.round(size * 0.04)}
+          fill="url(#bpBot)"/>
+        {/* Top tier */}
+        <rect x={tier2X} y={0} width={tier2W} height={tier2H} rx={Math.round(size * 0.03)}
+          fill="url(#bpTop)"/>
+        {/* Candles */}
+        {candlePositions.map((cx, i) => (
+          <g key={i}>
+            <rect x={cx - candleW / 2} y={-candleH} width={candleW} height={candleH}
+              rx={candleW / 2} fill="#D4AF37" opacity={0.9}/>
+            {/* Flame */}
+            <ellipse cx={cx} cy={-candleH - Math.round(candleH * 0.35)}
+              rx={Math.round(candleW * 0.7)} ry={Math.round(candleH * 0.35)}
+              fill="#FFEE60" opacity={0.95}
+              style={{ animation: `hs-pulse ${1.4 + i * 0.22}s ease-in-out infinite` }}/>
+          </g>
+        ))}
+        <defs>
+          <linearGradient id="bpBot" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#C9849A"/><stop offset="100%" stopColor="#8A3A50"/>
+          </linearGradient>
+          <linearGradient id="bpTop" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#D4909E"/><stop offset="100%" stopColor="#A05060"/>
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   );
 }

@@ -1,0 +1,1 @@
+- [BirthdayDoor integration](birthday-integration.md) — birthday template is premium; 6-scene card at /birthday; auto-selects when occasion=birthday in send.tsx.

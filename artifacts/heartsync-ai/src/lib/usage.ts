@@ -6,11 +6,11 @@ const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 /* ─── Template gating ───────────────────────────────────────────────────── */
 
-export type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl";
-export const PREMIUM_TEMPLATES: ReadonlyArray<TemplateId> = ["cosmic", "crystal", "vinyl"];
+export type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday";
+export const PREMIUM_TEMPLATES: ReadonlyArray<TemplateId> = ["cosmic", "crystal", "vinyl", "birthday"];
 export const FREE_TEMPLATE: TemplateId = "envelope";
 
-export function isPremiumTemplate(t: string): t is "cosmic" | "crystal" | "vinyl" {
+export function isPremiumTemplate(t: string): t is "cosmic" | "crystal" | "vinyl" | "birthday" {
   return (PREMIUM_TEMPLATES as readonly string[]).includes(t);
 }
 

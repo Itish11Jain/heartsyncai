@@ -35,6 +35,7 @@ const CardExperience = lazy(() => import("@/pages/card"));
 const CrystalCard = lazy(() => import("@/pages/crystal"));
 const CosmicCard = lazy(() => import("@/pages/cosmic"));
 const VinylCard = lazy(() => import("@/pages/vinyl"));
+const BirthdayCard = lazy(() => import("@/pages/birthday"));
 
 /* ── Lazy auth-required pages (Clerk) ───────────────────────────────── */
 const Send = lazy(() => import("@/pages/send"));
@@ -112,6 +113,7 @@ function AppRoutes() {
       <Route path="/crystal"><L><CrystalCard /></L></Route>
       <Route path="/cosmic"><L><CosmicCard /></L></Route>
       <Route path="/vinyl"><L><VinylCard /></L></Route>
+      <Route path="/birthday"><L><BirthdayCard /></L></Route>
       {/* /send renders outside ClerkAuthLayer so the form is visible immediately.
           Clerk is mounted concurrently via ClerkBridgeForSend inside the Send
           component itself. Auth state is bridged via SendAuthCtx. */}
