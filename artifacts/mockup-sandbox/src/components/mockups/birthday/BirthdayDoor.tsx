@@ -1574,7 +1574,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
       </motion.p>
 
       {/* ── Voice note ── */}
-      <motion.div style={{ position:"absolute", top:178, left:20, right:20, zIndex:12 }}
+      <motion.div style={{ position:"absolute", top:206, left:20, right:20, zIndex:12 }}
         initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
         transition={{ delay:0.65, duration:0.6 }}>
         <VoiceNote onDone={() => setArrowLit(true)}/>
@@ -1601,7 +1601,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
       <motion.button
         onClick={onReplay}
         style={{
-          position:"absolute", top:260, left:"calc(50% - 27px)", zIndex:22,
+          position:"absolute", top:298, left:"calc(50% - 27px)", zIndex:22,
           width:54, height:54, borderRadius:"50%",
           border: arrowLit ? "none" : "1.5px solid rgba(212,175,55,0.35)",
           cursor:"pointer",
