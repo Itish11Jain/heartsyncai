@@ -144,6 +144,8 @@ function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
       transition={{ duration:dur, repeat:Infinity, ease:"easeInOut", delay }}>
       <path d={strPath} fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.5}/>
       <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
+      <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
+        fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
       <ellipse cx={cx} cy={cy+r+4} rx={5} ry={4} fill={`url(#${gid})`} opacity={0.85}/>
     </motion.g>
   );
@@ -170,6 +172,8 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
         transition={{ duration:3.8, repeat:Infinity, ease:"easeInOut" }}
         onClick={onTap} style={{ cursor:"pointer" }}>
         <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
+        <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
+          fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
         <ellipse cx={cx} cy={cy+r+5} rx={6} ry={5} fill={`url(#${gid})`} opacity={0.85}/>
         <text x={cx} y={cy+5} textAnchor="middle"
           fontFamily="Georgia,serif" fontStyle="italic" fontSize={13}
