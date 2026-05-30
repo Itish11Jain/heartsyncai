@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import photo1Src from "@/assets/photo1.jpg";
+import photo2Src from "@/assets/photo2.jpg";
+import photo3Src from "@/assets/photo3.jpg";
 
 const name = "Priya";
 const age = 25;
@@ -592,70 +595,48 @@ function Scene3({ onNext }: { onNext:()=>void }) {
 /* ══════════════════════════════════════════
    PHOTO CUTOUT + CAP — Scene 4 sub-component
 ══════════════════════════════════════════ */
-function PhotoCutout({ capVisible }: { capVisible:boolean }) {
-  const HCX=195, HCY=390, HR=68;
+function PhotoCutout({ capVisible, imageSrc }: { capVisible:boolean, imageSrc:string }) {
+  const HCX=195, HCY=370, ORX=96, ORY=118;
+  const CAPBASE = HCY - ORY;
   return (
     <svg width={390} height={780} viewBox="0 0 390 780"
-      style={{ position:"absolute", top:100, left:0, pointerEvents:"none" }}>
+      style={{ position:"absolute", top:80, left:0, pointerEvents:"none" }}>
       <defs>
+        <clipPath id="photoClip">
+          <ellipse cx={HCX} cy={HCY} rx={ORX} ry={ORY}/>
+        </clipPath>
         <linearGradient id="capG" x1="0%" y1="0%" x2="60%" y2="100%">
           <stop offset="0%"   stopColor="#FFF4B0"/>
           <stop offset="35%"  stopColor="#D4AF37"/>
           <stop offset="70%"  stopColor="#9A6E00"/>
           <stop offset="100%" stopColor="#5C3D00"/>
         </linearGradient>
-        <radialGradient id="silG" cx="38%" cy="28%" r="60%">
-          <stop offset="0%"   stopColor="#3a2015"/>
-          <stop offset="100%" stopColor="#1a0a05"/>
-        </radialGradient>
         <filter id="silGlow">
           <feGaussianBlur stdDeviation="3" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
 
-      {/* Shadow */}
-      <ellipse cx={HCX} cy={600} rx={72} ry={14} fill="black" opacity={0.18}/>
+      {/* Real photo in oval clip */}
+      <image
+        href={imageSrc}
+        x={HCX-ORX} y={HCY-ORY}
+        width={ORX*2} height={ORY*2}
+        preserveAspectRatio="xMidYMin slice"
+        clipPath="url(#photoClip)"/>
 
-      {/* Body silhouette */}
-      <ellipse cx={HCX} cy={535} rx={68} ry={88} fill="url(#silG)" opacity={0.92}/>
-
-      {/* Neck */}
-      <rect x={HCX-14} y={HCY+HR-6} width={28} height={32} rx={10} fill="url(#silG)" opacity={0.92}/>
-
-      {/* Head */}
-      <circle cx={HCX} cy={HCY} r={HR} fill="url(#silG)" opacity={0.95}/>
-
-      {/* Eyes */}
-      <circle cx={HCX-22} cy={HCY-10} r={5.5} fill="#0a0502" opacity={0.85}/>
-      <circle cx={HCX+22} cy={HCY-10} r={5.5} fill="#0a0502" opacity={0.85}/>
-      <circle cx={HCX-20} cy={HCY-12} r={2}   fill="white"   opacity={0.55}/>
-      <circle cx={HCX+24} cy={HCY-12} r={2}   fill="white"   opacity={0.55}/>
-
-      {/* Smile */}
-      <path d={`M ${HCX-22} ${HCY+18} Q ${HCX} ${HCY+36} ${HCX+22} ${HCY+18}`}
-        fill="none" stroke="#0a0502" strokeWidth={3} strokeLinecap="round" opacity={0.8}/>
-
-      {/* Golden outline sketch — head */}
-      <motion.circle cx={HCX} cy={HCY} r={HR+10}
-        fill="none" stroke="#D4AF37" strokeWidth={2.2} strokeLinecap="round"
-        strokeDasharray="6 5"
-        initial={{ pathLength:0, rotate:-90 }} animate={{ pathLength:1, rotate:-90 }}
-        style={{ originX:"50%", originY:"50%" }}
-        transition={{ duration:2.2, ease:"easeInOut" }}/>
-
-      {/* Golden outline sketch — body */}
-      <motion.ellipse cx={HCX} cy={535} rx={78} ry={98}
-        fill="none" stroke="#D4AF37" strokeWidth={2}
-        strokeDasharray="6 5"
+      {/* Golden sketch outline */}
+      <motion.ellipse cx={HCX} cy={HCY} rx={ORX+11} ry={ORY+11}
+        fill="none" stroke="#D4AF37" strokeWidth={2.4} strokeLinecap="round"
+        strokeDasharray="7 5"
         initial={{ pathLength:0 }} animate={{ pathLength:1 }}
-        transition={{ duration:2.2, delay:0.6, ease:"easeInOut" }}/>
+        transition={{ duration:2.4, ease:"easeInOut" }}/>
 
-      {/* Golden outline glow ring */}
-      <motion.circle cx={HCX} cy={HCY} r={HR+10}
-        fill="none" stroke="#FFF4B0" strokeWidth={0.7} opacity={0.4}
+      {/* Soft glow ring */}
+      <motion.ellipse cx={HCX} cy={HCY} rx={ORX+11} ry={ORY+11}
+        fill="none" stroke="#FFF4B0" strokeWidth={0.8} opacity={0.4}
         initial={{ pathLength:0 }} animate={{ pathLength:1 }}
-        transition={{ duration:2.2, ease:"easeInOut" }}/>
+        transition={{ duration:2.4, ease:"easeInOut" }}/>
 
       {/* Birthday cap */}
       {capVisible && (
@@ -663,38 +644,23 @@ function PhotoCutout({ capVisible }: { capVisible:boolean }) {
           initial={{ y:-200, opacity:0, rotate:-12 }}
           animate={{ y:0, opacity:1, rotate:0 }}
           transition={{ duration:0.75, ease:[0.34,1.56,0.64,1] }}>
-          {/* Cap triangle */}
-          <path d={`M ${HCX+8} ${HCY-HR-62} L ${HCX-42} ${HCY-HR+8} L ${HCX+48} ${HCY-HR+8} Z`}
+          <path d={`M ${HCX+8} ${CAPBASE-62} L ${HCX-44} ${CAPBASE+10} L ${HCX+50} ${CAPBASE+10} Z`}
             fill="url(#capG)" filter="url(#silGlow)"/>
-          {/* Diagonal stripes on cap */}
           {[0,1,2].map(n=>(
             <line key={n}
-              x1={HCX-38+n*22} y1={HCY-HR+8}
-              x2={HCX-20+n*22} y2={HCY-HR-38}
+              x1={HCX-40+n*22} y1={CAPBASE+10}
+              x2={HCX-22+n*22} y2={CAPBASE-38}
               stroke="rgba(255,255,255,0.2)" strokeWidth={5}/>
           ))}
-          {/* Brim */}
-          <ellipse cx={HCX+4} cy={HCY-HR+8} rx={46} ry={9}
+          <ellipse cx={HCX+4} cy={CAPBASE+10} rx={48} ry={9}
             fill="#C9920A" opacity={0.95}/>
-          {/* Pompon ball */}
-          <circle cx={HCX+8} cy={HCY-HR-68} r={11}
-            fill="#FFF4B0"/>
-          <circle cx={HCX+5} cy={HCY-HR-72} r={4}
-            fill="white" opacity={0.7}/>
-          {/* Tassel string */}
-          <line x1={HCX+8} y1={HCY-HR-57} x2={HCX+28} y2={HCY-HR-24}
+          <circle cx={HCX+8} cy={CAPBASE-68} r={11} fill="#FFF4B0"/>
+          <circle cx={HCX+5} cy={CAPBASE-72} r={4} fill="white" opacity={0.7}/>
+          <line x1={HCX+8} y1={CAPBASE-57} x2={HCX+28} y2={CAPBASE-24}
             stroke="#D4AF37" strokeWidth={1.5}/>
-          <circle cx={HCX+30} cy={HCY-HR-20} r={5} fill="#D4AF37"/>
+          <circle cx={HCX+30} cy={CAPBASE-20} r={5} fill="#D4AF37"/>
         </motion.g>
       )}
-
-      {/* "Your photo here" hint */}
-      <motion.text x={HCX} y={HCY+8} textAnchor="middle"
-        fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic"
-        fontSize={13} fill="#C9A840" opacity={0.5}
-        initial={{ opacity:0 }} animate={{ opacity:0.5 }} transition={{ delay:0.4 }}>
-        your photo here
-      </motion.text>
     </svg>
   );
 }
@@ -805,14 +771,9 @@ function FlowerBottomLeft() {
   );
 }
 
-function PolaroidFrame({ idx, top, left, rotate, floatDelay }:
-  { idx:number, top:number, left:number, rotate:number, floatDelay:number }) {
+function PolaroidFrame({ idx, top, left, rotate, floatDelay, imageSrc }:
+  { idx:number, top:number, left:number, rotate:number, floatDelay:number, imageSrc:string }) {
   const IW=130, IH=138, BRD=11, BOT=32;
-  const moods = [
-    "linear-gradient(148deg,#1a0d08 0%,#3a1520 55%,#200c10 100%)",
-    "linear-gradient(148deg,#0c1018 0%,#1e1028 55%,#0e0c18 100%)",
-    "linear-gradient(148deg,#100810 0%,#241030 55%,#100c18 100%)",
-  ];
   return (
     <motion.div style={{ position:"absolute", top, left, zIndex:10+idx, rotate }}
       initial={{ opacity:0, scale:0.82, y:36 }}
@@ -831,27 +792,9 @@ function PolaroidFrame({ idx, top, left, rotate, floatDelay }:
           boxSizing:"border-box" as const,
         }}>
           {/* Photo area */}
-          <div style={{ width:IW, height:IH, background:moods[idx], borderRadius:2,
-            position:"relative", overflow:"hidden" }}>
-            <svg width={IW} height={IH} viewBox={`0 0 ${IW} ${IH}`}
-              style={{ position:"absolute", inset:0 }}>
-              <defs>
-                <radialGradient id={`phV${idx}`} cx="50%" cy="25%" r="70%">
-                  <stop offset="0%" stopColor="transparent"/>
-                  <stop offset="100%" stopColor="rgba(0,0,0,0.55)"/>
-                </radialGradient>
-              </defs>
-              {/* Vignette */}
-              <rect width={IW} height={IH} fill={`url(#phV${idx})`}/>
-              {/* Head silhouette */}
-              <ellipse cx={IW/2} cy={IH*0.34} rx={21} ry={25} fill="rgba(30,10,6,0.6)"/>
-              {/* Shoulders */}
-              <ellipse cx={IW/2} cy={IH*0.76} rx={30} ry={27} fill="rgba(20,8,4,0.55)"/>
-              {/* Add photo hint */}
-              <text x={IW/2} y={IH-6} textAnchor="middle"
-                fill="#C9A840" opacity={0.38} fontSize={8}
-                fontFamily="Georgia,serif" fontStyle="italic">tap to add photo</text>
-            </svg>
+          <div style={{ width:IW, height:IH, borderRadius:2,
+            position:"relative", overflow:"hidden", background:"#1a0d08" }}>
+            <img src={imageSrc} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
           </div>
         </div>
       </motion.div>
@@ -881,9 +824,9 @@ function Scene4({ onNext }: { onNext:()=>void }) {
       ))}
 
       {/* 3 Floating polaroids */}
-      <PolaroidFrame idx={0} top={155} left={6}  rotate={-7} floatDelay={0}   />
-      <PolaroidFrame idx={1} top={328} left={34} rotate={-2} floatDelay={0.6} />
-      <PolaroidFrame idx={2} top={505} left={6}  rotate={-5} floatDelay={1.1} />
+      <PolaroidFrame idx={0} top={155} left={6}  rotate={-7} floatDelay={0}   imageSrc={photo1Src}/>
+      <PolaroidFrame idx={1} top={328} left={34} rotate={-2} floatDelay={0.6} imageSrc={photo2Src}/>
+      <PolaroidFrame idx={2} top={505} left={6}  rotate={-5} floatDelay={1.1} imageSrc={photo3Src}/>
 
       {/* "happy birthday" cursive text — right side */}
       <motion.div style={{ position:"absolute", right:10, top:428, width:172, textAlign:"right" }}>
@@ -962,7 +905,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
       </AnimatePresence>
 
       {/* Photo + cap */}
-      <PhotoCutout capVisible={capVisible}/>
+      <PhotoCutout capVisible={capVisible} imageSrc={photo3Src}/>
 
       {/* Pencil emoji drawing animation */}
       {!pencilDone && (
