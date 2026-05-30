@@ -320,149 +320,190 @@ function CandleFlame({ cx, cy, blown }: { cx:number; cy:number; blown:boolean })
     </motion.g>
   );
 }
-/* ── True CSS-3D cake tier (cylinder with per-panel lighting) ── */
-function CakeTier3D({ r, h, top: yTop, panels=18, side1, side2, capColor, stripe }:{
+/* ── Beautiful CSS-3D cake tier ── */
+function CakeTier3D({ r, h, top: yTop, panels=20, light, dark, capA, capB, pearl, drip=true }:{
   r:number; h:number; top:number; panels?:number;
-  side1:string; side2:string; capColor:string; stripe?:string;
+  light:string; dark:string; capA:string; capB:string;
+  pearl?:string; drip?:boolean;
 }) {
   const pw = 2 * r * Math.sin(Math.PI / panels);
   return (
     <div style={{ position:"absolute", width:r*2, height:h,
                   left:"50%", top:yTop, marginLeft:-r,
                   transformStyle:"preserve-3d" }}>
-      {/* Cylinder side panels */}
       {Array.from({length:panels},(_,i)=>{
         const cos = Math.cos((i/panels)*Math.PI*2);
-        const lit = Math.max(0.32, Math.min(1.05, 0.64+0.38*cos));
+        const lit = Math.max(0.28, Math.min(1.12, 0.64+0.42*cos));
         return (
           <div key={i} style={{
             position:"absolute", width:pw, height:h,
             left:"50%", marginLeft:-pw/2, top:0,
-            background:`linear-gradient(180deg,${side1} 0%,${side2} 100%)`,
+            background:`linear-gradient(180deg,${light} 0%,${dark} 100%)`,
             filter:`brightness(${lit.toFixed(2)})`,
             transform:`rotateY(${(i/panels)*360}deg) translateZ(${r}px)`,
-            backfaceVisibility:"hidden",
-            overflow:"hidden",
+            backfaceVisibility:"hidden", overflow:"hidden",
           }}>
-            {/* Frosting drip stripe near top */}
-            {stripe && (
+            {/* Frosting drip blobs */}
+            {drip && [18, 62].map((lp, d) => (
+              <div key={d} style={{
+                position:"absolute",
+                left:`${lp}%`, top:-3,
+                width:7+d*4, height:18+d*5,
+                borderRadius:"0 0 55% 55%",
+                background:"rgba(255,251,246,0.93)",
+                transform:"translateX(-50%)",
+              }}/>
+            ))}
+            {/* Pearl dot */}
+            {pearl && (
               <div style={{
-                position:"absolute", left:0, top:0, width:"100%", height:10,
-                background:stripe, opacity:0.85,
+                position:"absolute", left:"50%", top:h*0.52,
+                width:10, height:10, borderRadius:"50%",
+                background:`radial-gradient(circle at 35% 32%,#fff 18%,${pearl} 75%)`,
+                marginLeft:-5, marginTop:-5,
+                boxShadow:`0 0 4px ${pearl}80`,
               }}/>
             )}
+            {/* Thin gold rim at base of panel */}
+            <div style={{
+              position:"absolute", left:0, bottom:0,
+              width:"100%", height:5,
+              background:"linear-gradient(90deg,#9B7210,#D4AF37,#F0D060,#D4AF37,#9B7210)",
+              opacity:0.7,
+            }}/>
           </div>
         );
       })}
-      {/* Top cap — rotated flat disk */}
+      {/* Frosting cap — glossy radial gradient */}
       <div style={{
         position:"absolute", width:r*2, height:r*2, borderRadius:"50%",
-        background:capColor,
+        background:`radial-gradient(circle at 38% 32%, #FFFEF8 0%, ${capA} 52%, ${capB} 100%)`,
         left:0, top:-(r*2),
         transformOrigin:"bottom center",
         transform:"rotateX(-90deg)",
-        boxShadow:"inset 0 0 12px rgba(255,255,255,0.25)",
+        boxShadow:"inset 0 2px 10px rgba(255,255,255,0.3), inset 0 0 18px rgba(180,130,60,0.12)",
       }}/>
-      {/* Inner frosting ring on cap */}
-      <div style={{
-        position:"absolute", width:r*1.7, height:r*1.7, borderRadius:"50%",
-        background:"rgba(255,255,255,0.12)",
-        left:r*0.15, top:-(r*1.7),
-        transformOrigin:"bottom center",
-        transform:"rotateX(-90deg)",
-        pointerEvents:"none",
-      }}/>
+    </div>
+  );
+}
+
+/* Thin gold separator ring between tiers */
+function TierRing({ r, top: yTop }:{ r:number; top:number }) {
+  const N = 20, h = 8, pw = 2 * r * Math.sin(Math.PI / N);
+  return (
+    <div style={{ position:"absolute", width:r*2, height:h,
+                  left:"50%", top:yTop, marginLeft:-r,
+                  transformStyle:"preserve-3d" }}>
+      {Array.from({length:N},(_,i)=>{
+        const lit = Math.max(0.5, Math.min(1.4, 0.8+0.5*Math.cos((i/N)*Math.PI*2)));
+        return (
+          <div key={i} style={{
+            position:"absolute", width:pw, height:h,
+            left:"50%", marginLeft:-pw/2, top:0,
+            background:"linear-gradient(180deg,#F4D060,#B89020)",
+            filter:`brightness(${lit.toFixed(2)})`,
+            transform:`rotateY(${(i/N)*360}deg) translateZ(${r}px)`,
+            backfaceVisibility:"hidden",
+          }}/>
+        );
+      })}
     </div>
   );
 }
 
 function BirthdayCake3D({ blown }: { blown:boolean }) {
   const CANDLES = [
-    {x:-24, color:"#C9846A", dur:0.38},
-    {x:  0, color:"#D4AF37", dur:0.44},
-    {x: 24, color:"#FFF5EE", dur:0.41},
+    { x:-22, top:"#F9A8D4", bot:"#BE185D", dur:0.37 },
+    { x:  0, top:"#FDE68A", bot:"#B45309", dur:0.43 },
+    { x: 22, top:"#C4B5FD", bot:"#6D28D9", dur:0.40 },
   ];
-  const cpw = 2*5*Math.sin(Math.PI/10); // candle panel width
+  const cpw = 2*5*Math.sin(Math.PI/12);
 
   return (
     <div style={{
       width:268, height:268, position:"relative",
       transformStyle:"preserve-3d",
-      transform:"rotateX(-20deg)",
+      transform:"rotateX(-26deg)",
     }}>
-      {/* Ground shadow */}
-      <div style={{
-        position:"absolute", width:180, height:20, borderRadius:"50%",
-        background:"rgba(0,0,0,0.35)", left:44, top:246,
-        transform:"rotateX(90deg)", transformOrigin:"top center",
-        filter:"blur(6px)",
-      }}/>
+      {/* Bottom tier — deep plum/burgundy */}
+      <CakeTier3D r={100} h={66} top={194} panels={24}
+        light="#B01830" dark="#5C0A18"
+        capA="#FFF5E8" capB="#E8CCA8"
+        pearl="#D4AF37" drip/>
 
-      {/* Bottom tier — deep maroon */}
-      <CakeTier3D r={100} h={68} top={192} panels={22}
-        side1="#AD1F38" side2="#6A0E1E"
-        capColor="#FFF5EE" stripe="#FFF5EE"/>
+      {/* Gold ring */}
+      <TierRing r={72} top={188}/>
 
-      {/* Middle tier — antique gold */}
-      <CakeTier3D r={70} h={54} top={132} panels={18}
-        side1="#C8960C" side2="#7A5700"
-        capColor="#FFF5EE" stripe="#FFF5EE"/>
+      {/* Middle tier — rose gold */}
+      <CakeTier3D r={68} h={54} top={130} panels={20}
+        light="#C47A5A" dark="#7A3E28"
+        capA="#FFF0E0" capB="#D4A880"
+        pearl="#FFF5EE" drip/>
+
+      {/* Gold ring */}
+      <TierRing r={48} top={126}/>
 
       {/* Top tier — ivory cream */}
-      <CakeTier3D r={46} h={46} top={80} panels={14}
-        side1="#FFF5EE" side2="#D4B898"
-        capColor="#FFFAF6" stripe="#D4AF37"/>
+      <CakeTier3D r={46} h={48} top={78} panels={16}
+        light="#FFFCF5" dark="#E8D0A8"
+        capA="#FFFFFF" capB="#F5E8CC"
+        pearl="#D4AF37" drip={false}/>
 
       {/* Candles */}
       {CANDLES.map((cd,i)=>(
         <div key={i} style={{
           position:"absolute",
-          width:10, height:30,
-          left:"50%", top:46,
+          width:10, height:32,
+          left:"50%", top:44,
           marginLeft:cd.x-5,
           transformStyle:"preserve-3d",
-          transform:"translateZ(28px)",
+          transform:"translateZ(32px)",
         }}>
-          {/* Candle cylinder */}
-          {Array.from({length:10},(_,j)=>{
-            const cos = Math.cos((j/10)*Math.PI*2);
-            const lit = Math.max(0.45, 0.7+0.3*cos);
+          {Array.from({length:12},(_,j)=>{
+            const lit = Math.max(0.4, 0.7+0.3*Math.cos((j/12)*Math.PI*2));
             return (
               <div key={j} style={{
-                position:"absolute", width:cpw, height:30,
+                position:"absolute", width:cpw, height:32,
                 left:"50%", marginLeft:-cpw/2, top:0,
-                background:cd.color,
+                background:`linear-gradient(180deg,${cd.top},${cd.bot})`,
                 filter:`brightness(${lit.toFixed(2)})`,
-                transform:`rotateY(${(j/10)*360}deg) translateZ(5px)`,
+                transform:`rotateY(${(j/12)*360}deg) translateZ(5px)`,
                 backfaceVisibility:"hidden",
               }}/>
             );
           })}
+          {/* Wax top */}
+          <div style={{
+            position:"absolute", width:12, height:12, borderRadius:"50%",
+            background:`radial-gradient(circle at 38% 35%,#fff 15%,${cd.top} 70%)`,
+            left:-1, top:-6, transformOrigin:"center bottom",
+            transform:"translateZ(5px) rotateX(-90deg)",
+          }}/>
+          {/* Wick */}
+          <div style={{
+            position:"absolute", width:2, height:7, borderRadius:1,
+            background:"#3B2000", left:4, top:-13, transform:"translateZ(5px)",
+          }}/>
           {/* Flame */}
           {!blown ? (
             <motion.div style={{
-              position:"absolute", width:12, height:20,
-              left:-1, top:-22,
-              borderRadius:"50% 50% 38% 38% / 60% 60% 40% 40%",
-              background:"linear-gradient(180deg,#FFFF80 0%,#FFA500 55%,#FF4400 100%)",
-              filter:"blur(1px)",
-              boxShadow:"0 0 10px 5px rgba(255,160,0,0.55)",
+              position:"absolute", width:14, height:22, left:-2, top:-33,
+              borderRadius:"50% 50% 35% 35% / 65% 65% 35% 35%",
+              background:"linear-gradient(180deg,#FFFFE0 0%,#FFAA00 45%,#FF5500 100%)",
+              filter:"blur(0.6px)",
+              boxShadow:"0 0 14px 7px rgba(255,150,0,0.65), 0 0 5px 2px rgba(255,255,100,0.5)",
               transform:"translateZ(5px)",
             }}
-              animate={{ scaleX:[1,0.6,1,0.75,1], scaleY:[1,1.18,0.88,1.12,1],
-                         y:[0,-1,1,-1,0] }}
+              animate={{ scaleX:[1,0.5,1,0.68,1], scaleY:[1,1.22,0.86,1.18,1], rotate:[-3,3,-1,4,-3] }}
               transition={{ duration:cd.dur, repeat:Infinity, ease:"easeInOut" }}/>
           ) : (
-            /* Smoke wisps after blown */
             <motion.div style={{
-              position:"absolute", width:6, height:24,
-              left:2, top:-30,
-              background:"linear-gradient(180deg,rgba(200,200,200,0),rgba(180,180,180,0.5))",
-              borderRadius:8,
+              position:"absolute", width:3, height:16, left:3.5, top:-26,
+              borderRadius:3, background:"rgba(220,220,220,0.45)",
               transform:"translateZ(5px)",
             }}
-              animate={{ opacity:[0.6,0], y:[0,-20], scaleX:[1,2,0] }}
-              transition={{ duration:1.2, repeat:Infinity, delay:i*0.15 }}/>
+              animate={{ opacity:[0.7,0], y:[0,-14,-20], scaleX:[1,2.5,0] }}
+              transition={{ duration:1.4, repeat:Infinity, delay:i*0.22 }}/>
           )}
         </div>
       ))}
@@ -1293,7 +1334,7 @@ export function BirthdayDoor() {
                 <motion.button key="cta" onClick={handleBlow}
                   style={{
                     position:"absolute",
-                    top: C_TOP + C_H/2 - 134 - 80 + 268 + 32,
+                    top: 518,
                     left:"50%", transform:"translateX(-50%)",
                     background:"rgba(212,175,55,0.1)",
                     border:"1.5px solid rgba(212,175,55,0.55)",
