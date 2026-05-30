@@ -410,7 +410,12 @@ export function BirthdayDoor() {
               <p style={{ color:"#A07850", fontSize:12, fontFamily:"sans-serif" }}>Turning {age} never looked so magical!</p>
             </motion.div>
 
-            <motion.div style={{ width:268, height:268, marginTop:20 }}
+            <motion.div style={{
+                position:"absolute",
+                left: C_LEFT + C_W/2 - 134,
+                top:  C_TOP  + C_H/2 - 134,
+                width:268, height:268,
+              }}
               initial={{ scale:0.1, rotate:-18 }} animate={{ scale:1, rotate:0 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
               <Cake />
