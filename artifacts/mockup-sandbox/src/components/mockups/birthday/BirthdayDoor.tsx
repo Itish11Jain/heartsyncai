@@ -1763,8 +1763,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
       }}
         initial={{ opacity:0 }} animate={{ opacity:1 }}
         transition={{ delay:0.5, duration:0.6 }}>
-        The world is so lucky to have you in it.<br/>
-        Wishing you all the happiness &amp; success you deserve!
+        The world is so lucky to have you in it. Wishing you all the happiness you deserve. May all your wishes come true!
       </motion.p>
 
       {/* ── Emoji orbs + message ── */}
