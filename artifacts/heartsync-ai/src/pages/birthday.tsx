@@ -464,7 +464,7 @@ const BUNCHES_DEF = [
 function BunchBalloons({ flyUp }: { flyUp:boolean }) {
   const AY = 900;
   return (
-    <div style={{ position:"absolute", left:0, top:0, width:390, height:844, zIndex:3, pointerEvents:"none" }}>
+    <div style={{ position:"absolute", left:0, top:0, width:390, height:844, zIndex:14, pointerEvents:"none" }}>
       <svg width={390} height={AY+60} viewBox={`0 0 390 ${AY+60}`}
         style={{ position:"absolute", top:0, left:0 }}>
         <defs>
@@ -535,7 +535,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
 
       {/* "Make a Wish" headline */}
       <motion.h1 style={{
-        position:"absolute", top:52, left:0, right:0, textAlign:"center", zIndex:5,
+        position:"absolute", top:52, left:0, right:0, textAlign:"center", zIndex:20,
         fontFamily:"'Great Vibes','Dancing Script',cursive",
         fontSize:44, lineHeight:1, margin:0, pointerEvents:"none",
         background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
@@ -547,7 +547,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
       </motion.h1>
 
       {/* Cake — entrance pop then continuous float */}
-      <motion.div style={{ position:"absolute", left:"50%", marginLeft:-140, top:188, width:280, height:280, zIndex:5 }}
+      <motion.div style={{ position:"absolute", left:"50%", marginLeft:-140, top:188, width:280, height:280, zIndex:20 }}
         initial={{ scale:0.1, opacity:0 }} animate={{ scale:1, opacity:1 }}
         transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
         <motion.div style={{ width:"100%", height:"100%" }}
@@ -561,7 +561,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
       <AnimatePresence>
         {cakePhase === "cta" && (
           <motion.div key="cta-wrap"
-            style={{ position:"absolute", top:510, left:0, right:0, display:"flex", justifyContent:"center", zIndex:5 }}
+            style={{ position:"absolute", top:510, left:0, right:0, display:"flex", justifyContent:"center", zIndex:20 }}
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
             exit={{ opacity:0, y:-10 }} transition={{ delay:0.7 }}>
             <motion.button onClick={handleBlow}
@@ -580,7 +580,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
       <AnimatePresence mode="wait">
         {cakePhase === "counting" && (
           <motion.div key={`cd-${countdown}`}
-            style={{ position:"absolute", top:488, left:0, right:0, textAlign:"center", zIndex:5,
+            style={{ position:"absolute", top:488, left:0, right:0, textAlign:"center", zIndex:20,
               fontSize:100, fontWeight:"bold", lineHeight:1, fontFamily:"Georgia,serif",
               background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 50%,#F0D060 100%)",
               WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
@@ -673,7 +673,17 @@ function Scene3({ onNext }: { onNext:()=>void }) {
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
       transition={{ duration:0.6 }}>
       <TwinkleBackground/>
-      <HappyBirthdayBanner/>
+      <motion.h1 style={{
+        position:"absolute", top:40, left:0, right:0, textAlign:"center", zIndex:8,
+        fontFamily:"'Great Vibes', cursive",
+        fontSize:52, lineHeight:1, margin:0, pointerEvents:"none",
+        background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+      }}
+        initial={{ opacity:0, y:-14 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.15, duration:0.6 }}>
+        Happy Birthday
+      </motion.h1>
       <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column",
         alignItems:"center", justifyContent:"center", gap:0 }}>
         <motion.div style={{ width:80, height:1,
