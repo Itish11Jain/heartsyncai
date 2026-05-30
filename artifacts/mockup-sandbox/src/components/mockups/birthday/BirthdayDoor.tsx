@@ -1667,8 +1667,23 @@ export function BirthdayDoor() {
             transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
 
             <TwinkleBackground />
-            <HappyBirthdayBanner />
             <BunchBalloons flyUp={flyUp} />
+
+            {/* "Make a Wish" headline */}
+            <motion.h1
+              style={{
+                position:"absolute", top:52, left:0, right:0, textAlign:"center",
+                fontFamily:"'Great Vibes', cursive",
+                fontSize:54, lineHeight:1,
+                background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+                WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+                margin:0, pointerEvents:"none",
+              }}
+              initial={{ opacity:0, y:-16 }}
+              animate={{ opacity:1, y:0 }}
+              transition={{ delay:0.2, duration:0.6 }}>
+              Make a Wish ✨
+            </motion.h1>
 
             {/* Cake */}
             <motion.div style={{
