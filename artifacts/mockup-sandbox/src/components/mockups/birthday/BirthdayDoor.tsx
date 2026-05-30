@@ -1105,8 +1105,8 @@ export function BirthdayDoor() {
     setTimeout(() => { setCakePhase("blown"); setBlown(true); setConfetti(true); setFlyUp(true); }, 2400);
     setTimeout(() => setConfetti(false), 5200);
     setTimeout(() => setCakeZoom(true), 6000);
-    setTimeout(() => setCakeExplode(true), 7700);
-    setTimeout(() => setScene(4), 8200);
+    setTimeout(() => setCakeExplode(true), 8300);
+    setTimeout(() => setScene(4), 8900);
   }
   function handleReplay() {
     setScene(1); setConfetti(false); setBlown(false); setFlyUp(false);
@@ -1160,22 +1160,29 @@ export function BirthdayDoor() {
             <HappyBirthdayBanner />
             <BunchBalloons flyUp={flyUp} />
 
-            {/* Cake — zooms + spins into screen after balloons gone */}
-            <motion.div style={{
+            {/* Cake — 3-D Y-axis spin + slow zoom-in, explodes before hitting screen */}
+            <div style={{
                 position:"absolute",
                 left: C_LEFT + C_W/2 - 134,
                 top:  C_TOP  + C_H/2 - 134 - 80,
                 width:268, height:268,
-              }}
-              initial={{ scale:0.1, rotate:-18, opacity:1 }}
-              animate={cakeZoom
-                ? { scale:32, rotate:720, opacity:0 }
-                : { scale:1, rotate:0, opacity:1 }}
-              transition={cakeZoom
-                ? { duration:1.7, ease:[0.4,0,0.85,1] }
-                : { delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <Cake blown={blown} />
-            </motion.div>
+                perspective: 700,
+              }}>
+              <motion.div
+                style={{ width:268, height:268 }}
+                initial={{ scale:0.1, rotateY:-20, opacity:1 }}
+                animate={cakeZoom
+                  ? { scale:3.8, rotateY:1080, opacity:1 }
+                  : { scale:1,   rotateY:0,    opacity:1 }}
+                transition={cakeZoom
+                  ? {
+                      scale:   { duration:2.3, ease:[0.12,0,0.88,1] },
+                      rotateY: { duration:2.3, ease:"linear" },
+                    }
+                  : { delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
+                <Cake blown={blown} />
+              </motion.div>
+            </div>
 
             {/* CTA */}
             <AnimatePresence>
