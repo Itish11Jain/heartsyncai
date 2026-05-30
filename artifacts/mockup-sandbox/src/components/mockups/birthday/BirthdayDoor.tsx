@@ -5,12 +5,9 @@ const name = "Priya";
 const age = 25;
 
 /* ══════════════════════════════════════════
-   ARCH GEOMETRY
-   Curtain from y=190 → y=844 (fills to bottom)
+   GEOMETRY — full-screen curtain
 ══════════════════════════════════════════ */
-const CX = 195, CY = 318, ARCH_R = 128;
-const C_LEFT = 67, C_TOP = 190, C_W = 256, C_H = 654; // 190+654=844
-const ARCH_BORDER_R = C_W / 2; // 128
+const C_LEFT = 0, C_TOP = 0, C_W = 390, C_H = 844;
 
 /* ══════════════════════════════════════════
    PALETTE — Rose Gold · Off-White · Gold
@@ -152,48 +149,45 @@ function Nebulae() {
 }
 
 /* ══════════════════════════════════════════
-   CURTAIN — off-white flowing, gold folds
+   CURTAIN — golden full-screen split
 ══════════════════════════════════════════ */
-// Red velvet: deep pile shadow → mid crimson → crushed-pile highlight → mid → shadow
 const FOLD_FABRIC = `repeating-linear-gradient(
   to right,
-  #2A0008       0px,
-  #780018       7px,
-  #C0002E      14px,
-  #E8003A      19px,
-  #C0002E      24px,
-  #780018      31px,
-  #2A0008      40px
+  #4A2E00  0px,
+  #8B5A00  6px,
+  #C9920A 12px,
+  #E8B820 17px,
+  #F5CE50 20px,
+  #E8B820 23px,
+  #C9920A 28px,
+  #8B5A00 34px,
+  #4A2E00 40px
 )`;
 
 function Curtain({ open }: { open: boolean }) {
-  const panelW = C_W / 2; // 128
+  const panelW = 195;
   return (
     <div style={{
-      position:"absolute", left:C_LEFT, top:C_TOP, width:C_W, height:C_H,
-      borderRadius:`${ARCH_BORDER_R}px ${ARCH_BORDER_R}px 0 0`,
+      position:"absolute", left:0, top:0, width:390, height:844,
       overflow:"hidden", zIndex:5,
     }}>
       {/* LEFT PANEL */}
       <motion.div style={{
         position:"absolute", left:0, top:0, width:panelW, height:"100%",
         background:FOLD_FABRIC, zIndex:2,
-        boxShadow:"inset -8px 0 28px rgba(0,0,0,0.55)",
+        boxShadow:"inset -12px 0 36px rgba(0,0,0,0.55)",
       }}
-        animate={open ? { x:-(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+        animate={open ? { x:-(panelW+4), opacity:0.6 } : { x:0, opacity:1 }}
         transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
-        {/* Gold shimmer */}
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,rgba(212,175,55,0.15) 0%,rgba(212,175,55,0.03) 50%,transparent 75%)", pointerEvents:"none" }} />
-        {/* Animated flowing shimmer */}
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.05) 50%,transparent 75%)", pointerEvents:"none" }} />
         <motion.div style={{
           position:"absolute", inset:0,
-          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.13) 48%,rgba(255,255,255,0.06) 58%,transparent 75%)",
+          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.18) 48%,rgba(255,255,255,0.08) 58%,transparent 75%)",
         }}
           animate={{ x:[0,6,0,-4,0], y:[0,8,0,-5,0] }}
           transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }} />
-        {/* Wavy hem */}
         <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
-          <motion.path fill="rgba(0,0,0,0.35)"
+          <motion.path fill="rgba(0,0,0,0.3)"
             animate={{ d:[
               `M 0 28 Q ${panelW*0.2} 14 ${panelW*0.4} 22 Q ${panelW*0.65} 28 ${panelW*0.85} 12 Q ${panelW} 4 ${panelW} 16 L ${panelW} 28 Z`,
               `M 0 28 Q ${panelW*0.2} 18 ${panelW*0.4} 26 Q ${panelW*0.65} 20 ${panelW*0.85} 8  Q ${panelW} 2 ${panelW} 18 L ${panelW} 28 Z`,
@@ -201,27 +195,26 @@ function Curtain({ open }: { open: boolean }) {
             ]}}
             transition={{ duration:4.8, repeat:Infinity, ease:"easeInOut" }} />
         </svg>
-        {/* Gold seam */}
-        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:2, background:"linear-gradient(to bottom,rgba(212,175,55,0.9),rgba(212,175,55,0.3))" }} />
+        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:3, background:"linear-gradient(to bottom,rgba(255,230,100,0.98),rgba(255,200,50,0.5))" }} />
       </motion.div>
 
       {/* RIGHT PANEL */}
       <motion.div style={{
         position:"absolute", right:0, top:0, width:panelW, height:"100%",
         background:FOLD_FABRIC, zIndex:2,
-        boxShadow:"inset 8px 0 28px rgba(0,0,0,0.55)",
+        boxShadow:"inset 12px 0 36px rgba(0,0,0,0.55)",
       }}
-        animate={open ? { x:(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+        animate={open ? { x:(panelW+4), opacity:0.6 } : { x:0, opacity:1 }}
         transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(225deg,rgba(212,175,55,0.15) 0%,rgba(212,175,55,0.03) 50%,transparent 75%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(225deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.05) 50%,transparent 75%)", pointerEvents:"none" }} />
         <motion.div style={{
           position:"absolute", inset:0,
-          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.13) 48%,rgba(255,255,255,0.06) 58%,transparent 75%)",
+          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.18) 48%,rgba(255,255,255,0.08) 58%,transparent 75%)",
         }}
           animate={{ x:[0,-6,0,4,0], y:[0,8,0,-5,0] }}
           transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut", delay:0.4 }} />
         <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
-          <motion.path fill="rgba(0,0,0,0.35)"
+          <motion.path fill="rgba(0,0,0,0.3)"
             animate={{ d:[
               `M 0 28 Q ${panelW*0.15} 8  ${panelW*0.35} 20 Q ${panelW*0.55} 28 ${panelW*0.75} 14 Q ${panelW*0.9} 4 ${panelW} 22 L ${panelW} 28 Z`,
               `M 0 28 Q ${panelW*0.15} 14 ${panelW*0.35} 24 Q ${panelW*0.55} 18 ${panelW*0.75} 6  Q ${panelW*0.9} 0 ${panelW} 18 L ${panelW} 28 Z`,
@@ -229,32 +222,81 @@ function Curtain({ open }: { open: boolean }) {
             ]}}
             transition={{ duration:4.8, repeat:Infinity, ease:"easeInOut", delay:0.6 }} />
         </svg>
-        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:2, background:"linear-gradient(to bottom,rgba(212,175,55,0.9),rgba(212,175,55,0.3))" }} />
+        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:"linear-gradient(to bottom,rgba(255,230,100,0.98),rgba(255,200,50,0.5))" }} />
       </motion.div>
     </div>
   );
 }
 
-function ArchFrame() {
-  const pad=6, fw=C_W+pad*2, fh=C_H+pad*2, fr=ARCH_BORDER_R+pad;
+
+/* ══════════════════════════════════════════
+   TWINKLE BACKGROUND (Scene 2)
+══════════════════════════════════════════ */
+const TW_DOTS = Array.from({length:45},(_,i)=>({
+  x:(i*173.1+31)%370+10, y:(i*97.7+55)%760+72,
+  r:0.8+(i%5)*0.6,
+  dur:1.8+(i%8)*0.35,
+  delay:(i*0.27)%4,
+  color:["#FFD700","#F5E0A0","#FFFDE8","#E8C84A","#D4AF37"][i%5],
+}));
+const TW_SPARKLES = Array.from({length:18},(_,i)=>({
+  x:(i*211.3+67)%350+20, y:(i*131.7+80)%680+80,
+  s:3+(i%4)*2, dur:3.5+(i%6)*0.5, delay:(i*0.45)%5,
+  ry:30+(i%4)*25, rx:(i%3-1)*18,
+  col:["#FFD700","#FFF8C8","#F0D060"][i%3],
+}));
+const TW_ORBS = Array.from({length:6},(_,i)=>({
+  x:[80,195,310,120,260,155][i], y:[150,280,200,520,420,650][i],
+  r:18+(i%3)*12, dur:6+(i%4)*1.5, delay:i*0.8,
+}));
+
+function TwinkleBackground() {
   return (
-    <svg style={{ position:"absolute", left:C_LEFT-pad, top:C_TOP-pad, width:fw, height:fh, zIndex:6, pointerEvents:"none" }}>
-      <defs>
-        <linearGradient id="af" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%"   stopColor="#D4AF37" />
-          <stop offset="40%"  stopColor="#F0D060" />
-          <stop offset="70%"  stopColor="#C9846A" />
-          <stop offset="100%" stopColor="#D4AF37" />
-        </linearGradient>
-        <filter id="afg"><feGaussianBlur stdDeviation="4" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      <path d={`M ${pad} ${fh} L ${pad} ${fr} A ${fr} ${fr} 0 0 1 ${fw-pad} ${fr} L ${fw-pad} ${fh} Z`}
-        fill="none" stroke="url(#af)" strokeWidth={14} opacity={0.45} filter="url(#afg)" />
-      <path d={`M ${pad} ${fh} L ${pad} ${fr} A ${fr} ${fr} 0 0 1 ${fw-pad} ${fr} L ${fw-pad} ${fh} Z`}
-        fill="none" stroke="url(#af)" strokeWidth={2.5} opacity={0.95} />
-    </svg>
+    <>
+      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",zIndex:1,pointerEvents:"none"}}>
+        {/* Glowing orbs */}
+        {TW_ORBS.map((o,i)=>(
+          <motion.circle key={`orb${i}`} cx={o.x} cy={o.y} r={o.r}
+            fill="none" stroke="#D4AF37" strokeWidth={0.8}
+            animate={{r:[o.r, o.r*1.35, o.r], opacity:[0.06,0.22,0.06]}}
+            transition={{duration:o.dur, repeat:Infinity, delay:o.delay, ease:"easeInOut"}}/>
+        ))}
+        {/* Twinkling dots */}
+        {TW_DOTS.map((s,i)=>(
+          <motion.circle key={i} cx={s.x} cy={s.y} r={s.r}
+            fill={s.color}
+            animate={{opacity:[0.04,0.95,0.1,0.8,0.04], r:[s.r,s.r*1.6,s.r,s.r*1.3,s.r]}}
+            transition={{duration:s.dur, repeat:Infinity, delay:s.delay, ease:"easeInOut"}}/>
+        ))}
+        {/* 4-point sparkle stars */}
+        {[...Array(10)].map((_,i)=>{
+          const x=(i*211+89)%340+25, y=(i*137+110)%660+90, s=4+(i%4)*1.5;
+          const col=["#FFD700","#F5E0A0","#FFF8E8"][i%3];
+          return (
+            <motion.g key={`sp${i}`}
+              animate={{rotate:[0,45,0,-45,0], scale:[0.5,1,0.6,1,0.5], opacity:[0.2,0.9,0.25,0.8,0.2]}}
+              transition={{duration:2.2+(i%5)*0.5, repeat:Infinity, delay:(i*0.55)%4}}
+              style={{transformOrigin:`${x}px ${y}px`}}>
+              <line x1={x-s} y1={y} x2={x+s} y2={y} stroke={col} strokeWidth={1.4} strokeLinecap="round"/>
+              <line x1={x} y1={y-s} x2={x} y2={y+s} stroke={col} strokeWidth={1.4} strokeLinecap="round"/>
+              <line x1={x-s*0.65} y1={y-s*0.65} x2={x+s*0.65} y2={y+s*0.65} stroke={col} strokeWidth={0.7} strokeLinecap="round" opacity={0.55}/>
+              <line x1={x+s*0.65} y1={y-s*0.65} x2={x-s*0.65} y2={y+s*0.65} stroke={col} strokeWidth={0.7} strokeLinecap="round" opacity={0.55}/>
+            </motion.g>
+          );
+        })}
+      </svg>
+      {/* Floating rising particles */}
+      {TW_SPARKLES.map((p,i)=>(
+        <motion.div key={i} style={{position:"absolute", left:p.x, top:p.y, zIndex:2, pointerEvents:"none"}}
+          animate={{y:[0,-p.ry,0], x:[0,p.rx,0,-p.rx*0.5,0], opacity:[0,0.85,0.35,0.7,0], scale:[0.4,1,0.6,1,0.4]}}
+          transition={{duration:p.dur, repeat:Infinity, delay:p.delay, ease:"easeInOut"}}>
+          <svg width={p.s*2} height={p.s*2} viewBox={`0 0 ${p.s*2} ${p.s*2}`}>
+            <line x1={p.s} y1={0} x2={p.s} y2={p.s*2} stroke={p.col} strokeWidth={1.3} strokeLinecap="round"/>
+            <line x1={0} y1={p.s} x2={p.s*2} y2={p.s} stroke={p.col} strokeWidth={1.3} strokeLinecap="round"/>
+          </svg>
+        </motion.div>
+      ))}
+    </>
   );
 }
 
@@ -397,29 +439,28 @@ export function BirthdayDoor() {
             style={{ position:"absolute", inset:0, zIndex:10 }}
             exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
 
-            {/* Header text */}
+            {/* Header text — sits above golden curtain */}
             <motion.div style={{ position:"absolute", top:72, left:0, right:0, textAlign:"center", zIndex:20 }}
               initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
-              <p style={{ color:"#8C6A4A", fontSize:10, letterSpacing:4, textTransform:"uppercase", marginBottom:3, fontFamily:"sans-serif" }}>
+              <p style={{ color:"rgba(255,255,255,0.75)", fontSize:10, letterSpacing:4, textTransform:"uppercase", marginBottom:3, fontFamily:"sans-serif", textShadow:"0 1px 6px rgba(0,0,0,0.6)" }}>
                 YOU'RE INVITED TO
               </p>
-              <h1 style={{ fontSize:26, fontWeight:"bold", lineHeight:1.15, margin:"0 0 2px", ...gradText }}>
+              <h1 style={{ fontSize:26, fontWeight:"bold", lineHeight:1.15, margin:"0 0 2px", color:"#fff", textShadow:"0 2px 12px rgba(0,0,0,0.7)", ...gradText }}>
                 {name}'s Birthday
               </h1>
-              <motion.p style={{ color:"#8C6A4A", fontSize:11, fontFamily:"sans-serif" }}
-                animate={{ opacity:[0.5,1,0.5] }} transition={{ duration:2.5, repeat:Infinity }}>
+              <motion.p style={{ color:"rgba(255,255,255,0.8)", fontSize:11, fontFamily:"sans-serif", textShadow:"0 1px 6px rgba(0,0,0,0.55)" }}
+                animate={{ opacity:[0.55,1,0.55] }} transition={{ duration:2.5, repeat:Infinity }}>
                 ✨ A special surprise awaits ✨
               </motion.p>
             </motion.div>
 
             <Curtain open={open} />
 
-            {/* Tap zone */}
+            {/* Tap zone — full screen */}
             <motion.button onClick={handleTap} style={{
-              position:"absolute", left:C_LEFT, top:C_TOP, width:C_W, height:C_H,
+              position:"absolute", left:0, top:0, width:390, height:844,
               background:"transparent", border:"none",
               cursor:open?"default":"pointer", zIndex:7,
-              borderRadius:`${ARCH_BORDER_R}px ${ARCH_BORDER_R}px 0 0`,
             }}>
             </motion.button>
 
@@ -439,7 +480,9 @@ export function BirthdayDoor() {
             animate={{ opacity:1, scale:1 }}
             transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
 
-            {/* Cake — shifted up 80px from arch centre */}
+            <TwinkleBackground />
+
+            {/* Cake */}
             <motion.div style={{
                 position:"absolute",
                 left: C_LEFT + C_W/2 - 134,
