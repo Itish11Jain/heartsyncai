@@ -480,6 +480,29 @@ function Cake({ blown = false }: { blown?: boolean }) {
         <radialGradient id="ct2" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4AF37"/><stop offset="100%" stopColor="#8C6A10"/></radialGradient>
         <radialGradient id="ct3" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#FFF5EE"/><stop offset="100%" stopColor="#E8D0B8"/></radialGradient>
         <filter id="cglo"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        {/* 3D candle cylinder gradients — horizontal, dark edges → bright centre */}
+        <linearGradient id="cnd1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="#6B2C14"/>
+          <stop offset="28%"  stopColor="#E8A07A"/>
+          <stop offset="52%"  stopColor="#C9846A"/>
+          <stop offset="100%" stopColor="#6B2C14"/>
+        </linearGradient>
+        <linearGradient id="cnd2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="#6B4800"/>
+          <stop offset="28%"  stopColor="#F5D060"/>
+          <stop offset="52%"  stopColor="#D4AF37"/>
+          <stop offset="100%" stopColor="#6B4800"/>
+        </linearGradient>
+        <linearGradient id="cnd3" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="#AE9880"/>
+          <stop offset="28%"  stopColor="#FFFFFF"/>
+          <stop offset="52%"  stopColor="#FFF5EE"/>
+          <stop offset="100%" stopColor="#AE9880"/>
+        </linearGradient>
+        {/* Candle top-cap radial for the flat top disc */}
+        <radialGradient id="cap1" cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="#F2C0A0"/><stop offset="100%" stopColor="#8C4A30"/></radialGradient>
+        <radialGradient id="cap2" cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="#FAE090"/><stop offset="100%" stopColor="#8C6A10"/></radialGradient>
+        <radialGradient id="cap3" cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="#FFFFFF"/><stop offset="100%" stopColor="#C8B0A0"/></radialGradient>
       </defs>
       <ellipse cx={140} cy={258} rx={92} ry={10} fill="#C4A070" opacity={0.6}/>
       <rect x={56} y={198} width={168} height={58} rx={8} fill="url(#ct1)"/>
@@ -504,16 +527,17 @@ function Cake({ blown = false }: { blown?: boolean }) {
       ))}
       {[114,136,158].map((cx,i)=>(
         <g key={i}>
-          <rect x={cx-3} y={78} width={6} height={25} rx={2.5} fill={["#C9846A","#D4AF37","#FFF5EE"][i]}/>
+          {/* 3D cylinder body */}
+          <rect x={cx-5} y={78} width={10} height={25} rx={3} fill={`url(#cnd${i+1})`}/>
+          {/* Bottom rim ellipse (shadow) */}
+          <ellipse cx={cx} cy={103} rx={5} ry={2} fill={["#6B2C14","#6B4800","#AE9880"][i]} opacity={0.7}/>
+          {/* Top cap disc */}
+          <ellipse cx={cx} cy={78} rx={5} ry={2} fill={`url(#cap${i+1})`}/>
+          {/* Wick */}
+          <line x1={cx} y1={78} x2={cx} y2={73} stroke="#3B1A00" strokeWidth={1.5} strokeLinecap="round"/>
           <CandleFlame cx={cx} cy={71} blown={blown}/>
         </g>
       ))}
-      <ellipse cx={140} cy={82} rx={55} ry={22} fill="#FFD700" opacity={0.12} filter="url(#cglo)"/>
-      <motion.g filter="url(#cglo)"
-        animate={{ scale:[1,1.2,1], rotate:[0,15,0,-15,0] }}
-        transition={{ duration:2.2, repeat:Infinity }} style={{ transformOrigin:"140px 88px" }}>
-        <polygon points="140,81 142.8,88.5 150,88.5 144.2,92.8 146.5,100 140,95.5 133.5,100 135.8,92.8 130,88.5 137.2,88.5" fill="#D4AF37"/>
-      </motion.g>
     </svg>
   );
 }
