@@ -174,67 +174,66 @@ const CURTAIN_SPARKLES = [
   { x:"28%", y:"78%"}, { x:"76%", y:"72%"}, { x:"58%", y:"85%"},
 ];
 
-function CurtainPanel({ side, open, panelW }: { side:"left"|"right"; open:boolean; panelW:number }) {
-  const isLeft = side === "left";
-  const sparkles = CURTAIN_SPARKLES.filter((_,i) => isLeft ? i < 6 : i >= 6);
-  return (
-    <motion.div style={{
-      position:"absolute", [isLeft?"left":"right"]:0, top:0, width:panelW, height:"100%",
-      background:FOLD_FABRIC, zIndex:2,
-      boxShadow: isLeft
-        ? "inset -10px 0 28px rgba(180,160,130,0.35), inset -2px 0 8px rgba(255,255,255,0.25)"
-        : "inset 10px 0 28px rgba(180,160,130,0.35), inset 2px 0 8px rgba(255,255,255,0.25)",
-    }}
-      animate={open ? { x: isLeft ? -(panelW+4) : (panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
-      transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
-
-      {/* Silk sheen sweep */}
-      <motion.div style={{
-        position:"absolute", inset:0, pointerEvents:"none",
-        background:`linear-gradient(${isLeft?105:255}deg,transparent 15%,rgba(255,255,255,0.38) 42%,rgba(255,252,240,0.18) 55%,transparent 72%)`,
-      }}
-        animate={{ opacity:[0.55,1,0.55] }}
-        transition={{ duration:3.2, repeat:Infinity, ease:"easeInOut", delay: isLeft ? 0 : 0.9 }}/>
-
-      {/* Gold shimmer sweep */}
-      <motion.div style={{
-        position:"absolute", inset:0, pointerEvents:"none",
-        background:`linear-gradient(${isLeft?80:280}deg,transparent 30%,rgba(212,175,55,0.14) 50%,transparent 70%)`,
-      }}
-        animate={{ x:[0, isLeft?10:-10, 0] }}
-        transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }}/>
-
-      {/* Sparkle dots */}
-      {sparkles.map((sp,i) => (
-        <motion.div key={i} style={{
-          position:"absolute", left:sp.x, top:sp.y,
-          fontSize:11, color:"#D4AF37", lineHeight:1, pointerEvents:"none",
-          textShadow:"0 0 6px rgba(212,175,55,0.9), 0 0 12px rgba(255,240,180,0.6)",
-        }}
-          animate={{ opacity:[0, 1, 0.3, 1, 0], scale:[0.6,1.2,0.8,1.1,0.6], rotate:[0,20,-10,15,0] }}
-          transition={{ duration:2.4+i*0.55, repeat:Infinity, delay:i*0.62, ease:"easeInOut" }}>
-          ✦
-        </motion.div>
-      ))}
-
-      {/* Inner shadow fold at seam */}
-      <div style={{
-        position:"absolute", [isLeft?"right":"left"]:0, top:0, bottom:0, width:3,
-        background:`linear-gradient(to bottom,rgba(212,180,80,0.95),rgba(200,160,40,0.55))`,
-      }}/>
-    </motion.div>
-  );
-}
-
 function Curtain({ open }: { open: boolean }) {
   const panelW = 195;
+  const leftSparks  = CURTAIN_SPARKLES.slice(0, 6);
+  const rightSparks = CURTAIN_SPARKLES.slice(6);
+
+  const sharedPanel = {
+    position:"absolute", top:0, width:panelW, height:"100%",
+    background:FOLD_FABRIC, zIndex:2,
+  };
+
   return (
     <div style={{
       position:"absolute", left:0, top:0, width:390, height:844,
       overflow:"hidden", zIndex:5,
     }}>
-      <CurtainPanel side="left"  open={open} panelW={panelW}/>
-      <CurtainPanel side="right" open={open} panelW={panelW}/>
+      {/* LEFT PANEL */}
+      <motion.div style={{ ...sharedPanel, left:0,
+        boxShadow:"inset -10px 0 28px rgba(180,160,130,0.35), inset -2px 0 8px rgba(255,255,255,0.25)" }}
+        animate={open ? { x:-(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+        transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
+        <motion.div style={{ position:"absolute", inset:0, pointerEvents:"none",
+          background:"linear-gradient(105deg,transparent 15%,rgba(255,255,255,0.38) 42%,rgba(255,252,240,0.18) 55%,transparent 72%)" }}
+          animate={{ opacity:[0.55,1,0.55] }}
+          transition={{ duration:3.2, repeat:Infinity, ease:"easeInOut" }}/>
+        <motion.div style={{ position:"absolute", inset:0, pointerEvents:"none",
+          background:"linear-gradient(80deg,transparent 30%,rgba(212,175,55,0.13) 50%,transparent 70%)" }}
+          animate={{ x:[0,10,0] }} transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }}/>
+        {leftSparks.map((sp,i) => (
+          <motion.div key={i} style={{ position:"absolute", left:sp.x, top:sp.y,
+            fontSize:10, color:"#C9A840", lineHeight:1, pointerEvents:"none",
+            textShadow:"0 0 5px rgba(212,175,55,0.85)" }}
+            animate={{ opacity:[0,1,0.2,1,0], scale:[0.5,1.2,0.7,1.1,0.5] }}
+            transition={{ duration:2.5+i*0.5, repeat:Infinity, delay:i*0.7, ease:"easeInOut" }}>✦</motion.div>
+        ))}
+        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:3,
+          background:"linear-gradient(to bottom,rgba(212,180,80,0.95),rgba(200,160,40,0.5))" }}/>
+      </motion.div>
+
+      {/* RIGHT PANEL — uses left:panelW so x-transforms work correctly */}
+      <motion.div style={{ ...sharedPanel, left:panelW,
+        boxShadow:"inset 10px 0 28px rgba(180,160,130,0.35), inset 2px 0 8px rgba(255,255,255,0.25)" }}
+        animate={open ? { x:(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+        transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
+        <motion.div style={{ position:"absolute", inset:0, pointerEvents:"none",
+          background:"linear-gradient(255deg,transparent 15%,rgba(255,255,255,0.38) 42%,rgba(255,252,240,0.18) 55%,transparent 72%)" }}
+          animate={{ opacity:[0.55,1,0.55] }}
+          transition={{ duration:3.2, repeat:Infinity, ease:"easeInOut", delay:0.9 }}/>
+        <motion.div style={{ position:"absolute", inset:0, pointerEvents:"none",
+          background:"linear-gradient(280deg,transparent 30%,rgba(212,175,55,0.13) 50%,transparent 70%)" }}
+          animate={{ x:[0,-10,0] }} transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }}/>
+        {rightSparks.map((sp,i) => (
+          <motion.div key={i} style={{ position:"absolute", left:sp.x, top:sp.y,
+            fontSize:10, color:"#C9A840", lineHeight:1, pointerEvents:"none",
+            textShadow:"0 0 5px rgba(212,175,55,0.85)" }}
+            animate={{ opacity:[0,1,0.2,1,0], scale:[0.5,1.2,0.7,1.1,0.5] }}
+            transition={{ duration:2.5+i*0.5, repeat:Infinity, delay:i*0.7+0.4, ease:"easeInOut" }}>✦</motion.div>
+        ))}
+        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3,
+          background:"linear-gradient(to bottom,rgba(212,180,80,0.95),rgba(200,160,40,0.5))" }}/>
+      </motion.div>
     </div>
   );
 }
@@ -1265,10 +1264,26 @@ export function BirthdayDoor() {
             style={{ position:"absolute", inset:0, zIndex:10 }}
             exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
             <Curtain open={open} />
-            <motion.button onClick={handleTap} style={{
+            {/* Tap hint */}
+            {!open && (
+              <motion.div style={{
+                position:"absolute", left:0, right:0, bottom:72, textAlign:"center",
+                zIndex:15, pointerEvents:"none",
+              }}
+                animate={{ opacity:[0.55,1,0.55] }}
+                transition={{ duration:2, repeat:Infinity, ease:"easeInOut" }}>
+                <span style={{
+                  fontFamily:"Georgia,serif", fontStyle:"italic",
+                  fontSize:13, letterSpacing:3, color:"rgba(180,140,40,0.9)",
+                  textTransform:"uppercase",
+                }}>Tap to open ✦</span>
+              </motion.div>
+            )}
+            {/* Full-screen tap overlay — must be topmost */}
+            <div onClick={handleTap} style={{
               position:"absolute", left:0, top:0, width:390, height:844,
-              background:"transparent", border:"none",
-              cursor:open?"default":"pointer", zIndex:7,
+              background:"transparent",
+              cursor:open?"default":"pointer", zIndex:20,
             }}/>
           </motion.div>
         )}
