@@ -155,14 +155,6 @@ function Curtain({ open }: { open: boolean }) {
       borderRadius:`${ARCH_BORDER_R}px ${ARCH_BORDER_R}px 0 0`,
       overflow:"hidden", zIndex:5,
     }}>
-      {/* Warm back-light on open */}
-      <motion.div style={{
-        position:"absolute", inset:0, zIndex:0,
-        background:"radial-gradient(ellipse at 50% 22%, #FFF8E0 0%, #FFD070 35%, #FFB060 65%, transparent 100%)",
-      }}
-        animate={{ opacity: open ? 1 : 0 }}
-        transition={{ duration:0.65, delay:0.25 }} />
-
       {/* LEFT PANEL */}
       <motion.div style={{
         position:"absolute", left:0, top:0, width:panelW, height:"100%",
