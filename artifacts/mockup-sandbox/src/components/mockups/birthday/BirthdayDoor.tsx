@@ -92,6 +92,44 @@ function Nebulae() {
 /* ══════════════════════════════════════════
    SCENE 1 — Gift box SVG
 ══════════════════════════════════════════ */
+/* Small gift boxes scattered around the main one */
+const SIDE_GIFTS = [
+  { cx:110, cy:752, w:50, h:42, d:13, front:"#1A3A5A", side:"#0E2240", top:"#254E78", ribbon:"#EFC840", delay:0.35, amp:4 },
+  { cx:280, cy:746, w:56, h:46, d:15, front:"#3A1A58", side:"#250E3C", top:"#52288A", ribbon:"#E87060", delay:0.9,  amp:5 },
+  { cx:58,  cy:762, w:40, h:34, d:11, front:"#0A3A28", side:"#052416", top:"#125A3E", ribbon:"#D4AF37", delay:1.5,  amp:3 },
+  { cx:330, cy:755, w:46, h:38, d:12, front:"#3A2808", side:"#261B04", top:"#5A3E0E", ribbon:"#C9846A", delay:0.65, amp:4.5 },
+] as const;
+
+function SmallGiftBox({ cx,cy,w,h,d,front,side,top,ribbon,delay,amp }:
+  { cx:number;cy:number;w:number;h:number;d:number;front:string;side:string;top:string;ribbon:string;delay:number;amp:number }) {
+  const lx=cx-w/2, ty=cy-h;
+  return (
+    <motion.g
+      animate={{ y:[0,-amp,0,amp*0.5,0] }}
+      transition={{ duration:2.8+delay*0.4, repeat:Infinity, ease:"easeInOut", delay }}>
+      <motion.g initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+        transition={{ duration:0.7, delay:delay+0.2, ease:[0.34,1.56,0.64,1] }}>
+        {/* Right face */}
+        <path d={`M${lx+w} ${ty} L${lx+w+d} ${ty-d} L${lx+w+d} ${cy-d} L${lx+w} ${cy} Z`} fill={side}/>
+        {/* Top face */}
+        <path d={`M${lx} ${ty} L${lx+d} ${ty-d} L${lx+w+d} ${ty-d} L${lx+w} ${ty} Z`} fill={top}/>
+        {/* Front face */}
+        <rect x={lx} y={ty} width={w} height={h} fill={front} rx={2}/>
+        {/* Ribbon vertical */}
+        <rect x={cx-3} y={ty} width={6} height={h} fill={ribbon} rx={1} opacity={0.9}/>
+        {/* Ribbon horizontal */}
+        <rect x={lx} y={ty+h*0.44} width={w} height={h*0.12} fill={ribbon} rx={1} opacity={0.9}/>
+        {/* Bow loop left */}
+        <ellipse cx={cx-6} cy={ty-3} rx={5} ry={3.5} fill={ribbon} opacity={0.85} transform={`rotate(-20,${cx-6},${ty-3})`}/>
+        {/* Bow loop right */}
+        <ellipse cx={cx+6} cy={ty-3} rx={5} ry={3.5} fill={ribbon} opacity={0.85} transform={`rotate(20,${cx+6},${ty-3})`}/>
+        {/* Bow centre */}
+        <circle cx={cx} cy={ty-1} r={3} fill={ribbon}/>
+      </motion.g>
+    </motion.g>
+  );
+}
+
 function GiftBoxSVG() {
   const x=GBX, y=GBY, w=GBW, h=GBH, d=GBD;
   const lx=x-w/2, ty=y-h;
@@ -327,7 +365,10 @@ function Scene1({ onNext }: { onNext:()=>void }) {
             transition={{ duration:3+i*0.16, repeat:Infinity, delay:i*0.18, ease:"easeInOut" }}/>
         ))}
 
-        {/* Gift box */}
+        {/* Small side gifts */}
+        {SIDE_GIFTS.map((g,i) => <SmallGiftBox key={i} {...g}/>)}
+
+        {/* Main gift box */}
         <GiftBoxSVG />
 
         {/* Bouquet balloons */}
@@ -1582,7 +1623,7 @@ function VoiceNote({ onDone }: { onDone:()=>void }) {
   );
 }
 
-/* ── Emoji orbs with popup messages ── */
+/* ── Emoji orbs with floating + message below ── */
 const EMOJI_ORBS = [
   { emoji:"💗", msg:"You're loved more than words can say! 🌸" },
   { emoji:"⭐", msg:"You shine brighter than all the stars! ✨" },
@@ -1592,68 +1633,64 @@ const EMOJI_ORBS = [
 function EmojiOrbs() {
   const [active, setActive] = useState<number|null>(null);
   return (
-    <div style={{ display:"flex", justifyContent:"center", gap:20 }}>
-      {EMOJI_ORBS.map((o,i) => (
-        <div key={i} style={{ position:"relative", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-          <AnimatePresence>
-            {active===i && (
-              <motion.div
-                initial={{ opacity:0, y:8, scale:0.85 }}
-                animate={{ opacity:1, y:0, scale:1 }}
-                exit={{ opacity:0, y:5, scale:0.9 }}
-                transition={{ duration:0.22 }}
-                style={{
-                  position:"absolute", bottom:"calc(100% + 8px)",
-                  background:"rgba(28,10,6,0.93)",
-                  border:"1px solid rgba(212,175,55,0.4)",
-                  borderRadius:12, padding:"7px 11px",
-                  fontSize:11, lineHeight:1.4,
-                  color:"rgba(255,241,220,0.95)",
-                  textAlign:"center", whiteSpace:"nowrap",
-                  backdropFilter:"blur(8px)",
-                  boxShadow:"0 4px 20px rgba(0,0,0,0.55)",
-                  zIndex:30,
-                }}>
-                {o.msg}
-                {/* little arrow tip */}
-                <div style={{
-                  position:"absolute", bottom:-5, left:"50%", transform:"translateX(-50%)",
-                  width:10, height:10, background:"rgba(28,10,6,0.93)",
-                  borderRight:"1px solid rgba(212,175,55,0.4)",
-                  borderBottom:"1px solid rgba(212,175,55,0.4)",
-                  rotate:"45deg",
-                }}/>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <motion.button
-            onClick={() => setActive(active===i ? null : i)}
-            whileTap={{ scale:0.88 }}
-            animate={active===i ? {
-              boxShadow:"0 0 18px rgba(212,175,55,0.55)",
-              background:"rgba(212,175,55,0.14)",
-            } : {
-              boxShadow:"none",
-              background:"rgba(255,255,255,0.06)",
-            }}
-            style={{
-              width:52, height:52, borderRadius:"50%",
-              border:"1px solid rgba(212,175,55,0.28)",
-              backdropFilter:"blur(8px)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:24, cursor:"pointer",
-            }}>
-            {o.emoji}
-          </motion.button>
-        </div>
-      ))}
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:14 }}>
+      {/* Orbs row — each floats independently */}
+      <div style={{ display:"flex", justifyContent:"center", gap:24 }}>
+        {EMOJI_ORBS.map((o,i) => (
+          <motion.div key={i}
+            animate={{ y:[0,-(5+i*2),0,(3+i),0] }}
+            transition={{ duration:2.4+i*0.55, repeat:Infinity, ease:"easeInOut", delay:i*0.7 }}>
+            <motion.button
+              onClick={() => setActive(active===i ? null : i)}
+              whileTap={{ scale:0.86 }}
+              animate={active===i ? {
+                boxShadow:"0 0 20px rgba(212,175,55,0.6)",
+                background:"rgba(212,175,55,0.16)",
+              } : {
+                boxShadow:"0 2px 8px rgba(0,0,0,0.3)",
+                background:"rgba(255,255,255,0.07)",
+              }}
+              style={{
+                width:56, height:56, borderRadius:"50%",
+                border:"1px solid rgba(212,175,55,0.3)",
+                backdropFilter:"blur(10px)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:27, cursor:"pointer",
+              }}>
+              {o.emoji}
+            </motion.button>
+          </motion.div>
+        ))}
+      </div>
+      {/* Message below — swaps with AnimatePresence */}
+      <div style={{ minHeight:44, display:"flex", alignItems:"center", justifyContent:"center", width:"100%" }}>
+        <AnimatePresence mode="wait">
+          {active !== null && (
+            <motion.p key={active}
+              initial={{ opacity:0, y:6, scale:0.94 }}
+              animate={{ opacity:1, y:0, scale:1 }}
+              exit={{ opacity:0, y:-4, scale:0.94 }}
+              transition={{ duration:0.24 }}
+              style={{
+                margin:0, fontSize:12.5, lineHeight:1.55,
+                textAlign:"center",
+                fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
+                color:"rgba(255,241,220,0.92)",
+                background:"rgba(28,10,6,0.72)",
+                border:"1px solid rgba(212,175,55,0.28)",
+                borderRadius:12, padding:"8px 16px",
+                backdropFilter:"blur(8px)",
+              }}>
+              {EMOJI_ORBS[active].msg}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
 
 function Scene5({ onReplay }: { onReplay:()=>void }) {
-  const [arrowLit, setArrowLit] = useState(false);
-
   return (
     <motion.div key="scene5new"
       style={{ position:"absolute", inset:0, zIndex:12,
@@ -1684,65 +1721,56 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
 
       {/* ── Wish text ── */}
       <motion.p style={{
-        position:"absolute", top:100, left:24, right:24,
+        position:"absolute", top:95, left:22, right:22,
         textAlign:"center", margin:0,
         fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:17,
-        lineHeight:1.5,
+        lineHeight:1.55,
         background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
         WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
         zIndex:8, letterSpacing:0.4,
       }}
         initial={{ opacity:0 }} animate={{ opacity:1 }}
         transition={{ delay:0.5, duration:0.6 }}>
-        The world is so lucky to have you in it.<br/>Wishing you all the happiness you deserve!
+        The world is so lucky to have you in it.<br/>
+        Wishing you all the happiness &amp; success you deserve!
       </motion.p>
 
-      {/* ── Voice note row + inline arrow ── */}
+      {/* ── Emoji orbs + message ── */}
+      <motion.div style={{ position:"absolute", top:210, left:20, right:20, zIndex:22 }}
+        initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.7, duration:0.55 }}>
+        <EmojiOrbs />
+      </motion.div>
+
+      {/* ── Voice note + always-on arrow ── */}
       <motion.div style={{
-        position:"absolute", top:204, left:20, right:20, zIndex:12,
+        position:"absolute", top:340, left:20, right:20, zIndex:12,
         display:"flex", alignItems:"center", gap:10,
       }}
         initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
-        transition={{ delay:0.65, duration:0.6 }}>
+        transition={{ delay:0.88, duration:0.55 }}>
         <div style={{ flex:1 }}>
-          <VoiceNote onDone={() => setArrowLit(true)}/>
+          <VoiceNote onDone={() => {}}/>
         </div>
-        {/* Arrow inline */}
+        {/* Arrow — always lit */}
         <motion.button
           onClick={onReplay}
           style={{
             width:50, height:50, borderRadius:"50%", flexShrink:0,
-            cursor:"pointer",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:22, border:"none",
-          }}
-          animate={arrowLit ? {
             background:"linear-gradient(135deg,#C4913A,#D4AF37)",
-            color:"#1c0a06",
-            boxShadow:"0 4px 20px rgba(212,175,55,0.55)",
-          } : {
-            background:"rgba(212,175,55,0.08)",
-            color:"rgba(212,175,55,0.35)",
-            boxShadow:"none",
+            color:"#1c0a06", border:"none", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:22, boxShadow:"0 4px 18px rgba(212,175,55,0.5)",
           }}
-          initial={{ scale:0, opacity:0 }}
-          transition={{ type:"spring", stiffness:280, damping:20 }}
-          whileHover={{ scale: arrowLit ? 1.1 : 1.04 }}
+          whileHover={{ scale:1.1 }}
           whileTap={{ scale:0.92 }}>
           →
         </motion.button>
       </motion.div>
 
-      {/* ── Emoji orbs ── */}
-      <motion.div style={{ position:"absolute", top:284, left:20, right:20, zIndex:22 }}
-        initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
-        transition={{ delay:0.85, duration:0.55 }}>
-        <EmojiOrbs />
-      </motion.div>
-
       {/* ── Photo sticker — covers lower half, bottom-pinned ── */}
       <motion.div style={{
-        position:"absolute", top:"45%", bottom:0,
+        position:"absolute", top:"50%", bottom:0,
         left:0, right:0, zIndex:10,
         display:"flex", alignItems:"flex-end", justifyContent:"center",
         overflow:"hidden",
