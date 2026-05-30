@@ -94,17 +94,22 @@ function Nebulae() {
 ══════════════════════════════════════════ */
 /* Small gift boxes scattered around the main one */
 const SIDE_GIFTS = [
-  { cx:110, cy:752, w:50, h:42, d:13, front:"#1A3A5A", side:"#0E2240", top:"#254E78", ribbon:"#EFC840", delay:0.35, amp:4 },
-  { cx:280, cy:746, w:56, h:46, d:15, front:"#3A1A58", side:"#250E3C", top:"#52288A", ribbon:"#E87060", delay:0.9,  amp:5 },
-  { cx:58,  cy:762, w:40, h:34, d:11, front:"#0A3A28", side:"#052416", top:"#125A3E", ribbon:"#D4AF37", delay:1.5,  amp:3 },
-  { cx:330, cy:755, w:46, h:38, d:12, front:"#3A2808", side:"#261B04", top:"#5A3E0E", ribbon:"#C9846A", delay:0.65, amp:4.5 },
+  // left-ish, lower, small, leaning left
+  { cx:92,  cy:764, w:44, h:36, d:11, front:"#1A3A5A", side:"#0E2240", top:"#254E78", ribbon:"#EFC840", delay:0.35, amp:3.5, tilt:-11 },
+  // right of main, higher up, bigger, slight right lean
+  { cx:295, cy:738, w:64, h:54, d:18, front:"#3A1A58", side:"#250E3C", top:"#52288A", ribbon:"#E87060", delay:0.9,  amp:6,   tilt:8  },
+  // far left, lowest, tiny, strong left tilt
+  { cx:44,  cy:775, w:34, h:28, d:9,  front:"#0A3A28", side:"#052416", top:"#125A3E", ribbon:"#D4AF37", delay:1.6,  amp:2.5, tilt:-18 },
+  // right side, mid-height, medium, gentle right tilt
+  { cx:336, cy:758, w:52, h:44, d:14, front:"#3A2808", side:"#261B04", top:"#5A3E0E", ribbon:"#C9846A", delay:0.55, amp:5,   tilt:14 },
 ] as const;
 
-function SmallGiftBox({ cx,cy,w,h,d,front,side,top,ribbon,delay,amp }:
-  { cx:number;cy:number;w:number;h:number;d:number;front:string;side:string;top:string;ribbon:string;delay:number;amp:number }) {
+function SmallGiftBox({ cx,cy,w,h,d,front,side,top,ribbon,delay,amp,tilt }:
+  { cx:number;cy:number;w:number;h:number;d:number;front:string;side:string;top:string;ribbon:string;delay:number;amp:number;tilt:number }) {
   const lx=cx-w/2, ty=cy-h;
   return (
     <motion.g
+      style={{ originX:`${cx}px`, originY:`${cy}px`, rotate:tilt }}
       animate={{ y:[0,-amp,0,amp*0.5,0] }}
       transition={{ duration:2.8+delay*0.4, repeat:Infinity, ease:"easeInOut", delay }}>
       <motion.g initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
