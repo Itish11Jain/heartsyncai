@@ -5,23 +5,15 @@ const name = "Priya";
 const age = 25;
 
 /* ══════════════════════════════════════════
-   GEOMETRY
-   Curtain = full screen width (no gap).
-   Arch frame overlaid on top as decoration.
-   Balloons sit on top of everything (z:8).
+   ARCH GEOMETRY
+   Curtain from y=190 → y=844 (fills to bottom)
 ══════════════════════════════════════════ */
-const SCREEN_W = 390;
-const C_TOP    = 174;           // below banner
-const C_H      = 844 - C_TOP;  // fills to bottom
-const C_HALF   = SCREEN_W / 2; // 195 — split point for panels
-
-// Arch decoration geometry (unchanged from original, just decorative now)
-const ARCH_CX  = 195;
-const ARCH_CY_SCREEN = 318;    // arch centre in screen coords
-const ARCH_DEC_R = 134;        // radius for gold ring decoration
+const CX = 195, CY = 318, ARCH_R = 128;
+const C_LEFT = 67, C_TOP = 190, C_W = 256, C_H = 654; // 190+654=844
+const ARCH_BORDER_R = C_W / 2; // 128
 
 /* ══════════════════════════════════════════
-   PALETTE
+   PALETTE — Rose Gold · Off-White · Gold
 ══════════════════════════════════════════ */
 type BColor = { c: string; s: string; confetti?: true };
 const P: BColor[] = [
@@ -34,7 +26,7 @@ const P: BColor[] = [
 ];
 
 /* ══════════════════════════════════════════
-   GARLAND — same anchor positions as before
+   GARLAND
 ══════════════════════════════════════════ */
 type B = { x: number; y: number; r: number; p: BColor; d: number };
 const GARLAND: B[] = [];
@@ -72,12 +64,13 @@ const ANCHORS: { x: number; y: number; ci: number }[] = [
 
 ANCHORS.forEach(({ x: ox, y: oy, ci }) => {
   CLUSTERS[ci].forEach(({ dx, dy, r, pi }) => {
-    GARLAND.push({ x: ox+dx, y: oy+dy, r, p: P[(_pi++ + pi) % P.length], d: nextD() });
+    GARLAND.push({ x: ox + dx, y: oy + dy, r, p: P[(_pi++ + pi) % P.length], d: nextD() });
   });
 });
 
-const CONFETTI_DOTS = [[0.3,0.25],[0.55,0.35],[0.45,0.55],[0.65,0.6],[0.3,0.65],[0.6,0.2],[0.42,0.42],[0.7,0.45]];
-
+const CONFETTI_DOTS = [
+  [0.3,0.25],[0.55,0.35],[0.45,0.55],[0.65,0.6],[0.3,0.65],[0.6,0.2],[0.42,0.42],[0.7,0.45],
+];
 function GBalloon({ x, y, r, p, d }: B) {
   const id = `g${Math.round(x*10)}${Math.round(y*10)}`;
   return (
@@ -95,281 +88,163 @@ function GBalloon({ x, y, r, p, d }: B) {
         </defs>
         {p.confetti ? (
           <>
-            <circle cx={r} cy={r} r={r} fill={`url(#${id}g)`} opacity={0.92}/>
+            <circle cx={r} cy={r} r={r} fill={`url(#${id}g)`} opacity={0.92} />
             {CONFETTI_DOTS.map(([dx,dy],i)=>(
-              <circle key={i} cx={dx*r*2} cy={dy*r*2} r={r*0.09} fill={P[i%P.length].c} opacity={0.85}/>
+              <circle key={i} cx={dx*r*2} cy={dy*r*2} r={r*0.09} fill={P[i%P.length].c} opacity={0.85} />
             ))}
           </>
         ) : (
-          <circle cx={r} cy={r} r={r} fill={`url(#${id}g)`}/>
+          <circle cx={r} cy={r} r={r} fill={`url(#${id}g)`} />
         )}
         <ellipse cx={r*0.6} cy={r*0.38} rx={r*0.2} ry={r*0.13}
-          fill="white" opacity={0.5} transform={`rotate(-30,${r*0.6},${r*0.38})`}/>
+          fill="white" opacity={0.5} transform={`rotate(-30,${r*0.6},${r*0.38})`} />
       </svg>
     </motion.div>
-  );
-}
-
-/* ══════════════════════════════════════════
-   HAPPY BIRTHDAY BUNTING BANNER
-══════════════════════════════════════════ */
-const BUNTING_CHARS = ["H","A","P","P","Y","","B","I","R","T","H","D","A","Y"];
-const PENNANT_FILLS = ["#D4AF37","#C9846A","#D4AF37","#C9846A","#D4AF37","","#C9846A","#D4AF37","#C9846A","#D4AF37","#C9846A","#D4AF37","#C9846A","#D4AF37"];
-
-function HappyBirthdayBanner() {
-  // Build pennant x-positions
-  const pennantW = 20, pennantGap = 5, spaceGap = 14;
-  const xs: number[] = [];
-  let cx = 0;
-  BUNTING_CHARS.forEach(ch => {
-    if (ch === "") { cx += spaceGap; xs.push(-1); }
-    else { xs.push(cx + pennantW / 2); cx += pennantW + pennantGap; }
-  });
-  const totalW = cx - pennantGap;
-  const offsetX = (SCREEN_W - totalW) / 2;
-
-  // String y follows a gentle arc
-  const stringY = (nx: number) => {
-    const t = (nx - offsetX) / totalW;
-    return 18 + 10 * Math.sin(t * Math.PI); // sags down in middle
-  };
-
-  return (
-    <div style={{ position:"absolute", top:0, left:0, width:"100%", height:C_TOP, zIndex:20 }}>
-      {/* String + pennants SVG */}
-      <svg width="390" height="100" style={{ position:"absolute", top:8, left:0 }}>
-        <defs>
-          <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#C4913A"/>
-            <stop offset="50%" stopColor="#F0D060"/>
-            <stop offset="100%" stopColor="#C4913A"/>
-          </linearGradient>
-          <filter id="gspark"><feGaussianBlur stdDeviation="1.5" result="b"/>
-            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-
-        {/* String rope — quadratic bezier from left to right */}
-        <path
-          d={`M ${offsetX - 8} ${stringY(offsetX - 8)} Q ${offsetX + totalW/2} ${stringY(offsetX + totalW/2) + 4} ${offsetX + totalW + 8} ${stringY(offsetX + totalW + 8)}`}
-          stroke="url(#sg)" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-
-        {/* Pennants */}
-        {BUNTING_CHARS.map((ch, i) => {
-          if (ch === "" || xs[i] < 0) return null;
-          const px = offsetX + xs[i];
-          const py = stringY(px);
-          const fill = PENNANT_FILLS[i];
-          const ph = 30; // pennant height (triangle)
-          const hw = pennantW / 2;
-          return (
-            <g key={i}>
-              {/* Triangle pennant */}
-              <polygon
-                points={`${px-hw},${py} ${px+hw},${py} ${px},${py+ph}`}
-                fill={fill} opacity={0.92}/>
-              {/* Shimmer */}
-              <polygon
-                points={`${px-hw},${py} ${px+hw},${py} ${px},${py+ph}`}
-                fill="rgba(255,255,255,0.18)"/>
-              {/* Border */}
-              <polygon
-                points={`${px-hw},${py} ${px+hw},${py} ${px},${py+ph}`}
-                fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8"/>
-              {/* Letter */}
-              <text x={px} y={py + 12} textAnchor="middle" dominantBaseline="middle"
-                fill="white" fontSize="10" fontWeight="bold"
-                style={{ fontFamily:"sans-serif", textShadow:"0 1px 2px rgba(0,0,0,0.3)" }}>
-                {ch}
-              </text>
-              {/* String dot at hang point */}
-              <circle cx={px} cy={py} r={2} fill="#F0D060"/>
-            </g>
-          );
-        })}
-
-        {/* Hanging sparkle ornaments between pennants */}
-        {[0.12, 0.38, 0.62, 0.88].map((t, i) => {
-          const nx = offsetX + t * totalW;
-          const ny = stringY(nx);
-          return (
-            <motion.g key={i} filter="url(#gspark)"
-              animate={{ opacity:[0.5,1,0.5], scale:[0.8,1.1,0.8] }}
-              transition={{ duration:2+i*0.4, repeat:Infinity, delay:i*0.5 }}
-              style={{ transformOrigin:`${nx}px ${ny+8}px` }}>
-              <polygon points={`${nx},${ny+3} ${nx+4},${ny+8} ${nx},${ny+13} ${nx-4},${ny+8}`}
-                fill="#D4AF37" opacity={0.9}/>
-            </motion.g>
-          );
-        })}
-      </svg>
-
-      {/* Name line */}
-      <motion.div style={{ position:"absolute", bottom:12, left:0, right:0, textAlign:"center" }}
-        initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}>
-        <p style={{
-          margin:0, fontSize:36, fontWeight:"bold", letterSpacing:2,
-          fontFamily:"'Georgia','Times New Roman',serif",
-          background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 45%,#F0D060 75%,#C9846A 100%)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-          textShadow:"none", lineHeight:1.1,
-        }}>{name}</p>
-        <motion.div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:2 }}
-          animate={{ opacity:[0.4,1,0.4] }} transition={{ duration:2.5, repeat:Infinity }}>
-          {["✦","✦","✦"].map((s,i)=>(
-            <span key={i} style={{ color:"#D4AF37", fontSize:9, opacity:0.8 }}>{s}</span>
-          ))}
-        </motion.div>
-      </motion.div>
-    </div>
   );
 }
 
 /* ══════════════════════════════════════════
    BACKGROUND
 ══════════════════════════════════════════ */
-const STARS = Array.from({ length:80 }, (_,i) => ({
-  x:(i*143.7)%390, y:(i*89.3)%174, // only in the banner area
-  r:0.4+(i%4)*0.4, delay:(i*0.19)%4, dur:2+(i%6)*0.4,
+const STARS = Array.from({ length:100 }, (_,i) => ({
+  x:(i*143.7)%390, y:(i*89.3)%844,
+  r:0.5+(i%4)*0.45, delay:(i*0.19)%4, dur:2+(i%6)*0.4,
 }));
 function StarField() {
   return (
     <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:1, pointerEvents:"none" }}>
       {STARS.map((s,i)=>(
         <motion.circle key={i} cx={s.x} cy={s.y} r={s.r}
-          fill={i%3===0?"#F5E0A0":"white"}
-          animate={{ opacity:[0.1,0.8,0.1] }}
-          transition={{ duration:s.dur, repeat:Infinity, delay:s.delay }}/>
+          fill={i%4===0?"#F5E0A0":"white"}
+          animate={{ opacity:[0.1,0.85,0.1] }}
+          transition={{ duration:s.dur, repeat:Infinity, delay:s.delay }} />
       ))}
+    </svg>
+  );
+}
+function Nebulae() {
+  return (
+    <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:1, pointerEvents:"none" }}>
+      <ellipse cx={55}  cy={200} rx={85} ry={65}  fill="#6B2A1A" opacity={0.22} />
+      <ellipse cx={335} cy={180} rx={75} ry={58}  fill="#5C3A10" opacity={0.20} />
+      <ellipse cx={195} cy={750} rx={125} ry={75} fill="#7A3820" opacity={0.18} />
     </svg>
   );
 }
 
 /* ══════════════════════════════════════════
-   FULL-WIDTH CURTAIN
-   No arch clip — spans 390px wide.
-   Balloons (z:8) sit visually on top of it.
-   Gold arch ring is an overlay decoration.
+   CURTAIN — off-white flowing, gold folds
 ══════════════════════════════════════════ */
 const FOLD_FABRIC = `repeating-linear-gradient(
   to right,
   #FFF9F3       0px,
-  #F5E8D4       8px,
-  #EDCFA8      16px,
-  #E5C490      22px,
-  #EDCFA8      28px,
-  #F5E8D4      36px,
-  #FFF9F3      44px
+  #F5E8D4       7px,
+  #EDD5B5      14px,
+  #E5C89A      20px,
+  #EDD5B5      26px,
+  #F5E8D4      33px,
+  #FFF9F3      40px
 )`;
 
-function CurtainPanel({ side, open, panelW }: { side:"left"|"right"; open:boolean; panelW:number }) {
-  const isLeft = side === "left";
-  return (
-    <motion.div style={{
-      position:"absolute",
-      left: isLeft ? 0 : panelW,
-      top:0, width:panelW, height:"100%",
-      background:FOLD_FABRIC, zIndex:2,
-      boxShadow: isLeft
-        ? "inset -6px 0 22px rgba(180,120,40,0.22)"
-        : "inset  6px 0 22px rgba(180,120,40,0.22)",
-    }}
-      animate={open ? { x: isLeft ? -(panelW+4) : (panelW+4), opacity:0.5 } : { x:0, opacity:1 }}
-      transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
-
-      {/* Gold shimmer */}
-      <div style={{
-        position:"absolute", inset:0,
-        background: isLeft
-          ? "linear-gradient(135deg,rgba(212,175,55,0.14) 0%,transparent 55%)"
-          : "linear-gradient(225deg,rgba(212,175,55,0.14) 0%,transparent 55%)",
-        pointerEvents:"none",
-      }}/>
-      {/* Top gather glow */}
-      <div style={{ position:"absolute", top:0, left:0, right:0, height:24,
-        background:"linear-gradient(to bottom,rgba(212,175,55,0.3),transparent)" }}/>
-      {/* Flowing shimmer wave */}
-      <motion.div style={{
-        position:"absolute", inset:0,
-        background:"linear-gradient(to right,transparent 15%,rgba(255,255,255,0.15) 45%,rgba(255,255,255,0.07) 58%,transparent 80%)",
-      }}
-        animate={{ x: isLeft ? [0,7,0,-5,0] : [0,-7,0,5,0], y:[0,10,0,-6,0] }}
-        transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut", delay: isLeft ? 0 : 0.5 }}/>
-      {/* Wavy hem */}
-      <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:30 }} preserveAspectRatio="none">
-        <motion.path fill="rgba(190,140,70,0.18)"
-          animate={{ d:[
-            `M 0 30 Q ${panelW*0.25} 14 ${panelW*0.5} 22 Q ${panelW*0.75} 28 ${panelW} 12 L ${panelW} 30 Z`,
-            `M 0 30 Q ${panelW*0.25} 20 ${panelW*0.5} 26 Q ${panelW*0.75} 18 ${panelW}  8 L ${panelW} 30 Z`,
-            `M 0 30 Q ${panelW*0.25} 14 ${panelW*0.5} 22 Q ${panelW*0.75} 28 ${panelW} 12 L ${panelW} 30 Z`,
-          ]}}
-          transition={{ duration:5, repeat:Infinity, ease:"easeInOut" }}/>
-      </svg>
-      {/* Centre seam gold line */}
-      <div style={{
-        position:"absolute",
-        [isLeft ? "right" : "left"]: 0,
-        top:0, bottom:0, width:2,
-        background:"linear-gradient(to bottom,rgba(212,175,55,0.95),rgba(212,175,55,0.3))",
-      }}/>
-    </motion.div>
-  );
-}
-
 function Curtain({ open }: { open: boolean }) {
-  const panelW = C_HALF; // 195
+  const panelW = C_W / 2; // 128
   return (
     <div style={{
-      position:"absolute", left:0, top:C_TOP, width:SCREEN_W, height:C_H,
+      position:"absolute", left:C_LEFT, top:C_TOP, width:C_W, height:C_H,
+      borderRadius:`${ARCH_BORDER_R}px ${ARCH_BORDER_R}px 0 0`,
       overflow:"hidden", zIndex:5,
     }}>
-      {/* Warm back-light reveals on open */}
+      {/* Warm back-light on open */}
       <motion.div style={{
         position:"absolute", inset:0, zIndex:0,
-        background:"radial-gradient(ellipse at 50% 15%, #FFF8E0 0%, #FFD060 30%, #FFB050 60%, transparent 85%)",
+        background:"radial-gradient(ellipse at 50% 22%, #FFF8E0 0%, #FFD070 35%, #FFB060 65%, transparent 100%)",
       }}
         animate={{ opacity: open ? 1 : 0 }}
-        transition={{ duration:0.7, delay:0.3 }}/>
-      <CurtainPanel side="left"  open={open} panelW={panelW}/>
-      <CurtainPanel side="right" open={open} panelW={panelW}/>
+        transition={{ duration:0.65, delay:0.25 }} />
+
+      {/* LEFT PANEL */}
+      <motion.div style={{
+        position:"absolute", left:0, top:0, width:panelW, height:"100%",
+        background:FOLD_FABRIC, zIndex:2,
+        boxShadow:"inset -5px 0 20px rgba(180,130,60,0.18)",
+      }}
+        animate={open ? { x:-(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+        transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
+        {/* Gold shimmer */}
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,rgba(212,175,55,0.15) 0%,rgba(212,175,55,0.03) 50%,transparent 75%)", pointerEvents:"none" }} />
+        {/* Top gather glow */}
+        <div style={{ position:"absolute", top:0, left:0, right:0, height:22, background:"linear-gradient(to bottom,rgba(212,175,55,0.28),transparent)" }} />
+        {/* Animated flowing shimmer */}
+        <motion.div style={{
+          position:"absolute", inset:0,
+          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.13) 48%,rgba(255,255,255,0.06) 58%,transparent 75%)",
+        }}
+          animate={{ x:[0,6,0,-4,0], y:[0,8,0,-5,0] }}
+          transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }} />
+        {/* Wavy hem */}
+        <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
+          <motion.path fill="rgba(190,145,80,0.2)"
+            animate={{ d:[
+              `M 0 28 Q ${panelW*0.2} 14 ${panelW*0.4} 22 Q ${panelW*0.65} 28 ${panelW*0.85} 12 Q ${panelW} 4 ${panelW} 16 L ${panelW} 28 Z`,
+              `M 0 28 Q ${panelW*0.2} 18 ${panelW*0.4} 26 Q ${panelW*0.65} 20 ${panelW*0.85} 8  Q ${panelW} 2 ${panelW} 18 L ${panelW} 28 Z`,
+              `M 0 28 Q ${panelW*0.2} 14 ${panelW*0.4} 22 Q ${panelW*0.65} 28 ${panelW*0.85} 12 Q ${panelW} 4 ${panelW} 16 L ${panelW} 28 Z`,
+            ]}}
+            transition={{ duration:4.8, repeat:Infinity, ease:"easeInOut" }} />
+        </svg>
+        {/* Gold seam */}
+        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:2, background:"linear-gradient(to bottom,rgba(212,175,55,0.9),rgba(212,175,55,0.3))" }} />
+      </motion.div>
+
+      {/* RIGHT PANEL */}
+      <motion.div style={{
+        position:"absolute", right:0, top:0, width:panelW, height:"100%",
+        background:FOLD_FABRIC, zIndex:2,
+        boxShadow:"inset 5px 0 20px rgba(180,130,60,0.18)",
+      }}
+        animate={open ? { x:(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+        transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(225deg,rgba(212,175,55,0.15) 0%,rgba(212,175,55,0.03) 50%,transparent 75%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", top:0, left:0, right:0, height:22, background:"linear-gradient(to bottom,rgba(212,175,55,0.28),transparent)" }} />
+        <motion.div style={{
+          position:"absolute", inset:0,
+          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.13) 48%,rgba(255,255,255,0.06) 58%,transparent 75%)",
+        }}
+          animate={{ x:[0,-6,0,4,0], y:[0,8,0,-5,0] }}
+          transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut", delay:0.4 }} />
+        <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
+          <motion.path fill="rgba(190,145,80,0.2)"
+            animate={{ d:[
+              `M 0 28 Q ${panelW*0.15} 8  ${panelW*0.35} 20 Q ${panelW*0.55} 28 ${panelW*0.75} 14 Q ${panelW*0.9} 4 ${panelW} 22 L ${panelW} 28 Z`,
+              `M 0 28 Q ${panelW*0.15} 14 ${panelW*0.35} 24 Q ${panelW*0.55} 18 ${panelW*0.75} 6  Q ${panelW*0.9} 0 ${panelW} 18 L ${panelW} 28 Z`,
+              `M 0 28 Q ${panelW*0.15} 8  ${panelW*0.35} 20 Q ${panelW*0.55} 28 ${panelW*0.75} 14 Q ${panelW*0.9} 4 ${panelW} 22 L ${panelW} 28 Z`,
+            ]}}
+            transition={{ duration:4.8, repeat:Infinity, ease:"easeInOut", delay:0.6 }} />
+        </svg>
+        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:2, background:"linear-gradient(to bottom,rgba(212,175,55,0.9),rgba(212,175,55,0.3))" }} />
+      </motion.div>
     </div>
   );
 }
 
-/* Arch decoration ring (purely decorative, rendered above curtain, below balloons) */
-function ArchRing() {
-  const padX = 6, padTop = 8;
-  const archCyLocal = ARCH_CY_SCREEN - C_TOP; // arch centre in curtain-local coords
-  const r = ARCH_DEC_R + padX;
-  // SVG sized to the arch zone
-  const svgLeft = ARCH_CX - r - padX;
-  const svgW    = (r + padX) * 2;
-  const svgH    = archCyLocal + r + 10;
-
+function ArchFrame() {
+  const pad=6, fw=C_W+pad*2, fh=C_H+pad*2, fr=ARCH_BORDER_R+pad;
   return (
-    <svg style={{
-      position:"absolute", left:svgLeft, top:C_TOP - padTop,
-      width:svgW, height:svgH, zIndex:6, pointerEvents:"none",
-    }}>
+    <svg style={{ position:"absolute", left:C_LEFT-pad, top:C_TOP-pad, width:fw, height:fh, zIndex:6, pointerEvents:"none" }}>
       <defs>
         <linearGradient id="af" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%"   stopColor="#D4AF37"/>
-          <stop offset="40%"  stopColor="#F0D060"/>
-          <stop offset="70%"  stopColor="#C9846A"/>
-          <stop offset="100%" stopColor="#D4AF37"/>
+          <stop offset="0%"   stopColor="#D4AF37" />
+          <stop offset="40%"  stopColor="#F0D060" />
+          <stop offset="70%"  stopColor="#C9846A" />
+          <stop offset="100%" stopColor="#D4AF37" />
         </linearGradient>
         <filter id="afg"><feGaussianBlur stdDeviation="4" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      {/* Glow */}
-      <path
-        d={`M ${r+padX} ${svgH} L ${r+padX} ${archCyLocal+padTop} A ${r} ${r} 0 0 0 ${-r+padX+svgW} ${archCyLocal+padTop} L ${-r+padX+svgW} ${svgH} Z`}
-        fill="none" stroke="url(#af)" strokeWidth={14} opacity={0.4} filter="url(#afg)"/>
-      {/* Sharp ring */}
-      <path
-        d={`M ${r+padX} ${svgH} L ${r+padX} ${archCyLocal+padTop} A ${r} ${r} 0 0 0 ${-r+padX+svgW} ${archCyLocal+padTop} L ${-r+padX+svgW} ${svgH} Z`}
-        fill="none" stroke="url(#af)" strokeWidth={2.5} opacity={0.95}/>
+      <path d={`M ${pad} ${fh} L ${pad} ${fr} A ${fr} ${fr} 0 0 1 ${fw-pad} ${fr} L ${fw-pad} ${fh} Z`}
+        fill="none" stroke="url(#af)" strokeWidth={14} opacity={0.45} filter="url(#afg)" />
+      <path d={`M ${pad} ${fh} L ${pad} ${fr} A ${fr} ${fr} 0 0 1 ${fw-pad} ${fr} L ${fw-pad} ${fh} Z`}
+        fill="none" stroke="url(#af)" strokeWidth={2.5} opacity={0.95} />
     </svg>
   );
 }
@@ -382,12 +257,12 @@ function CandleFlame({ cx, cy }: { cx:number; cy:number }) {
     <>
       <motion.ellipse cx={cx} cy={cy} rx={3.5} ry={6} fill="#FFD700"
         animate={{ scaleX:[1,0.7,1.1,0.85,1], scaleY:[1,1.1,0.9,1.05,1] }}
-        transition={{ duration:0.75, repeat:Infinity }} style={{ transformOrigin:`${cx}px ${cy}px` }}/>
+        transition={{ duration:0.75, repeat:Infinity }} style={{ transformOrigin:`${cx}px ${cy}px` }} />
       <motion.ellipse cx={cx} cy={cy+1.5} rx={2} ry={3.5} fill="#FF8C00"
         animate={{ scaleX:[1,0.8,1.1,0.9,1] }} transition={{ duration:0.75, repeat:Infinity }}
-        style={{ transformOrigin:`${cx}px ${cy+1.5}px` }}/>
+        style={{ transformOrigin:`${cx}px ${cy+1.5}px` }} />
       <motion.ellipse cx={cx} cy={cy+2.5} rx={1} ry={2} fill="white" opacity={0.5}
-        animate={{ opacity:[0.5,0.9,0.45,0.75,0.5] }} transition={{ duration:0.6, repeat:Infinity }}/>
+        animate={{ opacity:[0.5,0.9,0.45,0.75,0.5] }} transition={{ duration:0.6, repeat:Infinity }} />
     </>
   );
 }
@@ -405,8 +280,8 @@ function Cake() {
       <rect x={56} y={198} width={168} height={58} rx={8} fill="url(#ct1)"/>
       <ellipse cx={140} cy={198} rx={84} ry={9} fill="#D4956A"/><ellipse cx={140} cy={256} rx={84} ry={9} fill="#7A3C22"/>
       {[68,88,108,128,148,168,188,208].map((x,i)=>(
-        <motion.path key={i} d={`M ${x} 198 Q ${x} 205 ${x} 210`} stroke="rgba(255,248,240,0.45)" strokeWidth={5} strokeLinecap="round" fill="none"
-          animate={{ d:[`M ${x} 198 Q ${x} 203 ${x} 208`,`M ${x} 198 Q ${x} 208 ${x} 213`,`M ${x} 198 Q ${x} 203 ${x} 208`] }}
+        <motion.path key={i} d={`M ${x} 198 Q ${x} 206 ${x} 211`} stroke="rgba(255,248,240,0.45)" strokeWidth={5} strokeLinecap="round" fill="none"
+          animate={{ d:[`M ${x} 198 Q ${x} 204 ${x} 209`,`M ${x} 198 Q ${x} 209 ${x} 214`,`M ${x} 198 Q ${x} 204 ${x} 209`] }}
           transition={{ duration:3, repeat:Infinity, delay:i*0.2 }}/>
       ))}
       {[68,92,116,140,164,188,212].map((x,i)=>(
@@ -429,7 +304,8 @@ function Cake() {
         </g>
       ))}
       <ellipse cx={140} cy={82} rx={55} ry={22} fill="#FFD700" opacity={0.12} filter="url(#cglo)"/>
-      <motion.g filter="url(#cglo)" animate={{ scale:[1,1.2,1], rotate:[0,15,0,-15,0] }}
+      <motion.g filter="url(#cglo)"
+        animate={{ scale:[1,1.2,1], rotate:[0,15,0,-15,0] }}
         transition={{ duration:2.2, repeat:Infinity }} style={{ transformOrigin:"140px 88px" }}>
         <polygon points="140,81 142.8,88.5 150,88.5 144.2,92.8 146.5,100 140,95.5 133.5,100 135.8,92.8 130,88.5 137.2,88.5" fill="#D4AF37"/>
       </motion.g>
@@ -480,41 +356,52 @@ export function BirthdayDoor() {
   return (
     <div style={{
       width:390, height:844, position:"relative", overflow:"hidden",
-      background:"linear-gradient(175deg,#0e0502 0%,#1c0a06 50%,#0e0402 100%)",
+      background:"linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)",
       fontFamily:"'Georgia','Times New Roman',serif", userSelect:"none",
     }}>
-      <StarField/>
+      <StarField />
+      <Nebulae />
 
       <AnimatePresence>
         {confetti && cfPieces.map(p=><Confetto key={p.id} x={p.x} color={p.color} delay={p.delay}/>)}
       </AnimatePresence>
 
-      {/* ══ SCENE 1 ══ */}
+      {/* ══ SCENE 1 : CURTAIN ══ */}
       <AnimatePresence>
         {!showCake && (
           <motion.div key="scene1"
             style={{ position:"absolute", inset:0, zIndex:10 }}
             exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
 
-            {/* Bunting banner */}
-            <HappyBirthdayBanner/>
+            {/* Header text */}
+            <motion.div style={{ position:"absolute", top:36, left:0, right:0, textAlign:"center", zIndex:20 }}
+              initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
+              <p style={{ color:"#8C6A4A", fontSize:10, letterSpacing:4, textTransform:"uppercase", marginBottom:3, fontFamily:"sans-serif" }}>
+                YOU'RE INVITED TO
+              </p>
+              <h1 style={{ fontSize:26, fontWeight:"bold", lineHeight:1.15, margin:"0 0 2px", ...gradText }}>
+                {name}'s Birthday
+              </h1>
+              <motion.p style={{ color:"#8C6A4A", fontSize:11, fontFamily:"sans-serif" }}
+                animate={{ opacity:[0.5,1,0.5] }} transition={{ duration:2.5, repeat:Infinity }}>
+                ✨ A special surprise awaits ✨
+              </motion.p>
+            </motion.div>
 
-            {/* Full-width curtain */}
-            <Curtain open={open}/>
+            <Curtain open={open} />
+            <ArchFrame />
 
-            {/* Gold arch ring (z:6 — above curtain, below balloons) */}
-            <ArchRing/>
-
-            {/* Tap zone (positioned over the arch area) */}
+            {/* Tap zone */}
             <motion.button onClick={handleTap} style={{
-              position:"absolute", left:0, top:C_TOP, width:SCREEN_W, height:C_H,
+              position:"absolute", left:C_LEFT, top:C_TOP, width:C_W, height:C_H,
               background:"transparent", border:"none",
               cursor:open?"default":"pointer", zIndex:7,
+              borderRadius:`${ARCH_BORDER_R}px ${ARCH_BORDER_R}px 0 0`,
             }}>
               <AnimatePresence>
                 {!open && (
                   <motion.div
-                    style={{ position:"absolute", bottom:220, left:0, right:0, display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}
+                    style={{ position:"absolute", bottom:200, left:0, right:0, display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}
                     animate={{ opacity:[0.4,1,0.4] }} transition={{ duration:2.2, repeat:Infinity }}
                     exit={{ opacity:0 }}>
                     <motion.div style={{
@@ -534,8 +421,7 @@ export function BirthdayDoor() {
               </AnimatePresence>
             </motion.button>
 
-            {/* Balloons — z:8 — on top of curtain */}
-            {GARLAND.map((b,i) => <GBalloon key={i} {...b}/>)}
+            {GARLAND.map((b,i) => <GBalloon key={i} {...b} />)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -559,7 +445,7 @@ export function BirthdayDoor() {
             <motion.div style={{ width:268, height:268, marginTop:20 }}
               initial={{ scale:0.1, rotate:-18 }} animate={{ scale:1, rotate:0 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <Cake/>
+              <Cake />
             </motion.div>
 
             <motion.div style={{ textAlign:"center", marginTop:18, paddingInline:36 }}
