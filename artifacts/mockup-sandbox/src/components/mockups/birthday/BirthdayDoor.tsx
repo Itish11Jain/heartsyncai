@@ -377,53 +377,88 @@ function Confetto({ x, color, delay }: { x:number; color:string; delay:number })
 }
 
 /* ══════════════════════════════════════════
-   HAPPY BIRTHDAY BANNER
+   HAPPY BIRTHDAY BANNER — individual hanging letters
 ══════════════════════════════════════════ */
+const HB_DEF = [
+  {ch:"H",w:26},{ch:"a",w:20},{ch:"p",w:18},{ch:"p",w:18},{ch:"y",w:20},
+  {ch:" ",w:18},
+  {ch:"B",w:24},{ch:"i",w:11},{ch:"r",w:17},{ch:"t",w:14},{ch:"h",w:20},{ch:"d",w:20},{ch:"a",w:20},{ch:"y",w:20},
+];
+const HB_ROTS = [-8,-4,-6,-3,-5, 0, -7,-3,-5,-4,-6,-3,-5,-7];
+const HB_GAP  = 6;
+function calcHbXs() {
+  const totalW = HB_DEF.reduce((s,b)=>s+b.w,0) + HB_GAP*(HB_DEF.length-1);
+  let x = (390-totalW)/2;
+  return HB_DEF.map(item=>{ const cx=x+item.w/2; x+=item.w+HB_GAP; return cx; });
+}
+const HB_XS = calcHbXs();
+const HB_STR_X1 = HB_XS[0]-18;
+const HB_STR_X2 = HB_XS[HB_XS.length-1]+18;
+const HB_SAG    = 38;
+function hbStrY(x: number) {
+  const t=(x-HB_STR_X1)/(HB_STR_X2-HB_STR_X1);
+  return 22 + HB_SAG*4*t*(1-t);
+}
+
 function HappyBirthdayBanner() {
   return (
-    <motion.div style={{ position:"absolute", top:48, left:0, right:0, zIndex:25, pointerEvents:"none" }}
-      initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.7 }}>
-      <svg width={390} height={96} viewBox="0 0 390 96">
+    <motion.div style={{ position:"absolute", top:44, left:0, right:0, zIndex:25, pointerEvents:"none" }}
+      initial={{ opacity:0, y:-24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25, duration:0.7 }}>
+      <svg width={390} height={118} viewBox="0 0 390 118">
         <defs>
           <linearGradient id="bannerG" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"  stopColor="#6B4A00"/>
-            <stop offset="28%" stopColor="#D4AF37"/>
-            <stop offset="50%" stopColor="#FFF0A0"/>
-            <stop offset="72%" stopColor="#D4AF37"/>
-            <stop offset="100%" stopColor="#6B4A00"/>
+            <stop offset="0%"   stopColor="#5C3D00"/>
+            <stop offset="25%"  stopColor="#C9920A"/>
+            <stop offset="50%"  stopColor="#FFF4B0"/>
+            <stop offset="75%"  stopColor="#C9920A"/>
+            <stop offset="100%" stopColor="#5C3D00"/>
           </linearGradient>
-          <filter id="bannerGlow">
-            <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <filter id="bannerGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.6" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
 
         {/* Sagging string */}
-        <motion.path d="M 16 22 Q 195 58 374 22" fill="none"
-          stroke="#D4AF37" strokeWidth={1.5} opacity={0.9}
-          animate={{ d:["M 16 22 Q 195 60 374 22","M 16 22 Q 195 50 374 22","M 16 22 Q 195 60 374 22"] }}
-          transition={{ duration:4, repeat:Infinity, ease:"easeInOut" }} />
-        <circle cx={16}  cy={22} r={3.5} fill="#C9A840" opacity={0.85}/>
-        <circle cx={374} cy={22} r={3.5} fill="#C9A840" opacity={0.85}/>
+        <motion.path
+          d={`M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG} ${HB_STR_X2} 22`}
+          fill="none" stroke="#D4AF37" strokeWidth={1.6} opacity={0.95}
+          animate={{ d:[
+            `M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG+6} ${HB_STR_X2} 22`,
+            `M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG-6} ${HB_STR_X2} 22`,
+            `M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG+6} ${HB_STR_X2} 22`,
+          ]}}
+          transition={{ duration:4.5, repeat:Infinity, ease:"easeInOut" }}/>
+        <circle cx={HB_STR_X1} cy={22} r={4} fill="#B8940A" opacity={0.9}/>
+        <circle cx={HB_STR_X2} cy={22} r={4} fill="#B8940A" opacity={0.9}/>
 
-        {/* Connector threads — 5 evenly spaced */}
-        {[75,148,195,248,318].map((x,i) => {
-          const t=(x-16)/(374-16), sy=22+38*4*t*(1-t);
-          return <line key={i} x1={x} y1={sy} x2={x} y2={52}
-            stroke="#D4AF37" strokeWidth={0.9} opacity={0.55}/>;
+        {/* Individual hanging letters */}
+        {HB_DEF.map((item, i) => {
+          if (item.ch === " ") return null;
+          const cx   = HB_XS[i];
+          const sy   = hbStrY(cx);
+          const THREAD = 15;
+          const baseline = sy + THREAD + 40;
+          const rot  = HB_ROTS[i];
+          return (
+            <g key={i} transform={`rotate(${rot},${cx},${sy+THREAD})`}>
+              <line x1={cx} y1={sy} x2={cx} y2={sy+THREAD}
+                stroke="#C9A840" strokeWidth={1.1} opacity={0.8}/>
+              <motion.text
+                x={cx} y={baseline}
+                textAnchor="middle"
+                fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                fontStyle="italic" fontWeight="bold"
+                fontSize={40}
+                fill="url(#bannerG)"
+                filter="url(#bannerGlow)"
+                animate={{ y:[baseline, baseline-2, baseline] }}
+                transition={{ duration:2.8+i*0.2, repeat:Infinity, ease:"easeInOut", delay:i*0.15 }}>
+                {item.ch}
+              </motion.text>
+            </g>
+          );
         })}
-
-        {/* "Happy" — left half */}
-        <text x={105} y={90} textAnchor="middle"
-          fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic" fontWeight="bold"
-          fontSize={44} fill="url(#bannerG)" filter="url(#bannerGlow)"
-          transform="rotate(-4,105,72)">Happy</text>
-
-        {/* "Birthday" — right half */}
-        <text x={272} y={88} textAnchor="middle"
-          fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic" fontWeight="bold"
-          fontSize={44} fill="url(#bannerG)" filter="url(#bannerGlow)"
-          transform="rotate(3,272,72)">Birthday</text>
       </svg>
     </motion.div>
   );
@@ -433,11 +468,15 @@ function HappyBirthdayBanner() {
    BOTTOM BALLOON BUNCHES (Scene 2)
 ══════════════════════════════════════════ */
 const BUNCHES_DEF = [
-  { ax:50,  balls:[{dx:-16,dy:-58,r:22,pi:0},{dx:10,dy:-90,r:26,pi:1},{dx:-4,dy:-118,r:20,pi:2},{dx:20,dy:-74,r:18,pi:3}] },
-  { ax:125, balls:[{dx:-14,dy:-55,r:24,pi:1},{dx:14,dy:-92,r:28,pi:2},{dx:-10,dy:-122,r:22,pi:3},{dx:24,dy:-76,r:18,pi:0},{dx:0,dy:-148,r:16,pi:4}] },
-  { ax:195, balls:[{dx:-22,dy:-52,r:24,pi:2},{dx:8,dy:-92,r:30,pi:3},{dx:-10,dy:-124,r:22,pi:0},{dx:24,dy:-78,r:20,pi:1},{dx:0,dy:-152,r:18,pi:4}] },
-  { ax:265, balls:[{dx:14,dy:-55,r:24,pi:3},{dx:-14,dy:-92,r:28,pi:0},{dx:10,dy:-122,r:22,pi:1},{dx:-24,dy:-76,r:18,pi:2},{dx:0,dy:-148,r:16,pi:4}] },
-  { ax:340, balls:[{dx:16,dy:-58,r:22,pi:0},{dx:-10,dy:-90,r:26,pi:1},{dx:4,dy:-118,r:20,pi:4},{dx:-20,dy:-74,r:18,pi:3}] },
+  { ax:20,  balls:[{dx:4,dy:-50,r:20,pi:0},{dx:-18,dy:-76,r:24,pi:2},{dx:16,dy:-68,r:18,pi:1},{dx:-6,dy:-100,r:22,pi:3},{dx:14,dy:-96,r:14,pi:4}] },
+  { ax:62,  balls:[{dx:-14,dy:-53,r:22,pi:4},{dx:10,dy:-86,r:26,pi:0},{dx:-4,dy:-114,r:20,pi:2},{dx:20,dy:-66,r:16,pi:1},{dx:-18,dy:-136,r:15,pi:3},{dx:6,dy:-118,r:12,pi:0}] },
+  { ax:106, balls:[{dx:6,dy:-58,r:24,pi:1},{dx:-22,dy:-88,r:28,pi:3},{dx:18,dy:-78,r:20,pi:0},{dx:-10,dy:-118,r:22,pi:2},{dx:24,dy:-106,r:14,pi:4}] },
+  { ax:148, balls:[{dx:-10,dy:-50,r:20,pi:2},{dx:14,dy:-82,r:24,pi:0},{dx:-24,dy:-74,r:18,pi:4},{dx:4,dy:-114,r:22,pi:1},{dx:22,dy:-102,r:14,pi:3},{dx:-6,dy:-134,r:13,pi:2}] },
+  { ax:195, balls:[{dx:-22,dy:-54,r:24,pi:3},{dx:16,dy:-92,r:30,pi:1},{dx:-8,dy:-126,r:22,pi:0},{dx:28,dy:-76,r:18,pi:2},{dx:0,dy:-154,r:18,pi:4},{dx:-24,dy:-110,r:14,pi:0},{dx:18,dy:-138,r:12,pi:2}] },
+  { ax:242, balls:[{dx:10,dy:-50,r:20,pi:4},{dx:-14,dy:-82,r:24,pi:2},{dx:24,dy:-74,r:18,pi:1},{dx:-4,dy:-114,r:22,pi:3},{dx:-22,dy:-102,r:14,pi:0},{dx:8,dy:-134,r:13,pi:1}] },
+  { ax:284, balls:[{dx:-6,dy:-58,r:24,pi:0},{dx:22,dy:-88,r:28,pi:2},{dx:-20,dy:-78,r:20,pi:1},{dx:8,dy:-118,r:22,pi:4},{dx:-26,dy:-106,r:14,pi:3}] },
+  { ax:328, balls:[{dx:14,dy:-53,r:22,pi:1},{dx:-10,dy:-86,r:26,pi:3},{dx:4,dy:-114,r:20,pi:0},{dx:-20,dy:-66,r:16,pi:2},{dx:18,dy:-136,r:15,pi:4},{dx:-4,dy:-118,r:12,pi:1}] },
+  { ax:370, balls:[{dx:-4,dy:-50,r:20,pi:2},{dx:18,dy:-76,r:24,pi:0},{dx:-16,dy:-68,r:18,pi:4},{dx:6,dy:-100,r:22,pi:1},{dx:-14,dy:-96,r:14,pi:3}] },
 ];
 
 function BunchBalloons({ flyUp }: { flyUp: boolean }) {
@@ -487,16 +526,276 @@ function BunchBalloons({ flyUp }: { flyUp: boolean }) {
 }
 
 /* ══════════════════════════════════════════
+   SCENE 3 — "We are not done yet"
+══════════════════════════════════════════ */
+function Scene3({ onNext }: { onNext:()=>void }) {
+  return (
+    <motion.div key="scene3" style={{ position:"absolute", inset:0, zIndex:12 }}
+      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>
+      <TwinkleBackground />
+      <HappyBirthdayBanner />
+
+      {/* Center message */}
+      <motion.div style={{
+        position:"absolute", left:0, right:0, top:0, bottom:0,
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+        gap:0,
+      }}>
+        {/* Decorative line */}
+        <motion.div style={{ width:80, height:1, background:"linear-gradient(90deg,transparent,#D4AF37,transparent)", marginBottom:28 }}
+          initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.5, duration:0.7 }}/>
+
+        <motion.p style={{
+          fontFamily:"'Brush Script MT','Segoe Script','Comic Sans MS',cursive",
+          fontStyle:"italic", fontSize:38, lineHeight:1.3, textAlign:"center",
+          margin:0, padding:"0 32px",
+          background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 45%,#FFF4B0 65%,#D4AF37 85%,#C9846A 100%)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+        }}
+          initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4, duration:0.7 }}>
+          We are not<br/>done yet…
+        </motion.p>
+
+        {/* Decorative line */}
+        <motion.div style={{ width:80, height:1, background:"linear-gradient(90deg,transparent,#D4AF37,transparent)", marginTop:28 }}
+          initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.6, duration:0.7 }}/>
+
+        <motion.p style={{
+          fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
+          fontSize:14, color:"rgba(212,175,55,0.65)", letterSpacing:2,
+          marginTop:20, textAlign:"center",
+        }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.9 }}>
+          One more surprise awaits ✨
+        </motion.p>
+
+        {/* CTA */}
+        <motion.button onClick={onNext} style={{
+          marginTop:36,
+          background:"linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.22))",
+          border:"1.5px solid rgba(212,175,55,0.6)",
+          borderRadius:40, padding:"15px 44px",
+          color:"#F0D060", fontSize:14, letterSpacing:2.5,
+          textTransform:"uppercase", fontFamily:"'Georgia',serif", cursor:"pointer",
+          whiteSpace:"nowrap",
+        }}
+          initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.1 }}
+          whileHover={{ scale:1.05, background:"linear-gradient(135deg,rgba(212,175,55,0.22),rgba(212,175,55,0.35))" }}
+          whileTap={{ scale:0.97 }}>
+          Click here ✨
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   PHOTO CUTOUT + CAP — Scene 4 sub-component
+══════════════════════════════════════════ */
+function PhotoCutout({ capVisible }: { capVisible:boolean }) {
+  const HCX=195, HCY=390, HR=68;
+  return (
+    <svg width={390} height={780} viewBox="0 0 390 780"
+      style={{ position:"absolute", top:100, left:0, pointerEvents:"none" }}>
+      <defs>
+        <linearGradient id="capG" x1="0%" y1="0%" x2="60%" y2="100%">
+          <stop offset="0%"   stopColor="#FFF4B0"/>
+          <stop offset="35%"  stopColor="#D4AF37"/>
+          <stop offset="70%"  stopColor="#9A6E00"/>
+          <stop offset="100%" stopColor="#5C3D00"/>
+        </linearGradient>
+        <radialGradient id="silG" cx="38%" cy="28%" r="60%">
+          <stop offset="0%"   stopColor="#3a2015"/>
+          <stop offset="100%" stopColor="#1a0a05"/>
+        </radialGradient>
+        <filter id="silGlow">
+          <feGaussianBlur stdDeviation="3" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      {/* Shadow */}
+      <ellipse cx={HCX} cy={600} rx={72} ry={14} fill="black" opacity={0.18}/>
+
+      {/* Body silhouette */}
+      <ellipse cx={HCX} cy={535} rx={68} ry={88} fill="url(#silG)" opacity={0.92}/>
+
+      {/* Neck */}
+      <rect x={HCX-14} y={HCY+HR-6} width={28} height={32} rx={10} fill="url(#silG)" opacity={0.92}/>
+
+      {/* Head */}
+      <circle cx={HCX} cy={HCY} r={HR} fill="url(#silG)" opacity={0.95}/>
+
+      {/* Eyes */}
+      <circle cx={HCX-22} cy={HCY-10} r={5.5} fill="#0a0502" opacity={0.85}/>
+      <circle cx={HCX+22} cy={HCY-10} r={5.5} fill="#0a0502" opacity={0.85}/>
+      <circle cx={HCX-20} cy={HCY-12} r={2}   fill="white"   opacity={0.55}/>
+      <circle cx={HCX+24} cy={HCY-12} r={2}   fill="white"   opacity={0.55}/>
+
+      {/* Smile */}
+      <path d={`M ${HCX-22} ${HCY+18} Q ${HCX} ${HCY+36} ${HCX+22} ${HCY+18}`}
+        fill="none" stroke="#0a0502" strokeWidth={3} strokeLinecap="round" opacity={0.8}/>
+
+      {/* Golden outline sketch — head */}
+      <motion.circle cx={HCX} cy={HCY} r={HR+10}
+        fill="none" stroke="#D4AF37" strokeWidth={2.2} strokeLinecap="round"
+        strokeDasharray="6 5"
+        initial={{ pathLength:0, rotate:-90 }} animate={{ pathLength:1, rotate:-90 }}
+        style={{ originX:"50%", originY:"50%" }}
+        transition={{ duration:2.2, ease:"easeInOut" }}/>
+
+      {/* Golden outline sketch — body */}
+      <motion.ellipse cx={HCX} cy={535} rx={78} ry={98}
+        fill="none" stroke="#D4AF37" strokeWidth={2}
+        strokeDasharray="6 5"
+        initial={{ pathLength:0 }} animate={{ pathLength:1 }}
+        transition={{ duration:2.2, delay:0.6, ease:"easeInOut" }}/>
+
+      {/* Golden outline glow ring */}
+      <motion.circle cx={HCX} cy={HCY} r={HR+10}
+        fill="none" stroke="#FFF4B0" strokeWidth={0.7} opacity={0.4}
+        initial={{ pathLength:0 }} animate={{ pathLength:1 }}
+        transition={{ duration:2.2, ease:"easeInOut" }}/>
+
+      {/* Birthday cap */}
+      {capVisible && (
+        <motion.g
+          initial={{ y:-200, opacity:0, rotate:-12 }}
+          animate={{ y:0, opacity:1, rotate:0 }}
+          transition={{ duration:0.75, ease:[0.34,1.56,0.64,1] }}>
+          {/* Cap triangle */}
+          <path d={`M ${HCX+8} ${HCY-HR-62} L ${HCX-42} ${HCY-HR+8} L ${HCX+48} ${HCY-HR+8} Z`}
+            fill="url(#capG)" filter="url(#silGlow)"/>
+          {/* Diagonal stripes on cap */}
+          {[0,1,2].map(n=>(
+            <line key={n}
+              x1={HCX-38+n*22} y1={HCY-HR+8}
+              x2={HCX-20+n*22} y2={HCY-HR-38}
+              stroke="rgba(255,255,255,0.2)" strokeWidth={5}/>
+          ))}
+          {/* Brim */}
+          <ellipse cx={HCX+4} cy={HCY-HR+8} rx={46} ry={9}
+            fill="#C9920A" opacity={0.95}/>
+          {/* Pompon ball */}
+          <circle cx={HCX+8} cy={HCY-HR-68} r={11}
+            fill="#FFF4B0"/>
+          <circle cx={HCX+5} cy={HCY-HR-72} r={4}
+            fill="white" opacity={0.7}/>
+          {/* Tassel string */}
+          <line x1={HCX+8} y1={HCY-HR-57} x2={HCX+28} y2={HCY-HR-24}
+            stroke="#D4AF37" strokeWidth={1.5}/>
+          <circle cx={HCX+30} cy={HCY-HR-20} r={5} fill="#D4AF37"/>
+        </motion.g>
+      )}
+
+      {/* "Your photo here" hint */}
+      <motion.text x={HCX} y={HCY+8} textAnchor="middle"
+        fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic"
+        fontSize={13} fill="#C9A840" opacity={0.5}
+        initial={{ opacity:0 }} animate={{ opacity:0.5 }} transition={{ delay:0.4 }}>
+        your photo here
+      </motion.text>
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 4 — Photo cutout + cap + confetti
+══════════════════════════════════════════ */
+function Scene4({ onReplay }: { onReplay:()=>void }) {
+  const [capVisible,  setCapVisible]  = useState(false);
+  const [cfShow,      setCfShow]      = useState(false);
+  const [showReplay,  setShowReplay]  = useState(false);
+  const [pencilDone,  setPencilDone]  = useState(false);
+
+  useEffect(()=>{
+    const t1 = setTimeout(()=>setPencilDone(true),  2600);
+    const t2 = setTimeout(()=>setCapVisible(true),   3200);
+    const t3 = setTimeout(()=>setCfShow(true),       4400);
+    const t4 = setTimeout(()=>setCfShow(false),      8000);
+    const t5 = setTimeout(()=>setShowReplay(true),   5000);
+    return ()=>[t1,t2,t3,t4,t5].forEach(clearTimeout);
+  },[]);
+
+  const cf4 = Array.from({length:65},(_,i)=>({
+    id:i, x:(i*16.3)%100, color:P[i%P.length].c, delay:i*0.05,
+  }));
+
+  return (
+    <motion.div key="scene4" style={{ position:"absolute", inset:0, zIndex:12 }}
+      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>
+      <TwinkleBackground />
+      <HappyBirthdayBanner />
+
+      <AnimatePresence>
+        {cfShow && cf4.map(p=><Confetto key={p.id} x={p.x} color={p.color} delay={p.delay}/>)}
+      </AnimatePresence>
+
+      {/* Photo + cap */}
+      <PhotoCutout capVisible={capVisible}/>
+
+      {/* Pencil emoji drawing animation */}
+      {!pencilDone && (
+        <motion.div style={{ position:"absolute", fontSize:26, zIndex:30, pointerEvents:"none",
+          top:195, left:335 }}
+          animate={{
+            x:[-140,-200,-140,-80,-140],
+            y:[ -10, 68, 148,  68,  -10],
+          }}
+          transition={{ duration:2.4, ease:"linear", times:[0,0.25,0.5,0.75,1] }}>
+          ✏️
+        </motion.div>
+      )}
+
+      {/* "Your surprise" label that appears after cap */}
+      {capVisible && (
+        <motion.div style={{
+          position:"absolute", bottom:130, left:0, right:0,
+          textAlign:"center",
+          fontFamily:"'Brush Script MT','Segoe Script',cursive",
+          fontStyle:"italic", fontSize:22,
+          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+        }}
+          initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}>
+          Wishing you all the happiness ✨
+        </motion.div>
+      )}
+
+      {/* Replay */}
+      <AnimatePresence>
+        {showReplay && (
+          <motion.button key="replay4"
+            onClick={onReplay}
+            style={{
+              position:"absolute", bottom:52,
+              left:"50%", transform:"translateX(-50%)",
+              background:"rgba(212,175,55,0.08)", border:"1px solid rgba(212,175,55,0.3)",
+              borderRadius:24, padding:"8px 26px", color:"#C9A840",
+              fontSize:11, letterSpacing:2, textTransform:"uppercase",
+              fontFamily:"sans-serif", cursor:"pointer", whiteSpace:"nowrap",
+            }}
+            initial={{ opacity:0 }} animate={{ opacity:1 }}
+            whileHover={{ background:"rgba(212,175,55,0.18)" }}>
+            ↩ Replay from start
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
    MAIN
 ══════════════════════════════════════════ */
 export function BirthdayDoor() {
-  const [open, setOpen]           = useState(false);
-  const [showCake, setShowCake]   = useState(false);
-  const [confetti, setConfetti]   = useState(false);
-  const [cakePhase, setCakePhase] = useState<"cta"|"counting"|"blown">("cta");
-  const [countdown, setCountdown] = useState(3);
-  const [blown, setBlown]         = useState(false);
-  const [flyUp, setFlyUp]         = useState(false);
+  const [scene,      setScene]      = useState<1|2|3|4>(1);
+  const [open,       setOpen]       = useState(false);
+  const [confetti,   setConfetti]   = useState(false);
+  const [cakePhase,  setCakePhase]  = useState<"cta"|"counting"|"blown">("cta");
+  const [countdown,  setCountdown]  = useState(3);
+  const [blown,      setBlown]      = useState(false);
+  const [flyUp,      setFlyUp]      = useState(false);
 
   const cfPieces = Array.from({ length:55 }, (_,i) => ({
     id:i, x:(i*18.7)%100, color:P[i%P.length].c, delay:i*0.065,
@@ -505,30 +804,21 @@ export function BirthdayDoor() {
   function handleTap() {
     if (open) return;
     setOpen(true);
-    setTimeout(() => { setShowCake(true); setCakePhase("cta"); }, 1000);
+    setTimeout(() => { setScene(2); setCakePhase("cta"); }, 1000);
   }
   function handleBlow() {
     setCakePhase("counting");
     setCountdown(3);
     setTimeout(() => setCountdown(2), 800);
     setTimeout(() => { setCountdown(1); setFlyUp(true); }, 1600);
-    setTimeout(() => {
-      setCakePhase("blown");
-      setBlown(true);
-      setConfetti(true);
-    }, 2400);
+    setTimeout(() => { setCakePhase("blown"); setBlown(true); setConfetti(true); }, 2400);
     setTimeout(() => setConfetti(false), 5200);
   }
   function handleReplay() {
-    setShowCake(false); setConfetti(false); setBlown(false); setFlyUp(false);
+    setScene(1); setConfetti(false); setBlown(false); setFlyUp(false);
     setCakePhase("cta"); setCountdown(3);
     setTimeout(() => setOpen(false), 80);
   }
-
-  const gradText = {
-    background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 50%,#F0D060 100%)",
-    WebkitBackgroundClip:"text" as const, WebkitTextFillColor:"transparent" as const,
-  };
 
   return (
     <div style={{
@@ -545,31 +835,26 @@ export function BirthdayDoor() {
 
       {/* ══ SCENE 1 : CURTAIN ══ */}
       <AnimatePresence>
-        {!showCake && (
+        {scene === 1 && (
           <motion.div key="scene1"
             style={{ position:"absolute", inset:0, zIndex:10 }}
             exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
-
             <Curtain open={open} />
-
-            {/* Tap zone — full screen */}
             <motion.button onClick={handleTap} style={{
               position:"absolute", left:0, top:0, width:390, height:844,
               background:"transparent", border:"none",
               cursor:open?"default":"pointer", zIndex:7,
-            }}>
-            </motion.button>
-
+            }}/>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Balloon garland — scene 1 only */}
-      {!showCake && GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
+      {scene === 1 && GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
 
       {/* ══ SCENE 2 : CAKE ══ */}
       <AnimatePresence>
-        {showCake && (
+        {scene === 2 && (
           <motion.div key="scene2"
             style={{ position:"absolute", inset:0, zIndex:12, display:"flex", flexDirection:"column", alignItems:"center" }}
             initial={{ opacity:0, scale:0.9 }}
@@ -595,8 +880,7 @@ export function BirthdayDoor() {
             {/* CTA */}
             <AnimatePresence>
               {cakePhase === "cta" && (
-                <motion.button key="cta"
-                  onClick={handleBlow}
+                <motion.button key="cta" onClick={handleBlow}
                   style={{
                     position:"absolute",
                     top: C_TOP + C_H/2 - 134 - 80 + 268 + 32,
@@ -605,12 +889,11 @@ export function BirthdayDoor() {
                     border:"1.5px solid rgba(212,175,55,0.55)",
                     borderRadius:32, padding:"13px 32px",
                     color:"#F0D060", fontSize:14, letterSpacing:2,
-                    textTransform:"uppercase", fontFamily:"sans-serif", cursor:"pointer",
-                    whiteSpace:"nowrap",
+                    textTransform:"uppercase", fontFamily:"sans-serif",
+                    cursor:"pointer", whiteSpace:"nowrap",
                   }}
                   initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
-                  exit={{ opacity:0, y:-10 }}
-                  transition={{ delay:0.7 }}
+                  exit={{ opacity:0, y:-10 }} transition={{ delay:0.7 }}
                   whileHover={{ background:"rgba(212,175,55,0.22)", scale:1.04 }}>
                   🕯️ Blow the Candles
                 </motion.button>
@@ -624,8 +907,7 @@ export function BirthdayDoor() {
                   style={{
                     position:"absolute",
                     top: C_TOP + C_H/2 - 134 - 80 + 268 + 16,
-                    left:0, right:0,
-                    textAlign:"center",
+                    left:0, right:0, textAlign:"center",
                     fontSize:100, fontWeight:"bold", lineHeight:1,
                     fontFamily:"Georgia,serif",
                     background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 50%,#F0D060 100%)",
@@ -640,28 +922,55 @@ export function BirthdayDoor() {
               )}
             </AnimatePresence>
 
-            {/* Replay — appears after blown */}
+            {/* After blown — Continue + Replay */}
             <AnimatePresence>
               {cakePhase === "blown" && (
-                <motion.button key="replay"
-                  onClick={handleReplay}
-                  style={{
-                    position:"absolute", bottom:36,
-                    left:"50%", transform:"translateX(-50%)",
-                    background:"rgba(212,175,55,0.08)", border:"1px solid rgba(212,175,55,0.3)",
-                    borderRadius:24, padding:"8px 24px", color:"#C9A840",
-                    fontSize:11, letterSpacing:2, textTransform:"uppercase",
-                    fontFamily:"sans-serif", cursor:"pointer", whiteSpace:"nowrap",
-                  }}
+                <motion.div key="blown-actions" style={{
+                  position:"absolute", bottom:30,
+                  left:0, right:0, display:"flex", flexDirection:"column",
+                  alignItems:"center", gap:12,
+                }}
                   initial={{ opacity:0 }} animate={{ opacity:1 }}
-                  transition={{ delay:1.2 }}
-                  whileHover={{ background:"rgba(212,175,55,0.18)" }}>
-                  ↩ Replay
-                </motion.button>
+                  transition={{ delay:1.2 }}>
+
+                  <motion.button onClick={() => setScene(3)}
+                    style={{
+                      background:"linear-gradient(135deg,rgba(212,175,55,0.18),rgba(212,175,55,0.3))",
+                      border:"1.5px solid rgba(212,175,55,0.65)",
+                      borderRadius:36, padding:"14px 40px",
+                      color:"#F0D060", fontSize:14, letterSpacing:2,
+                      textTransform:"uppercase", fontFamily:"sans-serif",
+                      cursor:"pointer", whiteSpace:"nowrap",
+                    }}
+                    whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
+                    Continue ✨
+                  </motion.button>
+
+                  <motion.button onClick={handleReplay}
+                    style={{
+                      background:"transparent", border:"none",
+                      color:"rgba(201,168,64,0.55)", fontSize:11,
+                      letterSpacing:2, textTransform:"uppercase",
+                      fontFamily:"sans-serif", cursor:"pointer",
+                    }}
+                    whileHover={{ color:"rgba(201,168,64,0.9)" }}>
+                    ↩ Replay
+                  </motion.button>
+                </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* ══ SCENE 3 : TEASER ══ */}
+      <AnimatePresence>
+        {scene === 3 && <Scene3 onNext={() => setScene(4)} />}
+      </AnimatePresence>
+
+      {/* ══ SCENE 4 : PHOTO ══ */}
+      <AnimatePresence>
+        {scene === 4 && <Scene4 onReplay={handleReplay} />}
       </AnimatePresence>
     </div>
   );
