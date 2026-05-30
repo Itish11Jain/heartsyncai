@@ -406,12 +406,12 @@ function HappyBirthdayBanner() {
       initial={{ opacity:0, y:-24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25, duration:0.7 }}>
       <svg width={390} height={118} viewBox="0 0 390 118">
         <defs>
-          <linearGradient id="bannerG" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"   stopColor="#5C3D00"/>
-            <stop offset="25%"  stopColor="#C9920A"/>
+          <linearGradient id="bannerG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="390" y2="0">
+            <stop offset="0%"   stopColor="#9A6E00"/>
+            <stop offset="20%"  stopColor="#D4AF37"/>
             <stop offset="50%"  stopColor="#FFF4B0"/>
-            <stop offset="75%"  stopColor="#C9920A"/>
-            <stop offset="100%" stopColor="#5C3D00"/>
+            <stop offset="80%"  stopColor="#D4AF37"/>
+            <stop offset="100%" stopColor="#9A6E00"/>
           </linearGradient>
           <filter id="bannerGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="1.6" result="b"/>
