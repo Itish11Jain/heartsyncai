@@ -1527,7 +1527,7 @@ function VoiceNote({ onDone }: { onDone:()=>void }) {
 }
 
 function Scene5({ onReplay }: { onReplay:()=>void }) {
-  const [showArrow, setShowArrow] = useState(false);
+  const [arrowLit, setArrowLit] = useState(false);
 
   return (
     <motion.div key="scene5new"
@@ -1576,7 +1576,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
       <motion.div style={{ position:"absolute", top:178, left:20, right:20, zIndex:12 }}
         initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
         transition={{ delay:0.65, duration:0.6 }}>
-        <VoiceNote onDone={() => setShowArrow(true)}/>
+        <VoiceNote onDone={() => setArrowLit(true)}/>
       </motion.div>
 
       {/* ── Photo sticker — covers lower half, bottom-pinned ── */}
@@ -1596,30 +1596,36 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
           }}/>
       </motion.div>
 
-      {/* ── Arrow — appears after voice note finishes ── */}
-      <AnimatePresence>
-        {showArrow && (
-          <motion.button key="arrow5"
-            onClick={onReplay}
-            style={{
-              position:"absolute", top:260, left:"calc(50% - 27px)", zIndex:22,
-              width:54, height:54, borderRadius:"50%",
-              background:"linear-gradient(135deg,#C4913A,#D4AF37)",
-              border:"none", cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:24, color:"#1c0a06",
-              boxShadow:"0 4px 20px rgba(212,175,55,0.5)",
-            }}
-            initial={{ scale:0, opacity:0 }}
-            animate={{ scale:1, opacity:1 }}
-            exit={{ scale:0, opacity:0 }}
-            transition={{ type:"spring", stiffness:320, damping:18 }}
-            whileHover={{ scale:1.12 }}
-            whileTap={{ scale:0.9 }}>
-            →
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* ── Arrow — always visible; lights up after voice note played ── */}
+      <motion.button
+        onClick={onReplay}
+        style={{
+          position:"absolute", top:260, left:"calc(50% - 27px)", zIndex:22,
+          width:54, height:54, borderRadius:"50%",
+          border: arrowLit ? "none" : "1.5px solid rgba(212,175,55,0.35)",
+          cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:24,
+        }}
+        animate={arrowLit ? {
+          background:"linear-gradient(135deg,#C4913A,#D4AF37)",
+          color:"#1c0a06",
+          boxShadow:"0 4px 20px rgba(212,175,55,0.55)",
+          scale:1,
+          opacity:1,
+        } : {
+          background:"rgba(212,175,55,0.08)",
+          color:"rgba(212,175,55,0.38)",
+          boxShadow:"none",
+          scale:1,
+          opacity:1,
+        }}
+        initial={{ scale:0, opacity:0 }}
+        transition={{ type:"spring", stiffness:280, damping:20 }}
+        whileHover={{ scale: arrowLit ? 1.12 : 1.04 }}
+        whileTap={{ scale:0.93 }}>
+        →
+      </motion.button>
     </motion.div>
   );
 }
