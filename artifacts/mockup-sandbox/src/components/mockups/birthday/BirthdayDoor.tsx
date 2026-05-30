@@ -1719,7 +1719,7 @@ function EmojiOrbs() {
   );
 }
 
-function Scene5({ onReplay }: { onReplay:()=>void }) {
+function Scene5({ onNext }: { onNext:()=>void }) {
   return (
     <motion.div key="scene5new"
       style={{ position:"absolute", inset:0, zIndex:12,
@@ -1785,7 +1785,7 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
         </div>
         {/* Arrow — always lit */}
         <motion.button
-          onClick={onReplay}
+          onClick={onNext}
           style={{
             width:50, height:50, borderRadius:"50%", flexShrink:0,
             background:"linear-gradient(135deg,#C4913A,#D4AF37)",
@@ -1821,10 +1821,196 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
 }
 
 /* ══════════════════════════════════════════
+   SCENE 6 — Personal message card + share sheet
+══════════════════════════════════════════ */
+const CUSTOM_MSG =
+  `Priya, wishing you the most magical birthday! You mean the world to us and deserve every bit of happiness life has to offer. Here's to you and the beautiful year ahead! 🎉✨`;
+
+function Scene6({ onReplay }: { onReplay:()=>void }) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSheetOpen(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <motion.div key="scene6"
+      style={{ position:"absolute", inset:0, zIndex:12,
+        background:"linear-gradient(160deg,#0e0502 0%,#1c0a06 55%,#130604 100%)" }}
+      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>
+
+      <TwinkleBackground />
+
+      {/* Replay pill */}
+      <motion.button onClick={onReplay}
+        style={{
+          position:"absolute", top:52, left:20, zIndex:20,
+          background:"rgba(212,175,55,0.07)", border:"1px solid rgba(212,175,55,0.22)",
+          borderRadius:20, padding:"7px 16px",
+          fontSize:11, color:"rgba(212,175,55,0.65)",
+          fontFamily:"sans-serif", letterSpacing:1.2, cursor:"pointer",
+        }}
+        whileTap={{ scale:0.94 }}>
+        ↺ Replay
+      </motion.button>
+
+      {/* Floating message card */}
+      <motion.div
+        style={{
+          position:"absolute", top:108, left:"50%", marginLeft:-153,
+          width:306,
+          background:"linear-gradient(148deg,rgba(212,175,55,0.09) 0%,rgba(201,132,106,0.05) 100%)",
+          border:"1.5px solid rgba(212,175,55,0.32)",
+          borderRadius:24,
+          backdropFilter:"blur(18px)",
+          boxShadow:"0 8px 48px rgba(0,0,0,0.55), inset 0 0 32px rgba(212,175,55,0.04)",
+          padding:"26px 22px 26px",
+          zIndex:15, display:"flex", flexDirection:"column", alignItems:"center",
+        }}
+        initial={{ opacity:0, scale:0.84, rotate:-2 }}
+        animate={{ opacity:1, scale:1, rotate:0 }}
+        transition={{ delay:0.3, duration:0.75, ease:[0.34,1.56,0.64,1] }}>
+
+        {/* Corner emoji accents */}
+        {([
+          {top:10, left:12,  e:"🌸"},
+          {top:10, right:12, e:"✨"},
+          {bottom:12, left:12,  e:"💛"},
+          {bottom:12, right:12, e:"🎂"},
+        ] as React.CSSProperties[]).map((c,i)=>(
+          <motion.span key={i}
+            style={{ position:"absolute", fontSize:13, ...c }}
+            animate={{ rotate:[0,10,-8,5,0], scale:[1,1.15,0.95,1.1,1] }}
+            transition={{ duration:3+i*0.5, repeat:Infinity, delay:i*0.7 }}>
+            {(c as any).e}
+          </motion.span>
+        ))}
+
+        {/* Top ornament */}
+        <div style={{ width:44, height:2, borderRadius:1, marginBottom:18,
+          background:"linear-gradient(90deg,transparent,#D4AF37,transparent)" }}/>
+
+        {/* Recipient name */}
+        <motion.p style={{
+          margin:"0 0 4px", textAlign:"center",
+          fontFamily:"'Great Vibes',cursive", fontSize:30,
+          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+        }}
+          initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }}
+          transition={{ delay:0.65, duration:0.6 }}>
+          Hey {name}! 💛
+        </motion.p>
+
+        {/* Thin rule */}
+        <div style={{ width:72, height:1, background:"rgba(212,175,55,0.28)", marginBottom:18 }}/>
+
+        {/* Custom message */}
+        <motion.p style={{
+          margin:0, fontSize:13.5, lineHeight:1.78, textAlign:"center",
+          fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
+          color:"rgba(255,241,220,0.86)", letterSpacing:0.3,
+        }}
+          initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+          transition={{ delay:0.85, duration:0.7 }}>
+          {CUSTOM_MSG}
+        </motion.p>
+
+        {/* Bottom ornament */}
+        <div style={{ width:40, height:1.5, borderRadius:1, marginTop:22,
+          background:"linear-gradient(90deg,transparent,#D4AF37,transparent)" }}/>
+      </motion.div>
+
+      {/* Continuous card float */}
+      {/* (applied via nested wrapper below) */}
+
+      {/* ── Auto-popup bottom share sheet ── */}
+      <AnimatePresence>
+        {sheetOpen && (
+          <motion.div
+            initial={{ y:"100%" }}
+            animate={{ y:0 }}
+            exit={{ y:"100%" }}
+            transition={{ type:"spring", stiffness:260, damping:28 }}
+            style={{
+              position:"absolute", bottom:0, left:0, right:0, zIndex:30,
+              background:"linear-gradient(175deg,#1c0804 0%,#0e0502 100%)",
+              borderTop:"1.5px solid rgba(212,175,55,0.32)",
+              borderRadius:"24px 24px 0 0",
+              padding:"18px 24px 38px",
+              boxShadow:"0 -10px 48px rgba(0,0,0,0.65)",
+            }}>
+
+            {/* Pull handle */}
+            <div style={{ width:40, height:4, borderRadius:2, margin:"0 auto 20px",
+              background:"rgba(212,175,55,0.28)" }}/>
+
+            {/* Sheet headline */}
+            <motion.p style={{
+              margin:"0 0 5px", textAlign:"center",
+              fontFamily:"'Great Vibes',cursive", fontSize:26,
+              background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0)",
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+            }}
+              initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay:0.1 }}>
+              Make {name} smile ❤️
+            </motion.p>
+            <p style={{
+              margin:"0 0 22px", fontSize:12, textAlign:"center",
+              color:"rgba(255,241,220,0.45)", fontFamily:"sans-serif",
+            }}>
+              Your card is ready — send it now!
+            </p>
+
+            {/* Share buttons */}
+            <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
+              {[
+                { label:"Share on WhatsApp", icon:"💬", bg:"linear-gradient(135deg,#25D366,#128C7E)", color:"#fff", border:"none" },
+                { label:"Share on Instagram", icon:"📸", bg:"linear-gradient(135deg,#E1306C,#833AB4)", color:"#fff", border:"none" },
+                { label:"Copy Link", icon:"🔗", bg:"transparent", color:"#D4AF37", border:"1.5px solid rgba(212,175,55,0.38)" },
+              ].map((b,i) => (
+                <motion.button key={i}
+                  style={{
+                    width:"100%", padding:"14px",
+                    borderRadius:14, border:b.border,
+                    background:b.bg, color:b.color,
+                    fontSize:14, fontWeight:600,
+                    fontFamily:"sans-serif", cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:9,
+                  }}
+                  initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  transition={{ delay:0.15 + i*0.08 }}
+                  whileTap={{ scale:0.97 }}>
+                  <span style={{ fontSize:16 }}>{b.icon}</span> {b.label}
+                </motion.button>
+              ))}
+            </div>
+
+            <motion.button onClick={() => setSheetOpen(false)}
+              style={{
+                marginTop:14, width:"100%", padding:"10px",
+                background:"none", border:"none",
+                color:"rgba(255,255,255,0.28)", fontSize:12,
+                fontFamily:"sans-serif", cursor:"pointer",
+              }}
+              whileTap={{ scale:0.96 }}>
+              Dismiss
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
    MAIN
 ══════════════════════════════════════════ */
 export function BirthdayDoor() {
-  const [scene,      setScene]      = useState<1|2|3|4|5>(1);
+  const [scene,      setScene]      = useState<1|2|3|4|5|6>(1);
   const [confetti,   setConfetti]   = useState(false);
   const [cakePhase,  setCakePhase]  = useState<"cta"|"counting"|"blown">("cta");
   const [countdown,  setCountdown]  = useState(3);
@@ -1973,7 +2159,12 @@ export function BirthdayDoor() {
 
       {/* ══ SCENE 5 : PHOTO CUTOUT ══ */}
       <AnimatePresence>
-        {scene === 5 && <Scene5 onReplay={handleReplay} />}
+        {scene === 5 && <Scene5 onNext={() => setScene(6)} />}
+      </AnimatePresence>
+
+      {/* ══ SCENE 6 : MESSAGE CARD + SHARE SHEET ══ */}
+      <AnimatePresence>
+        {scene === 6 && <Scene6 onReplay={handleReplay} />}
       </AnimatePresence>
     </div>
   );
