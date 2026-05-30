@@ -674,7 +674,7 @@ function Scene3({ onNext }: { onNext:()=>void }) {
       transition={{ duration:0.6 }}>
       <TwinkleBackground/>
       <HappyBirthdayBanner/>
-      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column",
+      <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column",
         alignItems:"center", justifyContent:"center", gap:0 }}>
         <motion.div style={{ width:80, height:1,
           background:"linear-gradient(90deg,transparent,#D4AF37,transparent)", marginBottom:28 }}
@@ -826,7 +826,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
           transition={{ duration:1.8+i*0.45, repeat:Infinity, delay:i*0.38 }}>✦</motion.div>
       ))}
       <motion.h1 style={{
-          position:"absolute", top:48, left:0, right:0, textAlign:"center",
+          position:"absolute", top:48, left:0, right:0, textAlign:"center", zIndex:5,
           fontFamily:"'Great Vibes', cursive",
           fontSize:56, lineHeight:1, margin:0,
           background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
@@ -840,7 +840,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
 
       {photoUrls.length === 0 && (
         /* ── 0 photos: full-width celebratory quote ── */
-        <motion.div style={{ position:"absolute", left:0, right:0, top:160, bottom:120,
+        <motion.div style={{ position:"absolute", left:0, right:0, top:160, bottom:120, zIndex:5,
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:20 }}
           initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
           <div style={{ fontSize:52 }}>🎉</div>
@@ -859,7 +859,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
         <>
           <PolaroidFrame idx={0} top={190} left={119} rotate={0} floatDelay={0} imageSrc={p0}/>
           <motion.div style={{ position:"absolute", left:0, right:0, bottom:118, textAlign:"center",
-            padding:"0 36px" }}
+            padding:"0 36px", zIndex:5 }}
             initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
             transition={{ delay:0.7, duration:0.6 }}>
             <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
@@ -876,7 +876,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
         <>
           <PolaroidFrame idx={0} top={175} left={12}  rotate={-5} floatDelay={0}   imageSrc={p0}/>
           <PolaroidFrame idx={1} top={375} left={22}  rotate={3}  floatDelay={0.5} imageSrc={p1}/>
-          <motion.div style={{ position:"absolute", right:18, top:310, width:148, textAlign:"right" }}
+          <motion.div style={{ position:"absolute", right:18, top:310, width:148, textAlign:"right", zIndex:5 }}
             initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
             transition={{ delay:0.9, duration:0.7 }}>
             <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
@@ -894,7 +894,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
           <PolaroidFrame idx={0} top={168} left={6}  rotate={-7} floatDelay={0}   imageSrc={p0}/>
           <PolaroidFrame idx={1} top={341} left={34} rotate={-2} floatDelay={0.6} imageSrc={p1}/>
           <PolaroidFrame idx={2} top={514} left={6}  rotate={-5} floatDelay={1.1} imageSrc={p2}/>
-          <motion.div style={{ position:"absolute", right:36, top:492, width:148, textAlign:"right" }}
+          <motion.div style={{ position:"absolute", right:36, top:492, width:148, textAlign:"right", zIndex:5 }}
             initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
             transition={{ delay:0.9, duration:0.7 }}>
             <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
@@ -907,7 +907,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
       )}
 
       <motion.button onClick={onNext} style={{
-        position:"absolute", bottom:26, left:"50%", marginLeft:-80, width:160,
+        position:"absolute", bottom:26, left:"50%", marginLeft:-80, width:160, zIndex:5,
         background:"linear-gradient(135deg,rgba(212,175,55,0.14),rgba(212,175,55,0.26))",
         border:"1.5px solid rgba(212,175,55,0.58)", borderRadius:36, padding:"13px 0",
         color:"#F0D060", fontSize:13, letterSpacing:2, textTransform:"uppercase",
@@ -1201,7 +1201,7 @@ function Scene6({
       <TwinkleBackground/>
       <HappyBirthdayBanner/>
 
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
+      <div style={{ position:"relative", zIndex:5, display:"flex", flexDirection:"column", alignItems:"center",
         justifyContent:"flex-start", minHeight:"100%",
         paddingTop:110, paddingBottom:40, paddingLeft:24, paddingRight:24 }}>
 
