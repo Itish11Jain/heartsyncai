@@ -137,7 +137,7 @@ function GiftBoxSVG() {
 function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
   { cx:number; cy:number; r:number; gi:number; dur:number; delay:number; amp:number }) {
   const gid = S1G[gi].id;
-  const strPath = `M${cx} ${cy+r+4} Q${cx+(cx-GBX)*0.12} ${(cy+r+BOW_CY)/2} ${GBX} ${BOW_CY+10}`;
+  const strPath = `M${cx} ${cy+r+4} Q${cx+(cx-GBX)*0.12} ${(cy+r+(GBY-GBH))/2} ${GBX} ${GBY-GBH}`;
   return (
     <motion.g animate={{ y:[0,-amp,0,amp*0.5,0], rotate:[-1.5,1.5,-0.5,1,-1.5] }}
       style={{ originX:`${cx}px`, originY:`${cy}px` }}
@@ -158,7 +158,7 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
   return (
     <g>
       {/* Long string to gift */}
-      <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${BOW_CY+10}`}
+      <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${GBY-GBH}`}
         fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
       {/* Pulsing ring */}
       <motion.circle cx={cx} cy={cy} r={r+8}
