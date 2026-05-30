@@ -271,8 +271,8 @@ function Scene1({ onNext }: { onNext:()=>void }) {
         </motion.p>
         <motion.p style={{
           fontFamily:"'Playfair Display',Georgia,serif", fontStyle:"italic",
-          fontSize:22, margin:"8px 0 0", letterSpacing:6, textTransform:"uppercase",
-          color:"rgba(212,175,55,0.85)", display:"block",
+          fontSize:22, fontWeight:700, margin:"8px 0 0", letterSpacing:6, textTransform:"uppercase",
+          color:"rgba(212,175,55,0.95)", display:"block",
         }}
           initial={{ opacity:0 }} animate={{ opacity:1 }}
           transition={{ delay:3.5, duration:1.0 }}>
