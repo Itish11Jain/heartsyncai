@@ -1895,17 +1895,21 @@ export function BirthdayDoor() {
               Make a Wish ✨
             </motion.h1>
 
-            {/* Cake */}
+            {/* Cake — entrance pop then continuous float */}
             <motion.div style={{
                 position:"absolute",
-                left:"50%", marginLeft:-134,
-                top: 208,
-                width:268, height:268,
+                left:"50%", marginLeft:-152,
+                top: 200,
+                width:304, height:304,
               }}
               initial={{ scale:0.1, opacity:0 }}
               animate={{ scale:1, opacity:1 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <Cake blown={blown} />
+              <motion.div style={{ width:"100%", height:"100%" }}
+                animate={{ y:[0,-9,0,6,0] }}
+                transition={{ duration:3.6, repeat:Infinity, ease:"easeInOut", delay:1.2 }}>
+                <Cake blown={blown} />
+              </motion.div>
             </motion.div>
 
             {/* CTA */}
