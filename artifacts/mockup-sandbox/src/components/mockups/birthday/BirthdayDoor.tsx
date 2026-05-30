@@ -471,6 +471,53 @@ function CandleFlame({ cx, cy, blown }: { cx:number; cy:number; blown:boolean })
     </motion.g>
   );
 }
+function Cake({ blown = false }: { blown?: boolean }) {
+  const dotC = ["#D4AF37","#C9846A","#FFF5EE","#E8A07A","#C4913A","#F2DFC8"];
+  return (
+    <svg viewBox="0 0 280 280" style={{ width:"100%", height:"100%", overflow:"visible" }}>
+      <defs>
+        <radialGradient id="ct1" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4956A"/><stop offset="100%" stopColor="#8C4A30"/></radialGradient>
+        <radialGradient id="ct2" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4AF37"/><stop offset="100%" stopColor="#8C6A10"/></radialGradient>
+        <radialGradient id="ct3" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#FFF5EE"/><stop offset="100%" stopColor="#E8D0B8"/></radialGradient>
+        <filter id="cglo"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <ellipse cx={140} cy={258} rx={92} ry={10} fill="#C4A070" opacity={0.6}/>
+      <rect x={56} y={198} width={168} height={58} rx={8} fill="url(#ct1)"/>
+      <ellipse cx={140} cy={198} rx={84} ry={9} fill="#D4956A"/><ellipse cx={140} cy={256} rx={84} ry={9} fill="#7A3C22"/>
+      {[68,88,108,128,148,168,188,208].map((x,i)=>(
+        <motion.path key={i} d={`M ${x} 198 Q ${x} 206 ${x} 211`} stroke="rgba(255,248,240,0.45)" strokeWidth={5} strokeLinecap="round" fill="none"
+          animate={{ d:[`M ${x} 198 Q ${x} 204 ${x} 209`,`M ${x} 198 Q ${x} 209 ${x} 214`,`M ${x} 198 Q ${x} 204 ${x} 209`] }}
+          transition={{ duration:3, repeat:Infinity, delay:i*0.2 }}/>
+      ))}
+      {[68,92,116,140,164,188,212].map((x,i)=>(
+        <g key={i}><circle cx={x} cy={228} r={7} fill={dotC[i%dotC.length]}/><circle cx={x} cy={228} r={3.5} fill="white" opacity={0.35}/></g>
+      ))}
+      <rect x={80} y={146} width={120} height={54} rx={7} fill="url(#ct2)"/>
+      <ellipse cx={140} cy={146} rx={60} ry={8} fill="#D4AF37"/><ellipse cx={140} cy={200} rx={60} ry={8} fill="#7A5F10"/>
+      {[88,108,128,148,168,188].map((x,i)=>(
+        <g key={i}><circle cx={x} cy={173} r={6} fill={dotC[(i+2)%dotC.length]}/><circle cx={x} cy={173} r={3} fill="white" opacity={0.35}/></g>
+      ))}
+      <rect x={104} y={102} width={72} height={46} rx={7} fill="url(#ct3)"/>
+      <ellipse cx={140} cy={102} rx={36} ry={6.5} fill="#FFF5EE"/><ellipse cx={140} cy={148} rx={36} ry={6.5} fill="#D4B898"/>
+      {[115,135,155].map((x,i)=>(
+        <g key={i}><circle cx={x} cy={125} r={5} fill={dotC[(i+1)%dotC.length]}/><circle cx={x} cy={125} r={2.5} fill="white" opacity={0.4}/></g>
+      ))}
+      {[114,136,158].map((cx,i)=>(
+        <g key={i}>
+          <rect x={cx-3} y={78} width={6} height={25} rx={2.5} fill={["#C9846A","#D4AF37","#FFF5EE"][i]}/>
+          <CandleFlame cx={cx} cy={71} blown={blown}/>
+        </g>
+      ))}
+      <ellipse cx={140} cy={82} rx={55} ry={22} fill="#FFD700" opacity={0.12} filter="url(#cglo)"/>
+      <motion.g filter="url(#cglo)"
+        animate={{ scale:[1,1.2,1], rotate:[0,15,0,-15,0] }}
+        transition={{ duration:2.2, repeat:Infinity }} style={{ transformOrigin:"140px 88px" }}>
+        <polygon points="140,81 142.8,88.5 150,88.5 144.2,92.8 146.5,100 140,95.5 133.5,100 135.8,92.8 130,88.5 137.2,88.5" fill="#D4AF37"/>
+      </motion.g>
+    </svg>
+  );
+}
+
 /* ── Beautiful CSS-3D cake tier ── */
 function CakeTier3D({ r, h, top: yTop, panels=20, light, dark, capA, capB, pearl, drip=true }:{
   r:number; h:number; top:number; panels?:number;
@@ -1609,7 +1656,7 @@ export function BirthdayDoor() {
               initial={{ scale:0.1, opacity:0 }}
               animate={{ scale:1, opacity:1 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <BirthdayCake3D blown={blown} />
+              <Cake blown={blown} />
             </motion.div>
 
             {/* CTA */}
