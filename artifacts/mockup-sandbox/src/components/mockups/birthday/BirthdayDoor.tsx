@@ -270,14 +270,12 @@ function Scene1({ onNext }: { onNext:()=>void }) {
           Happy Birthday
         </motion.p>
         <motion.p style={{
-          fontFamily:"'Great Vibes', cursive",
-          fontSize:34, margin:"2px 0 0", letterSpacing:1,
-          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-          display:"inline-block",
+          fontFamily:"'Playfair Display',Georgia,serif", fontStyle:"italic",
+          fontSize:22, margin:"8px 0 0", letterSpacing:6, textTransform:"uppercase",
+          color:"rgba(212,175,55,0.85)", display:"block",
         }}
-          initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }}
-          transition={{ delay:3.5, duration:0.8, ease:[0.34,1.56,0.64,1] }}>
+          initial={{ opacity:0 }} animate={{ opacity:1 }}
+          transition={{ delay:3.5, duration:1.0 }}>
           {name}
         </motion.p>
       </div>
