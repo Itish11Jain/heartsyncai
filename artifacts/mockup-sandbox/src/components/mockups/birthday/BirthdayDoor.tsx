@@ -135,15 +135,16 @@ function Nebulae() {
 /* ══════════════════════════════════════════
    CURTAIN — off-white flowing, gold folds
 ══════════════════════════════════════════ */
+// Red velvet: deep pile shadow → mid crimson → crushed-pile highlight → mid → shadow
 const FOLD_FABRIC = `repeating-linear-gradient(
   to right,
-  #FFF9F3       0px,
-  #F5E8D4       7px,
-  #EDD5B5      14px,
-  #E5C89A      20px,
-  #EDD5B5      26px,
-  #F5E8D4      33px,
-  #FFF9F3      40px
+  #2A0008       0px,
+  #780018       7px,
+  #C0002E      14px,
+  #E8003A      19px,
+  #C0002E      24px,
+  #780018      31px,
+  #2A0008      40px
 )`;
 
 function Curtain({ open }: { open: boolean }) {
@@ -166,7 +167,7 @@ function Curtain({ open }: { open: boolean }) {
       <motion.div style={{
         position:"absolute", left:0, top:0, width:panelW, height:"100%",
         background:FOLD_FABRIC, zIndex:2,
-        boxShadow:"inset -5px 0 20px rgba(180,130,60,0.18)",
+        boxShadow:"inset -8px 0 28px rgba(0,0,0,0.55)",
       }}
         animate={open ? { x:-(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
         transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
@@ -183,7 +184,7 @@ function Curtain({ open }: { open: boolean }) {
           transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }} />
         {/* Wavy hem */}
         <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
-          <motion.path fill="rgba(190,145,80,0.2)"
+          <motion.path fill="rgba(0,0,0,0.35)"
             animate={{ d:[
               `M 0 28 Q ${panelW*0.2} 14 ${panelW*0.4} 22 Q ${panelW*0.65} 28 ${panelW*0.85} 12 Q ${panelW} 4 ${panelW} 16 L ${panelW} 28 Z`,
               `M 0 28 Q ${panelW*0.2} 18 ${panelW*0.4} 26 Q ${panelW*0.65} 20 ${panelW*0.85} 8  Q ${panelW} 2 ${panelW} 18 L ${panelW} 28 Z`,
@@ -199,7 +200,7 @@ function Curtain({ open }: { open: boolean }) {
       <motion.div style={{
         position:"absolute", right:0, top:0, width:panelW, height:"100%",
         background:FOLD_FABRIC, zIndex:2,
-        boxShadow:"inset 5px 0 20px rgba(180,130,60,0.18)",
+        boxShadow:"inset 8px 0 28px rgba(0,0,0,0.55)",
       }}
         animate={open ? { x:(panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
         transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
@@ -212,7 +213,7 @@ function Curtain({ open }: { open: boolean }) {
           animate={{ x:[0,-6,0,4,0], y:[0,8,0,-5,0] }}
           transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut", delay:0.4 }} />
         <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
-          <motion.path fill="rgba(190,145,80,0.2)"
+          <motion.path fill="rgba(0,0,0,0.35)"
             animate={{ d:[
               `M 0 28 Q ${panelW*0.15} 8  ${panelW*0.35} 20 Q ${panelW*0.55} 28 ${panelW*0.75} 14 Q ${panelW*0.9} 4 ${panelW} 22 L ${panelW} 28 Z`,
               `M 0 28 Q ${panelW*0.15} 14 ${panelW*0.35} 24 Q ${panelW*0.55} 18 ${panelW*0.75} 6  Q ${panelW*0.9} 0 ${panelW} 18 L ${panelW} 28 Z`,
