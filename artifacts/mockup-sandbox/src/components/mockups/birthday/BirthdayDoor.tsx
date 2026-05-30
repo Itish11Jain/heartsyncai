@@ -1264,7 +1264,7 @@ function Scene4({ onNext }: { onNext:()=>void }) {
       <PolaroidFrame idx={2} top={514} left={6}  rotate={-5} floatDelay={1.1} imageSrc={photo3Src}/>
 
       {/* Right-side caption */}
-      <motion.div style={{ position:"absolute", right:10, top:492, width:148, textAlign:"right" }}
+      <motion.div style={{ position:"absolute", right:36, top:492, width:148, textAlign:"right" }}
         initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
         transition={{ delay:0.9, duration:0.7 }}>
         <p style={{
