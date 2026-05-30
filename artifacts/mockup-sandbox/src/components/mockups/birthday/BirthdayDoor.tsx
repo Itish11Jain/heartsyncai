@@ -1354,20 +1354,20 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
         <VoiceNote onDone={() => setShowArrow(true)}/>
       </motion.div>
 
-      {/* ── Photo sticker — centered, full height in remaining space ── */}
+      {/* ── Photo sticker — full-width container, image centered inside ── */}
       <motion.div style={{
-        position:"absolute", top:155, bottom:64, left:"50%",
-        transform:"translateX(-50%) rotate(1.5deg)",
-        width:348, zIndex:10,
+        position:"absolute", top:155, bottom:68,
+        left:0, right:0, zIndex:10,
         display:"flex", alignItems:"center", justifyContent:"center",
+        overflow:"hidden",
       }}
         initial={{ opacity:0, y:30 }}
         animate={{ opacity:1, y:0 }}
         transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
         <img src={photo1StickerSrc} alt=""
           style={{
-            width:"100%", height:"100%", display:"block",
-            objectFit:"contain", objectPosition:"center center",
+            maxWidth:"88%", maxHeight:"100%",
+            width:"auto", height:"auto", display:"block",
             filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.75)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
           }}/>
       </motion.div>
