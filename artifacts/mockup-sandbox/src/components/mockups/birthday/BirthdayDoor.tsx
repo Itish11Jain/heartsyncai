@@ -873,78 +873,193 @@ function Scene4({ onNext }: { onNext:()=>void }) {
 }
 
 /* ══════════════════════════════════════════
-   SCENE 5 — Photo cutout + cap + confetti
+   FOIL NUMBER BALLOONS helper
+══════════════════════════════════════════ */
+function NumberBalloons({ n }: { n:number }) {
+  const digits = String(n).split("");
+  const DW=72, DH=96, GAP=8;
+  const totalW = digits.length * (DW + GAP) - GAP;
+  return (
+    <svg width={totalW} height={DH+30} viewBox={`0 0 ${totalW} ${DH+30}`}>
+      <defs>
+        <radialGradient id="bnBody" cx="35%" cy="28%" r="68%">
+          <stop offset="0%"   stopColor="#F2C4CE"/>
+          <stop offset="42%"  stopColor="#C07880"/>
+          <stop offset="100%" stopColor="#7A3042"/>
+        </radialGradient>
+        <radialGradient id="bnHigh" cx="38%" cy="22%" r="36%">
+          <stop offset="0%"   stopColor="rgba(255,255,255,0.62)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      {digits.map((ch, i) => {
+        const ox = i * (DW + GAP);
+        const cx = ox + DW / 2;
+        return (
+          <g key={i}>
+            <rect x={ox} y={2} width={DW} height={DH - 8} rx={DW/2} ry={DH/2}
+              fill="url(#bnBody)"/>
+            <ellipse cx={cx - 8} cy={24} rx={15} ry={10} fill="url(#bnHigh)"/>
+            <text x={cx} y={DH * 0.62} textAnchor="middle"
+              fontFamily="'Arial Black','Arial Bold',Gadget,sans-serif" fontWeight="900"
+              fontSize={52} fill="rgba(65,12,22,0.68)">{ch}</text>
+            <ellipse cx={cx} cy={DH - 6} rx={4} ry={5} fill="#A05060"/>
+            <line x1={cx} y1={DH - 1} x2={cx} y2={DH + 28}
+              stroke="#B07080" strokeWidth={1.5}/>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════════
+   BIRTHDAY CAKE SVG helper
+══════════════════════════════════════════ */
+function BirthdayCakeSVG() {
+  return (
+    <svg width={142} height={130} viewBox="0 0 142 130">
+      <defs>
+        <linearGradient id="ckBot" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stopColor="#C9849A"/>
+          <stop offset="100%" stopColor="#8A3A50"/>
+        </linearGradient>
+        <linearGradient id="ckTop" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stopColor="#D4909E"/>
+          <stop offset="100%" stopColor="#A05060"/>
+        </linearGradient>
+      </defs>
+
+      {/* Bottom tier */}
+      <rect x={8} y={74} width={126} height={48} rx={8} fill="url(#ckBot)"/>
+      {/* Bottom frosting drips */}
+      <path d="M8,74 C18,62 28,74 38,66 C48,58 58,74 68,66 C78,58 88,74 98,66 C108,58 118,74 134,66"
+        fill="none" stroke="#F5DDE6" strokeWidth={5} strokeLinecap="round"/>
+      {/* Dot decorations */}
+      {[28,52,71,91,114].map((x,i) => (
+        <circle key={i} cx={x} cy={94} r={3.5} fill="#F0D0DA" opacity={0.75}/>
+      ))}
+
+      {/* Top tier */}
+      <rect x={26} y={42} width={90} height={38} rx={6} fill="url(#ckTop)"/>
+      {/* Top frosting drips */}
+      <path d="M26,42 C36,32 46,42 56,34 C66,26 76,42 86,34 C96,26 106,42 116,34"
+        fill="none" stroke="#F8E8EE" strokeWidth={4.5} strokeLinecap="round"/>
+
+      {/* Candles */}
+      {[38,54,71,88,104].map((cx, i) => (
+        <g key={i}>
+          <rect x={cx-3.5} y={22} width={7} height={22} rx={3.5} fill="#D4AF37"/>
+          <ellipse cx={cx} cy={19} rx={3.5} ry={5.5} fill="#FFF4B0"/>
+          <ellipse cx={cx} cy={20.5} rx={2} ry={3} fill="#FFD700"/>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 5 — Collage: photo + balloons + cake
 ══════════════════════════════════════════ */
 function Scene5({ onReplay }: { onReplay:()=>void }) {
-  const [capVisible,  setCapVisible]  = useState(false);
-  const [cfShow,      setCfShow]      = useState(false);
-  const [showReplay,  setShowReplay]  = useState(false);
-  const [pencilDone,  setPencilDone]  = useState(false);
+  const [showReplay, setShowReplay] = useState(false);
 
   useEffect(()=>{
-    const t1 = setTimeout(()=>setPencilDone(true),  2600);
-    const t2 = setTimeout(()=>setCapVisible(true),   3200);
-    const t3 = setTimeout(()=>setCfShow(true),       4400);
-    const t4 = setTimeout(()=>setCfShow(false),      8000);
-    const t5 = setTimeout(()=>setShowReplay(true),   5000);
-    return ()=>[t1,t2,t3,t4,t5].forEach(clearTimeout);
+    const t = setTimeout(()=>setShowReplay(true), 2200);
+    return ()=>clearTimeout(t);
   },[]);
 
-  const cf4 = Array.from({length:65},(_,i)=>({
-    id:i, x:(i*16.3)%100, color:P[i%P.length].c, delay:i*0.05,
-  }));
+  const dots = [
+    {x:38, y:88,  r:8,  c:"#B76E79"}, {x:316,y:72,  r:6,  c:"#D4AF37"},
+    {x:342,y:152, r:9,  c:"#B76E79"}, {x:48, y:198, r:7,  c:"#D4AF37"},
+    {x:300,y:222, r:5,  c:"#F8F0E3"}, {x:348,y:318, r:8,  c:"#C9A840"},
+    {x:34, y:348, r:6,  c:"#F8F0E3"}, {x:330,y:456, r:7,  c:"#B76E79"},
+    {x:50, y:540, r:9,  c:"#D4AF37"}, {x:318,y:598, r:5,  c:"#F8F0E3"},
+    {x:66, y:682, r:8,  c:"#C9A840"}, {x:324,y:726, r:6,  c:"#B76E79"},
+    {x:158,y:68,  r:5,  c:"#D4AF37"}, {x:230,y:92,  r:7,  c:"#B76E79"},
+    {x:80, y:116, r:5,  c:"#C9A840"}, {x:278,y:132, r:4,  c:"#F8F0E3"},
+    {x:196,y:114, r:6,  c:"#D4AF37"}, {x:262,y:780, r:7,  c:"#B76E79"},
+  ];
 
   return (
-    <motion.div key="scene5" style={{ position:"absolute", inset:0, zIndex:12 }}
-      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>
-      <TwinkleBackground />
-      <HappyBirthdayBanner />
+    <motion.div key="scene5col"
+      style={{ position:"absolute", inset:0, zIndex:12,
+        background:"linear-gradient(160deg,#0e0502 0%,#1c0a06 55%,#130604 100%)" }}
+      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.7 }}>
 
-      <AnimatePresence>
-        {cfShow && cf4.map(p=><Confetto key={p.id} x={p.x} color={p.color} delay={p.delay}/>)}
-      </AnimatePresence>
+      {/* Scattered confetti dots */}
+      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%",
+        pointerEvents:"none" }} viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet">
+        {dots.map((d,i) => (
+          <motion.circle key={i} cx={d.x} cy={d.y} r={d.r} fill={d.c}
+            initial={{ scale:0, opacity:0 }}
+            animate={{ scale:1, opacity:0.72 }}
+            transition={{ delay:0.05 + i*0.055, duration:0.32 }}/>
+        ))}
+      </svg>
 
-      {/* Photo + cap */}
-      <PhotoCutout capVisible={capVisible} imageSrc={photo3Src}/>
+      {/* Foil number balloons — upper left */}
+      <motion.div style={{ position:"absolute", top:48, left:8, zIndex:8 }}
+        initial={{ opacity:0, x:-28, y:-18 }}
+        animate={{ opacity:1, x:0, y:0 }}
+        transition={{ delay:0.22, duration:0.72, ease:[0.34,1.56,0.64,1] }}>
+        <NumberBalloons n={age} />
+      </motion.div>
 
-      {/* Pencil emoji drawing animation */}
-      {!pencilDone && (
-        <motion.div style={{ position:"absolute", fontSize:26, zIndex:30, pointerEvents:"none",
-          top:195, left:335 }}
-          animate={{
-            x:[-140,-200,-140,-80,-140],
-            y:[ -10, 68, 148,  68,  -10],
-          }}
-          transition={{ duration:2.4, ease:"linear", times:[0,0.25,0.5,0.75,1] }}>
-          ✏️
-        </motion.div>
-      )}
+      {/* Photo — large, center, slightly desaturated */}
+      <motion.div style={{
+          position:"absolute", left:62, top:138,
+          width:238, height:306,
+          borderRadius:"50% 50% 50% 50% / 55% 55% 45% 45%",
+          overflow:"hidden", zIndex:10,
+          boxShadow:"0 14px 52px rgba(0,0,0,0.72), 0 0 0 2.5px rgba(212,175,55,0.20)",
+        }}
+        initial={{ opacity:0, scale:0.84, y:22 }}
+        animate={{ opacity:1, scale:1, y:0 }}
+        transition={{ delay:0.38, duration:0.78, ease:[0.34,1.56,0.64,1] }}>
+        <img src={photo3Src} alt=""
+          style={{ width:"100%", height:"100%", objectFit:"cover",
+            objectPosition:"center 15%",
+            filter:"saturate(0.52) contrast(1.08) brightness(1.06)",
+            display:"block" }}/>
+      </motion.div>
 
-      {/* "Your surprise" label that appears after cap */}
-      {capVisible && (
-        <motion.div style={{
-          position:"absolute", bottom:130, left:0, right:0,
-          textAlign:"center",
-          fontFamily:"'Brush Script MT','Segoe Script',cursive",
-          fontStyle:"italic", fontSize:22,
+      {/* Birthday cake — lower right, overlapping photo */}
+      <motion.div style={{ position:"absolute", right:6, bottom:154, zIndex:11 }}
+        initial={{ opacity:0, scale:0.68, x:22 }}
+        animate={{ opacity:1, scale:1, x:0 }}
+        transition={{ delay:0.65, duration:0.68, ease:[0.34,1.56,0.64,1] }}>
+        <BirthdayCakeSVG />
+      </motion.div>
+
+      {/* Name + wish */}
+      <motion.div style={{
+          position:"absolute", bottom:72, left:0, right:0,
+          textAlign:"center", padding:"0 28px",
+        }}
+        initial={{ opacity:0, y:16 }}
+        animate={{ opacity:1, y:0 }}
+        transition={{ delay:1.05, duration:0.72 }}>
+        <p style={{
+          fontFamily:"'Palatino Linotype','Book Antiqua',Palatino,serif",
+          fontStyle:"italic", fontSize:23, margin:"0 0 5px",
           background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
           WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}
-          initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}>
-          Wishing you all the happiness ✨
-        </motion.div>
-      )}
+        }}>Happy Birthday, {name}!</p>
+        <p style={{
+          fontFamily:"Georgia,serif", fontStyle:"italic",
+          fontSize:12, color:"rgba(212,175,55,0.62)", margin:0, letterSpacing:0.5,
+        }}>Wishing you all the love &amp; happiness ✨</p>
+      </motion.div>
 
       {/* Replay */}
       <AnimatePresence>
         {showReplay && (
-          <motion.button key="replay4"
-            onClick={onReplay}
+          <motion.button key="replay5" onClick={onReplay}
             style={{
-              position:"absolute", bottom:52,
-              left:"50%", transform:"translateX(-50%)",
-              background:"rgba(212,175,55,0.08)", border:"1px solid rgba(212,175,55,0.3)",
-              borderRadius:24, padding:"8px 26px", color:"#C9A840",
+              position:"absolute", bottom:18, left:"50%", transform:"translateX(-50%)",
+              background:"rgba(212,175,55,0.07)", border:"1px solid rgba(212,175,55,0.3)",
+              borderRadius:24, padding:"8px 28px", color:"#C9A840",
               fontSize:11, letterSpacing:2, textTransform:"uppercase",
               fontFamily:"sans-serif", cursor:"pointer", whiteSpace:"nowrap",
             }}
