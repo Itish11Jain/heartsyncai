@@ -464,9 +464,9 @@ const BUNCHES_DEF = [
 function BunchBalloons({ flyUp }: { flyUp:boolean }) {
   const AY = 900;
   return (
-    <div style={{ position:"absolute", left:0, top:0, width:390, height:844, zIndex:14, pointerEvents:"none" }}>
-      <svg width={390} height={AY+60} viewBox={`0 0 390 ${AY+60}`}
-        style={{ position:"absolute", top:0, left:0 }}>
+    <div style={{ position:"absolute", left:0, bottom:0, width:390, height:260, zIndex:14, pointerEvents:"none" }}>
+      <svg width={390} height={260} viewBox="0 700 390 260"
+        style={{ position:"absolute", bottom:0, left:0 }}>
         <defs>
           {P.map((p,i) => (
             <radialGradient key={i} id={`bpg${i}`} cx="34%" cy="28%" r="62%">
@@ -666,66 +666,6 @@ function HappyBirthdayBanner() {
   );
 }
 
-/* ─── Scene 3: Teaser ────────────────────────────────────────────────────── */
-function Scene3({ onNext }: { onNext:()=>void }) {
-  return (
-    <motion.div key="s3" style={{ position:"absolute", inset:0, zIndex:12 }}
-      initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-      transition={{ duration:0.6 }}>
-      <TwinkleBackground/>
-      <motion.h1 style={{
-        position:"absolute", top:40, left:0, right:0, textAlign:"center", zIndex:8,
-        fontFamily:"'Great Vibes', cursive",
-        fontSize:52, lineHeight:1, margin:0, pointerEvents:"none",
-        background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
-        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-      }}
-        initial={{ opacity:0, y:-14 }} animate={{ opacity:1, y:0 }}
-        transition={{ delay:0.15, duration:0.6 }}>
-        Happy Birthday
-      </motion.h1>
-      <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center", gap:0 }}>
-        <motion.div style={{ width:80, height:1,
-          background:"linear-gradient(90deg,transparent,#D4AF37,transparent)", marginBottom:28 }}
-          initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.5, duration:0.7 }}/>
-        <motion.p style={{
-          fontFamily:"'Brush Script MT','Segoe Script','Comic Sans MS',cursive",
-          fontStyle:"italic", fontSize:30, lineHeight:1.3, textAlign:"center",
-          margin:0, padding:"0 32px",
-          background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 45%,#FFF4B0 65%,#D4AF37 85%,#C9846A 100%)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}
-          initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4, duration:0.7 }}>
-          We are not<br/>done yet…
-        </motion.p>
-        <motion.div style={{ width:80, height:1,
-          background:"linear-gradient(90deg,transparent,#D4AF37,transparent)", marginTop:28 }}
-          initial={{ scaleX:0 }} animate={{ scaleX:1 }} transition={{ delay:0.6, duration:0.7 }}/>
-        <motion.p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
-          fontSize:14, color:"rgba(212,175,55,0.65)", letterSpacing:2,
-          marginTop:20, textAlign:"center" }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.9 }}>
-          One more surprise awaits ✨
-        </motion.p>
-        <motion.button onClick={onNext} style={{
-          marginTop:36,
-          background:"linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.22))",
-          border:"1.5px solid rgba(212,175,55,0.6)",
-          borderRadius:40, padding:"15px 44px",
-          color:"#F0D060", fontSize:14, letterSpacing:2.5,
-          textTransform:"uppercase", fontFamily:"Georgia,serif", cursor:"pointer",
-          whiteSpace:"nowrap",
-        }}
-          initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:1.1 }}
-          whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
-          Click here ✨
-        </motion.button>
-      </div>
-    </motion.div>
-  );
-}
-
 /* ─── Scene 4: Polaroid collage ───────────────────────────────────────────── */
 function FlowerTopRight() {
   return (
@@ -764,7 +704,7 @@ function FlowerTopRight() {
 function FlowerBottomLeft() {
   return (
     <motion.svg width={178} height={178} viewBox="0 0 178 178"
-      style={{ position:"absolute", bottom:-8, left:-8, zIndex:6, pointerEvents:"none" }}
+      style={{ position:"absolute", bottom:-8, left:-8, zIndex:15, pointerEvents:"none" }}
       animate={{ rotate:[1,-1.5,1] }} transition={{ duration:6.5, repeat:Infinity, ease:"easeInOut" }}>
       <defs>
         <radialGradient id="fpBL2" cx="38%" cy="30%" r="65%">
@@ -917,11 +857,11 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
       )}
 
       <motion.button onClick={onNext} style={{
-        position:"absolute", bottom:26, left:"50%", marginLeft:-80, width:160, zIndex:5,
+        position:"absolute", bottom:26, left:"50%", transform:"translateX(-50%)", zIndex:5,
         background:"linear-gradient(135deg,rgba(212,175,55,0.14),rgba(212,175,55,0.26))",
-        border:"1.5px solid rgba(212,175,55,0.58)", borderRadius:36, padding:"13px 0",
+        border:"1.5px solid rgba(212,175,55,0.58)", borderRadius:36, padding:"13px 40px",
         color:"#F0D060", fontSize:13, letterSpacing:2, textTransform:"uppercase",
-        fontFamily:"Georgia,serif", cursor:"pointer",
+        fontFamily:"Georgia,serif", cursor:"pointer", whiteSpace:"nowrap",
       }}
         initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}
         transition={{ delay:1.4 }}
@@ -1161,21 +1101,22 @@ function Scene5({ onNext, personalPicUrl, voiceUrl }: {
         </motion.button>
       </motion.div>
 
-      {/* Photo sticker — lower half, centered, sticker effect */}
+      {/* Photo sticker — circular crop, bottom-center */}
       {personalPicUrl && (
         <motion.div style={{
-          position:"absolute", top:"50%", bottom:0,
-          left:0, right:0, zIndex:10,
-          display:"flex", alignItems:"flex-end", justifyContent:"center",
-          overflow:"hidden", pointerEvents:"none",
+          position:"absolute", bottom:80, left:0, right:0, zIndex:10,
+          display:"flex", justifyContent:"center", pointerEvents:"none",
         }}
-          initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
+          initial={{ opacity:0, scale:0.55 }} animate={{ opacity:1, scale:1 }}
           transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
-          <img src={personalPicUrl} alt=""
-            style={{
-              height:"100%", width:"auto", maxWidth:"100%", display:"block",
-              filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.75)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
-            }}/>
+          <div style={{
+            width:164, height:164, borderRadius:"50%", overflow:"hidden",
+            border:"5px solid white",
+            boxShadow:"0 0 0 2px rgba(212,175,55,0.5), 0 8px 32px rgba(0,0,0,0.75), 0 0 24px rgba(255,255,255,0.12)",
+          }}>
+            <img src={personalPicUrl} alt=""
+              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+          </div>
         </motion.div>
       )}
     </motion.div>
@@ -1359,8 +1300,15 @@ export default function BirthdayCard() {
     ? decodeURIComponent(params.get("voicenote")!)
     : "";
 
-  /* scenes: 1 = gift, 2 = cake, 3 = teaser, 4 = polaroids, 5 = confetti+voice, 6 = message */
-  const [scene, setScene] = useState<1|2|3|4|5|6>(1);
+  /* scenes: 1 = gift, 2 = cake, 4 = polaroids, 5 = confetti+voice, 6 = message */
+  const [scene, setScene] = useState<1|2|4|5|6>(1);
+
+  /* Preload photos as early as possible so they're ready when Scene 4 appears */
+  useEffect(() => {
+    photoUrls.forEach(url => { const img = new Image(); img.src = url; });
+    if (personalPicUrl) { const img = new Image(); img.src = personalPicUrl; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showDesktopPaywall, setShowDesktopPaywall] = useState(false);
@@ -1435,10 +1383,7 @@ export default function BirthdayCard() {
             <Scene1 key="s1" name={name} onNext={() => setScene(2)}/>
           )}
           {scene === 2 && (
-            <Scene2 key="s2" onNext={() => setScene(3)}/>
-          )}
-          {scene === 3 && (
-            <Scene3 key="s3" onNext={() => setScene(4)}/>
+            <Scene2 key="s2" onNext={() => setScene(4)}/>
           )}
           {scene === 4 && (
             <Scene4 key="s4" photoUrls={photoUrls} onNext={() => setScene(5)}/>
