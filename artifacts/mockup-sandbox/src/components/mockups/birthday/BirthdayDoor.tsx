@@ -4,6 +4,7 @@ import photo1Src from "@/assets/photo1.jpg";
 import photo2Src from "@/assets/photo2.jpg";
 import photo3Src from "@/assets/photo3.jpg";
 import photo1StickerSrc from "@/assets/photo1_sticker.png";
+import cakeStickerSrc   from "@/assets/cake_sticker.png";
 
 const name = "Priya";
 const age = 25;
@@ -1195,117 +1196,216 @@ function BirthdayCakeSVG() {
 }
 
 /* ══════════════════════════════════════════
-   SCENE 5 — Collage: photo + balloons + cake
+   SCENE 5 — Confetti + voice note + sticker
 ══════════════════════════════════════════ */
-function Scene5({ onReplay }: { onReplay:()=>void }) {
-  const [showReplay, setShowReplay] = useState(false);
 
-  useEffect(()=>{
-    const t = setTimeout(()=>setShowReplay(true), 2200);
-    return ()=>clearTimeout(t);
-  },[]);
+// Gold confetti burst — LEFT side (start at x=0, y=400, fly up & right)
+const S5_CL = [
+  {x:110,y:-260,c:"#D4AF37",s:9,r:45,d:0.00},{x:160,y:-190,c:"#C9846A",s:7,r:-30,d:0.05},
+  {x:70,y:-330,c:"#F0D060",s:8,r:65,d:0.08},{x:210,y:-170,c:"#FFF4B0",s:6,r:-55,d:0.12},
+  {x:130,y:-410,c:"#D4AF37",s:8,r:38,d:0.03},{x:80,y:-250,c:"#C9846A",s:5,r:-42,d:0.15},
+  {x:175,y:-350,c:"#F0D060",s:9,r:72,d:0.06},{x:55,y:-290,c:"#D4AF37",s:6,r:-65,d:0.10},
+  {x:230,y:-210,c:"#FFF4B0",s:8,r:52,d:0.18},{x:140,y:-370,c:"#C9846A",s:7,r:-28,d:0.13},
+  {x:95,y:-440,c:"#D4AF37",s:7,r:82,d:0.02},{x:185,y:-130,c:"#F0D060",s:9,r:-72,d:0.09},
+];
+// Gold confetti burst — RIGHT side (start at x=390, y=400, fly up & left — negative x)
+const S5_CR = [
+  {x:-110,y:-260,c:"#D4AF37",s:9,r:-45,d:0.00},{x:-160,y:-190,c:"#C9846A",s:7,r:30,d:0.05},
+  {x:-70,y:-330,c:"#F0D060",s:8,r:-65,d:0.08},{x:-210,y:-170,c:"#FFF4B0",s:6,r:55,d:0.12},
+  {x:-130,y:-410,c:"#D4AF37",s:8,r:-38,d:0.03},{x:-80,y:-250,c:"#C9846A",s:5,r:42,d:0.15},
+  {x:-175,y:-350,c:"#F0D060",s:9,r:-72,d:0.06},{x:-55,y:-290,c:"#D4AF37",s:6,r:65,d:0.10},
+  {x:-230,y:-210,c:"#FFF4B0",s:8,r:-52,d:0.18},{x:-140,y:-370,c:"#C9846A",s:7,r:28,d:0.13},
+  {x:-95,y:-440,c:"#D4AF37",s:7,r:-82,d:0.02},{x:-185,y:-130,c:"#F0D060",s:9,r:72,d:0.09},
+];
 
-  const dots = [
-    {x:38, y:88,  r:8,  c:"#B76E79"}, {x:316,y:72,  r:6,  c:"#D4AF37"},
-    {x:342,y:152, r:9,  c:"#B76E79"}, {x:48, y:198, r:7,  c:"#D4AF37"},
-    {x:300,y:222, r:5,  c:"#F8F0E3"}, {x:348,y:318, r:8,  c:"#C9A840"},
-    {x:34, y:348, r:6,  c:"#F8F0E3"}, {x:330,y:456, r:7,  c:"#B76E79"},
-    {x:50, y:540, r:9,  c:"#D4AF37"}, {x:318,y:598, r:5,  c:"#F8F0E3"},
-    {x:66, y:682, r:8,  c:"#C9A840"}, {x:324,y:726, r:6,  c:"#B76E79"},
-    {x:158,y:68,  r:5,  c:"#D4AF37"}, {x:230,y:92,  r:7,  c:"#B76E79"},
-    {x:80, y:116, r:5,  c:"#C9A840"}, {x:278,y:132, r:4,  c:"#F8F0E3"},
-    {x:196,y:114, r:6,  c:"#D4AF37"}, {x:262,y:780, r:7,  c:"#B76E79"},
-  ];
+// Waveform bar heights (static seed, 24 bars)
+const WAVE_H = [14,28,20,38,16,44,22,36,18,32,30,46,14,38,24,42,16,28,26,40,18,34,22,30,14,44];
+
+function VoiceNote({ onDone }: { onDone:()=>void }) {
+  const [playing, setPlaying] = useState(false);
+  const [secs, setSecs]       = useState(0);
+  const [done, setDone]       = useState(false);
+  const TOTAL = 8;
+
+  useEffect(() => {
+    if (!playing || done) return;
+    const iv = setInterval(() => {
+      setSecs(s => {
+        if (s + 1 >= TOTAL) {
+          setPlaying(false); setDone(true); onDone();
+          clearInterval(iv); return TOTAL;
+        }
+        return s + 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [playing, done, onDone]);
+
+  const pct  = done ? 100 : (secs / TOTAL) * 100;
+  const fmt  = (n: number) => `0:${String(n).padStart(2,"0")}`;
 
   return (
-    <motion.div key="scene5col"
+    <div style={{
+      display:"flex", alignItems:"center", gap:12,
+      background:"rgba(255,255,255,0.07)", backdropFilter:"blur(12px)",
+      border:"1px solid rgba(212,175,55,0.28)", borderRadius:50,
+      padding:"10px 16px 10px 10px",
+    }}>
+      {/* Play / pause */}
+      <motion.button
+        onClick={() => { if (!done) setPlaying(p => !p); }}
+        whileTap={{ scale:0.88 }}
+        style={{
+          width:46, height:46, borderRadius:"50%", flexShrink:0,
+          background:"linear-gradient(135deg,#C4913A,#D4AF37,#F0D060)",
+          border:"none", cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:20, color:"#1c0a06", boxShadow:"0 2px 10px rgba(212,175,55,0.4)",
+        }}>
+        {playing ? "⏸" : "▶"}
+      </motion.button>
+
+      {/* Waveform */}
+      <div style={{ flex:1 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:2, height:40 }}>
+          {WAVE_H.map((h,i) => {
+            const filled = pct >= (i / WAVE_H.length) * 100;
+            return (
+              <motion.div key={i}
+                style={{
+                  flex:1, borderRadius:3,
+                  background: filled
+                    ? "linear-gradient(180deg,#F0D060,#C4913A)"
+                    : "rgba(255,255,255,0.18)",
+                }}
+                animate={{ height: playing ? [h*0.4, h, h*0.55, h*0.85, h*0.4] : h*0.45 }}
+                transition={{
+                  duration: 0.45 + (i%5)*0.12,
+                  repeat: playing ? Infinity : 0,
+                  delay: i*0.022,
+                  ease:"easeInOut",
+                  repeatType:"mirror",
+                }}/>
+            );
+          })}
+        </div>
+        <div style={{ display:"flex", justifyContent:"space-between", marginTop:3 }}>
+          <span style={{ fontSize:9, color:"rgba(212,175,55,0.75)", fontFamily:"monospace" }}>
+            {fmt(secs)}
+          </span>
+          <span style={{ fontSize:9, color:"rgba(255,255,255,0.28)", fontFamily:"monospace" }}>
+            {fmt(TOTAL)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Scene5({ onReplay }: { onReplay:()=>void }) {
+  const [showArrow, setShowArrow] = useState(false);
+
+  return (
+    <motion.div key="scene5new"
       style={{ position:"absolute", inset:0, zIndex:12,
         background:"linear-gradient(160deg,#0e0502 0%,#1c0a06 55%,#130604 100%)" }}
-      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.7 }}>
+      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>
 
-      {/* Scattered confetti dots */}
-      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%",
-        pointerEvents:"none" }} viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet">
-        {dots.map((d,i) => (
-          <motion.circle key={i} cx={d.x} cy={d.y} r={d.r} fill={d.c}
-            initial={{ scale:0, opacity:0 }}
-            animate={{ scale:1, opacity:0.72 }}
-            transition={{ delay:0.05 + i*0.055, duration:0.32 }}/>
-        ))}
-      </svg>
+      <TwinkleBackground />
 
-      {/* Foil number balloons — upper left */}
-      <motion.div style={{ position:"absolute", top:48, left:8, zIndex:8 }}
-        initial={{ opacity:0, x:-28, y:-18 }}
-        animate={{ opacity:1, x:0, y:0 }}
-        transition={{ delay:0.22, duration:0.72, ease:[0.34,1.56,0.64,1] }}>
-        <NumberBalloons n={age} />
-      </motion.div>
+      {/* ── Confetti blast from both sides ── */}
+      {S5_CL.map((p,i) => (
+        <motion.div key={`cl${i}`}
+          style={{ position:"absolute", left:0, top:400,
+            width:p.s, height:p.s, borderRadius:p.s*0.35,
+            background:p.c, pointerEvents:"none", zIndex:20 }}
+          initial={{ x:0, y:0, opacity:1, rotate:0 }}
+          animate={{ x:p.x, y:p.y, opacity:0, rotate:p.r }}
+          transition={{ duration:1.1, delay:p.d, ease:[0.16,1,0.3,1] }}/>
+      ))}
+      {S5_CR.map((p,i) => (
+        <motion.div key={`cr${i}`}
+          style={{ position:"absolute", left:390, top:400,
+            width:p.s, height:p.s, borderRadius:p.s*0.35,
+            background:p.c, pointerEvents:"none", zIndex:20 }}
+          initial={{ x:0, y:0, opacity:1, rotate:0 }}
+          animate={{ x:p.x, y:p.y, opacity:0, rotate:p.r }}
+          transition={{ duration:1.1, delay:p.d, ease:[0.16,1,0.3,1] }}/>
+      ))}
 
-      {/* Photo sticker — background removed, white outline border */}
+      {/* ── Cake sticker — top center ── */}
       <motion.div style={{
-          position:"absolute", left:18, top:96,
-          width:306, zIndex:10,
-          transform:"rotate(-2.5deg)",
-        }}
-        initial={{ opacity:0, scale:0.82, y:28, rotate:-6 }}
-        animate={{ opacity:1, scale:1, y:0, rotate:-2.5 }}
-        transition={{ delay:0.32, duration:0.82, ease:[0.34,1.56,0.64,1] }}>
-        <img src={photo1StickerSrc} alt=""
+        position:"absolute", top:14, left:"50%", transform:"translateX(-50%)",
+        width:178, zIndex:11, pointerEvents:"none",
+      }}
+        initial={{ opacity:0, y:-24, scale:0.85 }}
+        animate={{ opacity:1, y:0, scale:1 }}
+        transition={{ delay:0.35, duration:0.75, ease:[0.34,1.56,0.64,1] }}>
+        <img src={cakeStickerSrc} alt=""
           style={{
             width:"100%", height:"auto", display:"block",
-            filter:[
-              "drop-shadow(0 0 8px white)",
-              "drop-shadow(0 0 8px white)",
-              "drop-shadow(0 0 6px white)",
-              "drop-shadow(0 0 4px rgba(255,255,255,0.9))",
-              "drop-shadow(0 6px 20px rgba(0,0,0,0.55))",
-            ].join(" "),
+            filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px white) drop-shadow(0 5px 18px rgba(0,0,0,0.55))",
           }}/>
       </motion.div>
 
-      {/* Birthday cake — lower right, overlapping photo */}
-      <motion.div style={{ position:"absolute", right:6, bottom:154, zIndex:11 }}
-        initial={{ opacity:0, scale:0.68, x:22 }}
-        animate={{ opacity:1, scale:1, x:0 }}
-        transition={{ delay:0.65, duration:0.68, ease:[0.34,1.56,0.64,1] }}>
-        <BirthdayCakeSVG />
+      {/* ── "Happy Birthday" text ── */}
+      <motion.p style={{
+        position:"absolute", top:210, left:0, right:0,
+        textAlign:"center", margin:0,
+        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:19,
+        background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
+        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+        zIndex:8, letterSpacing:0.5,
+      }}
+        initial={{ opacity:0 }} animate={{ opacity:1 }}
+        transition={{ delay:0.65, duration:0.6 }}>
+        Happy Birthday, {name}! 🎂
+      </motion.p>
+
+      {/* ── Voice note ── */}
+      <motion.div style={{ position:"absolute", top:248, left:20, right:20, zIndex:12 }}
+        initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.82, duration:0.6 }}>
+        <VoiceNote onDone={() => setShowArrow(true)}/>
       </motion.div>
 
-      {/* Name + wish */}
+      {/* ── Photo sticker — bottom, large ── */}
       <motion.div style={{
-          position:"absolute", bottom:72, left:0, right:0,
-          textAlign:"center", padding:"0 28px",
-        }}
-        initial={{ opacity:0, y:16 }}
+        position:"absolute", bottom:-18, left:"50%",
+        transform:"translateX(-50%) rotate(1.8deg)",
+        width:356, zIndex:10,
+      }}
+        initial={{ opacity:0, y:36 }}
         animate={{ opacity:1, y:0 }}
-        transition={{ delay:1.05, duration:0.72 }}>
-        <p style={{
-          fontFamily:"'Palatino Linotype','Book Antiqua',Palatino,serif",
-          fontStyle:"italic", fontSize:23, margin:"0 0 5px",
-          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}>Happy Birthday, {name}!</p>
-        <p style={{
-          fontFamily:"Georgia,serif", fontStyle:"italic",
-          fontSize:12, color:"rgba(212,175,55,0.62)", margin:0, letterSpacing:0.5,
-        }}>Wishing you all the love &amp; happiness ✨</p>
+        transition={{ delay:0.48, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
+        <img src={photo1StickerSrc} alt=""
+          style={{
+            width:"100%", height:"auto", display:"block",
+            filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
+          }}/>
       </motion.div>
 
-      {/* Replay */}
+      {/* ── Arrow — appears after voice note finishes ── */}
       <AnimatePresence>
-        {showReplay && (
-          <motion.button key="replay5" onClick={onReplay}
+        {showArrow && (
+          <motion.button key="arrow5"
+            onClick={onReplay}
             style={{
-              position:"absolute", bottom:18, left:"50%", transform:"translateX(-50%)",
-              background:"rgba(212,175,55,0.07)", border:"1px solid rgba(212,175,55,0.3)",
-              borderRadius:24, padding:"8px 28px", color:"#C9A840",
-              fontSize:11, letterSpacing:2, textTransform:"uppercase",
-              fontFamily:"sans-serif", cursor:"pointer", whiteSpace:"nowrap",
+              position:"absolute", bottom:32, right:26, zIndex:22,
+              width:54, height:54, borderRadius:"50%",
+              background:"linear-gradient(135deg,#C4913A,#D4AF37)",
+              border:"none", cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:24, color:"#1c0a06",
+              boxShadow:"0 4px 20px rgba(212,175,55,0.5)",
             }}
-            initial={{ opacity:0 }} animate={{ opacity:1 }}
-            whileHover={{ background:"rgba(212,175,55,0.18)" }}>
-            ↩ Replay from start
+            initial={{ scale:0, opacity:0 }}
+            animate={{ scale:1, opacity:1 }}
+            exit={{ scale:0, opacity:0 }}
+            transition={{ type:"spring", stiffness:320, damping:18 }}
+            whileHover={{ scale:1.12 }}
+            whileTap={{ scale:0.9 }}>
+            →
           </motion.button>
         )}
       </AnimatePresence>
