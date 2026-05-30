@@ -624,14 +624,19 @@ function Cake({ blown = false }: { blown?: boolean }) {
           {/* Wick */}
           <line x1={cx} y1={78} x2={cx} y2={73} stroke="#3B1A00" strokeWidth={1.5} strokeLinecap="round"/>
           <CandleFlame cx={cx} cy={71} blown={blown}/>
-          {/* Smoke puffs — 3 staggered wisps per candle */}
-          {blown && [0,1,2].map(j=>(
-            <motion.ellipse key={j} cx={cx + (j-1)*3} cy={70}
-              rx={3+j} ry={4+j}
-              fill="rgba(210,210,210,0.55)"
-              initial={{ opacity:0, y:0, scaleX:0.4 }}
-              animate={{ opacity:[0,0.55,0.35,0], y:[0,-(18+j*14)], scaleX:[0.4,1.2,1.5,0.5], x:(j-1)*6 }}
-              transition={{ duration:1.4+j*0.35, delay:j*0.22+i*0.08, repeat:Infinity, repeatDelay:0.3, ease:"easeOut" }}/>
+          {/* Smoke puffs — 4 staggered wisps per candle */}
+          {blown && [0,1,2,3].map(j=>(
+            <motion.ellipse key={j} cx={cx + (j%2===0?-4:4)} cy={72}
+              rx={5+j*2.5} ry={6+j*2}
+              fill={j<2?"rgba(220,215,210,0.72)":"rgba(200,195,190,0.45)"}
+              initial={{ opacity:0, y:0, scaleX:0.35, x:0 }}
+              animate={{
+                opacity:[0, 0.72, 0.55, 0.2, 0],
+                y:[0, -(22+j*16)],
+                scaleX:[0.35, 1.4, 1.8, 2.2, 0.8],
+                x:[0, (j%2===0?-8:8), (j%2===0?-14:14), (j%2===0?-10:10)],
+              }}
+              transition={{ duration:1.6+j*0.32, delay:j*0.2+i*0.06, repeat:Infinity, repeatDelay:0.15, ease:"easeOut" }}/>
           ))}
         </g>
       ))}
