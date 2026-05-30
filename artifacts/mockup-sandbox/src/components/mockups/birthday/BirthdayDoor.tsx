@@ -1333,22 +1333,23 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
           transition={{ duration:1.1, delay:p.d, ease:[0.16,1,0.3,1] }}/>
       ))}
 
-      {/* ── "Happy Birthday" text ── */}
+      {/* ── Wish text ── */}
       <motion.p style={{
-        position:"absolute", top:52, left:0, right:0,
+        position:"absolute", top:108, left:20, right:20,
         textAlign:"center", margin:0,
-        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:20,
+        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:18,
+        lineHeight:1.45,
         background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
         WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
         zIndex:8, letterSpacing:0.5,
       }}
         initial={{ opacity:0 }} animate={{ opacity:1 }}
         transition={{ delay:0.5, duration:0.6 }}>
-        Happy Birthday, {name}! 🎂
+        Wishing you lots of love,<br/>laughter &amp; happiness. ✨
       </motion.p>
 
       {/* ── Voice note ── */}
-      <motion.div style={{ position:"absolute", top:86, left:20, right:20, zIndex:12 }}
+      <motion.div style={{ position:"absolute", top:178, left:20, right:20, zIndex:12 }}
         initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
         transition={{ delay:0.65, duration:0.6 }}>
         <VoiceNote onDone={() => setShowArrow(true)}/>
