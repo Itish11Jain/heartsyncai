@@ -424,16 +424,13 @@ function HappyBirthdayBanner() {
           if (ch === " ") return null;
           const cx     = HB_XS[i];
           const sy     = hbStrY(cx);
-          const THREAD = 14;
+          const THREAD = 3;
           const rot    = HB_ROTS[i];
           const pivot  = sy + THREAD;
-          const floatY = pivot + 38;
+          const floatY = pivot + 36;
           return (
             <g key={i}>
-              {/* Thread — OUTSIDE rotation so it always hangs straight from the string */}
-              <line x1={cx} y1={sy} x2={cx} y2={pivot + 5}
-                stroke="#D4AF37" strokeWidth={1.2} opacity={0.85}/>
-              {/* Letter card — rotated around the pivot (string attachment point) */}
+              {/* No thread line — letters hang directly from string */}
               <g transform={`rotate(${rot},${cx},${pivot})`}>
                 <motion.g
                   animate={{ y:[0,-2.5,0] }}
@@ -1088,6 +1085,8 @@ export function BirthdayDoor() {
   const [countdown,  setCountdown]  = useState(3);
   const [blown,      setBlown]      = useState(false);
   const [flyUp,      setFlyUp]      = useState(false);
+  const [cakeZoom,   setCakeZoom]   = useState(false);
+  const [cakeExplode,setCakeExplode]= useState(false);
 
   const cfPieces = Array.from({ length:55 }, (_,i) => ({
     id:i, x:(i*18.7)%100, color:P[i%P.length].c, delay:i*0.065,
@@ -1102,13 +1101,17 @@ export function BirthdayDoor() {
     setCakePhase("counting");
     setCountdown(3);
     setTimeout(() => setCountdown(2), 800);
-    setTimeout(() => { setCountdown(1); setFlyUp(true); }, 1600);
-    setTimeout(() => { setCakePhase("blown"); setBlown(true); setConfetti(true); }, 2400);
+    setTimeout(() => setCountdown(1), 1600);
+    setTimeout(() => { setCakePhase("blown"); setBlown(true); setConfetti(true); setFlyUp(true); }, 2400);
     setTimeout(() => setConfetti(false), 5200);
+    setTimeout(() => setCakeZoom(true), 6000);
+    setTimeout(() => setCakeExplode(true), 7700);
+    setTimeout(() => setScene(4), 8200);
   }
   function handleReplay() {
     setScene(1); setConfetti(false); setBlown(false); setFlyUp(false);
     setCakePhase("cta"); setCountdown(3);
+    setCakeZoom(false); setCakeExplode(false);
     setTimeout(() => setOpen(false), 80);
   }
 
@@ -1157,15 +1160,20 @@ export function BirthdayDoor() {
             <HappyBirthdayBanner />
             <BunchBalloons flyUp={flyUp} />
 
-            {/* Cake */}
+            {/* Cake — zooms + spins into screen after balloons gone */}
             <motion.div style={{
                 position:"absolute",
                 left: C_LEFT + C_W/2 - 134,
                 top:  C_TOP  + C_H/2 - 134 - 80,
                 width:268, height:268,
               }}
-              initial={{ scale:0.1, rotate:-18 }} animate={{ scale:1, rotate:0 }}
-              transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
+              initial={{ scale:0.1, rotate:-18, opacity:1 }}
+              animate={cakeZoom
+                ? { scale:32, rotate:720, opacity:0 }
+                : { scale:1, rotate:0, opacity:1 }}
+              transition={cakeZoom
+                ? { duration:1.7, ease:[0.4,0,0.85,1] }
+                : { delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
               <Cake blown={blown} />
             </motion.div>
 
@@ -1214,38 +1222,45 @@ export function BirthdayDoor() {
               )}
             </AnimatePresence>
 
-            {/* After blown — Continue + Replay */}
+            {/* Explosion burst */}
             <AnimatePresence>
-              {cakePhase === "blown" && (
-                <motion.div key="blown-actions" style={{
-                  position:"absolute", bottom:30,
-                  left:0, right:0, display:"flex", flexDirection:"column",
-                  alignItems:"center", gap:12,
-                }}
-                  initial={{ opacity:0 }} animate={{ opacity:1 }}
-                  transition={{ delay:1.2 }}>
+              {cakeExplode && (
+                <motion.div key="explosion" style={{ position:"absolute", inset:0, zIndex:22, pointerEvents:"none" }}>
+                  <motion.div style={{ position:"absolute", inset:0, background:"rgba(255,248,220,0.9)" }}
+                    initial={{ opacity:1 }} animate={{ opacity:0 }} transition={{ duration:0.45 }}/>
+                  {Array.from({length:28},(_,i)=>{
+                    const angle = (i/28)*Math.PI*2;
+                    const dist  = 160 + (i%5)*52;
+                    const tx = Math.cos(angle)*dist;
+                    const ty = Math.sin(angle)*dist;
+                    const sz = 14 + (i%6)*3;
+                    return (
+                      <motion.div key={i}
+                        style={{ position:"absolute", width:sz, height:sz,
+                          borderRadius:"50%", background:P[i%P.length].c,
+                          left:"50%", top:"45%", marginLeft:-sz/2, marginTop:-sz/2, zIndex:23 }}
+                        initial={{ x:0, y:0, scale:1.5, opacity:1 }}
+                        animate={{ x:tx, y:ty, scale:0, opacity:0 }}
+                        transition={{ duration:0.72, ease:[0.15,0,0.45,1], delay:i*0.012 }}/>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                  <motion.button onClick={() => setScene(3)}
-                    style={{
-                      background:"linear-gradient(135deg,rgba(212,175,55,0.18),rgba(212,175,55,0.3))",
-                      border:"1.5px solid rgba(212,175,55,0.65)",
-                      borderRadius:36, padding:"14px 40px",
-                      color:"#F0D060", fontSize:14, letterSpacing:2,
-                      textTransform:"uppercase", fontFamily:"sans-serif",
-                      cursor:"pointer", whiteSpace:"nowrap",
-                    }}
-                    whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
-                    Continue ✨
-                  </motion.button>
-
+            {/* Replay only — auto-advances to Scene 4 */}
+            <AnimatePresence>
+              {cakePhase === "blown" && !cakeZoom && (
+                <motion.div key="replay-btn"
+                  style={{ position:"absolute", bottom:28, left:0, right:0, textAlign:"center" }}
+                  initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.5 }}
+                  exit={{ opacity:0 }}>
                   <motion.button onClick={handleReplay}
-                    style={{
-                      background:"transparent", border:"none",
-                      color:"rgba(201,168,64,0.55)", fontSize:11,
+                    style={{ background:"transparent", border:"none",
+                      color:"rgba(201,168,64,0.5)", fontSize:11,
                       letterSpacing:2, textTransform:"uppercase",
-                      fontFamily:"sans-serif", cursor:"pointer",
-                    }}
-                    whileHover={{ color:"rgba(201,168,64,0.9)" }}>
+                      fontFamily:"sans-serif", cursor:"pointer" }}
+                    whileHover={{ color:"rgba(201,168,64,0.85)" }}>
                     ↩ Replay
                   </motion.button>
                 </motion.div>
