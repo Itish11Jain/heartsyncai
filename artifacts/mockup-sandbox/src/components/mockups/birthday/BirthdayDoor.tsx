@@ -1602,14 +1602,14 @@ export function BirthdayDoor() {
             {/* Cake */}
             <motion.div style={{
                 position:"absolute",
-                left:"50%", marginLeft:-140,
-                top: 230,
-                width:280, height:250,
+                left:"50%", marginLeft:-134,
+                top: 208,
+                width:268, height:268,
               }}
               initial={{ scale:0.1, opacity:0 }}
               animate={{ scale:1, opacity:1 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <BirthdayCakeHybrid blown={blown} />
+              <BirthdayCake3D blown={blown} />
             </motion.div>
 
             {/* CTA */}
