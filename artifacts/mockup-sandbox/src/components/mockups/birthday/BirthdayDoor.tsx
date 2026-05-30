@@ -1525,23 +1525,27 @@ function BirthdayCakeSVG() {
    SCENE 5 — Confetti + voice note + sticker
 ══════════════════════════════════════════ */
 
-// Gold confetti burst — LEFT side (start at x=0, y=400, fly up & right)
+// Confetti cannon — LEFT top corner (x=0,y=0), shoots right & down
 const S5_CL = [
-  {x:110,y:-260,c:"#D4AF37",s:9,r:45,d:0.00},{x:160,y:-190,c:"#C9846A",s:7,r:-30,d:0.05},
-  {x:70,y:-330,c:"#F0D060",s:8,r:65,d:0.08},{x:210,y:-170,c:"#FFF4B0",s:6,r:-55,d:0.12},
-  {x:130,y:-410,c:"#D4AF37",s:8,r:38,d:0.03},{x:80,y:-250,c:"#C9846A",s:5,r:-42,d:0.15},
-  {x:175,y:-350,c:"#F0D060",s:9,r:72,d:0.06},{x:55,y:-290,c:"#D4AF37",s:6,r:-65,d:0.10},
-  {x:230,y:-210,c:"#FFF4B0",s:8,r:52,d:0.18},{x:140,y:-370,c:"#C9846A",s:7,r:-28,d:0.13},
-  {x:95,y:-440,c:"#D4AF37",s:7,r:82,d:0.02},{x:185,y:-130,c:"#F0D060",s:9,r:-72,d:0.09},
+  {x:140,y:220,c:"#D4AF37",s:18,r:50, d:0.55},{x:220,y:160,c:"#C9846A",s:14,r:-35,d:0.60},
+  {x:90, y:300,c:"#F0D060",s:20,r:75, d:0.58},{x:280,y:130,c:"#FFF4B0",s:12,r:-60,d:0.65},
+  {x:170,y:380,c:"#D4AF37",s:16,r:42, d:0.52},{x:60, y:260,c:"#C9846A",s:22,r:-48,d:0.68},
+  {x:240,y:310,c:"#F0D060",s:15,r:80, d:0.56},{x:120,y:440,c:"#D4AF37",s:13,r:-70,d:0.70},
+  {x:310,y:200,c:"#FFF4B0",s:17,r:55, d:0.62},{x:190,y:480,c:"#C9846A",s:19,r:-32,d:0.64},
+  {x:80, y:200,c:"#D4AF37",s:14,r:88, d:0.53},{x:260,y:260,c:"#F0D060",s:21,r:-78,d:0.66},
+  {x:150,y:340,c:"#FFF4B0",s:16,r:60, d:0.59},{x:340,y:150,c:"#C9846A",s:12,r:-40,d:0.72},
+  {x:200,y:420,c:"#D4AF37",s:18,r:35, d:0.61},{x:100,y:360,c:"#F0D060",s:13,r:-55,d:0.57},
 ];
-// Gold confetti burst — RIGHT side (start at x=390, y=400, fly up & left — negative x)
+// Confetti cannon — RIGHT top corner (x=390,y=0), shoots left & down
 const S5_CR = [
-  {x:-110,y:-260,c:"#D4AF37",s:9,r:-45,d:0.00},{x:-160,y:-190,c:"#C9846A",s:7,r:30,d:0.05},
-  {x:-70,y:-330,c:"#F0D060",s:8,r:-65,d:0.08},{x:-210,y:-170,c:"#FFF4B0",s:6,r:55,d:0.12},
-  {x:-130,y:-410,c:"#D4AF37",s:8,r:-38,d:0.03},{x:-80,y:-250,c:"#C9846A",s:5,r:42,d:0.15},
-  {x:-175,y:-350,c:"#F0D060",s:9,r:-72,d:0.06},{x:-55,y:-290,c:"#D4AF37",s:6,r:65,d:0.10},
-  {x:-230,y:-210,c:"#FFF4B0",s:8,r:-52,d:0.18},{x:-140,y:-370,c:"#C9846A",s:7,r:28,d:0.13},
-  {x:-95,y:-440,c:"#D4AF37",s:7,r:-82,d:0.02},{x:-185,y:-130,c:"#F0D060",s:9,r:72,d:0.09},
+  {x:-140,y:220,c:"#D4AF37",s:18,r:-50,d:0.55},{x:-220,y:160,c:"#C9846A",s:14,r:35, d:0.60},
+  {x:-90, y:300,c:"#F0D060",s:20,r:-75,d:0.58},{x:-280,y:130,c:"#FFF4B0",s:12,r:60, d:0.65},
+  {x:-170,y:380,c:"#D4AF37",s:16,r:-42,d:0.52},{x:-60, y:260,c:"#C9846A",s:22,r:48, d:0.68},
+  {x:-240,y:310,c:"#F0D060",s:15,r:-80,d:0.56},{x:-120,y:440,c:"#D4AF37",s:13,r:70, d:0.70},
+  {x:-310,y:200,c:"#FFF4B0",s:17,r:-55,d:0.62},{x:-190,y:480,c:"#C9846A",s:19,r:32, d:0.64},
+  {x:-80, y:200,c:"#D4AF37",s:14,r:-88,d:0.53},{x:-260,y:260,c:"#F0D060",s:21,r:78, d:0.66},
+  {x:-150,y:340,c:"#FFF4B0",s:16,r:-60,d:0.59},{x:-340,y:150,c:"#C9846A",s:12,r:40, d:0.72},
+  {x:-200,y:420,c:"#D4AF37",s:18,r:-35,d:0.61},{x:-100,y:360,c:"#F0D060",s:13,r:55, d:0.57},
 ];
 
 // Waveform bar heights (static seed, 24 bars)
@@ -1704,24 +1708,24 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
 
       <TwinkleBackground />
 
-      {/* ── Confetti blast from both sides ── */}
+      {/* ── Confetti cannons from top corners ── */}
       {S5_CL.map((p,i) => (
         <motion.div key={`cl${i}`}
-          style={{ position:"absolute", left:0, top:400,
-            width:p.s, height:p.s, borderRadius:p.s*0.35,
-            background:p.c, pointerEvents:"none", zIndex:20 }}
-          initial={{ x:0, y:0, opacity:1, rotate:0 }}
-          animate={{ x:p.x, y:p.y, opacity:0, rotate:p.r }}
-          transition={{ duration:1.1, delay:p.d, ease:[0.16,1,0.3,1] }}/>
+          style={{ position:"absolute", left:0, top:0,
+            width:p.s, height:p.s*1.6, borderRadius:p.s*0.25,
+            background:p.c, pointerEvents:"none", zIndex:28 }}
+          initial={{ x:0, y:0, opacity:0, rotate:0, scale:0.5 }}
+          animate={{ x:p.x, y:p.y, opacity:[0,1,1,0.6,0], rotate:p.r, scale:1 }}
+          transition={{ duration:2.2, delay:p.d, ease:[0.22,1,0.36,1] }}/>
       ))}
       {S5_CR.map((p,i) => (
         <motion.div key={`cr${i}`}
-          style={{ position:"absolute", left:390, top:400,
-            width:p.s, height:p.s, borderRadius:p.s*0.35,
-            background:p.c, pointerEvents:"none", zIndex:20 }}
-          initial={{ x:0, y:0, opacity:1, rotate:0 }}
-          animate={{ x:p.x, y:p.y, opacity:0, rotate:p.r }}
-          transition={{ duration:1.1, delay:p.d, ease:[0.16,1,0.3,1] }}/>
+          style={{ position:"absolute", left:390, top:0,
+            width:p.s, height:p.s*1.6, borderRadius:p.s*0.25,
+            background:p.c, pointerEvents:"none", zIndex:28 }}
+          initial={{ x:0, y:0, opacity:0, rotate:0, scale:0.5 }}
+          animate={{ x:p.x, y:p.y, opacity:[0,1,1,0.6,0], rotate:p.r, scale:1 }}
+          transition={{ duration:2.2, delay:p.d, ease:[0.22,1,0.36,1] }}/>
       ))}
 
       {/* ── Wish text ── */}
