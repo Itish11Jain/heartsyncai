@@ -75,7 +75,7 @@ function GBalloon({ x, y, r, p, d }: B) {
   const id = `g${Math.round(x*10)}${Math.round(y*10)}`;
   return (
     <motion.div
-      style={{ position:"absolute", left:x-r, top:y-r, width:r*2, height:r*2, zIndex:8, pointerEvents:"none" }}
+      style={{ position:"absolute", left:x-r, top:y-r, width:r*2, height:r*2, zIndex:15, pointerEvents:"none" }}
       animate={{ y:[0,-4-d*1.2,0,-2-d*0.6,0] }}
       transition={{ duration:2.6+d, repeat:Infinity, ease:"easeInOut", delay:d }}>
       <svg width={r*2} height={r*2} viewBox={`0 0 ${r*2} ${r*2}`}>
@@ -389,10 +389,12 @@ export function BirthdayDoor() {
             }}>
             </motion.button>
 
-            {GARLAND.map((b,i) => <GBalloon key={i} {...b} />)}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Balloon garland — persists across both scenes */}
+      {GARLAND.map((b,i) => <GBalloon key={i} {...b} />)}
 
       {/* ══ SCENE 2 : CAKE ══ */}
       <AnimatePresence>
