@@ -669,7 +669,58 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
         Happy Birthday
       </motion.h1>
 
-      {hasPhotos ? (
+      {photoUrls.length === 0 && (
+        /* ── 0 photos: full-width celebratory quote ── */
+        <motion.div style={{ position:"absolute", left:0, right:0, top:160, bottom:120,
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:20 }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
+          <div style={{ fontSize:52 }}>🎉</div>
+          <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
+            fontSize:16, lineHeight:1.8, color:"#D4AF37", textAlign:"center",
+            padding:"0 44px", margin:0, textShadow:"0 0 18px rgba(212,175,55,0.3)" }}>
+            Cheers to another year of joy, laughter &amp; unforgettable memories!
+          </p>
+          <motion.div animate={{ opacity:[0.4,0.9,0.4] }} transition={{ duration:2.4, repeat:Infinity }}
+            style={{ fontSize:18, letterSpacing:8, color:"rgba(212,175,55,0.55)" }}>✦ ✦ ✦</motion.div>
+        </motion.div>
+      )}
+
+      {photoUrls.length === 1 && (
+        /* ── 1 photo: single large centered polaroid + caption below ── */
+        <>
+          <PolaroidFrame idx={0} top={190} left={119} rotate={0} floatDelay={0} imageSrc={p0}/>
+          <motion.div style={{ position:"absolute", left:0, right:0, bottom:118, textAlign:"center",
+            padding:"0 36px" }}
+            initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+            transition={{ delay:0.7, duration:0.6 }}>
+            <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
+              fontSize:14, lineHeight:1.75, color:"#D4AF37",
+              margin:0, textShadow:"0 0 18px rgba(212,175,55,0.3)" }}>
+              Cheers to another year of joy, laughter &amp; unforgettable memories!
+            </p>
+          </motion.div>
+        </>
+      )}
+
+      {photoUrls.length === 2 && (
+        /* ── 2 photos: two staggered polaroids + right-side caption ── */
+        <>
+          <PolaroidFrame idx={0} top={175} left={12}  rotate={-5} floatDelay={0}   imageSrc={p0}/>
+          <PolaroidFrame idx={1} top={375} left={22}  rotate={3}  floatDelay={0.5} imageSrc={p1}/>
+          <motion.div style={{ position:"absolute", right:18, top:310, width:148, textAlign:"right" }}
+            initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
+            transition={{ delay:0.9, duration:0.7 }}>
+            <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
+              fontSize:14, lineHeight:1.75, color:"#D4AF37",
+              margin:0, textShadow:"0 0 18px rgba(212,175,55,0.3)" }}>
+              Cheers to another year of joy, laughter &amp; unforgettable memories!
+            </p>
+          </motion.div>
+        </>
+      )}
+
+      {photoUrls.length >= 3 && (
+        /* ── 3+ photos: original three-polaroid layout ── */
         <>
           <PolaroidFrame idx={0} top={168} left={6}  rotate={-7} floatDelay={0}   imageSrc={p0}/>
           <PolaroidFrame idx={1} top={341} left={34} rotate={-2} floatDelay={0.6} imageSrc={p1}/>
@@ -684,17 +735,6 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
             </p>
           </motion.div>
         </>
-      ) : (
-        <motion.div style={{ position:"absolute", left:0, right:0, top:160, bottom:120,
-          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
-          <div style={{ fontSize:56 }}>📸</div>
-          <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
-            fontSize:15, lineHeight:1.7, color:"#D4AF37", textAlign:"center",
-            padding:"0 40px", margin:0 }}>
-            Cheers to another year of fun, laughter &amp; unforgettable memories!
-          </p>
-        </motion.div>
       )}
 
       <motion.button onClick={onNext} style={{
@@ -745,30 +785,42 @@ function Confetto({ x, y, c, s, t, r }: { x:number,y:number,c:string,s:number,t:
 
 const WAVE_H = [14,28,20,38,16,44,22,36,18,32,30,46,14,38,24,42,16,28,26,40,18,34,22,30,14,44];
 
-function VoiceNote({ onDone }: { onDone:()=>void }) {
+function VoiceNote({ voiceUrl, onDone }: { voiceUrl: string, onDone:()=>void }) {
   const [playing, setPlaying] = useState(false);
   const [secs, setSecs]       = useState(0);
+  const [duration, setDuration] = useState(30);
   const [done, setDone]       = useState(false);
-  const TOTAL = 8;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
   useEffect(() => {
-    if (!playing || done) return;
-    const iv = setInterval(() => {
-      setSecs(s => {
-        if (s + 1 >= TOTAL) { setPlaying(false); setDone(true); onDone(); clearInterval(iv); return TOTAL; }
-        return s + 1;
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [playing, done, onDone]);
-  const pct = done ? 100 : (secs / TOTAL) * 100;
-  const fmt = (n: number) => `0:${String(n).padStart(2,"0")}`;
+    const audio = new Audio(voiceUrl);
+    audioRef.current = audio;
+    audio.onloadedmetadata = () => {
+      if (isFinite(audio.duration) && audio.duration > 0) setDuration(Math.ceil(audio.duration));
+    };
+    audio.ontimeupdate = () => setSecs(Math.floor(audio.currentTime));
+    audio.onended = () => { setPlaying(false); setDone(true); onDoneRef.current(); };
+    return () => { audio.pause(); audio.src = ""; audioRef.current = null; };
+  }, [voiceUrl]);
+
+  function toggle() {
+    const audio = audioRef.current;
+    if (!audio || done) return;
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play().then(() => setPlaying(true)).catch(() => {}); }
+  }
+
+  const pct = done ? 100 : (secs / duration) * 100;
+  const fmt = (n: number) => `0:${String(Math.floor(n)).padStart(2,"0")}`;
   return (
     <div style={{ display:"flex", alignItems:"center", gap:12,
       background:"rgba(255,255,255,0.07)", backdropFilter:"blur(12px)",
       border:"1px solid rgba(212,175,55,0.28)", borderRadius:50,
       padding:"10px 16px 10px 10px" }}>
       <motion.button
-        onClick={() => { if (!done) setPlaying(p => !p); }}
+        onClick={toggle}
         whileTap={{ scale:0.88 }}
         style={{ width:46, height:46, borderRadius:"50%", flexShrink:0,
           background:"linear-gradient(135deg,#C4913A,#D4AF37,#F0D060)",
@@ -793,7 +845,7 @@ function VoiceNote({ onDone }: { onDone:()=>void }) {
         </div>
         <div style={{ display:"flex", justifyContent:"space-between", marginTop:3 }}>
           <span style={{ fontSize:9, color:"rgba(212,175,55,0.75)", fontFamily:"monospace" }}>{fmt(secs)}</span>
-          <span style={{ fontSize:9, color:"rgba(255,255,255,0.28)", fontFamily:"monospace" }}>{fmt(TOTAL)}</span>
+          <span style={{ fontSize:9, color:"rgba(255,255,255,0.28)", fontFamily:"monospace" }}>{fmt(duration)}</span>
         </div>
       </div>
     </div>
@@ -859,8 +911,22 @@ function EmojiOrbs() {
   );
 }
 
-function Scene5({ onNext, personalPicUrl }: { onNext:()=>void, personalPicUrl:string }) {
-  const [voiceDone, setVoiceDone] = useState(false);
+function Scene5({ onNext, personalPicUrl, voiceUrl }: {
+  onNext: () => void,
+  personalPicUrl: string,
+  voiceUrl: string,
+}) {
+  const hasAudio = voiceUrl.length > 0;
+  /* voiceDone starts true when there's no audio — arrow appears after 2s via timer */
+  const [voiceDone, setVoiceDone] = useState(!hasAudio);
+
+  /* When no audio, auto-reveal Continue arrow after 2s */
+  useEffect(() => {
+    if (hasAudio) return;
+    const t = setTimeout(() => setVoiceDone(true), 2000);
+    return () => clearTimeout(t);
+  }, [hasAudio]);
+
   return (
     <motion.div key="s5" style={{ position:"absolute", inset:0, zIndex:12, overflow:"hidden" }}
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -900,19 +966,22 @@ function Scene5({ onNext, personalPicUrl }: { onNext:()=>void, personalPicUrl:st
           Sending you all<br/>the love &amp; happiness! 💖
         </motion.p>
 
-        <motion.div style={{ width:"100%", marginBottom:20 }}
-          initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
-          transition={{ delay:0.6 }}>
-          <VoiceNote onDone={() => setVoiceDone(true)}/>
-        </motion.div>
+        {/* Voice note — only when audio URL is present */}
+        {hasAudio && (
+          <motion.div style={{ width:"100%", marginBottom:20 }}
+            initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+            transition={{ delay:0.6 }}>
+            <VoiceNote voiceUrl={voiceUrl} onDone={() => setVoiceDone(true)}/>
+          </motion.div>
+        )}
 
-        <motion.div style={{ width:"100%" }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.9 }}>
+        <motion.div style={{ width:"100%", marginTop: hasAudio ? 0 : 8 }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay: hasAudio ? 0.9 : 0.5 }}>
           <EmojiOrbs/>
         </motion.div>
       </div>
 
-      {/* Arrow to next scene */}
+      {/* Arrow to next scene — appears immediately when no audio, or after voice note ends */}
       <AnimatePresence>
         {voiceDone && (
           <motion.button onClick={onNext}
@@ -1111,6 +1180,9 @@ export default function BirthdayCard() {
   const personalPicUrl = params.get("personalpicture")
     ? decodeURIComponent(params.get("personalpicture")!)
     : photoUrls[0] ?? "";
+  const voiceUrl = params.get("voicenote")
+    ? decodeURIComponent(params.get("voicenote")!)
+    : "";
 
   /* scenes: 1 = gift, 2 = cake, 3 = teaser, 4 = polaroids, 5 = confetti+voice, 6 = message */
   const [scene, setScene] = useState<1|2|3|4|5|6>(1);
@@ -1197,7 +1269,7 @@ export default function BirthdayCard() {
             <Scene4 key="s4" photoUrls={photoUrls} onNext={() => setScene(5)}/>
           )}
           {scene === 5 && (
-            <Scene5 key="s5" personalPicUrl={personalPicUrl} onNext={() => setScene(6)}/>
+            <Scene5 key="s5" personalPicUrl={personalPicUrl} voiceUrl={voiceUrl} onNext={() => setScene(6)}/>
           )}
           {scene === 6 && (
             <Scene6 key="s6"
