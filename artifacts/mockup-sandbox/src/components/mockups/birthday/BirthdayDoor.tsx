@@ -191,8 +191,8 @@ function Scene1({ onNext }: { onNext:()=>void }) {
       <div style={{ position:"absolute", left:0, right:0, top:50,
         textAlign:"center", zIndex:5, pointerEvents:"none" }}>
         <motion.p style={{
-          fontFamily:"'Playfair Display',Georgia,serif",
-          fontStyle:"italic", fontWeight:700, fontSize:46, lineHeight:1.2, margin:0,
+          fontFamily:"'Great Vibes','Dancing Script',cursive",
+          fontWeight:400, fontSize:58, lineHeight:1.2, margin:0,
           color:"#D4AF37", display:"inline-block", letterSpacing:1,
           filter:"drop-shadow(0 0 14px rgba(212,175,55,0.7)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))",
         }}
