@@ -1582,6 +1582,75 @@ function VoiceNote({ onDone }: { onDone:()=>void }) {
   );
 }
 
+/* ── Emoji orbs with popup messages ── */
+const EMOJI_ORBS = [
+  { emoji:"💗", msg:"You're loved more than words can say! 🌸" },
+  { emoji:"⭐", msg:"You shine brighter than all the stars! ✨" },
+  { emoji:"🥂", msg:"Here's to you & all your dreams coming true! 🎉" },
+];
+
+function EmojiOrbs() {
+  const [active, setActive] = useState<number|null>(null);
+  return (
+    <div style={{ display:"flex", justifyContent:"center", gap:20 }}>
+      {EMOJI_ORBS.map((o,i) => (
+        <div key={i} style={{ position:"relative", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+          <AnimatePresence>
+            {active===i && (
+              <motion.div
+                initial={{ opacity:0, y:8, scale:0.85 }}
+                animate={{ opacity:1, y:0, scale:1 }}
+                exit={{ opacity:0, y:5, scale:0.9 }}
+                transition={{ duration:0.22 }}
+                style={{
+                  position:"absolute", bottom:"calc(100% + 8px)",
+                  background:"rgba(28,10,6,0.93)",
+                  border:"1px solid rgba(212,175,55,0.4)",
+                  borderRadius:12, padding:"7px 11px",
+                  fontSize:11, lineHeight:1.4,
+                  color:"rgba(255,241,220,0.95)",
+                  textAlign:"center", whiteSpace:"nowrap",
+                  backdropFilter:"blur(8px)",
+                  boxShadow:"0 4px 20px rgba(0,0,0,0.55)",
+                  zIndex:30,
+                }}>
+                {o.msg}
+                {/* little arrow tip */}
+                <div style={{
+                  position:"absolute", bottom:-5, left:"50%", transform:"translateX(-50%)",
+                  width:10, height:10, background:"rgba(28,10,6,0.93)",
+                  borderRight:"1px solid rgba(212,175,55,0.4)",
+                  borderBottom:"1px solid rgba(212,175,55,0.4)",
+                  rotate:"45deg",
+                }}/>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <motion.button
+            onClick={() => setActive(active===i ? null : i)}
+            whileTap={{ scale:0.88 }}
+            animate={active===i ? {
+              boxShadow:"0 0 18px rgba(212,175,55,0.55)",
+              background:"rgba(212,175,55,0.14)",
+            } : {
+              boxShadow:"none",
+              background:"rgba(255,255,255,0.06)",
+            }}
+            style={{
+              width:52, height:52, borderRadius:"50%",
+              border:"1px solid rgba(212,175,55,0.28)",
+              backdropFilter:"blur(8px)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:24, cursor:"pointer",
+            }}>
+            {o.emoji}
+          </motion.button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Scene5({ onReplay }: { onReplay:()=>void }) {
   const [arrowLit, setArrowLit] = useState(false);
 
@@ -1615,29 +1684,65 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
 
       {/* ── Wish text ── */}
       <motion.p style={{
-        position:"absolute", top:108, left:20, right:20,
+        position:"absolute", top:100, left:24, right:24,
         textAlign:"center", margin:0,
-        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:18,
-        lineHeight:1.45,
+        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:17,
+        lineHeight:1.5,
         background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
         WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        zIndex:8, letterSpacing:0.5,
+        zIndex:8, letterSpacing:0.4,
       }}
         initial={{ opacity:0 }} animate={{ opacity:1 }}
         transition={{ delay:0.5, duration:0.6 }}>
-        Wishing you lots of love,<br/>laughter &amp; happiness. ✨
+        The world is so lucky to have you in it.<br/>Wishing you all the happiness you deserve!
       </motion.p>
 
-      {/* ── Voice note ── */}
-      <motion.div style={{ position:"absolute", top:206, left:20, right:20, zIndex:12 }}
+      {/* ── Voice note row + inline arrow ── */}
+      <motion.div style={{
+        position:"absolute", top:204, left:20, right:20, zIndex:12,
+        display:"flex", alignItems:"center", gap:10,
+      }}
         initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
         transition={{ delay:0.65, duration:0.6 }}>
-        <VoiceNote onDone={() => setArrowLit(true)}/>
+        <div style={{ flex:1 }}>
+          <VoiceNote onDone={() => setArrowLit(true)}/>
+        </div>
+        {/* Arrow inline */}
+        <motion.button
+          onClick={onReplay}
+          style={{
+            width:50, height:50, borderRadius:"50%", flexShrink:0,
+            cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:22, border:"none",
+          }}
+          animate={arrowLit ? {
+            background:"linear-gradient(135deg,#C4913A,#D4AF37)",
+            color:"#1c0a06",
+            boxShadow:"0 4px 20px rgba(212,175,55,0.55)",
+          } : {
+            background:"rgba(212,175,55,0.08)",
+            color:"rgba(212,175,55,0.35)",
+            boxShadow:"none",
+          }}
+          initial={{ scale:0, opacity:0 }}
+          transition={{ type:"spring", stiffness:280, damping:20 }}
+          whileHover={{ scale: arrowLit ? 1.1 : 1.04 }}
+          whileTap={{ scale:0.92 }}>
+          →
+        </motion.button>
+      </motion.div>
+
+      {/* ── Emoji orbs ── */}
+      <motion.div style={{ position:"absolute", top:284, left:20, right:20, zIndex:22 }}
+        initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.85, duration:0.55 }}>
+        <EmojiOrbs />
       </motion.div>
 
       {/* ── Photo sticker — covers lower half, bottom-pinned ── */}
       <motion.div style={{
-        position:"absolute", top:"42%", bottom:0,
+        position:"absolute", top:"45%", bottom:0,
         left:0, right:0, zIndex:10,
         display:"flex", alignItems:"flex-end", justifyContent:"center",
         overflow:"hidden",
@@ -1652,36 +1757,6 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
           }}/>
       </motion.div>
 
-      {/* ── Arrow — always visible; lights up after voice note played ── */}
-      <motion.button
-        onClick={onReplay}
-        style={{
-          position:"absolute", top:298, left:"calc(50% - 27px)", zIndex:22,
-          width:54, height:54, borderRadius:"50%",
-          border: arrowLit ? "none" : "1.5px solid rgba(212,175,55,0.35)",
-          cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:24,
-        }}
-        animate={arrowLit ? {
-          background:"linear-gradient(135deg,#C4913A,#D4AF37)",
-          color:"#1c0a06",
-          boxShadow:"0 4px 20px rgba(212,175,55,0.55)",
-          scale:1,
-          opacity:1,
-        } : {
-          background:"rgba(212,175,55,0.08)",
-          color:"rgba(212,175,55,0.38)",
-          boxShadow:"none",
-          scale:1,
-          opacity:1,
-        }}
-        initial={{ scale:0, opacity:0 }}
-        transition={{ type:"spring", stiffness:280, damping:20 }}
-        whileHover={{ scale: arrowLit ? 1.12 : 1.04 }}
-        whileTap={{ scale:0.93 }}>
-        →
-      </motion.button>
     </motion.div>
   );
 }
