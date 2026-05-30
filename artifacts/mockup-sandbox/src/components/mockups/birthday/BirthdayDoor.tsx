@@ -154,23 +154,65 @@ function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
 /* ══════════════════════════════════════════
    SCENE 1 — Floating tappable balloon
 ══════════════════════════════════════════ */
+const BURST_PTS = Array.from({length:12}, (_,i)=>{
+  const angle = (i/12)*Math.PI*2 - Math.PI/2;
+  const dist  = 58 + (i%3)*14;
+  return { tx: Math.round(Math.cos(angle)*dist), ty: Math.round(Math.sin(angle)*dist),
+    c: i%3===0?"#D4AF37":i%3===1?"#C9846A":"#F0D060", r:3+(i%3) };
+});
+
 function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
   const cx=195, cy=255, r=50;
   const gid = S1G[5].id;
+  const [popped, setPopped] = useState(false);
+
+  const handleTap = () => {
+    if (popped) return;
+    setPopped(true);
+    setTimeout(onTap, 680);
+  };
+
   return (
     <g>
-      {/* Long string to gift */}
-      <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${GBY-GBH}`}
-        fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
-      {/* Pulsing ring */}
-      <motion.circle cx={cx} cy={cy} r={r+8}
-        fill="none" stroke="rgba(212,175,55,0.45)" strokeWidth={2.5}
-        animate={{ r:[r+8,r+22], opacity:[0.6,0] }}
-        transition={{ duration:1.9, repeat:Infinity, ease:"easeOut" }}/>
-      {/* The balloon — tappable */}
-      <motion.g animate={{ y:[0,-13,0,9,0], rotate:[-2,2,-1,2.5,-2] }}
-        transition={{ duration:3.8, repeat:Infinity, ease:"easeInOut" }}
-        onClick={onTap} style={{ cursor:"pointer" }}>
+      {/* Long string to gift — hides on pop */}
+      {!popped && (
+        <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${GBY-GBH}`}
+          fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
+      )}
+      {/* Pulsing ring — hides on pop */}
+      {!popped && (
+        <motion.circle cx={cx} cy={cy} r={r+8}
+          fill="none" stroke="rgba(212,175,55,0.45)" strokeWidth={2.5}
+          animate={{ r:[r+8,r+22], opacity:[0.6,0] }}
+          transition={{ duration:1.9, repeat:Infinity, ease:"easeOut" }}/>
+      )}
+
+      {/* Burst particles — shown on pop */}
+      {popped && BURST_PTS.map((p,i)=>(
+        <motion.circle key={i} cx={cx} cy={cy} r={p.r}
+          fill={p.c}
+          initial={{ x:0, y:0, opacity:1 }}
+          animate={{ x:p.tx, y:p.ty, opacity:0 }}
+          transition={{ duration:0.55, delay:i*0.018, ease:[0.16,1,0.3,1] }}/>
+      ))}
+      {/* Pop flash */}
+      {popped && (
+        <motion.circle cx={cx} cy={cy} r={r+6}
+          fill="white"
+          initial={{ opacity:0.65 }}
+          animate={{ opacity:0 }}
+          transition={{ duration:0.22 }}/>
+      )}
+
+      {/* The balloon — floats, then pops out */}
+      <motion.g
+        animate={popped
+          ? { opacity:0 }
+          : { y:[0,-13,0,9,0], rotate:[-2,2,-1,2.5,-2] }}
+        transition={popped
+          ? { duration:0.18, ease:"easeIn" }
+          : { duration:3.8, repeat:Infinity, ease:"easeInOut" }}
+        onClick={handleTap} style={{ cursor:"pointer" }}>
         <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
         <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
           fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
