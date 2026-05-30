@@ -238,7 +238,7 @@ function Scene1({ onNext }: { onNext:()=>void }) {
         textAlign:"center", zIndex:5, pointerEvents:"none" }}>
         <motion.p style={{
           fontFamily:"'Great Vibes', cursive",
-          fontWeight:400, fontSize:58, lineHeight:1.2, margin:0,
+          fontWeight:400, fontSize:46, lineHeight:1.2, margin:0,
           display:"inline-block", letterSpacing:1,
           background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
           WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
@@ -917,7 +917,7 @@ function Scene3({ onNext }: { onNext:()=>void }) {
 
         <motion.p style={{
           fontFamily:"'Brush Script MT','Segoe Script','Comic Sans MS',cursive",
-          fontStyle:"italic", fontSize:38, lineHeight:1.3, textAlign:"center",
+          fontStyle:"italic", fontSize:30, lineHeight:1.3, textAlign:"center",
           margin:0, padding:"0 32px",
           background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 45%,#FFF4B0 65%,#D4AF37 85%,#C9846A 100%)",
           WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
@@ -1695,7 +1695,7 @@ export function BirthdayDoor() {
               style={{
                 position:"absolute", top:52, left:0, right:0, textAlign:"center",
                 fontFamily:"'Great Vibes', cursive",
-                fontSize:54, lineHeight:1,
+                fontSize:44, lineHeight:1,
                 background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
                 WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
                 margin:0, pointerEvents:"none",
