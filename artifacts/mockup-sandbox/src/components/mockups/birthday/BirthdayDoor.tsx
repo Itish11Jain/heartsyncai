@@ -382,83 +382,76 @@ function Confetto({ x, color, delay }: { x:number; color:string; delay:number })
 /* ══════════════════════════════════════════
    HAPPY BIRTHDAY BANNER — individual hanging letters
 ══════════════════════════════════════════ */
-const HB_DEF = [
-  {ch:"H",w:26},{ch:"a",w:20},{ch:"p",w:18},{ch:"p",w:18},{ch:"y",w:20},
-  {ch:" ",w:18},
-  {ch:"B",w:24},{ch:"i",w:11},{ch:"r",w:17},{ch:"t",w:14},{ch:"h",w:20},{ch:"d",w:20},{ch:"a",w:20},{ch:"y",w:20},
-];
-const HB_ROTS = [-8,-4,-6,-3,-5, 0, -7,-3,-5,-4,-6,-3,-5,-7];
-const HB_GAP  = 6;
-function calcHbXs() {
-  const totalW = HB_DEF.reduce((s,b)=>s+b.w,0) + HB_GAP*(HB_DEF.length-1);
-  let x = (390-totalW)/2;
-  return HB_DEF.map(item=>{ const cx=x+item.w/2; x+=item.w+HB_GAP; return cx; });
-}
-const HB_XS = calcHbXs();
-const HB_STR_X1 = HB_XS[0]-18;
-const HB_STR_X2 = HB_XS[HB_XS.length-1]+18;
-const HB_SAG    = 38;
+const HB_CHARS = ["H","a","p","p","y"," ","B","i","r","t","h","d","a","y"];
+const HB_ROTS  = [-8,-4,-6,-3,-5,  0, -7,-2,-5,-4,-6,-3,-5,-7];
+const HB_STR_X1 = 3;
+const HB_STR_X2 = 387;
+const HB_SAG    = 36;
+// Spread letters edge-to-edge: x=16..374
+const HB_XS = HB_CHARS.map((_,i) => 16 + i * ((374-16)/(HB_CHARS.length-1)));
 function hbStrY(x: number) {
-  const t=(x-HB_STR_X1)/(HB_STR_X2-HB_STR_X1);
-  return 22 + HB_SAG*4*t*(1-t);
+  const t = (x - HB_STR_X1) / (HB_STR_X2 - HB_STR_X1);
+  return 20 + HB_SAG * 4 * t * (1 - t);
 }
 
 function HappyBirthdayBanner() {
   return (
-    <motion.div style={{ position:"absolute", top:44, left:0, right:0, zIndex:25, pointerEvents:"none" }}
+    <motion.div style={{ position:"absolute", top:40, left:0, right:0, zIndex:25, pointerEvents:"none" }}
       initial={{ opacity:0, y:-24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25, duration:0.7 }}>
-      <svg width={390} height={118} viewBox="0 0 390 118">
+      <svg width={390} height={130} viewBox="0 0 390 130">
         <defs>
-          <linearGradient id="bannerG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="390" y2="0">
-            <stop offset="0%"   stopColor="#9A6E00"/>
-            <stop offset="20%"  stopColor="#D4AF37"/>
-            <stop offset="50%"  stopColor="#FFF4B0"/>
-            <stop offset="80%"  stopColor="#D4AF37"/>
-            <stop offset="100%" stopColor="#9A6E00"/>
-          </linearGradient>
-          <filter id="bannerGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.6" result="b"/>
+          <filter id="lttrGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.8" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
 
-        {/* Sagging string */}
+        {/* Sagging string — full edge-to-edge */}
         <motion.path
-          d={`M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG} ${HB_STR_X2} 22`}
-          fill="none" stroke="#D4AF37" strokeWidth={1.6} opacity={0.95}
+          d={`M ${HB_STR_X1} 20 Q 195 ${20+HB_SAG} ${HB_STR_X2} 20`}
+          fill="none" stroke="#D4AF37" strokeWidth={1.8} opacity={0.95}
           animate={{ d:[
-            `M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG+6} ${HB_STR_X2} 22`,
-            `M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG-6} ${HB_STR_X2} 22`,
-            `M ${HB_STR_X1} 22 Q 195 ${22+HB_SAG+6} ${HB_STR_X2} 22`,
+            `M ${HB_STR_X1} 20 Q 195 ${20+HB_SAG+7} ${HB_STR_X2} 20`,
+            `M ${HB_STR_X1} 20 Q 195 ${20+HB_SAG-7} ${HB_STR_X2} 20`,
+            `M ${HB_STR_X1} 20 Q 195 ${20+HB_SAG+7} ${HB_STR_X2} 20`,
           ]}}
           transition={{ duration:4.5, repeat:Infinity, ease:"easeInOut" }}/>
-        <circle cx={HB_STR_X1} cy={22} r={4} fill="#B8940A" opacity={0.9}/>
-        <circle cx={HB_STR_X2} cy={22} r={4} fill="#B8940A" opacity={0.9}/>
+        <circle cx={HB_STR_X1} cy={20} r={5} fill="#B8940A" opacity={0.95}/>
+        <circle cx={HB_STR_X2} cy={20} r={5} fill="#B8940A" opacity={0.95}/>
 
         {/* Individual hanging letters */}
-        {HB_DEF.map((item, i) => {
-          if (item.ch === " ") return null;
-          const cx   = HB_XS[i];
-          const sy   = hbStrY(cx);
-          const THREAD = 15;
-          const baseline = sy + THREAD + 40;
-          const rot  = HB_ROTS[i];
+        {HB_CHARS.map((ch, i) => {
+          if (ch === " ") return null;
+          const cx     = HB_XS[i];
+          const sy     = hbStrY(cx);
+          const THREAD = 14;
+          const rot    = HB_ROTS[i];
+          const floatY = sy + THREAD + 38;
           return (
             <g key={i} transform={`rotate(${rot},${cx},${sy+THREAD})`}>
+              {/* Thread */}
               <line x1={cx} y1={sy} x2={cx} y2={sy+THREAD}
-                stroke="#C9A840" strokeWidth={1.1} opacity={0.8}/>
-              <motion.text
-                x={cx} y={baseline}
-                textAnchor="middle"
-                fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
-                fontStyle="italic" fontWeight="bold"
-                fontSize={40}
-                fill="url(#bannerG)"
-                filter="url(#bannerGlow)"
-                animate={{ y:[baseline, baseline-2, baseline] }}
-                transition={{ duration:2.8+i*0.2, repeat:Infinity, ease:"easeInOut", delay:i*0.15 }}>
-                {item.ch}
-              </motion.text>
+                stroke="#D4AF37" strokeWidth={1.2} opacity={0.85}/>
+              {/* Letter — solid gold fill (gradient on SVG text unreliable cross-browser) */}
+              <motion.g
+                animate={{ y:[0,-2.5,0] }}
+                transition={{ duration:2.6+i*0.22, repeat:Infinity, ease:"easeInOut", delay:i*0.14 }}>
+                {/* Subtle shadow for depth */}
+                <text x={cx+1} y={floatY+1} textAnchor="middle"
+                  fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                  fontStyle="italic" fontWeight="bold" fontSize={40}
+                  fill="#5C3500" opacity={0.45}>{ch}</text>
+                {/* Main letter */}
+                <text x={cx} y={floatY} textAnchor="middle"
+                  fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                  fontStyle="italic" fontWeight="bold" fontSize={40}
+                  fill="#D4AF37" filter="url(#lttrGlow)">{ch}</text>
+                {/* Highlight shimmer */}
+                <text x={cx} y={floatY} textAnchor="middle"
+                  fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                  fontStyle="italic" fontWeight="bold" fontSize={40}
+                  fill="#FFF4B0" opacity={0.28}>{ch}</text>
+              </motion.g>
             </g>
           );
         })}
@@ -485,9 +478,7 @@ const BUNCHES_DEF = [
 function BunchBalloons({ flyUp }: { flyUp: boolean }) {
   const AY = 900;
   return (
-    <motion.div style={{ position:"absolute", left:0, top:0, width:390, height:844, zIndex:14, pointerEvents:"none" }}
-      animate={flyUp ? { y:-1050 } : { y:0 }}
-      transition={flyUp ? { duration:2.6, ease:[0.25,0,0.65,1] } : {}}>
+    <div style={{ position:"absolute", left:0, top:0, width:390, height:844, zIndex:14, pointerEvents:"none" }}>
       <svg width={390} height={AY+60} viewBox={`0 0 390 ${AY+60}`}
         style={{ position:"absolute", top:0, left:0 }}>
         <defs>
@@ -503,13 +494,26 @@ function BunchBalloons({ flyUp }: { flyUp: boolean }) {
           bunch.balls.map((ball,li)=>{
             const bx=bunch.ax+ball.dx, by=AY+ball.dy, r=ball.r;
             const ci=ball.pi%P.length;
+            // Deterministic per-balloon spread: 0–1.9 s delay, ±14 px x-drift
+            const seed = bi*7 + li*13;
+            const flyDelay = (seed % 23) / 23 * 1.9;
+            const flyDrift = ((seed*3 + bi*5) % 29) - 14;
+            const flyDur   = 1.7 + (seed % 9) * 0.13;
             return (
               <g key={`${bi}-${li}`}>
-                <line x1={bx} y1={by+r} x2={bunch.ax} y2={AY}
-                  stroke="#C9A840" strokeWidth={0.9} opacity={0.5}/>
+                {/* String fades when ballon leaves */}
+                <motion.line x1={bx} y1={by+r} x2={bunch.ax} y2={AY}
+                  stroke="#C9A840" strokeWidth={0.9}
+                  animate={{ opacity: flyUp ? 0 : 0.5 }}
+                  transition={{ delay: flyUp ? flyDelay : 0, duration:0.25 }}/>
+                {/* Each balloon flies independently */}
                 <motion.g
-                  animate={{ y:[0,-3-li*0.5,0] }}
-                  transition={{ duration:2.2+bi*0.28, repeat:Infinity, ease:"easeInOut", delay:bi*0.18+li*0.1 }}>
+                  animate={flyUp
+                    ? { y:-1220, x:flyDrift }
+                    : { y:[0, -(3+li*0.5), 0] }}
+                  transition={flyUp
+                    ? { delay:flyDelay, duration:flyDur, ease:[0.22,0,0.55,1] }
+                    : { duration:2.2+bi*0.28, repeat:Infinity, ease:"easeInOut", delay:bi*0.18+li*0.1 }}>
                   <circle cx={bx} cy={by} r={r} fill={`url(#bpg${ci})`}/>
                   {(ci===1||ci===4) && [[-0.2,-0.1],[0.2,0.15],[-0.05,0.25]].map(([ddx,ddy],k)=>(
                     <circle key={k} cx={bx+ddx*r*2} cy={by+ddy*r*2} r={r*0.09}
@@ -524,7 +528,7 @@ function BunchBalloons({ flyUp }: { flyUp: boolean }) {
           })
         )}
       </svg>
-    </motion.div>
+    </div>
   );
 }
 
