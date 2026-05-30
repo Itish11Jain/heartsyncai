@@ -72,8 +72,9 @@ function processMessage(msg) {
   if (!amountMatch) return;
 
   var amount = amountMatch[1].replace(/,/g, "");
-  if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
-    Logger.log("Skipping non-₹49 payment: Rs." + amount + " | UTR " + utr);
+  var amountNum = parseFloat(amount);
+  if (amountNum < 49 || amountNum > 50) {
+    Logger.log("Skipping payment outside ₹49-50 range: Rs." + amount + " | UTR " + utr);
     markProcessed(msg.getId());  // mark so we don't check again
     return;
   }
