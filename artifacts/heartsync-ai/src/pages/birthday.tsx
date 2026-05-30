@@ -20,70 +20,81 @@ function parsePhotoUrls(raw: string | null): string[] {
   return raw.split(",").map(s => { try { return decodeURIComponent(s); } catch { return s; } }).filter(Boolean);
 }
 
-/* ─── Balloon palette ─────────────────────────────────────────────────────── */
+/* ─── Balloon palette — Rose Gold · Gold · Off-White (matches mockup) ──────── */
 const P = [
-  { c:"#E05E9A", s:"#F9C0DA" },
-  { c:"#E8A030", s:"#FAD880" },
-  { c:"#6ABDE8", s:"#B8E6F9" },
-  { c:"#9B60C8", s:"#D4B0F0" },
-  { c:"#48B87A", s:"#A8E8C0" },
+  { c:"#C9846A", s:"#F5D0C0" },
+  { c:"#D4AF37", s:"#F5E57A" },
+  { c:"#FFF5EE", s:"#FFFFFF" },
+  { c:"#E8A07A", s:"#F8D5C0" },
+  { c:"#C4913A", s:"#ECD080" },
+  { c:"#F2DFC8", s:"#FFFBF5" },
 ];
 
-/* ─── Star field ──────────────────────────────────────────────────────────── */
-const STARS_DATA = Array.from({ length: 90 }, (_, i) => ({
-  x: ((i * 137.5) % 390),
-  y: ((i * 97.3 + 42) % 844),
-  r: 0.5 + ((i * 23) % 13) / 10,
-  op: 0.12 + ((i * 31) % 22) / 40,
-  dur: 2.2 + ((i * 7) % 19) / 5,
-  del: ((i * 11) % 17) / 5,
+/* ─── Rich twinkle background (matches mockup) ───────────────────────────── */
+const TW_DOTS = Array.from({length:45},(_,i)=>({
+  x:(i*173.1+31)%370+10, y:(i*97.7+55)%760+72,
+  r:0.8+(i%5)*0.6, dur:1.8+(i%8)*0.35, delay:(i*0.27)%4,
+  color:["#FFD700","#F5E0A0","#FFFDE8","#E8C84A","#D4AF37"][i%5],
 }));
-
-function StarField() {
-  return (
-    <svg width={390} height={844} viewBox="0 0 390 844"
-      style={{ position:"absolute", top:0, left:0, zIndex:1, pointerEvents:"none" }}>
-      {STARS_DATA.map((s, i) => (
-        <motion.circle key={i} cx={s.x} cy={s.y} r={s.r}
-          fill="#FFF4B0" opacity={s.op}
-          animate={{ opacity: [s.op, s.op * 2.2, s.op] }}
-          transition={{ duration: s.dur, repeat: Infinity, delay: s.del, ease:"easeInOut" }}/>
-      ))}
-    </svg>
-  );
-}
-
-function Nebulae() {
-  return (
-    <svg width={390} height={844} viewBox="0 0 390 844"
-      style={{ position:"absolute", top:0, left:0, zIndex:0, pointerEvents:"none" }}>
-      <defs>
-        <radialGradient id="nb1" cx="30%" cy="25%" r="48%">
-          <stop offset="0%" stopColor="#8B1040" stopOpacity={0.22}/>
-          <stop offset="100%" stopColor="#8B1040" stopOpacity={0}/>
-        </radialGradient>
-        <radialGradient id="nb2" cx="70%" cy="65%" r="44%">
-          <stop offset="0%" stopColor="#4A2080" stopOpacity={0.18}/>
-          <stop offset="100%" stopColor="#4A2080" stopOpacity={0}/>
-        </radialGradient>
-        <radialGradient id="nb3" cx="50%" cy="90%" r="40%">
-          <stop offset="0%" stopColor="#9A4020" stopOpacity={0.14}/>
-          <stop offset="100%" stopColor="#9A4020" stopOpacity={0}/>
-        </radialGradient>
-      </defs>
-      <ellipse cx={117} cy={211} rx={220} ry={160} fill="url(#nb1)"/>
-      <ellipse cx={273} cy={548} rx={200} ry={160} fill="url(#nb2)"/>
-      <ellipse cx={195} cy={760} rx={210} ry={130} fill="url(#nb3)"/>
-    </svg>
-  );
-}
+const TW_SPARKLES = Array.from({length:18},(_,i)=>({
+  x:(i*211.3+67)%350+20, y:(i*131.7+80)%680+80,
+  s:3+(i%4)*2, dur:3.5+(i%6)*0.5, delay:(i*0.45)%5,
+  ry:30+(i%4)*25, rx:(i%3-1)*18,
+  col:["#FFD700","#FFF8C8","#F0D060"][i%3],
+}));
+const TW_ORBS = Array.from({length:6},(_,i)=>({
+  x:[80,195,310,120,260,155][i], y:[150,280,200,520,420,650][i],
+  r:18+(i%3)*12, dur:6+(i%4)*1.5, delay:i*0.8,
+}));
 
 function TwinkleBackground() {
   return (
     <div style={{ position:"absolute", inset:0, zIndex:1, pointerEvents:"none",
       background:"linear-gradient(175deg,#1c0a06 0%,#0e0502 100%)" }}>
-      <Nebulae/>
-      <StarField/>
+      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",zIndex:1,pointerEvents:"none"}}>
+        {TW_ORBS.map((o,i)=>(
+          <motion.circle key={`orb${i}`} cx={o.x} cy={o.y} r={o.r}
+            fill="none" stroke="#D4AF37" strokeWidth={0.8}
+            animate={{scale:[1,1.35,1], opacity:[0.06,0.22,0.06]}}
+            transition={{duration:o.dur, repeat:Infinity, delay:o.delay, ease:"easeInOut"}}
+            style={{transformOrigin:`${o.x}px ${o.y}px`}}/>
+        ))}
+        {TW_DOTS.map((s,i)=>(
+          <motion.circle key={i} cx={s.x} cy={s.y} r={s.r}
+            fill={s.color}
+            animate={{opacity:[0.04,0.95,0.1,0.8,0.04], scale:[1,1.6,1,1.3,1]}}
+            transition={{duration:s.dur, repeat:Infinity, delay:s.delay, ease:"easeInOut"}}
+            style={{transformOrigin:`${s.x}px ${s.y}px`}}/>
+        ))}
+        {[...Array(10)].map((_,i)=>{
+          const x=(i*211+89)%340+25, y=(i*137+110)%660+90, s=4+(i%4)*1.5;
+          const col=["#FFD700","#F5E0A0","#FFF8E8"][i%3];
+          return (
+            <motion.g key={`sp${i}`}
+              animate={{rotate:[0,45,0,-45,0], scale:[0.5,1,0.6,1,0.5], opacity:[0.2,0.9,0.25,0.8,0.2]}}
+              transition={{duration:2.2+(i%5)*0.5, repeat:Infinity, delay:(i*0.55)%4}}
+              style={{transformOrigin:`${x}px ${y}px`}}>
+              <line x1={x-s} y1={y} x2={x+s} y2={y} stroke={col} strokeWidth={1.4} strokeLinecap="round"/>
+              <line x1={x} y1={y-s} x2={x} y2={y+s} stroke={col} strokeWidth={1.4} strokeLinecap="round"/>
+              <line x1={x-s*0.65} y1={y-s*0.65} x2={x+s*0.65} y2={y+s*0.65} stroke={col} strokeWidth={0.7} strokeLinecap="round" opacity={0.55}/>
+              <line x1={x+s*0.65} y1={y-s*0.65} x2={x-s*0.65} y2={y+s*0.65} stroke={col} strokeWidth={0.7} strokeLinecap="round" opacity={0.55}/>
+            </motion.g>
+          );
+        })}
+        <ellipse cx={55}  cy={200} rx={85} ry={65}  fill="#6B2A1A" opacity={0.22}/>
+        <ellipse cx={335} cy={180} rx={75} ry={58}  fill="#5C3A10" opacity={0.20}/>
+        <ellipse cx={195} cy={750} rx={125} ry={75} fill="#7A3820" opacity={0.18}/>
+      </svg>
+      {TW_SPARKLES.map((p,i)=>(
+        <motion.div key={i} style={{position:"absolute", left:p.x, top:p.y, zIndex:2, pointerEvents:"none"}}
+          animate={{y:[0,-p.ry,0], x:[0,p.rx,0,-p.rx*0.5,0], opacity:[0,0.85,0.35,0.7,0], scale:[0.4,1,0.6,1,0.4]}}
+          transition={{duration:p.dur, repeat:Infinity, delay:p.delay, ease:"easeInOut"}}>
+          <svg width={p.s*2} height={p.s*2} viewBox={`0 0 ${p.s*2} ${p.s*2}`}>
+            <line x1={p.s} y1={0} x2={p.s} y2={p.s*2} stroke={p.col} strokeWidth={1.3} strokeLinecap="round"/>
+            <line x1={0} y1={p.s} x2={p.s*2} y2={p.s} stroke={p.col} strokeWidth={1.3} strokeLinecap="round"/>
+          </svg>
+        </motion.div>
+      ))}
     </div>
   );
 }
@@ -241,63 +252,92 @@ function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
   );
 }
 
-/* ─── Scene 2: Birthday Cake ─────────────────────────────────────────────── */
-function CandleFlame({ blown }: { blown:boolean }) {
-  if (blown) {
-    return (
-      <motion.div style={{
-        width:3, height:16, borderRadius:3,
-        background:"rgba(220,220,220,0.45)",
-        position:"absolute", top:-22, left:"50%", marginLeft:-1.5,
-      }}
-        animate={{ opacity:[0.7,0], y:[0,-14,-20], scaleX:[1,2.5,0] }}
-        transition={{ duration:1.4, repeat:Infinity }}/>
-    );
-  }
+/* ─── Scene 2: Birthday Cake (matches mockup — SVG flame + 3-tier cake) ───── */
+function CandleFlame({ cx, cy, blown }: { cx:number; cy:number; blown:boolean }) {
   return (
-    <motion.div style={{
-      width:14, height:22, borderRadius:"50% 50% 35% 35% / 65% 65% 35% 35%",
-      background:"linear-gradient(180deg,#FFFFE0 0%,#FFAA00 45%,#FF5500 100%)",
-      filter:"blur(0.6px)",
-      boxShadow:"0 0 14px 7px rgba(255,150,0,0.65),0 0 5px 2px rgba(255,255,100,0.5)",
-      position:"absolute", top:-30, left:"50%", marginLeft:-7,
-    }}
-      animate={{ scaleX:[1,0.5,1,0.68,1], scaleY:[1,1.22,0.86,1.18,1], rotate:[-3,3,-1,4,-3] }}
-      transition={{ duration:0.4, repeat:Infinity, ease:"easeInOut" }}/>
+    <motion.g animate={{ opacity: blown ? 0 : 1 }} transition={{ duration:0.25 }}>
+      <motion.ellipse cx={cx} cy={cy} rx={3.5} ry={6} fill="#FFD700"
+        animate={blown ? {} : { scaleX:[1,0.7,1.1,0.85,1], scaleY:[1,1.1,0.9,1.05,1] }}
+        transition={{ duration:0.75, repeat:Infinity }} style={{ transformOrigin:`${cx}px ${cy}px` }}/>
+      <motion.ellipse cx={cx} cy={cy+1.5} rx={2} ry={3.5} fill="#FF8C00"
+        animate={blown ? {} : { scaleX:[1,0.8,1.1,0.9,1] }} transition={{ duration:0.75, repeat:Infinity }}
+        style={{ transformOrigin:`${cx}px ${cy+1.5}px` }}/>
+      <motion.ellipse cx={cx} cy={cy+2.5} rx={1} ry={2} fill="white" opacity={0.5}
+        animate={blown ? {} : { opacity:[0.5,0.9,0.45,0.75,0.5] }} transition={{ duration:0.6, repeat:Infinity }}/>
+    </motion.g>
   );
 }
 
 function Cake({ blown }: { blown:boolean }) {
+  const dotC = ["#D4AF37","#C9846A","#FFF5EE","#E8A07A","#C4913A","#F2DFC8"];
   return (
-    <svg width={220} height={170} viewBox="0 0 220 170" style={{ overflow:"visible" }}>
+    <svg viewBox="0 0 280 280" style={{ width:"100%", height:"100%", overflow:"visible" }}>
       <defs>
-        <linearGradient id="ckBot2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#C9849A"/><stop offset="100%" stopColor="#8A3A50"/>
+        <radialGradient id="ct1" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4956A"/><stop offset="100%" stopColor="#8C4A30"/></radialGradient>
+        <radialGradient id="ct2" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4AF37"/><stop offset="100%" stopColor="#8C6A10"/></radialGradient>
+        <radialGradient id="ct3" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#FFF5EE"/><stop offset="100%" stopColor="#E8D0B8"/></radialGradient>
+        <filter id="cglo"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <linearGradient id="cnd1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#6B2C14"/>
+          <stop offset="28%" stopColor="#E8A07A"/>
+          <stop offset="52%" stopColor="#C9846A"/>
+          <stop offset="100%" stopColor="#6B2C14"/>
         </linearGradient>
-        <linearGradient id="ckTop2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#D4909E"/><stop offset="100%" stopColor="#A05060"/>
+        <linearGradient id="cnd2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#6B4800"/>
+          <stop offset="28%" stopColor="#F5D060"/>
+          <stop offset="52%" stopColor="#D4AF37"/>
+          <stop offset="100%" stopColor="#6B4800"/>
         </linearGradient>
-        <linearGradient id="ckPlate2" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#F0D060"/><stop offset="100%" stopColor="#B89020"/>
+        <linearGradient id="cnd3" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#AE9880"/>
+          <stop offset="28%" stopColor="#FFFFFF"/>
+          <stop offset="52%" stopColor="#FFF5EE"/>
+          <stop offset="100%" stopColor="#AE9880"/>
         </linearGradient>
+        <radialGradient id="cap1" cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="#F2C0A0"/><stop offset="100%" stopColor="#8C4A30"/></radialGradient>
+        <radialGradient id="cap2" cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="#FAE090"/><stop offset="100%" stopColor="#8C6A10"/></radialGradient>
+        <radialGradient id="cap3" cx="35%" cy="35%" r="65%"><stop offset="0%" stopColor="#FFFFFF"/><stop offset="100%" stopColor="#C8B0A0"/></radialGradient>
       </defs>
-      <ellipse cx={110} cy={162} rx={100} ry={7} fill="url(#ckPlate2)" opacity={0.8}/>
-      {/* Bottom tier */}
-      <rect x={10} y={92} width={200} height={70} rx={10} fill="url(#ckBot2)"/>
-      <path d="M10,92 C24,76 38,92 52,80 C66,68 80,92 96,80 C112,68 128,92 148,80 C164,68 180,92 210,80"
-        fill="none" stroke="#F5DDE6" strokeWidth={7} strokeLinecap="round"/>
-      {[42,76,110,144,178].map((x,i) => (
-        <circle key={i} cx={x} cy={118} r={4.5} fill="#F0D0DA" opacity={0.75}/>
+      <ellipse cx={140} cy={258} rx={92} ry={10} fill="#C4A070" opacity={0.6}/>
+      <rect x={56} y={198} width={168} height={58} rx={8} fill="url(#ct1)"/>
+      <ellipse cx={140} cy={198} rx={84} ry={9} fill="#D4956A"/>
+      <ellipse cx={140} cy={256} rx={84} ry={9} fill="#7A3C22"/>
+      {[68,88,108,128,148,168,188,208].map((x,i)=>(
+        <motion.path key={i} d={`M ${x} 198 Q ${x} 206 ${x} 211`} stroke="rgba(255,248,240,0.45)" strokeWidth={5} strokeLinecap="round" fill="none"
+          animate={{ d:[`M ${x} 198 Q ${x} 204 ${x} 209`,`M ${x} 198 Q ${x} 209 ${x} 214`,`M ${x} 198 Q ${x} 204 ${x} 209`] }}
+          transition={{ duration:3, repeat:Infinity, delay:i*0.2 }}/>
       ))}
-      {/* Top tier */}
-      <rect x={38} y={46} width={144} height={52} rx={8} fill="url(#ckTop2)"/>
-      <path d="M38,46 C52,32 66,46 80,34 C94,22 108,46 124,34 C138,22 152,46 168,34 C178,26 186,34 182,46"
-        fill="none" stroke="#F8E8EE" strokeWidth={6} strokeLinecap="round"/>
-      {/* Candles */}
-      {[62,90,110,130,158].map((cx) => (
-        <g key={cx}>
-          <rect x={cx-5} y={26} width={10} height={24} rx={5} fill="#D4AF37"/>
-          <div/>
+      {[68,92,116,140,164,188,212].map((x,i)=>(
+        <g key={i}><circle cx={x} cy={228} r={7} fill={dotC[i%dotC.length]}/><circle cx={x} cy={228} r={3.5} fill="white" opacity={0.35}/></g>
+      ))}
+      <rect x={80} y={146} width={120} height={54} rx={7} fill="url(#ct2)"/>
+      <ellipse cx={140} cy={146} rx={60} ry={8} fill="#D4AF37"/>
+      <ellipse cx={140} cy={200} rx={60} ry={8} fill="#7A5F10"/>
+      {[88,108,128,148,168,188].map((x,i)=>(
+        <g key={i}><circle cx={x} cy={173} r={6} fill={dotC[(i+2)%dotC.length]}/><circle cx={x} cy={173} r={3} fill="white" opacity={0.35}/></g>
+      ))}
+      <rect x={104} y={102} width={72} height={46} rx={7} fill="url(#ct3)"/>
+      <ellipse cx={140} cy={102} rx={36} ry={6.5} fill="#FFF5EE"/>
+      <ellipse cx={140} cy={148} rx={36} ry={6.5} fill="#D4B898"/>
+      {[115,135,155].map((x,i)=>(
+        <g key={i}><circle cx={x} cy={125} r={5} fill={dotC[(i+1)%dotC.length]}/><circle cx={x} cy={125} r={2.5} fill="white" opacity={0.4}/></g>
+      ))}
+      {[114,136,158].map((cx,i)=>(
+        <g key={i}>
+          <rect x={cx-5} y={78} width={10} height={25} rx={3} fill={`url(#cnd${i+1})`}/>
+          <ellipse cx={cx} cy={103} rx={5} ry={2} fill={["#6B2C14","#6B4800","#AE9880"][i]} opacity={0.7}/>
+          <ellipse cx={cx} cy={78} rx={5} ry={2} fill={`url(#cap${i+1})`}/>
+          <line x1={cx} y1={78} x2={cx} y2={73} stroke="#3B1A00" strokeWidth={1.5} strokeLinecap="round"/>
+          <CandleFlame cx={cx} cy={71} blown={blown}/>
+          {blown && [0,1,2,3].map(j=>(
+            <motion.ellipse key={j} cx={cx+(j%2===0?-4:4)} cy={72}
+              rx={5+j*2.5} ry={6+j*2}
+              fill={j<2?"rgba(220,215,210,0.72)":"rgba(200,195,190,0.45)"}
+              initial={{ opacity:0, y:0, scaleX:0.35, x:0 }}
+              animate={{ opacity:[0,0.72,0.55,0.2,0], y:[0,-(22+j*16)], scaleX:[0.35,1.4,1.8,2.2,0.8], x:[0,(j%2===0?-8:8),(j%2===0?-14:14),(j%2===0?-10:10)] }}
+              transition={{ duration:1.6+j*0.32, delay:j*0.2+i*0.06, repeat:Infinity, repeatDelay:0.15, ease:"easeOut" }}/>
+          ))}
         </g>
       ))}
     </svg>
@@ -306,11 +346,13 @@ function Cake({ blown }: { blown:boolean }) {
 
 const BUNCHES_DEF = [
   { ax:20,  balls:[{dx:4,dy:-50,r:20,pi:0},{dx:-18,dy:-76,r:24,pi:2},{dx:16,dy:-68,r:18,pi:1},{dx:-6,dy:-100,r:22,pi:3},{dx:14,dy:-96,r:14,pi:4}] },
-  { ax:62,  balls:[{dx:-14,dy:-53,r:22,pi:4},{dx:10,dy:-86,r:26,pi:0},{dx:-4,dy:-114,r:20,pi:2},{dx:20,dy:-66,r:16,pi:1},{dx:-18,dy:-136,r:15,pi:3}] },
-  { ax:148, balls:[{dx:6,dy:-58,r:24,pi:1},{dx:-22,dy:-88,r:28,pi:3},{dx:18,dy:-78,r:20,pi:0},{dx:-10,dy:-118,r:22,pi:2},{dx:24,dy:-106,r:14,pi:4}] },
-  { ax:195, balls:[{dx:-22,dy:-54,r:24,pi:3},{dx:16,dy:-92,r:30,pi:1},{dx:-8,dy:-126,r:22,pi:0},{dx:28,dy:-76,r:18,pi:2},{dx:0,dy:-154,r:18,pi:4}] },
-  { ax:242, balls:[{dx:10,dy:-50,r:20,pi:4},{dx:-14,dy:-82,r:24,pi:2},{dx:24,dy:-74,r:18,pi:1},{dx:-4,dy:-114,r:22,pi:3},{dx:-22,dy:-102,r:14,pi:0}] },
-  { ax:328, balls:[{dx:14,dy:-53,r:22,pi:1},{dx:-10,dy:-86,r:26,pi:3},{dx:4,dy:-114,r:20,pi:0},{dx:-20,dy:-66,r:16,pi:2},{dx:18,dy:-136,r:15,pi:4}] },
+  { ax:62,  balls:[{dx:-14,dy:-53,r:22,pi:4},{dx:10,dy:-86,r:26,pi:0},{dx:-4,dy:-114,r:20,pi:2},{dx:20,dy:-66,r:16,pi:1},{dx:-18,dy:-136,r:15,pi:3},{dx:6,dy:-118,r:12,pi:0}] },
+  { ax:106, balls:[{dx:6,dy:-58,r:24,pi:1},{dx:-22,dy:-88,r:28,pi:3},{dx:18,dy:-78,r:20,pi:0},{dx:-10,dy:-118,r:22,pi:2},{dx:24,dy:-106,r:14,pi:4}] },
+  { ax:148, balls:[{dx:-10,dy:-50,r:20,pi:2},{dx:14,dy:-82,r:24,pi:0},{dx:-24,dy:-74,r:18,pi:4},{dx:4,dy:-114,r:22,pi:1},{dx:22,dy:-102,r:14,pi:3},{dx:-6,dy:-134,r:13,pi:2}] },
+  { ax:195, balls:[{dx:-22,dy:-54,r:24,pi:3},{dx:16,dy:-92,r:30,pi:1},{dx:-8,dy:-126,r:22,pi:0},{dx:28,dy:-76,r:18,pi:2},{dx:0,dy:-154,r:18,pi:4},{dx:-24,dy:-110,r:14,pi:0},{dx:18,dy:-138,r:12,pi:2}] },
+  { ax:242, balls:[{dx:10,dy:-50,r:20,pi:4},{dx:-14,dy:-82,r:24,pi:2},{dx:24,dy:-74,r:18,pi:1},{dx:-4,dy:-114,r:22,pi:3},{dx:-22,dy:-102,r:14,pi:0},{dx:8,dy:-134,r:13,pi:1}] },
+  { ax:284, balls:[{dx:-6,dy:-58,r:24,pi:0},{dx:22,dy:-88,r:28,pi:2},{dx:-20,dy:-78,r:20,pi:1},{dx:8,dy:-118,r:22,pi:4},{dx:-26,dy:-106,r:14,pi:3}] },
+  { ax:328, balls:[{dx:14,dy:-53,r:22,pi:1},{dx:-10,dy:-86,r:26,pi:3},{dx:4,dy:-114,r:20,pi:0},{dx:-20,dy:-66,r:16,pi:2},{dx:18,dy:-136,r:15,pi:4},{dx:-4,dy:-118,r:12,pi:1}] },
   { ax:370, balls:[{dx:-4,dy:-50,r:20,pi:2},{dx:18,dy:-76,r:24,pi:0},{dx:-16,dy:-68,r:18,pi:4},{dx:6,dy:-100,r:22,pi:1},{dx:-14,dy:-96,r:14,pi:3}] },
 ];
 
@@ -365,93 +407,127 @@ function BunchBalloons({ flyUp }: { flyUp:boolean }) {
 }
 
 function Scene2({ onNext }: { onNext:()=>void }) {
+  const [cakePhase, setCakePhase] = useState<"cta"|"counting"|"blown">("cta");
+  const [countdown, setCountdown] = useState(3);
   const [blown, setBlown] = useState(false);
-  const [showNext, setShowNext] = useState(false);
+  const [flyUp, setFlyUp] = useState(false);
+
   function handleBlow() {
-    if (blown) return;
-    setBlown(true);
-    setTimeout(() => setShowNext(true), 1200);
+    setCakePhase("counting");
+    setCountdown(3);
+    setTimeout(() => setCountdown(2), 800);
+    setTimeout(() => setCountdown(1), 1600);
+    setTimeout(() => { setCakePhase("blown"); setBlown(true); setFlyUp(true); }, 2400);
+    setTimeout(() => onNext(), 6200);
   }
+
   return (
-    <motion.div key="s2" style={{ position:"absolute", inset:0, zIndex:12 }}
-      initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-      transition={{ duration:0.7 }}>
+    <motion.div key="s2" style={{ position:"absolute", inset:0, zIndex:12, display:"flex", flexDirection:"column", alignItems:"center" }}
+      initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }}
+      transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
       <TwinkleBackground/>
-      <BunchBalloons flyUp={blown}/>
-      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center", gap:0, zIndex:15 }}>
-        <motion.h1 style={{
-          fontFamily:"'Great Vibes','Dancing Script',cursive",
-          fontSize:58, margin:"0 0 6px",
-          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}
-          initial={{ opacity:0, y:-16 }} animate={{ opacity:1, y:0 }}
-          transition={{ delay:0.2, duration:0.6 }}>
-          Happy Birthday!
-        </motion.h1>
-        <motion.p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
-          fontSize:13, color:"rgba(212,175,55,0.6)", letterSpacing:2,
-          marginBottom:28 }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}>
-          {blown ? "Make a wish! 🌟" : "Blow out the candles 🎂"}
-        </motion.p>
+      <BunchBalloons flyUp={flyUp}/>
 
-        {/* Cake with overlay candle flames */}
-        <div style={{ position:"relative" }}>
+      {/* "Make a Wish" headline */}
+      <motion.h1 style={{
+        position:"absolute", top:52, left:0, right:0, textAlign:"center",
+        fontFamily:"'Great Vibes','Dancing Script',cursive",
+        fontSize:44, lineHeight:1, margin:0, pointerEvents:"none",
+        background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+      }}
+        initial={{ opacity:0, y:-16 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.2, duration:0.6 }}>
+        Make a Wish ✨
+      </motion.h1>
+
+      {/* Cake — entrance pop then continuous float */}
+      <motion.div style={{ position:"absolute", left:"50%", marginLeft:-140, top:188, width:280, height:280 }}
+        initial={{ scale:0.1, opacity:0 }} animate={{ scale:1, opacity:1 }}
+        transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
+        <motion.div style={{ width:"100%", height:"100%" }}
+          animate={{ y:[0,-9,0,6,0] }}
+          transition={{ duration:3.6, repeat:Infinity, ease:"easeInOut", delay:1.2 }}>
           <Cake blown={blown}/>
-          {/* Overlay flames on the 5 candle positions */}
-          {[62,90,110,130,158].map((cx,i) => (
-            <div key={i} style={{ position:"absolute", top:0, left:cx-5, width:14, pointerEvents:"none" }}>
-              <CandleFlame blown={blown}/>
-            </div>
-          ))}
-        </div>
+        </motion.div>
+      </motion.div>
 
-        <motion.button onClick={handleBlow} style={{
-          marginTop:36,
-          background: blown
-            ? "linear-gradient(135deg,rgba(212,175,55,0.05),rgba(212,175,55,0.12))"
-            : "linear-gradient(135deg,rgba(212,175,55,0.14),rgba(212,175,55,0.28))",
-          border:"1.5px solid rgba(212,175,55,0.55)", borderRadius:40, padding:"15px 44px",
-          color:"#F0D060", fontSize:14, letterSpacing:2.5,
-          textTransform:"uppercase", fontFamily:"Georgia,serif", cursor:"pointer",
-          opacity: blown && !showNext ? 0.5 : 1,
-        }}
-          initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.8 }}
-          whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
-          {showNext ? "Continue ✨" : blown ? "Wishing…" : "💨  Blow!"}
-        </motion.button>
-      </div>
+      {/* CTA button */}
+      <AnimatePresence>
+        {cakePhase === "cta" && (
+          <motion.div key="cta-wrap"
+            style={{ position:"absolute", top:510, left:0, right:0, display:"flex", justifyContent:"center" }}
+            initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+            exit={{ opacity:0, y:-10 }} transition={{ delay:0.7 }}>
+            <motion.button onClick={handleBlow}
+              style={{ background:"rgba(212,175,55,0.1)", border:"1.5px solid rgba(212,175,55,0.55)",
+                borderRadius:32, padding:"13px 32px", color:"#F0D060", fontSize:14, letterSpacing:2,
+                textTransform:"uppercase", fontFamily:"Georgia,serif", cursor:"pointer", whiteSpace:"nowrap" }}
+              whileHover={{ background:"rgba(212,175,55,0.22)", scale:1.04 }}
+              whileTap={{ scale:0.97 }}>
+              🕯️ Blow the Candles
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Countdown 3 → 2 → 1 */}
+      <AnimatePresence mode="wait">
+        {cakePhase === "counting" && (
+          <motion.div key={`cd-${countdown}`}
+            style={{ position:"absolute", top:488, left:0, right:0, textAlign:"center",
+              fontSize:100, fontWeight:"bold", lineHeight:1, fontFamily:"Georgia,serif",
+              background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 50%,#F0D060 100%)",
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+              pointerEvents:"none" }}
+            initial={{ scale:1.9, opacity:0 }} animate={{ scale:1, opacity:1 }}
+            exit={{ scale:0.2, opacity:0 }}
+            transition={{ duration:0.32, ease:[0.34,1.56,0.64,1] }}>
+            {countdown}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Continue button after blown */}
+      <AnimatePresence>
+        {cakePhase === "blown" && (
+          <motion.button key="continue-btn" onClick={onNext}
+            initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
+            transition={{ delay:0.5 }}
+            style={{ position:"absolute", top:526, left:"50%", marginLeft:-80, width:160,
+              background:"linear-gradient(135deg,rgba(212,175,55,0.14),rgba(212,175,55,0.28))",
+              border:"1.5px solid rgba(212,175,55,0.6)", borderRadius:40, padding:"15px 0",
+              color:"#F0D060", fontSize:14, letterSpacing:2.5,
+              textTransform:"uppercase", fontFamily:"Georgia,serif", cursor:"pointer" }}
+            whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
+            Continue ✨
+          </motion.button>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
-/* ─── Happy Birthday Banner ───────────────────────────────────────────────── */
-const HB_CHARS = "Happy Birthday".split("");
-const HB_XS = (() => {
-  const total = 390;
-  const n = HB_CHARS.filter(c => c !== " ").length;
-  let xi = 0;
-  return HB_CHARS.map(c => {
-    if (c === " ") return 0;
-    return 22 + (xi++ / (n-1)) * (total-44);
-  });
-})();
-const HB_ROTS = [-4,-3,-2,3,-4,0,-3,2,4,-2,3,-3,2,-1];
-const HB_SAG  = 22;
-const HB_STR_X1 = 8, HB_STR_X2 = 382;
-function hbStrY(x: number) { return 20 + HB_SAG * 4 * ((x - HB_STR_X1) / (HB_STR_X2 - HB_STR_X1)) * (1 - (x - HB_STR_X1) / (HB_STR_X2 - HB_STR_X1)); }
+/* ─── Happy Birthday Banner (matches mockup — top:40, SAG=36, 3-layer letters) */
+const HB_CHARS = ["H","a","p","p","y"," ","B","i","r","t","h","d","a","y"];
+const HB_ROTS  = [-8,-4,-6,-3,-5,  0, -7,-2,-5,-4,-6,-3,-5,-7];
+const HB_STR_X1 = 3, HB_STR_X2 = 387;
+const HB_SAG    = 36;
+const HB_XS = HB_CHARS.map((_,i) => 16 + i * ((374-16)/(HB_CHARS.length-1)));
+function hbStrY(x: number) {
+  const t = (x - HB_STR_X1) / (HB_STR_X2 - HB_STR_X1);
+  return 20 + HB_SAG * 4 * t * (1 - t);
+}
 
 function HappyBirthdayBanner() {
   return (
-    <motion.div style={{ position:"absolute", top:0, left:0, right:0, height:100, zIndex:8, pointerEvents:"none" }}
-      initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }}
-      transition={{ delay:0.3, duration:0.7 }}>
-      <svg width={390} height={100} viewBox="0 0 390 100" overflow="visible">
+    <motion.div style={{ position:"absolute", top:40, left:0, right:0, zIndex:8, pointerEvents:"none" }}
+      initial={{ opacity:0, y:-24 }} animate={{ opacity:1, y:0 }}
+      transition={{ delay:0.25, duration:0.7 }}>
+      <svg width={390} height={130} viewBox="0 0 390 130">
         <defs>
-          <filter id="lttrGlow2">
-            <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <filter id="lttrGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.8" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
@@ -486,7 +562,11 @@ function HappyBirthdayBanner() {
                   <text x={cx} y={floatY} textAnchor="middle"
                     fontFamily="'Great Vibes','Dancing Script',cursive"
                     fontWeight="400" fontSize={42}
-                    fill="#D4AF37" filter="url(#lttrGlow2)">{ch}</text>
+                    fill="#D4AF37" filter="url(#lttrGlow)">{ch}</text>
+                  <text x={cx} y={floatY} textAnchor="middle"
+                    fontFamily="'Great Vibes','Dancing Script',cursive"
+                    fontWeight="400" fontSize={42}
+                    fill="#FFF4B0" opacity={0.28}>{ch}</text>
                 </motion.g>
               </g>
             </g>
