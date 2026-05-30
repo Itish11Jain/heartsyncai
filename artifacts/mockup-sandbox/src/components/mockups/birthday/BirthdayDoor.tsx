@@ -719,28 +719,27 @@ function HappyBirthdayBanner() {
           if (ch === " ") return null;
           const cx     = HB_XS[i];
           const sy     = hbStrY(cx);
-          const THREAD = 3;
           const rot    = HB_ROTS[i];
-          const pivot  = sy + THREAD;
-          const floatY = pivot + 36;
+          const pivot  = sy;
+          // floatY = baseline; Great Vibes ascender ≈ 0.82em → top of letter at sy
+          const floatY = pivot + 33;
           return (
             <g key={i}>
-              {/* No thread line — letters hang directly from string */}
               <g transform={`rotate(${rot},${cx},${pivot})`}>
                 <motion.g
                   animate={{ y:[0,-2.5,0] }}
                   transition={{ duration:2.6+i*0.22, repeat:Infinity, ease:"easeInOut", delay:i*0.14 }}>
                   <text x={cx+1} y={floatY+1} textAnchor="middle"
-                    fontFamily="'Playfair Display',Georgia,serif"
-                    fontStyle="italic" fontWeight="bold" fontSize={40}
+                    fontFamily="'Great Vibes','Dancing Script',cursive"
+                    fontWeight="400" fontSize={42}
                     fill="#5C3500" opacity={0.45}>{ch}</text>
                   <text x={cx} y={floatY} textAnchor="middle"
-                    fontFamily="'Playfair Display',Georgia,serif"
-                    fontStyle="italic" fontWeight="bold" fontSize={40}
+                    fontFamily="'Great Vibes','Dancing Script',cursive"
+                    fontWeight="400" fontSize={42}
                     fill="#D4AF37" filter="url(#lttrGlow)">{ch}</text>
                   <text x={cx} y={floatY} textAnchor="middle"
-                    fontFamily="'Playfair Display',Georgia,serif"
-                    fontStyle="italic" fontWeight="bold" fontSize={40}
+                    fontFamily="'Great Vibes','Dancing Script',cursive"
+                    fontWeight="400" fontSize={42}
                     fill="#FFF4B0" opacity={0.28}>{ch}</text>
                 </motion.g>
               </g>
@@ -1195,6 +1194,104 @@ function NumberBalloons({ n }: { n:number }) {
 /* ══════════════════════════════════════════
    BIRTHDAY CAKE SVG helper
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   SCENE 2 — Hybrid cake: 2D body + 3D candles
+══════════════════════════════════════════ */
+function BirthdayCakeHybrid({ blown }: { blown:boolean }) {
+  const CANDLES = [
+    { x:-30, top:"#F9A8D4", bot:"#BE185D", dur:0.37 },
+    { x:  0, top:"#FDE68A", bot:"#B45309", dur:0.43 },
+    { x: 30, top:"#C4B5FD", bot:"#6D28D9", dur:0.40 },
+  ];
+  const cpw = 2*5*Math.sin(Math.PI/12);
+  return (
+    <div style={{ position:"relative", width:280, height:250 }}>
+      {/* ── 2D cake SVG body (no candles) ── */}
+      <svg style={{ position:"absolute", bottom:0, left:0 }}
+        width={280} height={195} viewBox="0 0 142 98">
+        <defs>
+          <linearGradient id="hckBot" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#C9849A"/><stop offset="100%" stopColor="#8A3A50"/>
+          </linearGradient>
+          <linearGradient id="hckTop" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#D4909E"/><stop offset="100%" stopColor="#A05060"/>
+          </linearGradient>
+          <linearGradient id="hckPlate" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#F0D060"/><stop offset="100%" stopColor="#B89020"/>
+          </linearGradient>
+        </defs>
+        {/* Gold plate */}
+        <ellipse cx={71} cy={96} rx={70} ry={5} fill="url(#hckPlate)" opacity={0.85}/>
+        {/* Bottom tier */}
+        <rect x={4} y={54} width={134} height={42} rx={8} fill="url(#hckBot)"/>
+        <rect x={4} y={54} width={134} height={7} rx={4} fill="rgba(255,255,255,0.12)"/>
+        <path d="M4,54 C14,43 24,54 34,46 C44,38 54,54 64,46 C74,38 84,54 98,46 C108,38 120,54 138,46"
+          fill="none" stroke="#F5DDE6" strokeWidth={5} strokeLinecap="round"/>
+        {[24,44,71,98,118].map((x,i) => (
+          <circle key={i} cx={x} cy={74} r={3} fill="#F0D0DA" opacity={0.8}/>
+        ))}
+        <rect x={4} y={70} width={134} height={3} rx={1} fill="#D4AF37" opacity={0.38}/>
+        {/* Top tier */}
+        <rect x={26} y={22} width={90} height={36} rx={6} fill="url(#hckTop)"/>
+        <rect x={26} y={22} width={90} height={5} rx={3} fill="rgba(255,255,255,0.14)"/>
+        <path d="M26,22 C36,12 46,22 56,14 C66,6 76,22 86,14 C96,6 108,22 116,14"
+          fill="none" stroke="#F8E8EE" strokeWidth={4} strokeLinecap="round"/>
+        <rect x={26} y={38} width={90} height={3} rx={1} fill="#D4AF37" opacity={0.32}/>
+      </svg>
+      {/* ── 3D candles ── */}
+      {CANDLES.map((cd,i)=>(
+        <div key={i} style={{
+          position:"absolute", width:10, height:32,
+          left:"50%", top:48, marginLeft:cd.x-5,
+          transformStyle:"preserve-3d", perspective:200,
+        }}>
+          {Array.from({length:12},(_,j)=>{
+            const lit = Math.max(0.4,0.7+0.3*Math.cos((j/12)*Math.PI*2));
+            return (
+              <div key={j} style={{
+                position:"absolute", width:cpw, height:32,
+                left:"50%", marginLeft:-cpw/2, top:0,
+                background:`linear-gradient(180deg,${cd.top},${cd.bot})`,
+                filter:`brightness(${lit.toFixed(2)})`,
+                transform:`rotateY(${(j/12)*360}deg) translateZ(5px)`,
+                backfaceVisibility:"hidden",
+              }}/>
+            );
+          })}
+          <div style={{
+            position:"absolute", width:12, height:12, borderRadius:"50%",
+            background:`radial-gradient(circle at 38% 35%,#fff 15%,${cd.top} 70%)`,
+            left:-1, top:-6, transformOrigin:"center bottom",
+            transform:"rotateX(-90deg)",
+          }}/>
+          <div style={{
+            position:"absolute", width:2, height:7, borderRadius:1,
+            background:"#3B2000", left:4, top:-13,
+          }}/>
+          {!blown ? (
+            <motion.div style={{
+              position:"absolute", width:14, height:22, left:-2, top:-33,
+              borderRadius:"50% 50% 35% 35% / 65% 65% 35% 35%",
+              background:"linear-gradient(180deg,#FFFFE0 0%,#FFAA00 45%,#FF5500 100%)",
+              filter:"blur(0.6px)",
+              boxShadow:"0 0 14px 7px rgba(255,150,0,0.65),0 0 5px 2px rgba(255,255,100,0.5)",
+            }}
+              animate={{ scaleX:[1,0.5,1,0.68,1], scaleY:[1,1.22,0.86,1.18,1], rotate:[-3,3,-1,4,-3] }}
+              transition={{ duration:cd.dur, repeat:Infinity, ease:"easeInOut" }}/>
+          ) : (
+            <motion.div style={{
+              position:"absolute", width:3, height:16, left:3.5, top:-26,
+              borderRadius:3, background:"rgba(220,220,220,0.45)",
+            }}
+              animate={{ opacity:[0.7,0], y:[0,-14,-20], scaleX:[1,2.5,0] }}
+              transition={{ duration:1.4, repeat:Infinity, delay:i*0.22 }}/>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function BirthdayCakeSVG() {
   return (
     <svg width={142} height={130} viewBox="0 0 142 130">
@@ -1505,36 +1602,36 @@ export function BirthdayDoor() {
             {/* Cake */}
             <motion.div style={{
                 position:"absolute",
-                left: C_LEFT + C_W/2 - 134,
-                top:  C_TOP  + C_H/2 - 134 - 80,
-                width:268, height:268,
+                left:"50%", marginLeft:-140,
+                top: 230,
+                width:280, height:250,
               }}
               initial={{ scale:0.1, opacity:0 }}
               animate={{ scale:1, opacity:1 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <BirthdayCake3D blown={blown} />
+              <BirthdayCakeHybrid blown={blown} />
             </motion.div>
 
             {/* CTA */}
             <AnimatePresence>
               {cakePhase === "cta" && (
-                <motion.button key="cta" onClick={handleBlow}
-                  style={{
-                    position:"absolute",
-                    top: 518,
-                    left:"50%", transform:"translateX(-50%)",
-                    background:"rgba(212,175,55,0.1)",
-                    border:"1.5px solid rgba(212,175,55,0.55)",
-                    borderRadius:32, padding:"13px 32px",
-                    color:"#F0D060", fontSize:14, letterSpacing:2,
-                    textTransform:"uppercase", fontFamily:"sans-serif",
-                    cursor:"pointer", whiteSpace:"nowrap",
-                  }}
+                <motion.div key="cta-wrap"
+                  style={{ position:"absolute", top:510, left:0, right:0, display:"flex", justifyContent:"center" }}
                   initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
-                  exit={{ opacity:0, y:-10 }} transition={{ delay:0.7 }}
-                  whileHover={{ background:"rgba(212,175,55,0.22)", scale:1.04 }}>
-                  🕯️ Blow the Candles
-                </motion.button>
+                  exit={{ opacity:0, y:-10 }} transition={{ delay:0.7 }}>
+                  <motion.button onClick={handleBlow}
+                    style={{
+                      background:"rgba(212,175,55,0.1)",
+                      border:"1.5px solid rgba(212,175,55,0.55)",
+                      borderRadius:32, padding:"13px 32px",
+                      color:"#F0D060", fontSize:14, letterSpacing:2,
+                      textTransform:"uppercase", fontFamily:"sans-serif",
+                      cursor:"pointer", whiteSpace:"nowrap",
+                    }}
+                    whileHover={{ background:"rgba(212,175,55,0.22)", scale:1.04 }}>
+                    🕯️ Blow the Candles
+                  </motion.button>
+                </motion.div>
               )}
             </AnimatePresence>
 
