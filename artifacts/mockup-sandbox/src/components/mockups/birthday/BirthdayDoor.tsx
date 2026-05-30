@@ -320,50 +320,153 @@ function CandleFlame({ cx, cy, blown }: { cx:number; cy:number; blown:boolean })
     </motion.g>
   );
 }
-function Cake({ blown = false }: { blown?: boolean }) {
-  const dotC = ["#D4AF37","#C9846A","#FFF5EE","#E8A07A","#C4913A","#F2DFC8"];
+/* ── True CSS-3D cake tier (cylinder with per-panel lighting) ── */
+function CakeTier3D({ r, h, top: yTop, panels=18, side1, side2, capColor, stripe }:{
+  r:number; h:number; top:number; panels?:number;
+  side1:string; side2:string; capColor:string; stripe?:string;
+}) {
+  const pw = 2 * r * Math.sin(Math.PI / panels);
   return (
-    <svg viewBox="0 0 280 280" style={{ width:"100%", height:"100%", overflow:"visible" }}>
-      <defs>
-        <radialGradient id="ct1" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4956A"/><stop offset="100%" stopColor="#8C4A30"/></radialGradient>
-        <radialGradient id="ct2" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#D4AF37"/><stop offset="100%" stopColor="#8C6A10"/></radialGradient>
-        <radialGradient id="ct3" cx="50%" cy="30%" r="65%"><stop offset="0%" stopColor="#FFF5EE"/><stop offset="100%" stopColor="#E8D0B8"/></radialGradient>
-        <filter id="cglo"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-      <ellipse cx={140} cy={258} rx={92} ry={10} fill="#C4A070" opacity={0.6}/>
-      <rect x={56} y={198} width={168} height={58} rx={8} fill="url(#ct1)"/>
-      <ellipse cx={140} cy={198} rx={84} ry={9} fill="#D4956A"/><ellipse cx={140} cy={256} rx={84} ry={9} fill="#7A3C22"/>
-      {[68,88,108,128,148,168,188,208].map((x,i)=>(
-        <motion.path key={i} d={`M ${x} 198 Q ${x} 206 ${x} 211`} stroke="rgba(255,248,240,0.45)" strokeWidth={5} strokeLinecap="round" fill="none"
-          animate={{ d:[`M ${x} 198 Q ${x} 204 ${x} 209`,`M ${x} 198 Q ${x} 209 ${x} 214`,`M ${x} 198 Q ${x} 204 ${x} 209`] }}
-          transition={{ duration:3, repeat:Infinity, delay:i*0.2 }}/>
+    <div style={{ position:"absolute", width:r*2, height:h,
+                  left:"50%", top:yTop, marginLeft:-r,
+                  transformStyle:"preserve-3d" }}>
+      {/* Cylinder side panels */}
+      {Array.from({length:panels},(_,i)=>{
+        const cos = Math.cos((i/panels)*Math.PI*2);
+        const lit = Math.max(0.32, Math.min(1.05, 0.64+0.38*cos));
+        return (
+          <div key={i} style={{
+            position:"absolute", width:pw, height:h,
+            left:"50%", marginLeft:-pw/2, top:0,
+            background:`linear-gradient(180deg,${side1} 0%,${side2} 100%)`,
+            filter:`brightness(${lit.toFixed(2)})`,
+            transform:`rotateY(${(i/panels)*360}deg) translateZ(${r}px)`,
+            backfaceVisibility:"hidden",
+            overflow:"hidden",
+          }}>
+            {/* Frosting drip stripe near top */}
+            {stripe && (
+              <div style={{
+                position:"absolute", left:0, top:0, width:"100%", height:10,
+                background:stripe, opacity:0.85,
+              }}/>
+            )}
+          </div>
+        );
+      })}
+      {/* Top cap — rotated flat disk */}
+      <div style={{
+        position:"absolute", width:r*2, height:r*2, borderRadius:"50%",
+        background:capColor,
+        left:0, top:-(r*2),
+        transformOrigin:"bottom center",
+        transform:"rotateX(-90deg)",
+        boxShadow:"inset 0 0 12px rgba(255,255,255,0.25)",
+      }}/>
+      {/* Inner frosting ring on cap */}
+      <div style={{
+        position:"absolute", width:r*1.7, height:r*1.7, borderRadius:"50%",
+        background:"rgba(255,255,255,0.12)",
+        left:r*0.15, top:-(r*1.7),
+        transformOrigin:"bottom center",
+        transform:"rotateX(-90deg)",
+        pointerEvents:"none",
+      }}/>
+    </div>
+  );
+}
+
+function BirthdayCake3D({ blown }: { blown:boolean }) {
+  const CANDLES = [
+    {x:-24, color:"#C9846A", dur:0.38},
+    {x:  0, color:"#D4AF37", dur:0.44},
+    {x: 24, color:"#FFF5EE", dur:0.41},
+  ];
+  const cpw = 2*5*Math.sin(Math.PI/10); // candle panel width
+
+  return (
+    <div style={{
+      width:268, height:268, position:"relative",
+      transformStyle:"preserve-3d",
+      transform:"rotateX(-20deg)",
+    }}>
+      {/* Ground shadow */}
+      <div style={{
+        position:"absolute", width:180, height:20, borderRadius:"50%",
+        background:"rgba(0,0,0,0.35)", left:44, top:246,
+        transform:"rotateX(90deg)", transformOrigin:"top center",
+        filter:"blur(6px)",
+      }}/>
+
+      {/* Bottom tier — deep maroon */}
+      <CakeTier3D r={100} h={68} top={192} panels={22}
+        side1="#AD1F38" side2="#6A0E1E"
+        capColor="#FFF5EE" stripe="#FFF5EE"/>
+
+      {/* Middle tier — antique gold */}
+      <CakeTier3D r={70} h={54} top={132} panels={18}
+        side1="#C8960C" side2="#7A5700"
+        capColor="#FFF5EE" stripe="#FFF5EE"/>
+
+      {/* Top tier — ivory cream */}
+      <CakeTier3D r={46} h={46} top={80} panels={14}
+        side1="#FFF5EE" side2="#D4B898"
+        capColor="#FFFAF6" stripe="#D4AF37"/>
+
+      {/* Candles */}
+      {CANDLES.map((cd,i)=>(
+        <div key={i} style={{
+          position:"absolute",
+          width:10, height:30,
+          left:"50%", top:46,
+          marginLeft:cd.x-5,
+          transformStyle:"preserve-3d",
+          transform:"translateZ(28px)",
+        }}>
+          {/* Candle cylinder */}
+          {Array.from({length:10},(_,j)=>{
+            const cos = Math.cos((j/10)*Math.PI*2);
+            const lit = Math.max(0.45, 0.7+0.3*cos);
+            return (
+              <div key={j} style={{
+                position:"absolute", width:cpw, height:30,
+                left:"50%", marginLeft:-cpw/2, top:0,
+                background:cd.color,
+                filter:`brightness(${lit.toFixed(2)})`,
+                transform:`rotateY(${(j/10)*360}deg) translateZ(5px)`,
+                backfaceVisibility:"hidden",
+              }}/>
+            );
+          })}
+          {/* Flame */}
+          {!blown ? (
+            <motion.div style={{
+              position:"absolute", width:12, height:20,
+              left:-1, top:-22,
+              borderRadius:"50% 50% 38% 38% / 60% 60% 40% 40%",
+              background:"linear-gradient(180deg,#FFFF80 0%,#FFA500 55%,#FF4400 100%)",
+              filter:"blur(1px)",
+              boxShadow:"0 0 10px 5px rgba(255,160,0,0.55)",
+              transform:"translateZ(5px)",
+            }}
+              animate={{ scaleX:[1,0.6,1,0.75,1], scaleY:[1,1.18,0.88,1.12,1],
+                         y:[0,-1,1,-1,0] }}
+              transition={{ duration:cd.dur, repeat:Infinity, ease:"easeInOut" }}/>
+          ) : (
+            /* Smoke wisps after blown */
+            <motion.div style={{
+              position:"absolute", width:6, height:24,
+              left:2, top:-30,
+              background:"linear-gradient(180deg,rgba(200,200,200,0),rgba(180,180,180,0.5))",
+              borderRadius:8,
+              transform:"translateZ(5px)",
+            }}
+              animate={{ opacity:[0.6,0], y:[0,-20], scaleX:[1,2,0] }}
+              transition={{ duration:1.2, repeat:Infinity, delay:i*0.15 }}/>
+          )}
+        </div>
       ))}
-      {[68,92,116,140,164,188,212].map((x,i)=>(
-        <g key={i}><circle cx={x} cy={228} r={7} fill={dotC[i%dotC.length]}/><circle cx={x} cy={228} r={3.5} fill="white" opacity={0.35}/></g>
-      ))}
-      <rect x={80} y={146} width={120} height={54} rx={7} fill="url(#ct2)"/>
-      <ellipse cx={140} cy={146} rx={60} ry={8} fill="#D4AF37"/><ellipse cx={140} cy={200} rx={60} ry={8} fill="#7A5F10"/>
-      {[88,108,128,148,168,188].map((x,i)=>(
-        <g key={i}><circle cx={x} cy={173} r={6} fill={dotC[(i+2)%dotC.length]}/><circle cx={x} cy={173} r={3} fill="white" opacity={0.35}/></g>
-      ))}
-      <rect x={104} y={102} width={72} height={46} rx={7} fill="url(#ct3)"/>
-      <ellipse cx={140} cy={102} rx={36} ry={6.5} fill="#FFF5EE"/><ellipse cx={140} cy={148} rx={36} ry={6.5} fill="#D4B898"/>
-      {[115,135,155].map((x,i)=>(
-        <g key={i}><circle cx={x} cy={125} r={5} fill={dotC[(i+1)%dotC.length]}/><circle cx={x} cy={125} r={2.5} fill="white" opacity={0.4}/></g>
-      ))}
-      {[114,136,158].map((cx,i)=>(
-        <g key={i}>
-          <rect x={cx-3} y={78} width={6} height={25} rx={2.5} fill={["#C9846A","#D4AF37","#FFF5EE"][i]}/>
-          <CandleFlame cx={cx} cy={71} blown={blown}/>
-        </g>
-      ))}
-      <ellipse cx={140} cy={82} rx={55} ry={22} fill="#FFD700" opacity={0.12} filter="url(#cglo)"/>
-      <motion.g filter="url(#cglo)"
-        animate={{ scale:[1,1.2,1], rotate:[0,15,0,-15,0] }}
-        transition={{ duration:2.2, repeat:Infinity }} style={{ transformOrigin:"140px 88px" }}>
-        <polygon points="140,81 142.8,88.5 150,88.5 144.2,92.8 146.5,100 140,95.5 133.5,100 135.8,92.8 130,88.5 137.2,88.5" fill="#D4AF37"/>
-      </motion.g>
-    </svg>
+    </div>
   );
 }
 
@@ -1169,7 +1272,7 @@ export function BirthdayDoor() {
                 perspective: 700,
               }}>
               <motion.div
-                style={{ width:268, height:268 }}
+                style={{ width:268, height:268, transformStyle:"preserve-3d" }}
                 initial={{ scale:0.1, rotateY:-20, opacity:1 }}
                 animate={cakeZoom
                   ? { scale:3.8, rotateY:1080, opacity:1 }
@@ -1180,7 +1283,7 @@ export function BirthdayDoor() {
                       rotateY: { duration:2.3, ease:"linear" },
                     }
                   : { delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-                <Cake blown={blown} />
+                <BirthdayCake3D blown={blown} />
               </motion.div>
             </div>
 
