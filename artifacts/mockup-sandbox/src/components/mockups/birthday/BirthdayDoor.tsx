@@ -237,10 +237,11 @@ function Scene1({ onNext }: { onNext:()=>void }) {
       <div style={{ position:"absolute", left:0, right:0, top:50,
         textAlign:"center", zIndex:5, pointerEvents:"none" }}>
         <motion.p style={{
-          fontFamily:"'Great Vibes','Dancing Script',cursive",
+          fontFamily:"'Great Vibes', cursive",
           fontWeight:400, fontSize:58, lineHeight:1.2, margin:0,
-          color:"#D4AF37", display:"inline-block", letterSpacing:1,
-          filter:"drop-shadow(0 0 14px rgba(212,175,55,0.7)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))",
+          display:"inline-block", letterSpacing:1,
+          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
         }}
           initial={{ clipPath:"inset(0 102% 0 0)" }}
           animate={{ clipPath:"inset(0 0% 0 0)" }}
