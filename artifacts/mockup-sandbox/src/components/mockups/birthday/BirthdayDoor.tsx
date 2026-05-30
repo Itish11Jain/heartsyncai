@@ -1333,55 +1333,42 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
           transition={{ duration:1.1, delay:p.d, ease:[0.16,1,0.3,1] }}/>
       ))}
 
-      {/* ── Cake sticker — top center ── */}
-      <motion.div style={{
-        position:"absolute", top:14, left:"50%", transform:"translateX(-50%)",
-        width:178, zIndex:11, pointerEvents:"none",
-      }}
-        initial={{ opacity:0, y:-24, scale:0.85 }}
-        animate={{ opacity:1, y:0, scale:1 }}
-        transition={{ delay:0.35, duration:0.75, ease:[0.34,1.56,0.64,1] }}>
-        <img src={cakeStickerSrc} alt=""
-          style={{
-            width:"100%", height:"auto", display:"block",
-            filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px white) drop-shadow(0 5px 18px rgba(0,0,0,0.55))",
-          }}/>
-      </motion.div>
-
       {/* ── "Happy Birthday" text ── */}
       <motion.p style={{
-        position:"absolute", top:210, left:0, right:0,
+        position:"absolute", top:18, left:0, right:0,
         textAlign:"center", margin:0,
-        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:19,
+        fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic", fontSize:20,
         background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37)",
         WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
         zIndex:8, letterSpacing:0.5,
       }}
         initial={{ opacity:0 }} animate={{ opacity:1 }}
-        transition={{ delay:0.65, duration:0.6 }}>
+        transition={{ delay:0.5, duration:0.6 }}>
         Happy Birthday, {name}! 🎂
       </motion.p>
 
       {/* ── Voice note ── */}
-      <motion.div style={{ position:"absolute", top:248, left:20, right:20, zIndex:12 }}
+      <motion.div style={{ position:"absolute", top:52, left:20, right:20, zIndex:12 }}
         initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
-        transition={{ delay:0.82, duration:0.6 }}>
+        transition={{ delay:0.65, duration:0.6 }}>
         <VoiceNote onDone={() => setShowArrow(true)}/>
       </motion.div>
 
-      {/* ── Photo sticker — bottom, large ── */}
+      {/* ── Photo sticker — centered, full height in remaining space ── */}
       <motion.div style={{
-        position:"absolute", bottom:-18, left:"50%",
-        transform:"translateX(-50%) rotate(1.8deg)",
-        width:356, zIndex:10,
+        position:"absolute", top:155, bottom:64, left:"50%",
+        transform:"translateX(-50%) rotate(1.5deg)",
+        width:348, zIndex:10,
+        display:"flex", alignItems:"center", justifyContent:"center",
       }}
-        initial={{ opacity:0, y:36 }}
+        initial={{ opacity:0, y:30 }}
         animate={{ opacity:1, y:0 }}
-        transition={{ delay:0.48, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
+        transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
         <img src={photo1StickerSrc} alt=""
           style={{
-            width:"100%", height:"auto", display:"block",
-            filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
+            width:"100%", height:"100%", display:"block",
+            objectFit:"contain", objectPosition:"center center",
+            filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.75)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
           }}/>
       </motion.div>
 
