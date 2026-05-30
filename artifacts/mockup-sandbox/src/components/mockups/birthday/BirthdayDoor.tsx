@@ -28,7 +28,7 @@ const P: BColor[] = [
 /* ══════════════════════════════════════════
    GARLAND
 ══════════════════════════════════════════ */
-type B = { x: number; y: number; r: number; p: BColor; d: number };
+type B = { x: number; y: number; r: number; p: BColor; d: number; tx: number; ty: number };
 const GARLAND: B[] = [];
 let _pi = 0, _di = 0;
 function nextD() { return (_di++ * 0.11) % 1.6; }
@@ -64,20 +64,34 @@ const ANCHORS: { x: number; y: number; ci: number }[] = [
 
 ANCHORS.forEach(({ x: ox, y: oy, ci }) => {
   CLUSTERS[ci].forEach(({ dx, dy, r, pi }) => {
-    GARLAND.push({ x: ox + dx, y: oy + dy, r, p: P[(_pi++ + pi) % P.length], d: nextD() });
+    const bx = ox + dx, by = oy + dy;
+    const ddx = bx - 195, ddy = by - 470;
+    const blen = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+    const bdist = 220 + (Math.abs(Math.round(ddx * 7 + ddy * 13)) % 180);
+    GARLAND.push({
+      x: bx, y: by, r,
+      p: P[(_pi++ + pi) % P.length],
+      d: nextD(),
+      tx: bx + (ddx / blen) * bdist,
+      ty: by + (ddy / blen) * bdist - 60,
+    });
   });
 });
 
 const CONFETTI_DOTS = [
   [0.3,0.25],[0.55,0.35],[0.45,0.55],[0.65,0.6],[0.3,0.65],[0.6,0.2],[0.42,0.42],[0.7,0.45],
 ];
-function GBalloon({ x, y, r, p, d }: B) {
+function GBalloon({ x, y, r, p, d, tx, ty, popped }: B & { popped: boolean }) {
   const id = `g${Math.round(x*10)}${Math.round(y*10)}`;
   return (
     <motion.div
       style={{ position:"absolute", left:x-r, top:y-r, width:r*2, height:r*2, zIndex:15, pointerEvents:"none" }}
-      animate={{ y:[0,-4-d*1.2,0,-2-d*0.6,0] }}
-      transition={{ duration:2.6+d, repeat:Infinity, ease:"easeInOut", delay:d }}>
+      animate={popped
+        ? { x: tx-x, y: ty-y, scale:[1,1.35,0], opacity:[1,1,0] }
+        : { y:[0,-4-d*1.2,0,-2-d*0.6,0] }}
+      transition={popped
+        ? { duration:0.75+d*0.35, ease:"easeOut", delay:d*0.12 }
+        : { duration:2.6+d, repeat:Infinity, ease:"easeInOut", delay:d }}>
       <svg width={r*2} height={r*2} viewBox={`0 0 ${r*2} ${r*2}`}>
         <defs>
           <radialGradient id={`${id}g`} cx="34%" cy="28%" r="62%">
@@ -242,21 +256,21 @@ function ArchFrame() {
 /* ══════════════════════════════════════════
    CAKE
 ══════════════════════════════════════════ */
-function CandleFlame({ cx, cy }: { cx:number; cy:number }) {
+function CandleFlame({ cx, cy, blown }: { cx:number; cy:number; blown:boolean }) {
   return (
-    <>
+    <motion.g animate={{ opacity: blown ? 0 : 1 }} transition={{ duration:0.25 }}>
       <motion.ellipse cx={cx} cy={cy} rx={3.5} ry={6} fill="#FFD700"
-        animate={{ scaleX:[1,0.7,1.1,0.85,1], scaleY:[1,1.1,0.9,1.05,1] }}
+        animate={blown ? {} : { scaleX:[1,0.7,1.1,0.85,1], scaleY:[1,1.1,0.9,1.05,1] }}
         transition={{ duration:0.75, repeat:Infinity }} style={{ transformOrigin:`${cx}px ${cy}px` }} />
       <motion.ellipse cx={cx} cy={cy+1.5} rx={2} ry={3.5} fill="#FF8C00"
-        animate={{ scaleX:[1,0.8,1.1,0.9,1] }} transition={{ duration:0.75, repeat:Infinity }}
+        animate={blown ? {} : { scaleX:[1,0.8,1.1,0.9,1] }} transition={{ duration:0.75, repeat:Infinity }}
         style={{ transformOrigin:`${cx}px ${cy+1.5}px` }} />
       <motion.ellipse cx={cx} cy={cy+2.5} rx={1} ry={2} fill="white" opacity={0.5}
-        animate={{ opacity:[0.5,0.9,0.45,0.75,0.5] }} transition={{ duration:0.6, repeat:Infinity }} />
-    </>
+        animate={blown ? {} : { opacity:[0.5,0.9,0.45,0.75,0.5] }} transition={{ duration:0.6, repeat:Infinity }} />
+    </motion.g>
   );
 }
-function Cake() {
+function Cake({ blown = false }: { blown?: boolean }) {
   const dotC = ["#D4AF37","#C9846A","#FFF5EE","#E8A07A","#C4913A","#F2DFC8"];
   return (
     <svg viewBox="0 0 280 280" style={{ width:"100%", height:"100%", overflow:"visible" }}>
@@ -290,7 +304,7 @@ function Cake() {
       {[114,136,158].map((cx,i)=>(
         <g key={i}>
           <rect x={cx-3} y={78} width={6} height={25} rx={2.5} fill={["#C9846A","#D4AF37","#FFF5EE"][i]}/>
-          <CandleFlame cx={cx} cy={71}/>
+          <CandleFlame cx={cx} cy={71} blown={blown}/>
         </g>
       ))}
       <ellipse cx={140} cy={82} rx={55} ry={22} fill="#FFD700" opacity={0.12} filter="url(#cglo)"/>
@@ -319,9 +333,12 @@ function Confetto({ x, color, delay }: { x:number; color:string; delay:number })
    MAIN
 ══════════════════════════════════════════ */
 export function BirthdayDoor() {
-  const [open, setOpen]         = useState(false);
-  const [showCake, setShowCake] = useState(false);
-  const [confetti, setConfetti] = useState(false);
+  const [open, setOpen]           = useState(false);
+  const [showCake, setShowCake]   = useState(false);
+  const [confetti, setConfetti]   = useState(false);
+  const [cakePhase, setCakePhase] = useState<"cta"|"counting"|"blown">("cta");
+  const [countdown, setCountdown] = useState(3);
+  const [blown, setBlown]         = useState(false);
 
   const cfPieces = Array.from({ length:55 }, (_,i) => ({
     id:i, x:(i*18.7)%100, color:P[i%P.length].c, delay:i*0.065,
@@ -330,12 +347,24 @@ export function BirthdayDoor() {
   function handleTap() {
     if (open) return;
     setOpen(true);
-    setTimeout(()=>{ setShowCake(true); setConfetti(true); }, 1000);
-    setTimeout(()=>setConfetti(false), 4600);
+    setTimeout(() => { setShowCake(true); setCakePhase("cta"); }, 1000);
+  }
+  function handleBlow() {
+    setCakePhase("counting");
+    setCountdown(3);
+    setTimeout(() => setCountdown(2), 800);
+    setTimeout(() => setCountdown(1), 1600);
+    setTimeout(() => {
+      setCakePhase("blown");
+      setBlown(true);
+      setConfetti(true);
+    }, 2400);
+    setTimeout(() => setConfetti(false), 5200);
   }
   function handleReplay() {
-    setShowCake(false); setConfetti(false);
-    setTimeout(()=>setOpen(false), 80);
+    setShowCake(false); setConfetti(false); setBlown(false);
+    setCakePhase("cta"); setCountdown(3);
+    setTimeout(() => setOpen(false), 80);
   }
 
   const gradText = {
@@ -393,8 +422,8 @@ export function BirthdayDoor() {
         )}
       </AnimatePresence>
 
-      {/* Balloon garland — persists across both scenes */}
-      {GARLAND.map((b,i) => <GBalloon key={i} {...b} />)}
+      {/* Balloon garland — persists across both scenes, pops when candles blown */}
+      {GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
 
       {/* ══ SCENE 2 : CAKE ══ */}
       <AnimatePresence>
@@ -405,59 +434,86 @@ export function BirthdayDoor() {
             animate={{ opacity:1, scale:1 }}
             transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
 
-            <motion.div style={{ marginTop:54, textAlign:"center", paddingInline:28 }}
-              initial={{ opacity:0, y:-18 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
-              <p style={{ color:"#8C6A4A", fontSize:10, letterSpacing:4, textTransform:"uppercase", marginBottom:4, fontFamily:"sans-serif" }}>HAPPY BIRTHDAY</p>
-              <h1 style={{ fontSize:32, fontWeight:"bold", lineHeight:1.15, ...gradText }}>{name} 🎂</h1>
-              <p style={{ color:"#A07850", fontSize:12, fontFamily:"sans-serif" }}>Turning {age} never looked so magical!</p>
-            </motion.div>
-
+            {/* Cake — shifted up 80px from arch centre */}
             <motion.div style={{
                 position:"absolute",
                 left: C_LEFT + C_W/2 - 134,
-                top:  C_TOP  + C_H/2 - 134,
+                top:  C_TOP  + C_H/2 - 134 - 80,
                 width:268, height:268,
               }}
               initial={{ scale:0.1, rotate:-18 }} animate={{ scale:1, rotate:0 }}
               transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-              <Cake />
+              <Cake blown={blown} />
             </motion.div>
 
-            <motion.div style={{ textAlign:"center", marginTop:18, paddingInline:36 }}
-              initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.85 }}>
-              <motion.h2 style={{ fontSize:28, fontWeight:"bold", marginBottom:10, ...gradText }}
-                animate={{ scale:[1,1.05,1] }} transition={{ duration:2.5, repeat:Infinity }}>
-                🌟 Make a Wish 🌟
-              </motion.h2>
-              <p style={{ color:"#A07850", fontSize:13, lineHeight:1.75, fontFamily:"sans-serif" }}>
-                Close your eyes, take a deep breath,<br/>and wish for everything you deserve 💫
-              </p>
-            </motion.div>
+            {/* CTA */}
+            <AnimatePresence>
+              {cakePhase === "cta" && (
+                <motion.button key="cta"
+                  onClick={handleBlow}
+                  style={{
+                    position:"absolute",
+                    top: C_TOP + C_H/2 - 134 - 80 + 268 + 36,
+                    left:"50%", transform:"translateX(-50%)",
+                    background:"rgba(212,175,55,0.1)",
+                    border:"1.5px solid rgba(212,175,55,0.55)",
+                    borderRadius:32, padding:"14px 36px",
+                    color:"#F0D060", fontSize:15, letterSpacing:2,
+                    textTransform:"uppercase", fontFamily:"sans-serif", cursor:"pointer",
+                    whiteSpace:"nowrap",
+                  }}
+                  initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-10 }}
+                  transition={{ delay:0.7 }}
+                  whileHover={{ background:"rgba(212,175,55,0.22)", scale:1.04 }}>
+                  🕯️ Blow the Candles
+                </motion.button>
+              )}
+            </AnimatePresence>
 
-            {[12,30,52,70,88].map((x,i)=>(
-              <motion.div key={i}
-                style={{ position:"absolute", left:`${x}%`, bottom:90+i*20, zIndex:3, pointerEvents:"none" }}
-                animate={{ y:[0,-18,0], opacity:[0.4,1,0.4] }}
-                transition={{ duration:2.8, repeat:Infinity, delay:i*0.45 }}>
-                <span style={{ fontSize:14 }}>✨</span>
-              </motion.div>
-            ))}
+            {/* Countdown */}
+            <AnimatePresence mode="wait">
+              {cakePhase === "counting" && (
+                <motion.div key={`cd-${countdown}`}
+                  style={{
+                    position:"absolute",
+                    top: C_TOP + C_H/2 - 134 - 80 + 268 + 16,
+                    left:0, right:0,
+                    textAlign:"center",
+                    fontSize:100, fontWeight:"bold", lineHeight:1,
+                    fontFamily:"Georgia,serif",
+                    background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 50%,#F0D060 100%)",
+                    WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+                  }}
+                  initial={{ scale:1.9, opacity:0 }}
+                  animate={{ scale:1, opacity:1 }}
+                  exit={{ scale:0.2, opacity:0 }}
+                  transition={{ duration:0.32, ease:[0.34,1.56,0.64,1] }}>
+                  {countdown}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <motion.p style={{ position:"absolute", bottom:80, color:"#8C6A4A", fontSize:12, letterSpacing:1.5, fontFamily:"sans-serif" }}
-              animate={{ opacity:[0.35,1,0.35] }} transition={{ duration:3, repeat:Infinity }}>
-              ✨ wishing you the world ✨
-            </motion.p>
-
-            <motion.button onClick={handleReplay} style={{
-              position:"absolute", bottom:32,
-              background:"rgba(212,175,55,0.08)", border:"1px solid rgba(212,175,55,0.35)",
-              borderRadius:24, padding:"8px 22px", color:"#C9A840",
-              fontSize:11, letterSpacing:2, textTransform:"uppercase", fontFamily:"sans-serif", cursor:"pointer",
-            }}
-              initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.5 }}
-              whileHover={{ background:"rgba(212,175,55,0.18)" }}>
-              ↩ Replay
-            </motion.button>
+            {/* Replay — appears after blown */}
+            <AnimatePresence>
+              {cakePhase === "blown" && (
+                <motion.button key="replay"
+                  onClick={handleReplay}
+                  style={{
+                    position:"absolute", bottom:36,
+                    left:"50%", transform:"translateX(-50%)",
+                    background:"rgba(212,175,55,0.08)", border:"1px solid rgba(212,175,55,0.3)",
+                    borderRadius:24, padding:"8px 24px", color:"#C9A840",
+                    fontSize:11, letterSpacing:2, textTransform:"uppercase",
+                    fontFamily:"sans-serif", cursor:"pointer", whiteSpace:"nowrap",
+                  }}
+                  initial={{ opacity:0 }} animate={{ opacity:1 }}
+                  transition={{ delay:1.2 }}
+                  whileHover={{ background:"rgba(212,175,55,0.18)" }}>
+                  ↩ Replay
+                </motion.button>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
