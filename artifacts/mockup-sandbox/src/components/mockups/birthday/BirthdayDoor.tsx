@@ -387,7 +387,6 @@ export function BirthdayDoor() {
             </motion.div>
 
             <Curtain open={open} />
-            <ArchFrame />
 
             {/* Tap zone */}
             <motion.button onClick={handleTap} style={{
