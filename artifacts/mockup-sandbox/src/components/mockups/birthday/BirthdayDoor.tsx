@@ -156,16 +156,75 @@ function Nebulae() {
 ══════════════════════════════════════════ */
 const FOLD_FABRIC = `repeating-linear-gradient(
   to right,
-  #1A0005  0px,
-  #5C0015  6px,
-  #900020 12px,
-  #B8002C 17px,
-  #CC0032 20px,
-  #B8002C 23px,
-  #900020 28px,
-  #5C0015 34px,
-  #1A0005 40px
+  #DDD4C4  0px,
+  #EDE5D8  5px,
+  #F8F2EA 10px,
+  #FEFCF8 14px,
+  #FFF9F3 17px,
+  #FEFCF8 20px,
+  #F4EDE4 25px,
+  #E6DDD0 32px,
+  #DDD4C4 40px
 )`;
+
+const CURTAIN_SPARKLES = [
+  { x:"14%", y:"12%"}, { x:"72%", y:"8%" }, { x:"38%", y:"22%"},
+  { x:"88%", y:"28%"}, { x:"22%", y:"42%"}, { x:"64%", y:"38%"},
+  { x:"10%", y:"58%"}, { x:"82%", y:"55%"}, { x:"44%", y:"68%"},
+  { x:"28%", y:"78%"}, { x:"76%", y:"72%"}, { x:"58%", y:"85%"},
+];
+
+function CurtainPanel({ side, open, panelW }: { side:"left"|"right"; open:boolean; panelW:number }) {
+  const isLeft = side === "left";
+  const sparkles = CURTAIN_SPARKLES.filter((_,i) => isLeft ? i < 6 : i >= 6);
+  return (
+    <motion.div style={{
+      position:"absolute", [isLeft?"left":"right"]:0, top:0, width:panelW, height:"100%",
+      background:FOLD_FABRIC, zIndex:2,
+      boxShadow: isLeft
+        ? "inset -10px 0 28px rgba(180,160,130,0.35), inset -2px 0 8px rgba(255,255,255,0.25)"
+        : "inset 10px 0 28px rgba(180,160,130,0.35), inset 2px 0 8px rgba(255,255,255,0.25)",
+    }}
+      animate={open ? { x: isLeft ? -(panelW+4) : (panelW+4), opacity:0.55 } : { x:0, opacity:1 }}
+      transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
+
+      {/* Silk sheen sweep */}
+      <motion.div style={{
+        position:"absolute", inset:0, pointerEvents:"none",
+        background:`linear-gradient(${isLeft?105:255}deg,transparent 15%,rgba(255,255,255,0.38) 42%,rgba(255,252,240,0.18) 55%,transparent 72%)`,
+      }}
+        animate={{ opacity:[0.55,1,0.55] }}
+        transition={{ duration:3.2, repeat:Infinity, ease:"easeInOut", delay: isLeft ? 0 : 0.9 }}/>
+
+      {/* Gold shimmer sweep */}
+      <motion.div style={{
+        position:"absolute", inset:0, pointerEvents:"none",
+        background:`linear-gradient(${isLeft?80:280}deg,transparent 30%,rgba(212,175,55,0.14) 50%,transparent 70%)`,
+      }}
+        animate={{ x:[0, isLeft?10:-10, 0] }}
+        transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }}/>
+
+      {/* Sparkle dots */}
+      {sparkles.map((sp,i) => (
+        <motion.div key={i} style={{
+          position:"absolute", left:sp.x, top:sp.y,
+          fontSize:11, color:"#D4AF37", lineHeight:1, pointerEvents:"none",
+          textShadow:"0 0 6px rgba(212,175,55,0.9), 0 0 12px rgba(255,240,180,0.6)",
+        }}
+          animate={{ opacity:[0, 1, 0.3, 1, 0], scale:[0.6,1.2,0.8,1.1,0.6], rotate:[0,20,-10,15,0] }}
+          transition={{ duration:2.4+i*0.55, repeat:Infinity, delay:i*0.62, ease:"easeInOut" }}>
+          ✦
+        </motion.div>
+      ))}
+
+      {/* Inner shadow fold at seam */}
+      <div style={{
+        position:"absolute", [isLeft?"right":"left"]:0, top:0, bottom:0, width:3,
+        background:`linear-gradient(to bottom,rgba(212,180,80,0.95),rgba(200,160,40,0.55))`,
+      }}/>
+    </motion.div>
+  );
+}
 
 function Curtain({ open }: { open: boolean }) {
   const panelW = 195;
@@ -174,59 +233,8 @@ function Curtain({ open }: { open: boolean }) {
       position:"absolute", left:0, top:0, width:390, height:844,
       overflow:"hidden", zIndex:5,
     }}>
-      {/* LEFT PANEL */}
-      <motion.div style={{
-        position:"absolute", left:0, top:0, width:panelW, height:"100%",
-        background:FOLD_FABRIC, zIndex:2,
-        boxShadow:"inset -12px 0 36px rgba(0,0,0,0.55)",
-      }}
-        animate={open ? { x:-(panelW+4), opacity:0.6 } : { x:0, opacity:1 }}
-        transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.05) 50%,transparent 75%)", pointerEvents:"none" }} />
-        <motion.div style={{
-          position:"absolute", inset:0,
-          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.18) 48%,rgba(255,255,255,0.08) 58%,transparent 75%)",
-        }}
-          animate={{ x:[0,6,0,-4,0], y:[0,8,0,-5,0] }}
-          transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut" }} />
-        <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
-          <motion.path fill="rgba(0,0,0,0.3)"
-            animate={{ d:[
-              `M 0 28 Q ${panelW*0.2} 14 ${panelW*0.4} 22 Q ${panelW*0.65} 28 ${panelW*0.85} 12 Q ${panelW} 4 ${panelW} 16 L ${panelW} 28 Z`,
-              `M 0 28 Q ${panelW*0.2} 18 ${panelW*0.4} 26 Q ${panelW*0.65} 20 ${panelW*0.85} 8  Q ${panelW} 2 ${panelW} 18 L ${panelW} 28 Z`,
-              `M 0 28 Q ${panelW*0.2} 14 ${panelW*0.4} 22 Q ${panelW*0.65} 28 ${panelW*0.85} 12 Q ${panelW} 4 ${panelW} 16 L ${panelW} 28 Z`,
-            ]}}
-            transition={{ duration:4.8, repeat:Infinity, ease:"easeInOut" }} />
-        </svg>
-        <div style={{ position:"absolute", right:0, top:0, bottom:0, width:3, background:"linear-gradient(to bottom,rgba(255,230,100,0.98),rgba(255,200,50,0.5))" }} />
-      </motion.div>
-
-      {/* RIGHT PANEL */}
-      <motion.div style={{
-        position:"absolute", right:0, top:0, width:panelW, height:"100%",
-        background:FOLD_FABRIC, zIndex:2,
-        boxShadow:"inset 12px 0 36px rgba(0,0,0,0.55)",
-      }}
-        animate={open ? { x:(panelW+4), opacity:0.6 } : { x:0, opacity:1 }}
-        transition={{ duration:1.1, ease:[0.4,0,0.2,1] }}>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(225deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.05) 50%,transparent 75%)", pointerEvents:"none" }} />
-        <motion.div style={{
-          position:"absolute", inset:0,
-          background:"linear-gradient(to right,transparent 20%,rgba(255,255,255,0.18) 48%,rgba(255,255,255,0.08) 58%,transparent 75%)",
-        }}
-          animate={{ x:[0,-6,0,4,0], y:[0,8,0,-5,0] }}
-          transition={{ duration:5.5, repeat:Infinity, ease:"easeInOut", delay:0.4 }} />
-        <svg style={{ position:"absolute", bottom:0, left:0, width:"100%", height:28 }} preserveAspectRatio="none">
-          <motion.path fill="rgba(0,0,0,0.3)"
-            animate={{ d:[
-              `M 0 28 Q ${panelW*0.15} 8  ${panelW*0.35} 20 Q ${panelW*0.55} 28 ${panelW*0.75} 14 Q ${panelW*0.9} 4 ${panelW} 22 L ${panelW} 28 Z`,
-              `M 0 28 Q ${panelW*0.15} 14 ${panelW*0.35} 24 Q ${panelW*0.55} 18 ${panelW*0.75} 6  Q ${panelW*0.9} 0 ${panelW} 18 L ${panelW} 28 Z`,
-              `M 0 28 Q ${panelW*0.15} 8  ${panelW*0.35} 20 Q ${panelW*0.55} 28 ${panelW*0.75} 14 Q ${panelW*0.9} 4 ${panelW} 22 L ${panelW} 28 Z`,
-            ]}}
-            transition={{ duration:4.8, repeat:Infinity, ease:"easeInOut", delay:0.6 }} />
-        </svg>
-        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:"linear-gradient(to bottom,rgba(255,230,100,0.98),rgba(255,200,50,0.5))" }} />
-      </motion.div>
+      <CurtainPanel side="left"  open={open} panelW={panelW}/>
+      <CurtainPanel side="right" open={open} panelW={panelW}/>
     </div>
   );
 }
@@ -958,7 +966,6 @@ function Scene4({ onNext }: { onNext:()=>void }) {
       <TwinkleBackground />
       <FlowerTopRight />
       <FlowerBottomLeft />
-      <HappyBirthdayBanner />
 
       {/* Sparkles */}
       {sparkles.map((s,i)=>(
@@ -973,31 +980,15 @@ function Scene4({ onNext }: { onNext:()=>void }) {
       <PolaroidFrame idx={1} top={328} left={34} rotate={-2} floatDelay={0.6} imageSrc={photo2Src}/>
       <PolaroidFrame idx={2} top={505} left={6}  rotate={-5} floatDelay={1.1} imageSrc={photo3Src}/>
 
-      {/* "happy birthday" cursive text — right side */}
-      <motion.div style={{ position:"absolute", right:10, top:428, width:172, textAlign:"right" }}>
-        <motion.p
-          style={{
-            fontFamily:"'Brush Script MT','Segoe Script','Dancing Script',cursive",
-            fontStyle:"italic", fontSize:48, lineHeight:0.88,
-            margin:0, marginBottom:14,
-            background:"linear-gradient(135deg,#7A5200 0%,#D4AF37 35%,#FFF4B0 55%,#D4AF37 78%,#7A5200 100%)",
-            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-            filter:"drop-shadow(0 0 10px rgba(212,175,55,0.35))",
-          }}
-          initial={{ opacity:0, x:28 }} animate={{ opacity:1, x:0 }}
-          transition={{ delay:0.5, duration:0.8 }}>
-          happy<br/>birthday
-        </motion.p>
-        <motion.p
-          style={{
-            fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
-            fontSize:11, lineHeight:1.6, color:"rgba(212,175,55,0.68)",
-            margin:0,
-          }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }}
-          transition={{ delay:1.05, duration:0.7 }}>
-          Cheers to another year of fun, laughter, and unforgettable memories!
-        </motion.p>
+      {/* Right-side caption */}
+      <motion.div style={{ position:"absolute", right:10, top:480, width:148, textAlign:"right" }}
+        initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
+        transition={{ delay:0.9, duration:0.7 }}>
+        <p style={{
+          fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
+          fontSize:11, lineHeight:1.65, color:"rgba(212,175,55,0.65)",
+          margin:0,
+        }}>Cheers to another year of fun, laughter &amp; unforgettable memories!</p>
       </motion.div>
 
       {/* Continue */}
@@ -1151,22 +1142,22 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
         <NumberBalloons n={age} />
       </motion.div>
 
-      {/* Photo — large, center, slightly desaturated */}
+      {/* Photo — cutout: only the person, background faded away */}
       <motion.div style={{
-          position:"absolute", left:62, top:138,
-          width:238, height:306,
-          borderRadius:"50% 50% 50% 50% / 55% 55% 45% 45%",
-          overflow:"hidden", zIndex:10,
-          boxShadow:"0 14px 52px rgba(0,0,0,0.72), 0 0 0 2.5px rgba(212,175,55,0.20)",
+          position:"absolute", left:44, top:110,
+          width:270, height:340, zIndex:10,
         }}
         initial={{ opacity:0, scale:0.84, y:22 }}
         animate={{ opacity:1, scale:1, y:0 }}
         transition={{ delay:0.38, duration:0.78, ease:[0.34,1.56,0.64,1] }}>
         <img src={photo3Src} alt=""
-          style={{ width:"100%", height:"100%", objectFit:"cover",
-            objectPosition:"center 15%",
-            filter:"saturate(0.52) contrast(1.08) brightness(1.06)",
-            display:"block" }}/>
+          style={{
+            width:"100%", height:"100%", objectFit:"cover",
+            objectPosition:"center 18%", display:"block",
+            WebkitMaskImage:"radial-gradient(ellipse 68% 78% at 50% 36%, white 36%, rgba(255,255,255,0.6) 55%, transparent 100%)",
+            maskImage:"radial-gradient(ellipse 68% 78% at 50% 36%, white 36%, rgba(255,255,255,0.6) 55%, transparent 100%)",
+            filter:"saturate(1.05) contrast(1.1) brightness(1.08)",
+          }}/>
       </motion.div>
 
       {/* Birthday cake — lower right, overlapping photo */}
@@ -1229,8 +1220,6 @@ export function BirthdayDoor() {
   const [countdown,  setCountdown]  = useState(3);
   const [blown,      setBlown]      = useState(false);
   const [flyUp,      setFlyUp]      = useState(false);
-  const [cakeZoom,   setCakeZoom]   = useState(false);
-  const [cakeExplode,setCakeExplode]= useState(false);
 
   const cfPieces = Array.from({ length:55 }, (_,i) => ({
     id:i, x:(i*18.7)%100, color:P[i%P.length].c, delay:i*0.065,
@@ -1248,14 +1237,11 @@ export function BirthdayDoor() {
     setTimeout(() => setCountdown(1), 1600);
     setTimeout(() => { setCakePhase("blown"); setBlown(true); setConfetti(true); setFlyUp(true); }, 2400);
     setTimeout(() => setConfetti(false), 5200);
-    setTimeout(() => setCakeZoom(true), 6000);
-    setTimeout(() => setCakeExplode(true), 8300);
-    setTimeout(() => setScene(4), 8900);
+    setTimeout(() => setScene(4), 6200);
   }
   function handleReplay() {
     setScene(1); setConfetti(false); setBlown(false); setFlyUp(false);
     setCakePhase("cta"); setCountdown(3);
-    setCakeZoom(false); setCakeExplode(false);
     setTimeout(() => setOpen(false), 80);
   }
 
@@ -1288,8 +1274,14 @@ export function BirthdayDoor() {
         )}
       </AnimatePresence>
 
-      {/* Balloon garland — scene 1 only */}
-      {scene === 1 && GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
+      {/* Balloon garland — fades away as curtain opens */}
+      {scene === 1 && (
+        <motion.div style={{ position:"absolute", inset:0, zIndex:6, pointerEvents:"none" }}
+          animate={{ opacity: open ? 0 : 1, y: open ? -30 : 0 }}
+          transition={{ duration:0.55 }}>
+          {GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
+        </motion.div>
+      )}
 
       {/* ══ SCENE 2 : CAKE ══ */}
       <AnimatePresence>
@@ -1304,29 +1296,18 @@ export function BirthdayDoor() {
             <HappyBirthdayBanner />
             <BunchBalloons flyUp={flyUp} />
 
-            {/* Cake — 3-D Y-axis spin + slow zoom-in, explodes before hitting screen */}
-            <div style={{
+            {/* Cake */}
+            <motion.div style={{
                 position:"absolute",
                 left: C_LEFT + C_W/2 - 134,
                 top:  C_TOP  + C_H/2 - 134 - 80,
                 width:268, height:268,
-                perspective: 700,
-              }}>
-              <motion.div
-                style={{ width:268, height:268, transformStyle:"preserve-3d" }}
-                initial={{ scale:0.1, rotateY:-20, opacity:1 }}
-                animate={cakeZoom
-                  ? { scale:3.8, rotateY:1080, opacity:1 }
-                  : { scale:1,   rotateY:0,    opacity:1 }}
-                transition={cakeZoom
-                  ? {
-                      scale:   { duration:2.3, ease:[0.12,0,0.88,1] },
-                      rotateY: { duration:2.3, ease:"linear" },
-                    }
-                  : { delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
-                <BirthdayCake3D blown={blown} />
-              </motion.div>
-            </div>
+              }}
+              initial={{ scale:0.1, opacity:0 }}
+              animate={{ scale:1, opacity:1 }}
+              transition={{ delay:0.3, duration:0.7, ease:[0.34,1.56,0.64,1] }}>
+              <BirthdayCake3D blown={blown} />
+            </motion.div>
 
             {/* CTA */}
             <AnimatePresence>
@@ -1373,50 +1354,6 @@ export function BirthdayDoor() {
               )}
             </AnimatePresence>
 
-            {/* Explosion burst */}
-            <AnimatePresence>
-              {cakeExplode && (
-                <motion.div key="explosion" style={{ position:"absolute", inset:0, zIndex:22, pointerEvents:"none" }}>
-                  <motion.div style={{ position:"absolute", inset:0, background:"rgba(255,248,220,0.9)" }}
-                    initial={{ opacity:1 }} animate={{ opacity:0 }} transition={{ duration:0.45 }}/>
-                  {Array.from({length:28},(_,i)=>{
-                    const angle = (i/28)*Math.PI*2;
-                    const dist  = 160 + (i%5)*52;
-                    const tx = Math.cos(angle)*dist;
-                    const ty = Math.sin(angle)*dist;
-                    const sz = 14 + (i%6)*3;
-                    return (
-                      <motion.div key={i}
-                        style={{ position:"absolute", width:sz, height:sz,
-                          borderRadius:"50%", background:P[i%P.length].c,
-                          left:"50%", top:"45%", marginLeft:-sz/2, marginTop:-sz/2, zIndex:23 }}
-                        initial={{ x:0, y:0, scale:1.5, opacity:1 }}
-                        animate={{ x:tx, y:ty, scale:0, opacity:0 }}
-                        transition={{ duration:0.72, ease:[0.15,0,0.45,1], delay:i*0.012 }}/>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Replay only — auto-advances to Scene 4 */}
-            <AnimatePresence>
-              {cakePhase === "blown" && !cakeZoom && (
-                <motion.div key="replay-btn"
-                  style={{ position:"absolute", bottom:28, left:0, right:0, textAlign:"center" }}
-                  initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.5 }}
-                  exit={{ opacity:0 }}>
-                  <motion.button onClick={handleReplay}
-                    style={{ background:"transparent", border:"none",
-                      color:"rgba(201,168,64,0.5)", fontSize:11,
-                      letterSpacing:2, textTransform:"uppercase",
-                      fontFamily:"sans-serif", cursor:"pointer" }}
-                    whileHover={{ color:"rgba(201,168,64,0.85)" }}>
-                    ↩ Replay
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
