@@ -50,16 +50,21 @@ const CLUSTERS: Cluster[] = [
 ];
 
 const ANCHORS: { x: number; y: number; ci: number }[] = [
-  { x: 30, y: 790, ci: 0  }, { x: 28, y: 738, ci: 1  }, { x: 26, y: 684, ci: 2  },
-  { x: 26, y: 632, ci: 3  }, { x: 28, y: 578, ci: 4  }, { x: 28, y: 524, ci: 5  },
-  { x: 30, y: 470, ci: 6  }, { x: 30, y: 416, ci: 7  }, { x: 32, y: 362, ci: 8  },
-  { x: 36, y: 304, ci: 9  }, { x: 47, y: 258, ci: 10 }, { x: 72, y: 215, ci: 11 },
-  { x:110, y: 182, ci: 0  }, { x:155, y: 160, ci: 1  }, { x:195, y: 150, ci: 2  },
-  { x:237, y: 160, ci: 3  }, { x:280, y: 182, ci: 4  }, { x:318, y: 215, ci: 5  },
-  { x:343, y: 258, ci: 6  }, { x:354, y: 304, ci: 7  },
-  { x:360, y: 362, ci: 8  }, { x:360, y: 416, ci: 9  }, { x:362, y: 470, ci: 10 },
-  { x:362, y: 524, ci: 11 }, { x:360, y: 578, ci: 0  }, { x:360, y: 632, ci: 1  },
-  { x:362, y: 684, ci: 2  }, { x:362, y: 738, ci: 3  }, { x:360, y: 790, ci: 4  },
+  // ── LEFT EDGE ──
+  { x: 28, y:  28, ci: 0  }, { x: 28, y:  83, ci: 1  }, { x: 28, y: 138, ci: 2  },
+  { x: 28, y: 193, ci: 3  }, { x: 28, y: 248, ci: 4  }, { x: 28, y: 303, ci: 5  },
+  { x: 28, y: 358, ci: 6  }, { x: 28, y: 413, ci: 7  }, { x: 28, y: 468, ci: 8  },
+  { x: 28, y: 523, ci: 9  }, { x: 28, y: 578, ci: 10 }, { x: 28, y: 633, ci: 11 },
+  { x: 28, y: 688, ci: 0  }, { x: 28, y: 743, ci: 1  }, { x: 28, y: 798, ci: 2  },
+  // ── RIGHT EDGE ──
+  { x:362, y:  28, ci: 3  }, { x:362, y:  83, ci: 4  }, { x:362, y: 138, ci: 5  },
+  { x:362, y: 193, ci: 6  }, { x:362, y: 248, ci: 7  }, { x:362, y: 303, ci: 8  },
+  { x:362, y: 358, ci: 9  }, { x:362, y: 413, ci: 10 }, { x:362, y: 468, ci: 11 },
+  { x:362, y: 523, ci: 0  }, { x:362, y: 578, ci: 1  }, { x:362, y: 633, ci: 2  },
+  { x:362, y: 688, ci: 3  }, { x:362, y: 743, ci: 4  }, { x:362, y: 798, ci: 5  },
+  // ── TOP EDGE ──
+  { x: 83, y:  28, ci: 6  }, { x:138, y:  28, ci: 7  }, { x:195, y:  28, ci: 8  },
+  { x:252, y:  28, ci: 9  }, { x:307, y:  28, ci: 10 },
 ];
 
 ANCHORS.forEach(({ x: ox, y: oy, ci }) => {
@@ -393,7 +398,7 @@ export function BirthdayDoor() {
             exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
 
             {/* Header text */}
-            <motion.div style={{ position:"absolute", top:36, left:0, right:0, textAlign:"center", zIndex:20 }}
+            <motion.div style={{ position:"absolute", top:72, left:0, right:0, textAlign:"center", zIndex:20 }}
               initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}>
               <p style={{ color:"#8C6A4A", fontSize:10, letterSpacing:4, textTransform:"uppercase", marginBottom:3, fontFamily:"sans-serif" }}>
                 YOU'RE INVITED TO
