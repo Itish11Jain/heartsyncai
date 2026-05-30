@@ -804,6 +804,7 @@ function MemoryCollage({
     if (!voiceNoteUrl) return;
     if (!audioRef.current) {
       audioRef.current = new Audio(voiceNoteUrl);
+      audioRef.current.volume = 0.9;
       audioRef.current.onended = () => {
         setIsPlaying(false);
         music.setVolume(1.0);
@@ -814,6 +815,7 @@ function MemoryCollage({
       setIsPlaying(false);
       music.setVolume(1.0);
     } else {
+      audioRef.current.volume = 0.9;
       void audioRef.current.play().then(() => {
         setIsPlaying(true);
         music.setVolume(0.1);
