@@ -26,101 +26,37 @@ const P: BColor[] = [
 ];
 
 /* ══════════════════════════════════════════
-   GARLAND
+   SCENE 1 DATA — balloon gradients & layout
 ══════════════════════════════════════════ */
-type B = { x: number; y: number; r: number; p: BColor; d: number; tx: number; ty: number };
-const GARLAND: B[] = [];
-let _pi = 0, _di = 0;
-function nextD() { return (_di++ * 0.11) % 1.6; }
-
-type Cluster = { dx: number; dy: number; r: number; pi: number }[];
-const CLUSTERS: Cluster[] = [
-  [{ dx:0,dy:-22,r:26,pi:0 },{ dx:-24,dy:12,r:20,pi:1 },{ dx:24,dy:12,r:20,pi:2 },{ dx:0,dy:10,r:14,pi:3 }],
-  [{ dx:0,dy:0,r:28,pi:0 },{ dx:-24,dy:-30,r:20,pi:1 },{ dx:22,dy:-28,r:20,pi:2 },{ dx:0,dy:28,r:16,pi:4 }],
-  [{ dx:0,dy:0,r:24,pi:2 },{ dx:-26,dy:-20,r:18,pi:0 },{ dx:26,dy:-20,r:18,pi:3 },{ dx:-14,dy:24,r:16,pi:1 },{ dx:14,dy:24,r:16,pi:4 }],
-  [{ dx:0,dy:-26,r:24,pi:3 },{ dx:0,dy:2,r:22,pi:0 },{ dx:0,dy:28,r:20,pi:1 },{ dx:20,dy:0,r:14,pi:2 }],
-  [{ dx:0,dy:-24,r:28,pi:1 },{ dx:-20,dy:12,r:20,pi:0 },{ dx:20,dy:12,r:20,pi:2 },{ dx:0,dy:32,r:16,pi:3 },{ dx:-10,dy:16,r:12,pi:4 }],
-  [{ dx:-22,dy:0,r:26,pi:4 },{ dx:22,dy:0,r:24,pi:0 },{ dx:0,dy:-26,r:18,pi:1 },{ dx:0,dy:26,r:14,pi:2 }],
-  [{ dx:0,dy:0,r:30,pi:2 },{ dx:-28,dy:-18,r:16,pi:0 },{ dx:28,dy:-18,r:16,pi:3 },{ dx:-20,dy:24,r:14,pi:1 },{ dx:20,dy:24,r:14,pi:4 }],
-  [{ dx:-18,dy:-22,r:22,pi:3 },{ dx:6,dy:-4,r:22,pi:1 },{ dx:-10,dy:20,r:18,pi:0 },{ dx:22,dy:18,r:16,pi:2 }],
-  [{ dx:-28,dy:4,r:22,pi:0 },{ dx:0,dy:-20,r:26,pi:2 },{ dx:28,dy:4,r:22,pi:1 },{ dx:-12,dy:22,r:14,pi:3 },{ dx:12,dy:22,r:14,pi:4 }],
-  [{ dx:-20,dy:10,r:24,pi:1 },{ dx:20,dy:10,r:24,pi:3 },{ dx:0,dy:-22,r:28,pi:0 },{ dx:0,dy:28,r:16,pi:2 }],
-  [{ dx:-8,dy:0,r:28,pi:4 },{ dx:22,dy:-14,r:20,pi:1 },{ dx:24,dy:18,r:18,pi:0 },{ dx:-24,dy:-18,r:16,pi:2 },{ dx:-20,dy:20,r:14,pi:3 }],
-  [{ dx:0,dy:0,r:26,pi:0 },{ dx:-24,dy:-10,r:20,pi:2 },{ dx:24,dy:-10,r:20,pi:1 },{ dx:-18,dy:20,r:18,pi:3 },{ dx:18,dy:20,r:18,pi:4 }],
+const S1G = [
+  { id:"sg0", hi:"#FDEAE0", mid:"#C9846A", lo:"#7A3A22" },
+  { id:"sg1", hi:"#FFF8EE", mid:"#E0B890", lo:"#A07038" },
+  { id:"sg2", hi:"#FFF2E8", mid:"#D4A880", lo:"#906040" },
+  { id:"sg3", hi:"#FEFDE0", mid:"#D4AF37", lo:"#8A6C10" },
+  { id:"sg4", hi:"#FEEAE8", mid:"#D09090", lo:"#904848" },
+  { id:"sg5", hi:"#F4F0FF", mid:"#B8A8D8", lo:"#604890" },
 ];
-
-const ANCHORS: { x: number; y: number; ci: number }[] = [
-  // ── LEFT EDGE ──
-  { x: 28, y:  28, ci: 0  }, { x: 28, y:  83, ci: 1  }, { x: 28, y: 138, ci: 2  },
-  { x: 28, y: 193, ci: 3  }, { x: 28, y: 248, ci: 4  }, { x: 28, y: 303, ci: 5  },
-  { x: 28, y: 358, ci: 6  }, { x: 28, y: 413, ci: 7  }, { x: 28, y: 468, ci: 8  },
-  { x: 28, y: 523, ci: 9  }, { x: 28, y: 578, ci: 10 }, { x: 28, y: 633, ci: 11 },
-  { x: 28, y: 688, ci: 0  }, { x: 28, y: 743, ci: 1  }, { x: 28, y: 798, ci: 2  },
-  // ── RIGHT EDGE ──
-  { x:362, y:  28, ci: 3  }, { x:362, y:  83, ci: 4  }, { x:362, y: 138, ci: 5  },
-  { x:362, y: 193, ci: 6  }, { x:362, y: 248, ci: 7  }, { x:362, y: 303, ci: 8  },
-  { x:362, y: 358, ci: 9  }, { x:362, y: 413, ci: 10 }, { x:362, y: 468, ci: 11 },
-  { x:362, y: 523, ci: 0  }, { x:362, y: 578, ci: 1  }, { x:362, y: 633, ci: 2  },
-  { x:362, y: 688, ci: 3  }, { x:362, y: 743, ci: 4  }, { x:362, y: 798, ci: 5  },
-  // ── TOP EDGE ──
-  { x: 83, y:  28, ci: 6  }, { x:138, y:  28, ci: 7  }, { x:195, y:  28, ci: 8  },
-  { x:252, y:  28, ci: 9  }, { x:307, y:  28, ci: 10 },
+const BOUQUET = [
+  { cx:152, cy:490, r:40, gi:0, dur:2.4, delay:0.0, amp:6 },
+  { cx:234, cy:462, r:37, gi:1, dur:2.9, delay:0.4, amp:7 },
+  { cx:190, cy:370, r:44, gi:2, dur:2.2, delay:0.2, amp:8 },
+  { cx:136, cy:402, r:35, gi:3, dur:2.7, delay:0.7, amp:5 },
+  { cx:252, cy:398, r:37, gi:4, dur:2.5, delay:0.9, amp:6 },
 ];
-
-ANCHORS.forEach(({ x: ox, y: oy, ci }) => {
-  CLUSTERS[ci].forEach(({ dx, dy, r, pi }) => {
-    const bx = ox + dx, by = oy + dy;
-    const ddx = bx - 195, ddy = by - 470;
-    const blen = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
-    const bdist = 220 + (Math.abs(Math.round(ddx * 7 + ddy * 13)) % 180);
-    GARLAND.push({
-      x: bx, y: by, r,
-      p: P[(_pi++ + pi) % P.length],
-      d: nextD(),
-      tx: bx + (ddx / blen) * bdist,
-      ty: by + (ddy / blen) * bdist - 60,
-    });
-  });
-});
-
-const CONFETTI_DOTS = [
-  [0.3,0.25],[0.55,0.35],[0.45,0.55],[0.65,0.6],[0.3,0.65],[0.6,0.2],[0.42,0.42],[0.7,0.45],
+const GBX=195, GBY=740, GBW=94, GBH=70, GBD=26;
+const BOW_CY = GBY - GBH - GBD - 4;
+const S1_CONF = [
+  {x:52,y:108,s:9,c:"#D4AF37",r:15},{x:318,y:82,s:7,c:"#D4AF37",r:-22},
+  {x:78,y:218,s:8,c:"#C9846A",r:30},{x:334,y:192,s:10,c:"#D4AF37",r:-15},
+  {x:42,y:348,s:7,c:"#F0D060",r:35},{x:356,y:318,s:8,c:"#C9846A",r:-28},
+  {x:118,y:146,s:6,c:"#D4AF37",r:42},{x:282,y:138,s:9,c:"#F0D060",r:-32},
+  {x:172,y:92,s:7,c:"#C9846A",r:20},{x:248,y:234,s:6,c:"#D4AF37",r:-12},
+  {x:64,y:488,s:8,c:"#F0D060",r:38},{x:344,y:464,s:7,c:"#D4AF37",r:-18},
+  {x:196,y:52,s:10,c:"#C9846A",r:14},{x:298,y:572,s:6,c:"#D4AF37",r:48},
+  {x:94,y:598,s:8,c:"#F0D060",r:-38},{x:162,y:640,s:7,c:"#D4AF37",r:25},
+  {x:316,y:620,s:6,c:"#C9846A",r:-25},{x:36,y:182,s:5,c:"#D4AF37",r:60},
+  {x:358,y:412,s:6,c:"#F0D060",r:-48},{x:220,y:304,s:5,c:"#D4AF37",r:33},
 ];
-function GBalloon({ x, y, r, p, d, tx, ty, popped }: B & { popped: boolean }) {
-  const id = `g${Math.round(x*10)}${Math.round(y*10)}`;
-  return (
-    <motion.div
-      style={{ position:"absolute", left:x-r, top:y-r, width:r*2, height:r*2, zIndex:15, pointerEvents:"none" }}
-      animate={popped
-        ? { x: tx-x, y: ty-y, scale:[1,1.35,0], opacity:[1,1,0] }
-        : { y:[0,-4-d*1.2,0,-2-d*0.6,0] }}
-      transition={popped
-        ? { duration:0.75+d*0.35, ease:"easeOut", delay:d*0.12 }
-        : { duration:2.6+d, repeat:Infinity, ease:"easeInOut", delay:d }}>
-      <svg width={r*2} height={r*2} viewBox={`0 0 ${r*2} ${r*2}`}>
-        <defs>
-          <radialGradient id={`${id}g`} cx="34%" cy="28%" r="62%">
-            <stop offset="0%"   stopColor={p.s} />
-            <stop offset="52%"  stopColor={p.c} />
-            <stop offset="100%" stopColor={p.c} stopOpacity={0.75} />
-          </radialGradient>
-        </defs>
-        {p.confetti ? (
-          <>
-            <circle cx={r} cy={r} r={r} fill={`url(#${id}g)`} opacity={0.92} />
-            {CONFETTI_DOTS.map(([dx,dy],i)=>(
-              <circle key={i} cx={dx*r*2} cy={dy*r*2} r={r*0.09} fill={P[i%P.length].c} opacity={0.85} />
-            ))}
-          </>
-        ) : (
-          <circle cx={r} cy={r} r={r} fill={`url(#${id}g)`} />
-        )}
-        <ellipse cx={r*0.6} cy={r*0.38} rx={r*0.2} ry={r*0.13}
-          fill="white" opacity={0.5} transform={`rotate(-30,${r*0.6},${r*0.38})`} />
-      </svg>
-    </motion.div>
-  );
-}
 
 /* ══════════════════════════════════════════
    BACKGROUND
@@ -152,7 +88,171 @@ function Nebulae() {
 }
 
 /* ══════════════════════════════════════════
-   CURTAIN — golden full-screen split
+   SCENE 1 — Gift box SVG
+══════════════════════════════════════════ */
+function GiftBoxSVG() {
+  const x=GBX, y=GBY, w=GBW, h=GBH, d=GBD;
+  const lx=x-w/2, ty=y-h;
+  return (
+    <motion.g initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }}
+      transition={{ duration:0.8, delay:0.3, ease:[0.34,1.56,0.64,1] }}>
+      {/* Top face */}
+      <path d={`M${lx} ${ty} L${lx+d} ${ty-d} L${lx+w+d} ${ty-d} L${lx+w} ${ty} Z`}
+        fill="rgba(212,175,55,0.07)" stroke="#D4AF37" strokeWidth={2}/>
+      {/* Right face */}
+      <path d={`M${lx+w} ${ty} L${lx+w+d} ${ty-d} L${lx+w+d} ${y-d} L${lx+w} ${y} Z`}
+        fill="rgba(212,175,55,0.05)" stroke="#D4AF37" strokeWidth={1.8}/>
+      {/* Front face */}
+      <rect x={lx} y={ty} width={w} height={h}
+        fill="rgba(212,175,55,0.07)" stroke="#D4AF37" strokeWidth={2} rx={2}/>
+      {/* Ribbon vertical */}
+      <line x1={x} y1={ty} x2={x} y2={y} stroke="#D4AF37" strokeWidth={2.8} opacity={0.9}/>
+      {/* Ribbon horizontal */}
+      <line x1={lx} y1={ty+h*0.5} x2={lx+w} y2={ty+h*0.5} stroke="#D4AF37" strokeWidth={2.8} opacity={0.9}/>
+      {/* Ribbon on top face */}
+      <line x1={x} y1={ty} x2={x+d} y2={ty-d} stroke="#D4AF37" strokeWidth={2} opacity={0.65}/>
+      {/* Subtle shine */}
+      <rect x={lx+5} y={ty+6} width={w*0.28} height={h*0.22} fill="rgba(255,255,255,0.08)" rx={2}/>
+      {/* Bow left loop */}
+      <ellipse cx={x-19} cy={BOW_CY} rx={21} ry={13} fill="#D4AF37" opacity={0.9}
+        transform={`rotate(-33,${x-19},${BOW_CY})`}/>
+      {/* Bow right loop */}
+      <ellipse cx={x+19} cy={BOW_CY} rx={21} ry={13} fill="#D4AF37" opacity={0.9}
+        transform={`rotate(33,${x+19},${BOW_CY})`}/>
+      {/* Bow center */}
+      <ellipse cx={x} cy={BOW_CY} rx={11} ry={9} fill="#C4913A"/>
+      <ellipse cx={x-3} cy={BOW_CY-3} rx={4} ry={3} fill="rgba(255,240,140,0.5)"/>
+    </motion.g>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 1 — Bouquet balloon
+══════════════════════════════════════════ */
+function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
+  { cx:number; cy:number; r:number; gi:number; dur:number; delay:number; amp:number }) {
+  const gid = S1G[gi].id;
+  const kx = cx - r*0.36, ky = cy - r*0.46;
+  const strPath = `M${cx} ${cy+r+4} Q${cx+(cx-GBX)*0.12} ${(cy+r+BOW_CY)/2} ${GBX} ${BOW_CY+10}`;
+  return (
+    <motion.g animate={{ y:[0,-amp,0,amp*0.5,0], rotate:[-1.5,1.5,-0.5,1,-1.5] }}
+      style={{ originX:`${cx}px`, originY:`${cy}px` }}
+      transition={{ duration:dur, repeat:Infinity, ease:"easeInOut", delay }}>
+      <path d={strPath} fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.5}/>
+      <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
+      <ellipse cx={cx} cy={cy+r+4} rx={5} ry={4} fill={`url(#${gid})`} opacity={0.85}/>
+      <ellipse cx={kx} cy={ky} rx={r*0.22} ry={r*0.14}
+        fill="rgba(255,255,255,0.55)" transform={`rotate(-28,${kx},${ky})`}/>
+      <circle cx={kx+r*0.1} cy={ky+r*0.08} r={r*0.06} fill="rgba(255,255,255,0.38)"/>
+    </motion.g>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 1 — Floating tappable balloon
+══════════════════════════════════════════ */
+function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
+  const cx=195, cy=180, r=50;
+  const gid = S1G[5].id;
+  const kx = cx-r*0.38, ky = cy-r*0.48;
+  return (
+    <g>
+      {/* Long string to gift */}
+      <path d={`M${cx} ${cy+r+5} Q${cx+22} 420 ${GBX} ${BOW_CY+10}`}
+        fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
+      {/* Pulsing ring */}
+      <motion.circle cx={cx} cy={cy} r={r+8}
+        fill="none" stroke="rgba(212,175,55,0.45)" strokeWidth={2.5}
+        animate={{ r:[r+8,r+22], opacity:[0.6,0] }}
+        transition={{ duration:1.9, repeat:Infinity, ease:"easeOut" }}/>
+      {/* The balloon — tappable */}
+      <motion.g animate={{ y:[0,-13,0,9,0], rotate:[-2,2,-1,2.5,-2] }}
+        transition={{ duration:3.8, repeat:Infinity, ease:"easeInOut" }}
+        onClick={onTap} style={{ cursor:"pointer" }}>
+        <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
+        <ellipse cx={cx} cy={cy+r+5} rx={6} ry={5} fill={`url(#${gid})`} opacity={0.85}/>
+        <ellipse cx={kx} cy={ky} rx={r*0.24} ry={r*0.16}
+          fill="rgba(255,255,255,0.62)" transform={`rotate(-28,${kx},${ky})`}/>
+        <text x={cx} y={cy+5} textAnchor="middle"
+          fontFamily="Georgia,serif" fontStyle="italic" fontSize={13}
+          fill="rgba(255,255,255,0.75)">tap ✦</text>
+      </motion.g>
+    </g>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 1 — Main component
+══════════════════════════════════════════ */
+function Scene1({ onNext }: { onNext:()=>void }) {
+  return (
+    <motion.div key="scene1new" style={{ position:"absolute", inset:0, zIndex:10 }}
+      exit={{ opacity:0 }} transition={{ duration:0.6 }}>
+
+      {/* Handwritten "Happy Birthday" — left-to-right reveal */}
+      <div style={{ position:"absolute", left:0, right:0, top:50,
+        textAlign:"center", zIndex:5, pointerEvents:"none" }}>
+        <motion.p style={{
+          fontFamily:"'Brush Script MT','Segoe Script','Dancing Script',cursive",
+          fontStyle:"italic", fontSize:48, lineHeight:1.2, margin:0,
+          color:"#D4AF37", display:"inline-block",
+          filter:"drop-shadow(0 0 14px rgba(212,175,55,0.75)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))",
+        }}
+          initial={{ clipPath:"inset(0 102% 0 0)" }}
+          animate={{ clipPath:"inset(0 0% 0 0)" }}
+          transition={{ duration:2.8, ease:"linear", delay:0.5 }}>
+          Happy Birthday
+        </motion.p>
+        <motion.p style={{
+          fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
+          fontSize:15, margin:"6px 0 0", letterSpacing:4, textTransform:"uppercase",
+          color:"rgba(212,175,55,0.72)",
+        }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }}
+          transition={{ delay:3.5, duration:1.0 }}>
+          {name}
+        </motion.p>
+      </div>
+
+      {/* SVG canvas — gift, balloons, confetti, strings */}
+      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:4 }}
+        viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          {S1G.map(g => (
+            <radialGradient key={g.id} id={g.id} cx="34%" cy="28%" r="65%">
+              <stop offset="0%"  stopColor={g.hi}/>
+              <stop offset="46%" stopColor={g.mid}/>
+              <stop offset="100%" stopColor={g.lo}/>
+            </radialGradient>
+          ))}
+        </defs>
+
+        {/* Confetti pieces */}
+        {S1_CONF.map((p,i) => (
+          <motion.rect key={i} x={p.x-p.s/2} y={p.y-p.s/2} width={p.s} height={p.s}
+            fill={p.c} rx={i%4===0 ? p.s/2 : 1}
+            initial={{ opacity:0 }}
+            animate={{ opacity:[0,0.88,0.42,0.76,0], rotate:[p.r, p.r+80, p.r+180], y:[0,-6,4,-5,0] }}
+            transition={{ duration:3+i*0.16, repeat:Infinity, delay:i*0.18, ease:"easeInOut" }}/>
+        ))}
+
+        {/* Gift box */}
+        <GiftBoxSVG />
+
+        {/* Bouquet balloons */}
+        {BOUQUET.map((b,i) => (
+          <BouquetBalloonSVG key={i} {...b}/>
+        ))}
+
+        {/* Floating tappable balloon */}
+        <FloatingBalloonSVG onTap={onNext}/>
+      </svg>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   (old curtain — replaced by Scene1 above)
 ══════════════════════════════════════════ */
 const FOLD_FABRIC = `repeating-linear-gradient(
   to right,
@@ -1213,7 +1313,6 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
 ══════════════════════════════════════════ */
 export function BirthdayDoor() {
   const [scene,      setScene]      = useState<1|2|3|4|5>(1);
-  const [open,       setOpen]       = useState(false);
   const [confetti,   setConfetti]   = useState(false);
   const [cakePhase,  setCakePhase]  = useState<"cta"|"counting"|"blown">("cta");
   const [countdown,  setCountdown]  = useState(3);
@@ -1224,11 +1323,6 @@ export function BirthdayDoor() {
     id:i, x:(i*18.7)%100, color:P[i%P.length].c, delay:i*0.065,
   }));
 
-  function handleTap() {
-    if (open) return;
-    setOpen(true);
-    setTimeout(() => { setScene(2); setCakePhase("cta"); }, 1000);
-  }
   function handleBlow() {
     setCakePhase("counting");
     setCountdown(3);
@@ -1241,7 +1335,6 @@ export function BirthdayDoor() {
   function handleReplay() {
     setScene(1); setConfetti(false); setBlown(false); setFlyUp(false);
     setCakePhase("cta"); setCountdown(3);
-    setTimeout(() => setOpen(false), 80);
   }
 
   return (
@@ -1257,46 +1350,10 @@ export function BirthdayDoor() {
         {confetti && cfPieces.map(p=><Confetto key={p.id} x={p.x} color={p.color} delay={p.delay}/>)}
       </AnimatePresence>
 
-      {/* ══ SCENE 1 : CURTAIN ══ */}
+      {/* ══ SCENE 1 : BIRTHDAY GREETING ══ */}
       <AnimatePresence>
-        {scene === 1 && (
-          <motion.div key="scene1"
-            style={{ position:"absolute", inset:0, zIndex:10 }}
-            exit={{ opacity:0 }} transition={{ duration:0.4, delay:0.8 }}>
-            <Curtain open={open} />
-            {/* Tap hint */}
-            {!open && (
-              <motion.div style={{
-                position:"absolute", left:0, right:0, bottom:72, textAlign:"center",
-                zIndex:15, pointerEvents:"none",
-              }}
-                animate={{ opacity:[0.55,1,0.55] }}
-                transition={{ duration:2, repeat:Infinity, ease:"easeInOut" }}>
-                <span style={{
-                  fontFamily:"Georgia,serif", fontStyle:"italic",
-                  fontSize:13, letterSpacing:3, color:"rgba(180,140,40,0.9)",
-                  textTransform:"uppercase",
-                }}>Tap to open ✦</span>
-              </motion.div>
-            )}
-            {/* Full-screen tap overlay — must be topmost */}
-            <div onClick={handleTap} style={{
-              position:"absolute", left:0, top:0, width:390, height:844,
-              background:"transparent",
-              cursor:open?"default":"pointer", zIndex:20,
-            }}/>
-          </motion.div>
-        )}
+        {scene === 1 && <Scene1 onNext={() => setScene(2)} />}
       </AnimatePresence>
-
-      {/* Balloon garland — fades away as curtain opens */}
-      {scene === 1 && (
-        <motion.div style={{ position:"absolute", inset:0, zIndex:6, pointerEvents:"none" }}
-          animate={{ opacity: open ? 0 : 1, y: open ? -30 : 0 }}
-          transition={{ duration:0.55 }}>
-          {GARLAND.map((b,i) => <GBalloon key={i} {...b} popped={blown} />)}
-        </motion.div>
-      )}
 
       {/* ══ SCENE 2 : CAKE ══ */}
       <AnimatePresence>

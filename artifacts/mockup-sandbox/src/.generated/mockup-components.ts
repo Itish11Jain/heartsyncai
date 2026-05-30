@@ -2,6 +2,7 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/birthday/BirthdayDoor.tsx": () => import("../components/mockups/birthday/BirthdayDoor.tsx"),
+  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx"),
   "./components/mockups/greeting-cards/Cinematic.tsx": () => import("../components/mockups/greeting-cards/Cinematic.tsx"),
   "./components/mockups/greeting-cards/InteractiveCard.tsx": () => import("../components/mockups/greeting-cards/InteractiveCard.tsx"),
   "./components/mockups/greeting-cards/LottieHearts.tsx": () => import("../components/mockups/greeting-cards/LottieHearts.tsx"),
@@ -11,7 +12,6 @@ export const modules: ModuleMap = {
   "./components/mockups/new-flow/PaywallPreview.tsx": () => import("../components/mockups/new-flow/PaywallPreview.tsx"),
   "./components/mockups/share-panel/ShareBadge.tsx": () => import("../components/mockups/share-panel/ShareBadge.tsx"),
   "./components/mockups/share-panel/ShareClean.tsx": () => import("../components/mockups/share-panel/ShareClean.tsx"),
-  "./components/mockups/homepage/HomeRedesign.tsx": () => import("../components/mockups/homepage/HomeRedesign.tsx"),
   "./components/mockups/heartsync-v2/AnalyticsUtmTile.tsx": () => import("../components/mockups/heartsync-v2/AnalyticsUtmTile.tsx"),
   "./components/mockups/heartsync-v2/CardIllustration.tsx": () => import("../components/mockups/heartsync-v2/CardIllustration.tsx"),
   "./components/mockups/heartsync-v2/HomeDesktop.tsx": () => import("../components/mockups/heartsync-v2/HomeDesktop.tsx"),
