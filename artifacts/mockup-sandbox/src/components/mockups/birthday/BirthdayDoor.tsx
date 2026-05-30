@@ -700,9 +700,239 @@ function PhotoCutout({ capVisible }: { capVisible:boolean }) {
 }
 
 /* ══════════════════════════════════════════
-   SCENE 4 — Photo cutout + cap + confetti
+   SCENE 4 — Flowers (SVG helpers)
 ══════════════════════════════════════════ */
-function Scene4({ onReplay }: { onReplay:()=>void }) {
+function FlowerTopRight() {
+  return (
+    <motion.svg width={188} height={220} viewBox="0 0 188 220"
+      style={{ position:"absolute", top:128, right:-6, zIndex:6, pointerEvents:"none" }}
+      animate={{ rotate:[-1,1.5,-1] }} transition={{ duration:6, repeat:Infinity, ease:"easeInOut" }}>
+      <defs>
+        <radialGradient id="fpA" cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#C04878"/><stop offset="100%" stopColor="#6A0A2C"/>
+        </radialGradient>
+        <radialGradient id="fpB" cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#D06090"/><stop offset="100%" stopColor="#8B1040"/>
+        </radialGradient>
+        <radialGradient id="fctr" cx="42%" cy="36%" r="60%">
+          <stop offset="0%" stopColor="#FFF4B0"/><stop offset="60%" stopColor="#D4AF37"/><stop offset="100%" stopColor="#8B6400"/>
+        </radialGradient>
+        <filter id="fGlow"><feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      {/* Stems + leaves */}
+      <path d="M 94 108 C 78 140 64 168 52 210" stroke="#2A4E30" strokeWidth={3} fill="none" opacity={0.8}/>
+      <path d="M 94 108 C 108 135 118 158 124 188" stroke="#2A4E30" strokeWidth={2.5} fill="none" opacity={0.7}/>
+      <ellipse cx={70} cy={158} rx={27} ry={11} fill="#1E3A26" opacity={0.75} transform="rotate(-42,70,158)"/>
+      <ellipse cx={117} cy={170} rx={22} ry={9}  fill="#2A4E30" opacity={0.65} transform="rotate(28,117,170)"/>
+      {/* Main flower — 8 petals */}
+      <g transform="translate(92,90)">
+        {[0,45,90,135,180,225,270,315].map((a,i)=>(
+          <motion.ellipse key={i} cx={0} cy={-34} rx={13} ry={29}
+            fill={i%2===0?"url(#fpA)":"url(#fpB)"} opacity={0.88}
+            transform={`rotate(${a})`}
+            animate={{ ry:[29,31,29], opacity:[0.88,1,0.88] }}
+            transition={{ duration:3.5+i*0.22, repeat:Infinity, ease:"easeInOut", delay:i*0.12 }}/>
+        ))}
+        <circle r={13} fill="url(#fctr)" filter="url(#fGlow)"/>
+        <circle r={5}  fill="#FFF4B0" opacity={0.8}/>
+      </g>
+      {/* Small flower top-left */}
+      <g transform="translate(34,48)">
+        {[0,60,120,180,240,300].map((a,i)=>(
+          <motion.ellipse key={i} cx={0} cy={-20} rx={9} ry={17}
+            fill="url(#fpB)" opacity={0.82} transform={`rotate(${a})`}
+            animate={{ ry:[17,19,17] }}
+            transition={{ duration:4+i*0.28, repeat:Infinity, ease:"easeInOut", delay:0.3+i*0.1 }}/>
+        ))}
+        <circle r={9} fill="url(#fctr)" opacity={0.9}/>
+      </g>
+      {/* Bud 1 */}
+      <g transform="translate(158,33) rotate(-18)">
+        <ellipse cx={0} cy={0} rx={10} ry={18} fill="#8B1040" opacity={0.9}/>
+        <ellipse cx={-2} cy={-2} rx={7} ry={13} fill="#C04878" opacity={0.75}/>
+        <ellipse cx={0} cy={-11} rx={4} ry={6}  fill="#D4608A" opacity={0.8}/>
+      </g>
+      {/* Bud 2 */}
+      <g transform="translate(148,135) rotate(14)">
+        <ellipse cx={0} cy={0} rx={8} ry={13} fill="#6A0A2C" opacity={0.88}/>
+        <ellipse cx={1} cy={-2} rx={5} ry={9}  fill="#A02050" opacity={0.7}/>
+      </g>
+    </motion.svg>
+  );
+}
+
+function FlowerBottomLeft() {
+  return (
+    <motion.svg width={178} height={178} viewBox="0 0 178 178"
+      style={{ position:"absolute", bottom:-8, left:-8, zIndex:6, pointerEvents:"none" }}
+      animate={{ rotate:[1,-1.5,1] }} transition={{ duration:6.5, repeat:Infinity, ease:"easeInOut" }}>
+      <defs>
+        <radialGradient id="fpBL" cx="38%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#A82460"/><stop offset="100%" stopColor="#5C0828"/>
+        </radialGradient>
+        <radialGradient id="fcBL" cx="42%" cy="36%" r="60%">
+          <stop offset="0%" stopColor="#FFF4B0"/><stop offset="100%" stopColor="#D4AF37"/>
+        </radialGradient>
+      </defs>
+      <path d="M 75 95 C 68 118 62 142 56 172" stroke="#2A4E30" strokeWidth={2.5} fill="none" opacity={0.75}/>
+      <path d="M 92 108 C 98 128 104 148 108 170" stroke="#2A4E30" strokeWidth={2} fill="none" opacity={0.65}/>
+      <ellipse cx={60} cy={140} rx={23} ry={9} fill="#1E3A26" opacity={0.7} transform="rotate(-50,60,140)"/>
+      {/* Medium flower — 7 petals */}
+      <g transform="translate(78,82)">
+        {[0,51.4,102.9,154.3,205.7,257.1,308.6].map((a,i)=>(
+          <motion.ellipse key={i} cx={0} cy={-24} rx={10} ry={21}
+            fill="url(#fpBL)" opacity={0.85} transform={`rotate(${a})`}
+            animate={{ ry:[21,23,21] }}
+            transition={{ duration:3.8+i*0.24, repeat:Infinity, ease:"easeInOut", delay:i*0.14 }}/>
+        ))}
+        <circle r={10} fill="url(#fcBL)"/>
+      </g>
+      {/* Small flower */}
+      <g transform="translate(30,52)">
+        {[0,72,144,216,288].map((a,i)=>(
+          <ellipse key={i} cx={0} cy={-16} rx={8} ry={14}
+            fill="#8B1040" opacity={0.8} transform={`rotate(${a})`}/>
+        ))}
+        <circle r={7} fill="#D4AF37" opacity={0.9}/>
+      </g>
+      {/* Bud */}
+      <g transform="translate(120,60) rotate(18)">
+        <ellipse cx={0} cy={0} rx={8} ry={14} fill="#5C0828" opacity={0.9}/>
+        <ellipse cx={0} cy={-4} rx={5} ry={9}  fill="#A82460" opacity={0.75}/>
+      </g>
+    </motion.svg>
+  );
+}
+
+function PolaroidFrame({ idx, top, left, rotate, floatDelay }:
+  { idx:number, top:number, left:number, rotate:number, floatDelay:number }) {
+  const IW=130, IH=138, BRD=11, BOT=32;
+  const moods = [
+    "linear-gradient(148deg,#1a0d08 0%,#3a1520 55%,#200c10 100%)",
+    "linear-gradient(148deg,#0c1018 0%,#1e1028 55%,#0e0c18 100%)",
+    "linear-gradient(148deg,#100810 0%,#241030 55%,#100c18 100%)",
+  ];
+  return (
+    <motion.div style={{ position:"absolute", top, left, zIndex:10+idx, rotate }}
+      initial={{ opacity:0, scale:0.82, y:36 }}
+      animate={{ opacity:1, scale:1, y:0 }}
+      transition={{ delay:0.18+idx*0.28, duration:0.65, ease:[0.34,1.56,0.64,1] }}>
+      <motion.div
+        animate={{ y:[0,-7,0] }}
+        transition={{ duration:3.2+idx*0.65, repeat:Infinity, ease:"easeInOut", delay:floatDelay }}>
+        {/* Polaroid frame */}
+        <div style={{
+          width:IW+BRD*2, height:IH+BRD+BOT,
+          background:"#f2ede4",
+          borderRadius:3,
+          boxShadow:"0 10px 28px rgba(0,0,0,0.65), 0 3px 8px rgba(0,0,0,0.4)",
+          padding:BRD, paddingBottom:BOT,
+          boxSizing:"border-box" as const,
+        }}>
+          {/* Photo area */}
+          <div style={{ width:IW, height:IH, background:moods[idx], borderRadius:2,
+            position:"relative", overflow:"hidden" }}>
+            <svg width={IW} height={IH} viewBox={`0 0 ${IW} ${IH}`}
+              style={{ position:"absolute", inset:0 }}>
+              <defs>
+                <radialGradient id={`phV${idx}`} cx="50%" cy="25%" r="70%">
+                  <stop offset="0%" stopColor="transparent"/>
+                  <stop offset="100%" stopColor="rgba(0,0,0,0.55)"/>
+                </radialGradient>
+              </defs>
+              {/* Vignette */}
+              <rect width={IW} height={IH} fill={`url(#phV${idx})`}/>
+              {/* Head silhouette */}
+              <ellipse cx={IW/2} cy={IH*0.34} rx={21} ry={25} fill="rgba(30,10,6,0.6)"/>
+              {/* Shoulders */}
+              <ellipse cx={IW/2} cy={IH*0.76} rx={30} ry={27} fill="rgba(20,8,4,0.55)"/>
+              {/* Add photo hint */}
+              <text x={IW/2} y={IH-6} textAnchor="middle"
+                fill="#C9A840" opacity={0.38} fontSize={8}
+                fontFamily="Georgia,serif" fontStyle="italic">tap to add photo</text>
+            </svg>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 4 — Polaroid Photo Collage
+══════════════════════════════════════════ */
+function Scene4({ onNext }: { onNext:()=>void }) {
+  const sparkles = [{x:318,y:218},{x:256,y:374},{x:342,y:446},{x:202,y:568},{x:278,y:300}];
+  return (
+    <motion.div key="scene4col" style={{ position:"absolute", inset:0, zIndex:12, overflow:"hidden" }}
+      initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.7 }}>
+      <TwinkleBackground />
+      <FlowerTopRight />
+      <FlowerBottomLeft />
+      <HappyBirthdayBanner />
+
+      {/* Sparkles */}
+      {sparkles.map((s,i)=>(
+        <motion.div key={i} style={{ position:"absolute", left:s.x, top:s.y,
+          fontSize:11, color:"#D4AF37", zIndex:7, pointerEvents:"none" }}
+          animate={{ opacity:[0.3,1,0.3], scale:[0.8,1.3,0.8], rotate:[0,30,0] }}
+          transition={{ duration:1.8+i*0.45, repeat:Infinity, delay:i*0.38 }}>✦</motion.div>
+      ))}
+
+      {/* 3 Floating polaroids */}
+      <PolaroidFrame idx={0} top={155} left={6}  rotate={-7} floatDelay={0}   />
+      <PolaroidFrame idx={1} top={328} left={34} rotate={-2} floatDelay={0.6} />
+      <PolaroidFrame idx={2} top={505} left={6}  rotate={-5} floatDelay={1.1} />
+
+      {/* "happy birthday" cursive text — right side */}
+      <motion.div style={{ position:"absolute", right:10, top:428, width:172, textAlign:"right" }}>
+        <motion.p
+          style={{
+            fontFamily:"'Brush Script MT','Segoe Script','Dancing Script',cursive",
+            fontStyle:"italic", fontSize:48, lineHeight:0.88,
+            margin:0, marginBottom:14,
+            background:"linear-gradient(135deg,#7A5200 0%,#D4AF37 35%,#FFF4B0 55%,#D4AF37 78%,#7A5200 100%)",
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+            filter:"drop-shadow(0 0 10px rgba(212,175,55,0.35))",
+          }}
+          initial={{ opacity:0, x:28 }} animate={{ opacity:1, x:0 }}
+          transition={{ delay:0.5, duration:0.8 }}>
+          happy<br/>birthday
+        </motion.p>
+        <motion.p
+          style={{
+            fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
+            fontSize:11, lineHeight:1.6, color:"rgba(212,175,55,0.68)",
+            margin:0,
+          }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }}
+          transition={{ delay:1.05, duration:0.7 }}>
+          Cheers to another year of fun, laughter, and unforgettable memories!
+        </motion.p>
+      </motion.div>
+
+      {/* Continue */}
+      <motion.button onClick={onNext} style={{
+        position:"absolute", bottom:26, left:"50%", transform:"translateX(-50%)",
+        background:"linear-gradient(135deg,rgba(212,175,55,0.14),rgba(212,175,55,0.26))",
+        border:"1.5px solid rgba(212,175,55,0.58)", borderRadius:36, padding:"13px 40px",
+        color:"#F0D060", fontSize:13, letterSpacing:2, textTransform:"uppercase",
+        fontFamily:"'Georgia',serif", cursor:"pointer", whiteSpace:"nowrap",
+      }}
+        initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:1.4 }}
+        whileHover={{ scale:1.04 }} whileTap={{ scale:0.97 }}>
+        Continue ✨
+      </motion.button>
+    </motion.div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   SCENE 5 — Photo cutout + cap + confetti
+══════════════════════════════════════════ */
+function Scene5({ onReplay }: { onReplay:()=>void }) {
   const [capVisible,  setCapVisible]  = useState(false);
   const [cfShow,      setCfShow]      = useState(false);
   const [showReplay,  setShowReplay]  = useState(false);
@@ -722,7 +952,7 @@ function Scene4({ onReplay }: { onReplay:()=>void }) {
   }));
 
   return (
-    <motion.div key="scene4" style={{ position:"absolute", inset:0, zIndex:12 }}
+    <motion.div key="scene5" style={{ position:"absolute", inset:0, zIndex:12 }}
       initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>
       <TwinkleBackground />
       <HappyBirthdayBanner />
@@ -789,7 +1019,7 @@ function Scene4({ onReplay }: { onReplay:()=>void }) {
    MAIN
 ══════════════════════════════════════════ */
 export function BirthdayDoor() {
-  const [scene,      setScene]      = useState<1|2|3|4>(1);
+  const [scene,      setScene]      = useState<1|2|3|4|5>(1);
   const [open,       setOpen]       = useState(false);
   const [confetti,   setConfetti]   = useState(false);
   const [cakePhase,  setCakePhase]  = useState<"cta"|"counting"|"blown">("cta");
@@ -968,9 +1198,14 @@ export function BirthdayDoor() {
         {scene === 3 && <Scene3 onNext={() => setScene(4)} />}
       </AnimatePresence>
 
-      {/* ══ SCENE 4 : PHOTO ══ */}
+      {/* ══ SCENE 4 : POLAROID COLLAGE ══ */}
       <AnimatePresence>
-        {scene === 4 && <Scene4 onReplay={handleReplay} />}
+        {scene === 4 && <Scene4 onNext={() => setScene(5)} />}
+      </AnimatePresence>
+
+      {/* ══ SCENE 5 : PHOTO CUTOUT ══ */}
+      <AnimatePresence>
+        {scene === 5 && <Scene5 onReplay={handleReplay} />}
       </AnimatePresence>
     </div>
   );
