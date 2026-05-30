@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import photo1Src from "@/assets/photo1.jpg";
 import photo2Src from "@/assets/photo2.jpg";
 import photo3Src from "@/assets/photo3.jpg";
+import photo1StickerSrc from "@/assets/photo1_sticker.png";
 
 const name = "Priya";
 const age = 25;
@@ -1241,21 +1242,25 @@ function Scene5({ onReplay }: { onReplay:()=>void }) {
         <NumberBalloons n={age} />
       </motion.div>
 
-      {/* Photo — cutout: only the person, background faded away */}
+      {/* Photo sticker — background removed, white outline border */}
       <motion.div style={{
-          position:"absolute", left:44, top:110,
-          width:270, height:340, zIndex:10,
+          position:"absolute", left:18, top:96,
+          width:306, zIndex:10,
+          transform:"rotate(-2.5deg)",
         }}
-        initial={{ opacity:0, scale:0.84, y:22 }}
-        animate={{ opacity:1, scale:1, y:0 }}
-        transition={{ delay:0.38, duration:0.78, ease:[0.34,1.56,0.64,1] }}>
-        <img src={photo3Src} alt=""
+        initial={{ opacity:0, scale:0.82, y:28, rotate:-6 }}
+        animate={{ opacity:1, scale:1, y:0, rotate:-2.5 }}
+        transition={{ delay:0.32, duration:0.82, ease:[0.34,1.56,0.64,1] }}>
+        <img src={photo1StickerSrc} alt=""
           style={{
-            width:"100%", height:"100%", objectFit:"cover",
-            objectPosition:"center 18%", display:"block",
-            WebkitMaskImage:"radial-gradient(ellipse 68% 78% at 50% 36%, white 36%, rgba(255,255,255,0.6) 55%, transparent 100%)",
-            maskImage:"radial-gradient(ellipse 68% 78% at 50% 36%, white 36%, rgba(255,255,255,0.6) 55%, transparent 100%)",
-            filter:"saturate(1.05) contrast(1.1) brightness(1.08)",
+            width:"100%", height:"auto", display:"block",
+            filter:[
+              "drop-shadow(0 0 8px white)",
+              "drop-shadow(0 0 8px white)",
+              "drop-shadow(0 0 6px white)",
+              "drop-shadow(0 0 4px rgba(255,255,255,0.9))",
+              "drop-shadow(0 6px 20px rgba(0,0,0,0.55))",
+            ].join(" "),
           }}/>
       </motion.div>
 
