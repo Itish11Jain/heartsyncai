@@ -31,12 +31,12 @@ const P: BColor[] = [
    SCENE 1 DATA — balloon gradients & layout
 ══════════════════════════════════════════ */
 const S1G = [
-  { id:"sg0", hi:"#FDEAE0", mid:"#C9846A", lo:"#7A3A22" },
-  { id:"sg1", hi:"#FFF8EE", mid:"#E0B890", lo:"#A07038" },
-  { id:"sg2", hi:"#FFF2E8", mid:"#D4A880", lo:"#906040" },
-  { id:"sg3", hi:"#FEFDE0", mid:"#D4AF37", lo:"#8A6C10" },
-  { id:"sg4", hi:"#FEEAE8", mid:"#D09090", lo:"#904848" },
-  { id:"sg5", hi:"#F4F0FF", mid:"#B8A8D8", lo:"#604890" },
+  { id:"sg0", hi:"#D89880", mid:"#C9846A", lo:"#B87060" },
+  { id:"sg1", hi:"#E4BE55", mid:"#D4AF37", lo:"#C09A25" },
+  { id:"sg2", hi:"#EDB890", mid:"#E8A07A", lo:"#D08060" },
+  { id:"sg3", hi:"#D09A42", mid:"#C4913A", lo:"#B07A28" },
+  { id:"sg4", hi:"#D89878", mid:"#C88868", lo:"#B87060" },
+  { id:"sg5", hi:"#D8A888", mid:"#C89878", lo:"#B88060" },
 ];
 const BOUQUET = [
   { cx:152, cy:490, r:40, gi:0, dur:2.4, delay:0.0, amp:6 },
@@ -98,32 +98,57 @@ function GiftBoxSVG() {
   return (
     <motion.g initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }}
       transition={{ duration:0.8, delay:0.3, ease:[0.34,1.56,0.64,1] }}>
+
+      {/* ── Box body ── */}
+      {/* Right face (shadow side) */}
+      <path d={`M${lx+w} ${ty} L${lx+w+d} ${ty-d} L${lx+w+d} ${y-d} L${lx+w} ${y} Z`}
+        fill="#3A0F14"/>
       {/* Top face */}
       <path d={`M${lx} ${ty} L${lx+d} ${ty-d} L${lx+w+d} ${ty-d} L${lx+w} ${ty} Z`}
-        fill="rgba(212,175,55,0.07)" stroke="#D4AF37" strokeWidth={2}/>
-      {/* Right face */}
-      <path d={`M${lx+w} ${ty} L${lx+w+d} ${ty-d} L${lx+w+d} ${y-d} L${lx+w} ${y} Z`}
-        fill="rgba(212,175,55,0.05)" stroke="#D4AF37" strokeWidth={1.8}/>
+        fill="#4A1520"/>
       {/* Front face */}
-      <rect x={lx} y={ty} width={w} height={h}
-        fill="rgba(212,175,55,0.07)" stroke="#D4AF37" strokeWidth={2} rx={2}/>
-      {/* Ribbon vertical */}
-      <line x1={x} y1={ty} x2={x} y2={y} stroke="#D4AF37" strokeWidth={2.8} opacity={0.9}/>
-      {/* Ribbon horizontal */}
-      <line x1={lx} y1={ty+h*0.5} x2={lx+w} y2={ty+h*0.5} stroke="#D4AF37" strokeWidth={2.8} opacity={0.9}/>
-      {/* Ribbon on top face */}
-      <line x1={x} y1={ty} x2={x+d} y2={ty-d} stroke="#D4AF37" strokeWidth={2} opacity={0.65}/>
-      {/* Subtle shine */}
-      <rect x={lx+5} y={ty+6} width={w*0.28} height={h*0.22} fill="rgba(255,255,255,0.08)" rx={2}/>
-      {/* Bow left loop */}
-      <ellipse cx={x-19} cy={BOW_CY} rx={21} ry={13} fill="#D4AF37" opacity={0.9}
-        transform={`rotate(-33,${x-19},${BOW_CY})`}/>
-      {/* Bow right loop */}
-      <ellipse cx={x+19} cy={BOW_CY} rx={21} ry={13} fill="#D4AF37" opacity={0.9}
-        transform={`rotate(33,${x+19},${BOW_CY})`}/>
-      {/* Bow center */}
-      <ellipse cx={x} cy={BOW_CY} rx={11} ry={9} fill="#C4913A"/>
-      <ellipse cx={x-3} cy={BOW_CY-3} rx={4} ry={3} fill="rgba(255,240,140,0.5)"/>
+      <rect x={lx} y={ty} width={w} height={h} fill="#5C1A22" rx={2}/>
+      {/* Front face subtle left-side sheen */}
+      <rect x={lx} y={ty} width={w*0.38} height={h} fill="rgba(255,255,255,0.04)" rx={2}/>
+
+      {/* ── Gold ribbon on right face ── */}
+      <path d={`M${lx+w} ${ty+h*0.44} L${lx+w+d} ${ty+h*0.44-d} L${lx+w+d} ${ty+h*0.56-d} L${lx+w} ${ty+h*0.56} Z`}
+        fill="#C4913A" opacity={0.9}/>
+
+      {/* ── Gold ribbon on top face ── */}
+      <path d={`M${x-5} ${ty} L${x-5+d} ${ty-d} L${x+5+d} ${ty-d} L${x+5} ${ty} Z`}
+        fill="#D4AF37" opacity={0.92}/>
+
+      {/* ── Gold ribbon on front face ── */}
+      {/* Vertical */}
+      <rect x={x-5} y={ty} width={10} height={h} fill="#D4AF37" rx={1.5} opacity={0.92}/>
+      {/* Horizontal */}
+      <rect x={lx} y={ty+h*0.44} width={w} height={h*0.12} fill="#D4AF37" rx={1.5} opacity={0.92}/>
+      {/* Ribbon shimmer */}
+      <rect x={x-2} y={ty+3} width={3} height={h-6} fill="rgba(255,248,140,0.45)" rx={1}/>
+
+      {/* ── Bow ── */}
+      {/* Left loop */}
+      <path d={`M${x} ${BOW_CY+5} C${x-40} ${BOW_CY} ${x-44} ${BOW_CY-30} ${x-22} ${BOW_CY-34} C${x-8} ${BOW_CY-37} ${x} ${BOW_CY-10} ${x} ${BOW_CY+5}`}
+        fill="#D4AF37" opacity={0.95}/>
+      <path d={`M${x} ${BOW_CY+5} C${x-40} ${BOW_CY} ${x-44} ${BOW_CY-30} ${x-22} ${BOW_CY-34} C${x-8} ${BOW_CY-37} ${x} ${BOW_CY-10} ${x} ${BOW_CY+5}`}
+        fill="rgba(255,245,140,0.18)"/>
+      {/* Right loop */}
+      <path d={`M${x} ${BOW_CY+5} C${x+40} ${BOW_CY} ${x+44} ${BOW_CY-30} ${x+22} ${BOW_CY-34} C${x+8} ${BOW_CY-37} ${x} ${BOW_CY-10} ${x} ${BOW_CY+5}`}
+        fill="#D4AF37" opacity={0.95}/>
+      <path d={`M${x} ${BOW_CY+5} C${x+40} ${BOW_CY} ${x+44} ${BOW_CY-30} ${x+22} ${BOW_CY-34} C${x+8} ${BOW_CY-37} ${x} ${BOW_CY-10} ${x} ${BOW_CY+5}`}
+        fill="rgba(255,245,140,0.18)"/>
+      {/* Trailing ribbons */}
+      <path d={`M${x-4} ${BOW_CY+6} Q${x-20} ${BOW_CY+28} ${x-16} ${BOW_CY+46}`}
+        stroke="#D4AF37" strokeWidth={9} fill="none" strokeLinecap="round" opacity={0.88}/>
+      <path d={`M${x+4} ${BOW_CY+6} Q${x+20} ${BOW_CY+28} ${x+16} ${BOW_CY+46}`}
+        stroke="#D4AF37" strokeWidth={9} fill="none" strokeLinecap="round" opacity={0.88}/>
+      {/* Ribbon shimmer on tails */}
+      <path d={`M${x-2} ${BOW_CY+6} Q${x-10} ${BOW_CY+24} ${x-8} ${BOW_CY+40}`}
+        stroke="rgba(255,248,140,0.4)" strokeWidth={3} fill="none" strokeLinecap="round"/>
+      {/* Center knot */}
+      <ellipse cx={x} cy={BOW_CY+3} rx={10} ry={9} fill="#C4913A"/>
+      <ellipse cx={x-1} cy={BOW_CY+1} rx={4.5} ry={3.5} fill="rgba(255,244,140,0.6)"/>
     </motion.g>
   );
 }
@@ -134,7 +159,6 @@ function GiftBoxSVG() {
 function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
   { cx:number; cy:number; r:number; gi:number; dur:number; delay:number; amp:number }) {
   const gid = S1G[gi].id;
-  const kx = cx - r*0.36, ky = cy - r*0.46;
   const strPath = `M${cx} ${cy+r+4} Q${cx+(cx-GBX)*0.12} ${(cy+r+BOW_CY)/2} ${GBX} ${BOW_CY+10}`;
   return (
     <motion.g animate={{ y:[0,-amp,0,amp*0.5,0], rotate:[-1.5,1.5,-0.5,1,-1.5] }}
@@ -143,9 +167,6 @@ function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
       <path d={strPath} fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.5}/>
       <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
       <ellipse cx={cx} cy={cy+r+4} rx={5} ry={4} fill={`url(#${gid})`} opacity={0.85}/>
-      <ellipse cx={kx} cy={ky} rx={r*0.22} ry={r*0.14}
-        fill="rgba(255,255,255,0.55)" transform={`rotate(-28,${kx},${ky})`}/>
-      <circle cx={kx+r*0.1} cy={ky+r*0.08} r={r*0.06} fill="rgba(255,255,255,0.38)"/>
     </motion.g>
   );
 }
@@ -154,13 +175,12 @@ function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
    SCENE 1 — Floating tappable balloon
 ══════════════════════════════════════════ */
 function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
-  const cx=195, cy=180, r=50;
+  const cx=195, cy=255, r=50;
   const gid = S1G[5].id;
-  const kx = cx-r*0.38, ky = cy-r*0.48;
   return (
     <g>
       {/* Long string to gift */}
-      <path d={`M${cx} ${cy+r+5} Q${cx+22} 420 ${GBX} ${BOW_CY+10}`}
+      <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${BOW_CY+10}`}
         fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
       {/* Pulsing ring */}
       <motion.circle cx={cx} cy={cy} r={r+8}
@@ -173,8 +193,6 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
         onClick={onTap} style={{ cursor:"pointer" }}>
         <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
         <ellipse cx={cx} cy={cy+r+5} rx={6} ry={5} fill={`url(#${gid})`} opacity={0.85}/>
-        <ellipse cx={kx} cy={ky} rx={r*0.24} ry={r*0.16}
-          fill="rgba(255,255,255,0.62)" transform={`rotate(-28,${kx},${ky})`}/>
         <text x={cx} y={cy+5} textAnchor="middle"
           fontFamily="Georgia,serif" fontStyle="italic" fontSize={13}
           fill="rgba(255,255,255,0.75)">tap ✦</text>
@@ -195,10 +213,10 @@ function Scene1({ onNext }: { onNext:()=>void }) {
       <div style={{ position:"absolute", left:0, right:0, top:50,
         textAlign:"center", zIndex:5, pointerEvents:"none" }}>
         <motion.p style={{
-          fontFamily:"'Brush Script MT','Segoe Script','Dancing Script',cursive",
-          fontStyle:"italic", fontSize:48, lineHeight:1.2, margin:0,
-          color:"#D4AF37", display:"inline-block",
-          filter:"drop-shadow(0 0 14px rgba(212,175,55,0.75)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))",
+          fontFamily:"'Playfair Display',Georgia,serif",
+          fontStyle:"italic", fontWeight:700, fontSize:46, lineHeight:1.2, margin:0,
+          color:"#D4AF37", display:"inline-block", letterSpacing:1,
+          filter:"drop-shadow(0 0 14px rgba(212,175,55,0.7)) drop-shadow(0 2px 8px rgba(0,0,0,0.55))",
         }}
           initial={{ clipPath:"inset(0 102% 0 0)" }}
           animate={{ clipPath:"inset(0 0% 0 0)" }}
@@ -206,8 +224,8 @@ function Scene1({ onNext }: { onNext:()=>void }) {
           Happy Birthday
         </motion.p>
         <motion.p style={{
-          fontFamily:"Georgia,'Times New Roman',serif", fontStyle:"italic",
-          fontSize:15, margin:"6px 0 0", letterSpacing:4, textTransform:"uppercase",
+          fontFamily:"'Playfair Display',Georgia,serif", fontStyle:"italic",
+          fontSize:15, margin:"6px 0 0", letterSpacing:5, textTransform:"uppercase",
           color:"rgba(212,175,55,0.72)",
         }}
           initial={{ opacity:0 }} animate={{ opacity:1 }}
@@ -689,15 +707,15 @@ function HappyBirthdayBanner() {
                   animate={{ y:[0,-2.5,0] }}
                   transition={{ duration:2.6+i*0.22, repeat:Infinity, ease:"easeInOut", delay:i*0.14 }}>
                   <text x={cx+1} y={floatY+1} textAnchor="middle"
-                    fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                    fontFamily="'Playfair Display',Georgia,serif"
                     fontStyle="italic" fontWeight="bold" fontSize={40}
                     fill="#5C3500" opacity={0.45}>{ch}</text>
                   <text x={cx} y={floatY} textAnchor="middle"
-                    fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                    fontFamily="'Playfair Display',Georgia,serif"
                     fontStyle="italic" fontWeight="bold" fontSize={40}
                     fill="#D4AF37" filter="url(#lttrGlow)">{ch}</text>
                   <text x={cx} y={floatY} textAnchor="middle"
-                    fontFamily="'Brush Script MT','Segoe Script','Comic Sans MS',cursive"
+                    fontFamily="'Playfair Display',Georgia,serif"
                     fontStyle="italic" fontWeight="bold" fontSize={40}
                     fill="#FFF4B0" opacity={0.28}>{ch}</text>
                 </motion.g>
