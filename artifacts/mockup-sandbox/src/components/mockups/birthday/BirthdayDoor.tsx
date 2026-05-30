@@ -395,27 +395,6 @@ export function BirthdayDoor() {
               cursor:open?"default":"pointer", zIndex:7,
               borderRadius:`${ARCH_BORDER_R}px ${ARCH_BORDER_R}px 0 0`,
             }}>
-              <AnimatePresence>
-                {!open && (
-                  <motion.div
-                    style={{ position:"absolute", bottom:200, left:0, right:0, display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}
-                    animate={{ opacity:[0.4,1,0.4] }} transition={{ duration:2.2, repeat:Infinity }}
-                    exit={{ opacity:0 }}>
-                    <motion.div style={{
-                      width:46, height:46, borderRadius:"50%",
-                      border:"1.5px solid rgba(212,175,55,0.6)",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      background:"rgba(212,175,55,0.12)", backdropFilter:"blur(4px)",
-                    }}
-                      animate={{ scale:[1,1.12,1] }} transition={{ duration:1.8, repeat:Infinity }}>
-                      <span style={{ fontSize:20 }}>👆</span>
-                    </motion.div>
-                    <p style={{ color:"rgba(212,175,55,0.9)", fontSize:11, letterSpacing:2.5, fontFamily:"sans-serif", margin:0 }}>
-                      TAP TO REVEAL
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.button>
 
             {GARLAND.map((b,i) => <GBalloon key={i} {...b} />)}
