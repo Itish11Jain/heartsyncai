@@ -96,6 +96,9 @@ function GiftBoxSVG() {
   const x=GBX, y=GBY, w=GBW, h=GBH, d=GBD;
   const lx=x-w/2, ty=y-h;
   return (
+    <motion.g
+      animate={{ y:[0,-7,0,5,0] }}
+      transition={{ duration:3.4, repeat:Infinity, ease:"easeInOut", delay:1.1 }}>
     <motion.g initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }}
       transition={{ duration:0.8, delay:0.3, ease:[0.34,1.56,0.64,1] }}>
 
@@ -128,6 +131,7 @@ function GiftBoxSVG() {
       <rect x={x-2} y={ty+3} width={3} height={h-6} fill="rgba(255,248,140,0.45)" rx={1}/>
 
     </motion.g>
+    </motion.g>
   );
 }
 
@@ -154,11 +158,12 @@ function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
 /* ══════════════════════════════════════════
    SCENE 1 — Floating tappable balloon
 ══════════════════════════════════════════ */
-const BURST_PTS = Array.from({length:12}, (_,i)=>{
-  const angle = (i/12)*Math.PI*2 - Math.PI/2;
-  const dist  = 58 + (i%3)*14;
+const BURST_COLORS = ["#D4AF37","#C9846A","#F0D060","#FFF4B0","#E8803A"];
+const BURST_PTS = Array.from({length:22}, (_,i)=>{
+  const angle = (i/22)*Math.PI*2 - Math.PI/2;
+  const dist  = 75 + (i%5)*20;
   return { tx: Math.round(Math.cos(angle)*dist), ty: Math.round(Math.sin(angle)*dist),
-    c: i%3===0?"#D4AF37":i%3===1?"#C9846A":"#F0D060", r:3+(i%3) };
+    c: BURST_COLORS[i%BURST_COLORS.length], r:4+(i%4)*2 };
 });
 
 function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
@@ -191,17 +196,33 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
       {popped && BURST_PTS.map((p,i)=>(
         <motion.circle key={i} cx={cx} cy={cy} r={p.r}
           fill={p.c}
-          initial={{ x:0, y:0, opacity:1 }}
-          animate={{ x:p.tx, y:p.ty, opacity:0 }}
-          transition={{ duration:0.55, delay:i*0.018, ease:[0.16,1,0.3,1] }}/>
+          initial={{ x:0, y:0, opacity:1, scale:1 }}
+          animate={{ x:p.tx, y:p.ty, opacity:0, scale:0.4 }}
+          transition={{ duration:0.7, delay:i*0.014, ease:[0.16,1,0.3,1] }}/>
       ))}
+      {/* Shockwave ring 1 */}
+      {popped && (
+        <motion.circle cx={cx} cy={cy} r={r}
+          fill="none" stroke="#D4AF37" strokeWidth={3}
+          initial={{ scale:1, opacity:0.9 }}
+          animate={{ scale:3.2, opacity:0 }}
+          transition={{ duration:0.55, ease:"easeOut" }}/>
+      )}
+      {/* Shockwave ring 2 */}
+      {popped && (
+        <motion.circle cx={cx} cy={cy} r={r}
+          fill="none" stroke="#F0D060" strokeWidth={1.5}
+          initial={{ scale:1, opacity:0.7 }}
+          animate={{ scale:4.5, opacity:0 }}
+          transition={{ duration:0.75, ease:"easeOut", delay:0.06 }}/>
+      )}
       {/* Pop flash */}
       {popped && (
-        <motion.circle cx={cx} cy={cy} r={r+6}
+        <motion.circle cx={cx} cy={cy} r={r+18}
           fill="white"
-          initial={{ opacity:0.65 }}
+          initial={{ opacity:0.85 }}
           animate={{ opacity:0 }}
-          transition={{ duration:0.22 }}/>
+          transition={{ duration:0.28 }}/>
       )}
 
       {/* The balloon — floats, then pops out */}
@@ -249,15 +270,42 @@ function Scene1({ onNext }: { onNext:()=>void }) {
           Happy Birthday
         </motion.p>
         <motion.p style={{
-          fontFamily:"'Playfair Display',Georgia,serif", fontStyle:"italic",
-          fontSize:15, margin:"6px 0 0", letterSpacing:5, textTransform:"uppercase",
-          color:"rgba(212,175,55,0.72)",
+          fontFamily:"'Great Vibes', cursive",
+          fontSize:34, margin:"2px 0 0", letterSpacing:1,
+          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+          display:"inline-block",
         }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }}
-          transition={{ delay:3.5, duration:1.0 }}>
+          initial={{ opacity:0, scale:0.85 }} animate={{ opacity:1, scale:1 }}
+          transition={{ delay:3.5, duration:0.8, ease:[0.34,1.56,0.64,1] }}>
           {name}
         </motion.p>
       </div>
+
+      {/* Sparkles around "Happy Birthday" */}
+      {(["✦","✨","✦","✨","✦","✨"] as const).map((s,i)=>{
+        const positions = [
+          { left:"8%",  top:"2%" },
+          { left:"82%", top:"3%" },
+          { left:"4%",  top:"14%"},
+          { left:"88%", top:"16%"},
+          { left:"22%", top:"20%"},
+          { left:"68%", top:"20%"},
+        ];
+        return (
+          <motion.span key={i} style={{
+            position:"absolute", zIndex:6, pointerEvents:"none",
+            fontSize:[13,11,10,12,9,11][i],
+            color:["#D4AF37","#F0D060","#C9846A","#FFF4B0","#D4AF37","#E8A060"][i],
+            ...positions[i],
+          }}
+            initial={{ opacity:0, scale:0 }}
+            animate={{ opacity:[0,1,0.5,1,0], scale:[0,1.3,0.9,1.2,0], rotate:[0,25,-15,20,0] }}
+            transition={{ delay:3.0+i*0.22, duration:2.2, repeat:Infinity, repeatDelay:0.6+i*0.3 }}>
+            {s}
+          </motion.span>
+        );
+      })}
 
       {/* SVG canvas — gift, balloons, confetti, strings */}
       <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:4 }}
@@ -537,6 +585,15 @@ function Cake({ blown = false }: { blown?: boolean }) {
           {/* Wick */}
           <line x1={cx} y1={78} x2={cx} y2={73} stroke="#3B1A00" strokeWidth={1.5} strokeLinecap="round"/>
           <CandleFlame cx={cx} cy={71} blown={blown}/>
+          {/* Smoke puffs — 3 staggered wisps per candle */}
+          {blown && [0,1,2].map(j=>(
+            <motion.ellipse key={j} cx={cx + (j-1)*3} cy={70}
+              rx={3+j} ry={4+j}
+              fill="rgba(210,210,210,0.55)"
+              initial={{ opacity:0, y:0, scaleX:0.4 }}
+              animate={{ opacity:[0,0.55,0.35,0], y:[0,-(18+j*14)], scaleX:[0.4,1.2,1.5,0.5], x:(j-1)*6 }}
+              transition={{ duration:1.4+j*0.35, delay:j*0.22+i*0.08, repeat:Infinity, repeatDelay:0.3, ease:"easeOut" }}/>
+          ))}
         </g>
       ))}
     </svg>
