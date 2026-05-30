@@ -99,155 +99,260 @@ function TwinkleBackground() {
   );
 }
 
-/* ─── Scene 1: Gift + Balloons ──────────────────────────────────────────── */
-const BALLOON_LEFT_DEFS = [
-  { x:-72, y:108, r:28, pi:0, rdur:4.2, rdel:0 },
-  { x:-44, y:72,  r:22, pi:2, rdur:3.8, rdel:0.6 },
-  { x:-96, y:158, r:18, pi:1, rdur:5.1, rdel:1.1 },
-  { x:-58, y:188, r:24, pi:3, rdur:4.7, rdel:0.3 },
-  { x:-28, y:138, r:16, pi:4, rdur:3.5, rdel:1.4 },
+/* ─── Scene 1 data ─────────────────────────────────────────────────────── */
+const S1G = [
+  { id:"sg0", hi:"#D89880", mid:"#C9846A", lo:"#B87060" },
+  { id:"sg1", hi:"#E4BE55", mid:"#D4AF37", lo:"#C09A25" },
+  { id:"sg2", hi:"#EDB890", mid:"#E8A07A", lo:"#D08060" },
+  { id:"sg3", hi:"#D09A42", mid:"#C4913A", lo:"#B07A28" },
+  { id:"sg4", hi:"#D89878", mid:"#C88868", lo:"#B87060" },
+  { id:"sg5", hi:"#D8A888", mid:"#C89878", lo:"#B88060" },
 ];
-const BALLOON_RIGHT_DEFS = [
-  { x: 72, y:108, r:28, pi:1, rdur:4.4, rdel:0.2 },
-  { x: 44, y:72,  r:22, pi:3, rdur:3.6, rdel:0.8 },
-  { x: 96, y:158, r:18, pi:2, rdur:5.3, rdel:0.9 },
-  { x: 58, y:188, r:24, pi:0, rdur:4.9, rdel:0.4 },
-  { x: 28, y:138, r:16, pi:4, rdur:3.7, rdel:1.6 },
+const BOUQUET = [
+  { cx:152, cy:490, r:40, gi:0, dur:2.4, delay:0.0, amp:6 },
+  { cx:234, cy:462, r:37, gi:1, dur:2.9, delay:0.4, amp:7 },
+  { cx:190, cy:370, r:44, gi:2, dur:2.2, delay:0.2, amp:8 },
+  { cx:136, cy:402, r:35, gi:3, dur:2.7, delay:0.7, amp:5 },
+  { cx:252, cy:398, r:37, gi:4, dur:2.5, delay:0.9, amp:6 },
 ];
+const GBX=195, GBY=740, GBW=94, GBH=70, GBD=26;
+const S1_CONF = [
+  {x:52,y:108,s:9,c:"#D4AF37",r:15},{x:318,y:82,s:7,c:"#D4AF37",r:-22},
+  {x:78,y:218,s:8,c:"#C9846A",r:30},{x:334,y:192,s:10,c:"#D4AF37",r:-15},
+  {x:42,y:348,s:7,c:"#F0D060",r:35},{x:356,y:318,s:8,c:"#C9846A",r:-28},
+  {x:118,y:146,s:6,c:"#D4AF37",r:42},{x:282,y:138,s:9,c:"#F0D060",r:-32},
+  {x:172,y:92,s:7,c:"#C9846A",r:20},{x:248,y:234,s:6,c:"#D4AF37",r:-12},
+  {x:64,y:488,s:8,c:"#F0D060",r:38},{x:344,y:464,s:7,c:"#D4AF37",r:-18},
+  {x:196,y:52,s:10,c:"#C9846A",r:14},{x:298,y:572,s:6,c:"#D4AF37",r:48},
+  {x:94,y:598,s:8,c:"#F0D060",r:-38},{x:162,y:640,s:7,c:"#D4AF37",r:25},
+  {x:316,y:620,s:6,c:"#C9846A",r:-25},{x:36,y:182,s:5,c:"#D4AF37",r:60},
+  {x:358,y:412,s:6,c:"#F0D060",r:-48},{x:220,y:304,s:5,c:"#D4AF37",r:33},
+];
+const SIDE_GIFTS = [
+  { cx:110, cy:752, w:50, h:42, d:13, front:"#4A1520", side:"#300D14", top:"#6A2030", ribbon:"#EFC840", delay:0.35, amp:4 },
+  { cx:280, cy:746, w:56, h:46, d:15, front:"#3A1A58", side:"#250E3C", top:"#52288A", ribbon:"#E87060", delay:0.9,  amp:5 },
+  { cx:58,  cy:762, w:40, h:34, d:11, front:"#0A3A28", side:"#052416", top:"#125A3E", ribbon:"#D4AF37", delay:1.5,  amp:3 },
+  { cx:330, cy:755, w:46, h:38, d:12, front:"#3A2808", side:"#261B04", top:"#5A3E0E", ribbon:"#C9846A", delay:0.65, amp:4.5 },
+] as const;
+const S1_TWINKLES = [
+  ["12%","8%",  14,"#D4AF37",0.3,2.0], ["85%","6%",  11,"#F0D060",0.8,2.4],
+  ["5%", "28%", 10,"#C9846A",1.1,1.8], ["91%","32%", 13,"#FFF4B0",0.5,2.2],
+  ["18%","42%", 9, "#D4AF37",1.6,2.6], ["78%","48%", 12,"#E8A060",0.2,1.9],
+  ["6%", "60%", 11,"#F0D060",1.9,2.1], ["88%","62%", 10,"#D4AF37",0.7,2.3],
+  ["25%","72%", 13,"#C9846A",1.3,1.7], ["70%","70%", 9, "#FFF4B0",1.0,2.5],
+  ["50%","6%",  10,"#D4AF37",2.0,2.0], ["40%","78%", 12,"#F0D060",0.4,2.2],
+  ["14%","86%", 8, "#C9846A",1.7,1.8], ["82%","84%", 11,"#D4AF37",0.9,2.4],
+] as const;
+const BURST_COLORS = ["#D4AF37","#C9846A","#F0D060","#FFF4B0","#E8803A"];
+const BURST_PTS = Array.from({length:22}, (_,i)=>{
+  const angle = (i/22)*Math.PI*2 - Math.PI/2;
+  const dist  = 75 + (i%5)*20;
+  return { tx: Math.round(Math.cos(angle)*dist), ty: Math.round(Math.sin(angle)*dist),
+    c: BURST_COLORS[i%BURST_COLORS.length], r:4+(i%4)*2 };
+});
 
-function BouquetBalloonSVG({ defs, side }: { defs: typeof BALLOON_LEFT_DEFS, side: "left"|"right" }) {
-  const anchorX = side === "left" ? 195 : 195;
-  const anchorY = 680;
+function SmallGiftBox({ cx,cy,w,h,d,front,side,top,ribbon,delay,amp }:
+  { cx:number;cy:number;w:number;h:number;d:number;front:string;side:string;top:string;ribbon:string;delay:number;amp:number }) {
+  const lx=cx-w/2, ty=cy-h;
   return (
-    <svg width={390} height={280} viewBox="0 0 390 280"
-      style={{ position:"absolute", bottom:120, left:0, zIndex:8, pointerEvents:"none" }}>
-      <defs>
-        {P.map((p, i) => (
-          <radialGradient key={i} id={`bg_${side}_${i}`} cx="34%" cy="28%" r="62%">
-            <stop offset="0%"   stopColor={p.s}/>
-            <stop offset="52%"  stopColor={p.c}/>
-            <stop offset="100%" stopColor={p.c} stopOpacity={0.7}/>
-          </radialGradient>
-        ))}
-      </defs>
-      {defs.map((b, i) => {
-        const bx = anchorX + b.x - (side === "left" ? 90 : -90);
-        const by = 220 + b.y - 220;
-        return (
-          <g key={i}>
-            <motion.line x1={bx} y1={by + b.r + 6} x2={anchorX + (side==="left"?-90:90)} y2={220}
-              stroke="#C9A840" strokeWidth={0.8} opacity={0.45}
-              animate={{ d: undefined }}/>
-            <motion.g
-              animate={{ y:[0, -(3+i*0.7), 0] }}
-              transition={{ duration: b.rdur, repeat:Infinity, ease:"easeInOut", delay:b.rdel }}>
-              <circle cx={bx} cy={by} r={b.r} fill={`url(#bg_${side}_${b.pi % P.length})`}/>
-              <ellipse cx={bx - b.r*0.4} cy={by - b.r*0.62} rx={b.r*0.2} ry={b.r*0.13}
-                fill="white" opacity={0.5}
-                transform={`rotate(-30,${bx - b.r*0.4},${by - b.r*0.62})`}/>
-            </motion.g>
-          </g>
-        );
-      })}
-    </svg>
+    <motion.g animate={{ y:[0,-amp,0,amp*0.5,0] }} transition={{ duration:2.8+delay*0.4, repeat:Infinity, ease:"easeInOut", delay }}>
+      <motion.g initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, delay:delay+0.2, ease:[0.34,1.56,0.64,1] }}>
+        <path d={`M${lx+w} ${ty} L${lx+w+d} ${ty-d} L${lx+w+d} ${cy-d} L${lx+w} ${cy} Z`} fill={side}/>
+        <path d={`M${lx} ${ty} L${lx+d} ${ty-d} L${lx+w+d} ${ty-d} L${lx+w} ${ty} Z`} fill={top}/>
+        <rect x={lx} y={ty} width={w} height={h} fill={front} rx={2}/>
+        <rect x={cx-3} y={ty} width={6} height={h} fill={ribbon} rx={1} opacity={0.9}/>
+        <rect x={lx} y={ty+h*0.44} width={w} height={h*0.12} fill={ribbon} rx={1} opacity={0.9}/>
+        <ellipse cx={cx-6} cy={ty-3} rx={5} ry={3.5} fill={ribbon} opacity={0.85} transform={`rotate(-20,${cx-6},${ty-3})`}/>
+        <ellipse cx={cx+6} cy={ty-3} rx={5} ry={3.5} fill={ribbon} opacity={0.85} transform={`rotate(20,${cx+6},${ty-3})`}/>
+        <circle cx={cx} cy={ty-1} r={3} fill={ribbon}/>
+      </motion.g>
+    </motion.g>
   );
 }
 
-function GiftBoxSVG({ onOpen }: { onOpen: () => void }) {
-  const [opened, setOpened] = useState(false);
-  const [shaking, setShaking] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => setShaking(false), 3200);
-    return () => clearTimeout(t);
-  }, []);
-  function handleTap() {
-    setOpened(true);
-    setTimeout(onOpen, 600);
-  }
+function GiftBoxSVG() {
+  const x=GBX, y=GBY, w=GBW, h=GBH, d=GBD;
+  const lx=x-w/2, ty=y-h;
   return (
-    <motion.div onClick={handleTap} style={{ cursor:"pointer", position:"relative", width:180, height:160 }}
-      animate={shaking ? { rotate:[-2,2,-2,2,-1,1,-2,2,0] } : {}}
-      transition={{ duration:0.55, repeat:shaking ? Infinity : 0, repeatDelay:1.4 }}>
-      <svg width={180} height={160} viewBox="0 0 180 160">
-        <defs>
-          <linearGradient id="boxBot" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#C04878"/><stop offset="100%" stopColor="#7A1035"/>
-          </linearGradient>
-          <linearGradient id="boxLid" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#E060A0"/><stop offset="100%" stopColor="#9B1848"/>
-          </linearGradient>
-          <linearGradient id="boxRib" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FFF4B0"/><stop offset="50%" stopColor="#D4AF37"/><stop offset="100%" stopColor="#FFF4B0"/>
-          </linearGradient>
-        </defs>
-        {/* Box body */}
-        <rect x={20} y={80} width={140} height={72} rx={5} fill="url(#boxBot)"/>
-        <rect x={84} y={80} width={12} height={72} fill="url(#boxRib)" opacity={0.85}/>
-        <rect x={20} y={106} width={140} height={8} fill="url(#boxRib)" opacity={0.7}/>
-        {/* Lid */}
-        <motion.g animate={opened ? { y:-60, opacity:0 } : { y:0, opacity:1 }}
-          transition={{ duration:0.5, ease:[0.34,1.56,0.64,1] }}>
-          <rect x={12} y={58} width={156} height={28} rx={5} fill="url(#boxLid)"/>
-          <rect x={78} y={58} width={24} height={28} fill="url(#boxRib)" opacity={0.85}/>
-          {/* Bow */}
-          <path d="M78 58 C60 42 52 30 78 44 C82 46 90 44 90 44" fill="url(#boxRib)" opacity={0.9}/>
-          <path d="M102 58 C120 42 128 30 102 44 C98 46 90 44 90 44" fill="url(#boxRib)" opacity={0.9}/>
-          <circle cx={90} cy={48} r={8} fill="#D4AF37"/>
-          <circle cx={88} cy={46} r={3} fill="#FFF4B0" opacity={0.7}/>
-        </motion.g>
-        {/* Shine */}
-        <rect x={26} y={84} width={4} height={60} rx={2} fill="white" opacity={0.12}/>
-      </svg>
-      {!opened && (
-        <motion.p style={{
-          position:"absolute", bottom:-28, left:0, right:0,
-          textAlign:"center", fontSize:11, color:"rgba(212,175,55,0.7)",
-          letterSpacing:2, textTransform:"uppercase", margin:0,
-          fontFamily:"Georgia,serif",
-        }}
-          animate={{ opacity:[0.5,1,0.5] }}
-          transition={{ duration:1.8, repeat:Infinity }}>
-          tap to open ✨
-        </motion.p>
+    <motion.g animate={{ y:[0,-7,0,5,0] }} transition={{ duration:3.4, repeat:Infinity, ease:"easeInOut", delay:1.1 }}>
+      <motion.g initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, delay:0.3, ease:[0.34,1.56,0.64,1] }}>
+        <path d={`M${lx+w} ${ty} L${lx+w+d} ${ty-d} L${lx+w+d} ${y-d} L${lx+w} ${y} Z`} fill="#3A0F14"/>
+        <path d={`M${lx} ${ty} L${lx+d} ${ty-d} L${lx+w+d} ${ty-d} L${lx+w} ${ty} Z`} fill="#4A1520"/>
+        <rect x={lx} y={ty} width={w} height={h} fill="#5C1A22" rx={2}/>
+        <rect x={lx} y={ty} width={w*0.38} height={h} fill="rgba(255,255,255,0.04)" rx={2}/>
+        <path d={`M${lx+w} ${ty+h*0.44} L${lx+w+d} ${ty+h*0.44-d} L${lx+w+d} ${ty+h*0.56-d} L${lx+w} ${ty+h*0.56} Z`} fill="#C4913A" opacity={0.9}/>
+        <path d={`M${x-5} ${ty} L${x-5+d} ${ty-d} L${x+5+d} ${ty-d} L${x+5} ${ty} Z`} fill="#D4AF37" opacity={0.92}/>
+        <rect x={x-5} y={ty} width={10} height={h} fill="#D4AF37" rx={1.5} opacity={0.92}/>
+        <rect x={lx} y={ty+h*0.44} width={w} height={h*0.12} fill="#D4AF37" rx={1.5} opacity={0.92}/>
+        <rect x={x-2} y={ty+3} width={3} height={h-6} fill="rgba(255,248,140,0.45)" rx={1}/>
+      </motion.g>
+    </motion.g>
+  );
+}
+
+function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
+  { cx:number; cy:number; r:number; gi:number; dur:number; delay:number; amp:number }) {
+  const gid = S1G[gi].id;
+  const strPath = `M${cx} ${cy+r+4} Q${cx+(cx-GBX)*0.12} ${(cy+r+(GBY-GBH))/2} ${GBX} ${GBY-GBH}`;
+  return (
+    <motion.g animate={{ y:[0,-amp,0,amp*0.5,0], rotate:[-1.5,1.5,-0.5,1,-1.5] }}
+      style={{ originX:`${cx}px`, originY:`${cy}px` }}
+      transition={{ duration:dur, repeat:Infinity, ease:"easeInOut", delay }}>
+      <path d={strPath} fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.5}/>
+      <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
+      <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
+        fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
+      <ellipse cx={cx} cy={cy+r+4} rx={5} ry={4} fill={`url(#${gid})`} opacity={0.85}/>
+    </motion.g>
+  );
+}
+
+function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
+  const cx=195, cy=255, r=50;
+  const gid = S1G[5].id;
+  const [popped, setPopped] = useState(false);
+  const handleTap = () => {
+    if (popped) return;
+    setPopped(true);
+    setTimeout(onTap, 680);
+  };
+  return (
+    <g>
+      {!popped && (
+        <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${GBY-GBH}`}
+          fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
       )}
-    </motion.div>
+      {!popped && (
+        <motion.circle cx={cx} cy={cy} r={r+8}
+          fill="none" stroke="rgba(212,175,55,0.45)" strokeWidth={2.5}
+          animate={{ scale:[1,(r+22)/(r+8)], opacity:[0.6,0] }}
+          transition={{ duration:1.9, repeat:Infinity, ease:"easeOut" }}
+          style={{ transformOrigin:`${cx}px ${cy}px` }}/>
+      )}
+      {popped && BURST_PTS.map((p,i)=>(
+        <motion.circle key={i} cx={cx} cy={cy} r={p.r} fill={p.c}
+          initial={{ x:0, y:0, opacity:1, scale:1 }}
+          animate={{ x:p.tx, y:p.ty, opacity:0, scale:0.4 }}
+          transition={{ duration:0.7, delay:i*0.014, ease:[0.16,1,0.3,1] }}/>
+      ))}
+      {popped && (
+        <motion.circle cx={cx} cy={cy} r={r} fill="none" stroke="#D4AF37" strokeWidth={3}
+          initial={{ scale:1, opacity:0.9 }} animate={{ scale:3.2, opacity:0 }}
+          transition={{ duration:0.55, ease:"easeOut" }}
+          style={{ transformOrigin:`${cx}px ${cy}px` }}/>
+      )}
+      {popped && (
+        <motion.circle cx={cx} cy={cy} r={r} fill="none" stroke="#F0D060" strokeWidth={1.5}
+          initial={{ scale:1, opacity:0.7 }} animate={{ scale:4.5, opacity:0 }}
+          transition={{ duration:0.75, ease:"easeOut", delay:0.06 }}
+          style={{ transformOrigin:`${cx}px ${cy}px` }}/>
+      )}
+      {popped && (
+        <motion.circle cx={cx} cy={cy} r={r+18} fill="white"
+          initial={{ opacity:0.85 }} animate={{ opacity:0 }}
+          transition={{ duration:0.28 }}/>
+      )}
+      <motion.g
+        animate={popped ? { opacity:0 } : { y:[0,-13,0,9,0], rotate:[-2,2,-1,2.5,-2] }}
+        transition={popped
+          ? { duration:0.18, ease:"easeIn" }
+          : { duration:3.8, repeat:Infinity, ease:"easeInOut" }}
+        onClick={handleTap} style={{ cursor:"pointer" }}>
+        <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
+        <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
+          fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
+        <ellipse cx={cx} cy={cy+r+5} rx={6} ry={5} fill={`url(#${gid})`} opacity={0.85}/>
+        <text x={cx} y={cy+5} textAnchor="middle"
+          fontFamily="Georgia,serif" fontStyle="italic" fontSize={13}
+          fill="rgba(255,255,255,0.75)">tap ✦</text>
+      </motion.g>
+    </g>
   );
 }
 
 function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
   return (
-    <motion.div key="s1" style={{ position:"absolute", inset:0, zIndex:12 }}
-      initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-      transition={{ duration:0.6 }}>
+    <motion.div key="s1" style={{ position:"absolute", inset:0, zIndex:10 }}
+      exit={{ opacity:0 }} transition={{ duration:0.6 }}>
       <TwinkleBackground/>
-      <BouquetBalloonSVG defs={BALLOON_LEFT_DEFS}  side="left"/>
-      <BouquetBalloonSVG defs={BALLOON_RIGHT_DEFS} side="right"/>
-      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center", gap:0, zIndex:10 }}>
-        <motion.p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
-          fontSize:13, color:"rgba(212,175,55,0.6)", letterSpacing:2.5,
-          marginBottom:8, textTransform:"uppercase" }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
-          Hey {name || "there"} 👋
-        </motion.p>
-        <motion.h1 style={{
-          fontFamily:"'Great Vibes','Dancing Script',cursive",
-          fontSize:62, margin:"0 0 8px",
+      {S1_TWINKLES.map(([l,t,sz,col,dl,dur],i) => (
+        <motion.span key={`s1tw${i}`} style={{
+          position:"absolute", left:l, top:t, zIndex:6, pointerEvents:"none",
+          fontSize:sz, color:col, lineHeight:1,
+        }}
+          animate={{ opacity:[0,1,0.4,0.9,0], scale:[0,1.2,0.8,1.1,0], rotate:[0,30,-20,15,0] }}
+          transition={{ delay:dl, duration:dur, repeat:Infinity, repeatDelay:0.4+(i%4)*0.3 }}>
+          {i%3===0?"✦":i%3===1?"✧":"·"}
+        </motion.span>
+      ))}
+      <div style={{ position:"absolute", left:0, right:0, top:50, textAlign:"center", zIndex:5, pointerEvents:"none" }}>
+        <motion.p style={{
+          fontFamily:"'Great Vibes', cursive",
+          fontWeight:400, fontSize:46, lineHeight:1.2, margin:0,
+          display:"inline-block", letterSpacing:1,
           background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
           WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
         }}
-          initial={{ opacity:0, scale:0.88 }} animate={{ opacity:1, scale:1 }}
-          transition={{ delay:0.15, duration:0.7, type:"spring", bounce:0.35 }}>
+          initial={{ clipPath:"inset(0 102% 0 0)" }}
+          animate={{ clipPath:"inset(0 0% 0 0)" }}
+          transition={{ duration:2.8, ease:"linear", delay:0.5 }}>
           Happy Birthday
-        </motion.h1>
-        <motion.p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
-          fontSize:14, color:"rgba(212,175,55,0.55)", letterSpacing:1.5,
-          marginBottom:40 }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}>
-          Someone made this just for you ✨
         </motion.p>
-        <GiftBoxSVG onOpen={onNext}/>
+        <motion.p style={{
+          fontFamily:"'Playfair Display',Georgia,serif", fontStyle:"italic",
+          fontSize:22, fontWeight:700, margin:"8px 0 0", letterSpacing:6, textTransform:"uppercase",
+          color:"rgba(212,175,55,0.95)", display:"block",
+        }}
+          initial={{ opacity:0 }} animate={{ opacity:1 }}
+          transition={{ delay:3.5, duration:1.0 }}>
+          {name}
+        </motion.p>
       </div>
+      {(["✦","✨","✦","✨","✦","✨"] as const).map((s,i)=>{
+        const positions = [
+          { left:"8%",  top:"2%" }, { left:"82%", top:"3%" },
+          { left:"4%",  top:"14%"}, { left:"88%", top:"16%"},
+          { left:"22%", top:"20%"}, { left:"68%", top:"20%"},
+        ];
+        return (
+          <motion.span key={i} style={{
+            position:"absolute", zIndex:6, pointerEvents:"none",
+            fontSize:[13,11,10,12,9,11][i],
+            color:["#D4AF37","#F0D060","#C9846A","#FFF4B0","#D4AF37","#E8A060"][i],
+            ...positions[i],
+          }}
+            initial={{ opacity:0, scale:0 }}
+            animate={{ opacity:[0,1,0.5,1,0], scale:[0,1.3,0.9,1.2,0], rotate:[0,25,-15,20,0] }}
+            transition={{ delay:3.0+i*0.22, duration:2.2, repeat:Infinity, repeatDelay:0.6+i*0.3 }}>
+            {s}
+          </motion.span>
+        );
+      })}
+      <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:4 }}
+        viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          {S1G.map(g => (
+            <radialGradient key={g.id} id={g.id} cx="34%" cy="28%" r="65%">
+              <stop offset="0%"  stopColor={g.hi}/>
+              <stop offset="46%" stopColor={g.mid}/>
+              <stop offset="100%" stopColor={g.lo}/>
+            </radialGradient>
+          ))}
+        </defs>
+        {S1_CONF.map((p,i) => (
+          <motion.rect key={i} x={p.x-p.s/2} y={p.y-p.s/2} width={p.s} height={p.s}
+            fill={p.c} rx={i%4===0 ? p.s/2 : 1}
+            initial={{ opacity:0 }}
+            animate={{ opacity:[0,0.88,0.42,0.76,0], rotate:[p.r, p.r+80, p.r+180], y:[0,-6,4,-5,0] }}
+            transition={{ duration:3+i*0.16, repeat:Infinity, delay:i*0.18, ease:"easeInOut" }}/>
+        ))}
+        {SIDE_GIFTS.map((g,i) => <SmallGiftBox key={i} {...g}/>)}
+        <GiftBoxSVG />
+        {BOUQUET.map((b,i) => (
+          <BouquetBalloonSVG key={i} {...b}/>
+        ))}
+        <FloatingBalloonSVG onTap={onNext}/>
+      </svg>
     </motion.div>
   );
 }
@@ -488,22 +593,6 @@ function Scene2({ onNext }: { onNext:()=>void }) {
         )}
       </AnimatePresence>
 
-      {/* Continue button after blown */}
-      <AnimatePresence>
-        {cakePhase === "blown" && (
-          <motion.button key="continue-btn" onClick={onNext}
-            initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
-            transition={{ delay:0.5 }}
-            style={{ position:"absolute", top:526, left:"50%", marginLeft:-80, width:160,
-              background:"linear-gradient(135deg,rgba(212,175,55,0.14),rgba(212,175,55,0.28))",
-              border:"1.5px solid rgba(212,175,55,0.6)", borderRadius:40, padding:"15px 0",
-              color:"#F0D060", fontSize:14, letterSpacing:2.5,
-              textTransform:"uppercase", fontFamily:"Georgia,serif", cursor:"pointer" }}
-            whileHover={{ scale:1.05 }} whileTap={{ scale:0.97 }}>
-            Continue ✨
-          </motion.button>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
@@ -836,32 +925,17 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
 /* ─── Scene 5: Confetti + voice note + emoji orbs + photo sticker ─────────── */
 const CC = ["#FF6BB5","#FF9B45","#60E8C0","#60C8F0","#D4AF37","#C9846A","#F0D060","#C060F0","#FF4E8A","#FFF4B0"];
 const S5_CL = [
-  {x:130,y:200,c:CC[0],s:14,t:0,r:40,d:0.55},{x:210,y:150,c:CC[4],s:12,t:1,r:-55,d:0.60},
+  {x:130,y:200,c:CC[0],s:14,t:0,r:40, d:0.55},{x:210,y:150,c:CC[4],s:12,t:1,r:-55,d:0.60},
   {x:80, y:290,c:CC[2],s:8, t:2,r:70, d:0.57},{x:270,y:120,c:CC[1],s:16,t:0,r:-30,d:0.63},
   {x:160,y:370,c:CC[5],s:13,t:1,r:45, d:0.51},{x:55, y:250,c:CC[6],s:10,t:3,r:-65,d:0.67},
   {x:235,y:300,c:CC[3],s:15,t:0,r:85, d:0.55},{x:115,y:430,c:CC[8],s:9, t:2,r:-75,d:0.69},
   {x:300,y:190,c:CC[9],s:14,t:1,r:52, d:0.61},{x:185,y:470,c:CC[7],s:11,t:3,r:-28,d:0.63},
+  {x:75, y:195,c:CC[4],s:12,t:0,r:90, d:0.52},{x:255,y:255,c:CC[0],s:16,t:1,r:-80,d:0.65},
+  {x:145,y:335,c:CC[2],s:8, t:2,r:62, d:0.58},{x:330,y:145,c:CC[1],s:13,t:3,r:-42,d:0.71},
+  {x:195,y:415,c:CC[6],s:15,t:0,r:38, d:0.60},{x:96, y:355,c:CC[3],s:11,t:1,r:-58,d:0.56},
+  {x:175,y:510,c:CC[5],s:10,t:3,r:25, d:0.74},{x:310,y:330,c:CC[8],s:14,t:0,r:-35,d:0.53},
 ];
-const S5_CR = S5_CL.map(p => ({...p, x: 390 - p.x}));
-
-function Confetto({ x, y, c, s, t, r }: { x:number,y:number,c:string,s:number,t:number,r:number }) {
-  const style: React.CSSProperties = {
-    position:"absolute", left:x, top:y,
-    background:c, rotate:`${r}deg`,
-    ...(t===0 ? { width:s, height:s, borderRadius:"50%" }
-      : t===1 ? { width:s, height:s, borderRadius:s*0.2 }
-      : t===2 ? { width:s*2.4, height:s*0.4, borderRadius:s*0.2 }
-      : { width:s*1.6, height:s*0.6, borderRadius:"50%" }),
-  };
-  return (
-    <motion.div style={{ position:"absolute", left:0, top:0 }}
-      animate={{ y:[0,-18,6,-12,0], rotate:[r, r+20, r-10, r+15, r],
-        opacity:[0.9,1,0.85,0.95,0.9] }}
-      transition={{ duration:2.8 + (x%5)*0.4, repeat:Infinity, ease:"easeInOut", delay:(x%7)*0.18 }}>
-      <div style={style}/>
-    </motion.div>
-  );
-}
+const S5_CR = S5_CL.map(p=>({...p, x:-p.x}));
 
 const WAVE_H = [14,28,20,38,16,44,22,36,18,32,30,46,14,38,24,42,16,28,26,40,18,34,22,30,14,44];
 
@@ -1012,74 +1086,88 @@ function Scene5({ onNext, personalPicUrl, voiceUrl }: {
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
       transition={{ duration:0.7 }}>
       <TwinkleBackground/>
-      {/* Confetti */}
-      {[...S5_CL, ...S5_CR].map((p, i) => <Confetto key={i} {...p}/>)}
 
-      {/* Photo sticker */}
+      {/* Cannon confetti from top-left and top-right corners */}
+      {[...S5_CL.map((p,i)=>({...p,side:0,i})), ...S5_CR.map((p,i)=>({...p,side:1,i}))].map(p => {
+        const ox = p.side===0 ? 0 : 390;
+        const w  = p.t===2 ? p.s*0.45 : p.t===3 ? p.s*1.5 : p.s;
+        const h  = p.t===2 ? p.s*2.8  : p.t===3 ? p.s*0.6  : p.s;
+        const br:React.CSSProperties["borderRadius"] = p.t===0 ? "50%" : p.t===2 ? p.s*0.2 : p.t===3 ? "50%" : p.s*0.22;
+        return (
+          <motion.div key={`c${p.side}${p.i}`}
+            style={{ position:"absolute", left:ox, top:0,
+              width:w, height:h, borderRadius:br,
+              background:p.c, pointerEvents:"none", zIndex:28,
+              boxShadow:`0 0 4px ${p.c}88` }}
+            initial={{ x:0, y:0, opacity:0, rotate:0, scale:0.4 }}
+            animate={{ x:p.x, y:p.y, opacity:[0,1,1,0.7,0], rotate:p.r, scale:[0.4,1,1,0.9,0.7] }}
+            transition={{ duration:2.4, delay:p.d, ease:[0.2,1,0.4,1] }}/>
+        );
+      })}
+
+      {/* Wish text */}
+      <motion.p style={{
+        position:"absolute", top:95, left:0, right:0,
+        fontFamily:"Georgia,serif", fontStyle:"italic",
+        fontSize:16, lineHeight:1.6, textAlign:"center",
+        padding:"0 32px", margin:0, zIndex:10,
+        background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
+        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+      }}
+        initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.3, duration:0.7 }}>
+        The world is so lucky to have you in it.{"\n"}Wishing you all the happiness you deserve.{"\n"}May all your wishes come true!
+      </motion.p>
+
+      {/* Emoji orbs */}
+      <motion.div style={{ position:"absolute", top:210, left:0, right:0, zIndex:10 }}
+        initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.5 }}>
+        <EmojiOrbs/>
+      </motion.div>
+
+      {/* Voice note + arrow always-on, side by side */}
+      <motion.div style={{
+        position:"absolute", top:340, left:0, right:0, zIndex:10,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:14, padding:"0 24px",
+      }}
+        initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}
+        transition={{ delay:0.65 }}>
+        {hasAudio && (
+          <div style={{ flex:1 }}>
+            <VoiceNote voiceUrl={voiceUrl} onDone={() => setVoiceDone(true)}/>
+          </div>
+        )}
+        <motion.button onClick={onNext}
+          style={{ flexShrink:0, width:52, height:52, borderRadius:"50%",
+            background:"linear-gradient(135deg,#C4913A,#D4AF37)",
+            border:"none", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:22, color:"#1c0a06",
+            boxShadow:"0 4px 18px rgba(212,175,55,0.55)" }}
+          animate={{ scale:[1,1.06,1] }}
+          transition={{ duration:1.8, repeat:Infinity, ease:"easeInOut" }}
+          whileHover={{ scale:1.1 }} whileTap={{ scale:0.93 }}>
+          →
+        </motion.button>
+      </motion.div>
+
+      {/* Photo sticker — lower half, centered, sticker effect */}
       {personalPicUrl && (
-        <motion.div
-          style={{ position:"absolute", bottom:0, right:0, width:130, height:200,
-            zIndex:6, pointerEvents:"none", overflow:"hidden" }}
-          initial={{ opacity:0, x:40 }} animate={{ opacity:1, x:0 }}
-          transition={{ delay:0.5, duration:0.7 }}>
+        <motion.div style={{
+          position:"absolute", top:"50%", bottom:0,
+          left:0, right:0, zIndex:10,
+          display:"flex", alignItems:"flex-end", justifyContent:"center",
+          overflow:"hidden", pointerEvents:"none",
+        }}
+          initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
+          transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
           <img src={personalPicUrl} alt=""
-            style={{ width:"100%", height:"100%", objectFit:"cover",
-              filter:"drop-shadow(0 8px 24px rgba(0,0,0,0.8))" }}/>
-          <div style={{ position:"absolute", inset:0,
-            background:"linear-gradient(to right, rgba(14,5,2,0.4) 0%, transparent 40%)" }}/>
+            style={{
+              height:"100%", width:"auto", maxWidth:"100%", display:"block",
+              filter:"drop-shadow(0 0 5px white) drop-shadow(0 0 4px rgba(255,255,255,0.75)) drop-shadow(0 5px 20px rgba(0,0,0,0.6))",
+            }}/>
         </motion.div>
       )}
-
-      {/* Main content */}
-      <div style={{ position:"absolute", top:0, left:0, right: personalPicUrl ? 120 : 0, bottom:0,
-        display:"flex", flexDirection:"column", alignItems:"center",
-        justifyContent:"center", gap:0, padding:"0 24px" }}>
-        <motion.p style={{
-          fontFamily:"Georgia,serif", fontStyle:"italic",
-          fontSize:22, lineHeight:1.45, textAlign:"center",
-          margin:"0 0 20px",
-          background:"linear-gradient(120deg,#C9846A,#D4AF37,#FFF4B0,#D4AF37,#C9846A)",
-          WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-        }}
-          initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
-          transition={{ delay:0.3, duration:0.7 }}>
-          Sending you all<br/>the love &amp; happiness! 💖
-        </motion.p>
-
-        {/* Voice note — only when audio URL is present */}
-        {hasAudio && (
-          <motion.div style={{ width:"100%", marginBottom:20 }}
-            initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
-            transition={{ delay:0.6 }}>
-            <VoiceNote voiceUrl={voiceUrl} onDone={() => setVoiceDone(true)}/>
-          </motion.div>
-        )}
-
-        <motion.div style={{ width:"100%", marginTop: hasAudio ? 0 : 8 }}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay: hasAudio ? 0.9 : 0.5 }}>
-          <EmojiOrbs/>
-        </motion.div>
-      </div>
-
-      {/* Arrow to next scene — appears immediately when no audio, or after voice note ends */}
-      <AnimatePresence>
-        {voiceDone && (
-          <motion.button onClick={onNext}
-            initial={{ opacity:0, scale:0.6 }} animate={{ opacity:1, scale:1 }}
-            exit={{ opacity:0, scale:0.6 }}
-            transition={{ type:"spring", bounce:0.45 }}
-            style={{ position:"absolute", bottom:32, right:24,
-              width:52, height:52, borderRadius:"50%",
-              background:"linear-gradient(135deg,#C4913A,#D4AF37)",
-              border:"none", cursor:"pointer",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontSize:22, color:"#1c0a06",
-              boxShadow:"0 4px 18px rgba(212,175,55,0.55)" }}
-            whileHover={{ scale:1.1 }} whileTap={{ scale:0.93 }}>
-            →
-          </motion.button>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
@@ -1125,40 +1213,37 @@ function Scene6({
           style={{ width:"100%", maxWidth:320,
             background:"linear-gradient(145deg,rgba(28,10,6,0.96),rgba(18,6,3,0.94))",
             border:"1.5px solid rgba(212,175,55,0.48)",
-            borderRadius:22, padding:"30px 26px 26px",
+            borderRadius:22, padding:"28px 24px 24px",
             boxShadow:"0 0 40px rgba(212,175,55,0.18), 0 0 80px rgba(180,60,20,0.22), inset 0 0 35px rgba(212,175,55,0.04)",
             position:"relative", overflow:"visible",
           }}>
-          <div style={{ position:"absolute", top:0, left:"10%", right:"10%", height:1,
-            borderRadius:1, background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.7),transparent)" }}/>
-          <div style={{ position:"absolute", bottom:0, left:"10%", right:"10%", height:1,
-            borderRadius:1, background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)" }}/>
+          {/* Corner emoji accents */}
+          <span style={{ position:"absolute", top:10, left:13, fontSize:16, opacity:0.82 }}>🌸</span>
+          <span style={{ position:"absolute", top:10, right:13, fontSize:16, opacity:0.82 }}>✨</span>
+          <span style={{ position:"absolute", bottom:10, left:13, fontSize:16, opacity:0.82 }}>💛</span>
+          <span style={{ position:"absolute", bottom:10, right:13, fontSize:16, opacity:0.82 }}>🎂</span>
+          {/* Top ornament */}
+          <div style={{ width:44, height:1, margin:"0 auto 16px",
+            background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.8),transparent)" }}/>
 
-          <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4 }}
-            style={{ fontSize:11, color:"rgba(212,175,55,0.7)", letterSpacing:"0.14em",
-              textTransform:"uppercase", marginBottom:8, textAlign:"center" }}>
-            🎂 Birthday wishes for
-          </motion.p>
-          <motion.h1 initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}
+          <motion.h1 initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4 }}
             style={{ fontFamily:"'Great Vibes','Dancing Script',cursive",
-              fontSize:44, fontWeight:400, color:"#D4AF37",
-              marginBottom:18, letterSpacing:"0.02em", textAlign:"center",
-              textShadow:"0 0 20px rgba(212,175,55,0.4)" }}>
-            {name}
+              fontSize:30, fontWeight:400, color:"#D4AF37",
+              margin:"0 0 12px", textAlign:"center",
+              textShadow:"0 0 18px rgba(212,175,55,0.4)" }}>
+            Hey {name}! 💛
           </motion.h1>
-          <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.72 }}
+          <div style={{ width:60, height:1, margin:"0 auto 16px",
+            background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)" }}/>
+          <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}
             style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
               fontSize:15, color:"rgba(255,241,220,0.96)", lineHeight:1.72,
               margin:0, textAlign:"center" }}>
             {finalMessage}
           </motion.p>
-          <motion.div
-            animate={{ opacity:[0.35,0.75,0.35] }}
-            transition={{ duration:2.8, repeat:Infinity }}
-            style={{ marginTop:24, fontSize:15, color:"rgba(212,175,55,0.5)",
-              letterSpacing:"0.35em", textAlign:"center" }}>
-            ✦ ✦ ✦
-          </motion.div>
+          {/* Bottom ornament */}
+          <div style={{ width:44, height:1, margin:"16px auto 0",
+            background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)" }}/>
         </motion.div>
 
         {/* Sender panel */}
