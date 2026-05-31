@@ -1449,12 +1449,14 @@ export default function BirthdayCard() {
   const autoOpenFiredRef = useRef(false);
 
   /* Build the recipient URL */
+  /* Share URL — /api/share generates a personalised og:image for WhatsApp,
+     then JS-redirects recipients to /birthday.html. */
   const senderShareUrl = (() => {
     const p = new URLSearchParams(window.location.search);
     p.delete("sender");
+    p.set("t", "birthday");
     if (cardId) p.set("id", cardId);
-    const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-    return `${base}/birthday.html?${p.toString()}`;
+    return window.location.origin + "/api/share?" + p.toString();
   })();
 
   /* Autoplay: advance through all scenes and loop — used by the UnlockModal iframe preview */

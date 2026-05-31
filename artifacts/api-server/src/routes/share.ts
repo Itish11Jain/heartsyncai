@@ -45,6 +45,7 @@ const TEMPLATE_MAP: Record<string, string> = {
   crystal: "crystal.html",
   cosmic: "cosmic.html",
   vinyl: "vinyl.html",
+  birthday: "birthday.html",
 };
 
 function escHtml(s: string): string {
