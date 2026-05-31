@@ -468,11 +468,11 @@ const BUNCHES_DEF = [
   { ax:370, balls:[{dx:-4,dy:-50,r:20,pi:2},{dx:18,dy:-76,r:24,pi:0},{dx:-16,dy:-68,r:18,pi:4},{dx:6,dy:-100,r:22,pi:1},{dx:-14,dy:-96,r:14,pi:3}] },
 ];
 
-function BunchBalloons({ flyUp }: { flyUp:boolean }) {
+function BunchBalloons({ flyUp, archHeight = 260 }: { flyUp:boolean, archHeight?:number }) {
   const AY = 960;
   return (
     <div style={{ position:"absolute", inset:0, width:"100%", zIndex:14, pointerEvents:"none", overflow:"visible" }}>
-      <svg width={390} height={260} viewBox="0 700 390 260"
+      <svg width={390} height={archHeight} viewBox="0 700 390 260"
         style={{ position:"absolute", bottom:0, left:0, overflow:"visible" }}
         overflow="visible">
         <defs>
@@ -520,11 +520,17 @@ function BunchBalloons({ flyUp }: { flyUp:boolean }) {
 }
 
 function Scene2({ onNext }: { onNext:()=>void }) {
-  /* Adaptive CTA position — keeps button above balloon arch on iOS Safari short canvases */
+  /* ── Adaptive layout for iOS Safari where canvas is shorter than 844 ──
+     Cake bottom = y:468 (top:188 + height:280).
+     Arch height shrinks so there is always room for the CTA between cake and arch.
+     Countdown reuses the same vertical band as the CTA (they never show together). */
   const _vpW2 = typeof window !== "undefined" ? window.innerWidth  : 390;
   const _vpH2 = typeof window !== "undefined" ? window.innerHeight : 844;
   const _sh2  = Math.ceil(_vpH2 / (_vpW2 / 390));
-  const _ctaTop = Math.min(510, _sh2 - 330); // 330 = arch(260)+gap(20)+btn(50)
+  const _avail    = Math.max(0, _sh2 - 468);             // space below cake
+  const _archH    = Math.min(260, Math.max(160, _avail - 80)); // 80=margins+btn
+  const _ctaTop   = Math.min(510, Math.max(483, _sh2 - _archH - 65)); // 65=gap+btn
+  const _countTop = Math.min(488, _ctaTop - 22);          // countdown: 22px above CTA
   const [cakePhase, setCakePhase] = useState<"cta"|"counting"|"blown">("cta");
   const [countdown, setCountdown] = useState(3);
   const [blown, setBlown] = useState(false);
@@ -544,7 +550,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
       initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }}
       transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
       <TwinkleBackground/>
-      <BunchBalloons flyUp={flyUp}/>
+      <BunchBalloons flyUp={flyUp} archHeight={_archH}/>
 
       {/* "Make a Wish" headline */}
       <motion.h1 style={{
@@ -593,7 +599,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
       <AnimatePresence mode="wait">
         {cakePhase === "counting" && (
           <motion.div key={`cd-${countdown}`}
-            style={{ position:"absolute", top:488, left:0, right:0, textAlign:"center", zIndex:20,
+            style={{ position:"absolute", top:_countTop, left:0, right:0, textAlign:"center", zIndex:20,
               fontSize:100, fontWeight:"bold", lineHeight:1, fontFamily:"Georgia,serif",
               background:"linear-gradient(120deg,#C9846A 0%,#D4AF37 50%,#F0D060 100%)",
               WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
