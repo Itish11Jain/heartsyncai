@@ -192,9 +192,9 @@ router.post("/admin/refund-payment", async (req, res) => {
   }
   const result = await pool.query(
     `UPDATE hs_received_payments
-     SET refunded_at = NOW(), refund_note = $1, used_at = COALESCE(used_at, NOW())
+     SET refunded_at = NOW(), refund_note = $1
      WHERE id = ANY($2::int[])
-     RETURNING id, card_id, amount, utr, refunded_at, used_at`,
+     RETURNING id, card_id, amount, utr, refunded_at`,
     [note ?? null, payment_ids],
   );
   return res.json({ ok: true, refunded: result.rows });
