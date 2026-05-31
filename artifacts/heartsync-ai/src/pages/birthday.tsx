@@ -210,7 +210,12 @@ function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
 }
 
 function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
-  const cx=195, cy=255, r=50;
+  const cx=195, r=50;
+  /* Push balloon down slightly on short-canvas iOS Safari so it clears the name text */
+  const _vpW = typeof window !== "undefined" ? window.innerWidth  : 390;
+  const _vpH = typeof window !== "undefined" ? window.innerHeight : 844;
+  const _sh  = Math.ceil(_vpH / (_vpW / 390));
+  const cy   = _sh < 820 ? 255 + Math.round((820 - _sh) * 0.3) : 255;
   const gid = S1G[5].id;
   const [popped, setPopped] = useState(false);
   const handleTap = () => {
@@ -515,6 +520,11 @@ function BunchBalloons({ flyUp }: { flyUp:boolean }) {
 }
 
 function Scene2({ onNext }: { onNext:()=>void }) {
+  /* Adaptive CTA position — keeps button above balloon arch on iOS Safari short canvases */
+  const _vpW2 = typeof window !== "undefined" ? window.innerWidth  : 390;
+  const _vpH2 = typeof window !== "undefined" ? window.innerHeight : 844;
+  const _sh2  = Math.ceil(_vpH2 / (_vpW2 / 390));
+  const _ctaTop = Math.min(510, _sh2 - 330); // 330 = arch(260)+gap(20)+btn(50)
   const [cakePhase, setCakePhase] = useState<"cta"|"counting"|"blown">("cta");
   const [countdown, setCountdown] = useState(3);
   const [blown, setBlown] = useState(false);
@@ -564,7 +574,7 @@ function Scene2({ onNext }: { onNext:()=>void }) {
       <AnimatePresence>
         {cakePhase === "cta" && (
           <motion.div key="cta-wrap"
-            style={{ position:"absolute", top:510, left:0, right:0, display:"flex", justifyContent:"center", zIndex:20 }}
+            style={{ position:"absolute", top:_ctaTop, left:0, right:0, display:"flex", justifyContent:"center", zIndex:20 }}
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
             exit={{ opacity:0, y:-10 }} transition={{ delay:0.7 }}>
             <motion.button onClick={handleBlow}
@@ -705,9 +715,14 @@ function FlowerTopRight() {
 }
 
 function FlowerBottomLeft() {
+  /* On iOS Safari the canvas is shorter than 844 — clamp flower below photo3 (bottom ~695) */
+  const _vpW = typeof window !== "undefined" ? window.innerWidth  : 390;
+  const _vpH = typeof window !== "undefined" ? window.innerHeight : 844;
+  const _sh  = Math.ceil(_vpH / (_vpW / 390));
+  const _flowerTop = Math.max(_sh - 170, 700);
   return (
     <motion.svg width={178} height={178} viewBox="0 0 178 178"
-      style={{ position:"absolute", bottom:-8, left:-8, zIndex:15, pointerEvents:"none" }}
+      style={{ position:"absolute", top:_flowerTop, left:-8, zIndex:15, pointerEvents:"none" }}
       animate={{ rotate:[1,-1.5,1] }} transition={{ duration:6.5, repeat:Infinity, ease:"easeInOut" }}>
       <defs>
         <radialGradient id="fpBL2" cx="38%" cy="30%" r="65%">
