@@ -472,7 +472,9 @@ function BunchBalloons({ flyUp, archHeight = 260 }: { flyUp:boolean, archHeight?
   const AY = 960;
   return (
     <div style={{ position:"absolute", inset:0, width:"100%", zIndex:14, pointerEvents:"none", overflow:"visible" }}>
-      <svg width={390} height={archHeight} viewBox="0 700 390 260"
+      <svg width={390} height={archHeight}
+        viewBox={`0 ${700 + (260 - archHeight)} 390 ${archHeight}`}
+        preserveAspectRatio="none"
         style={{ position:"absolute", bottom:0, left:0, overflow:"visible" }}
         overflow="visible">
         <defs>
@@ -772,7 +774,7 @@ function PolaroidFrame({ idx, top, left, rotate, floatDelay, imageSrc }:
           boxSizing:"border-box",
         }}>
           <div style={{ width:IW, height:IH, borderRadius:2, overflow:"hidden", background:"#1a0d08" }}>
-            <img src={imageSrc} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+            <img src={imageSrc} alt="" loading="eager" decoding="async" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
           </div>
         </div>
       </motion.div>
@@ -786,6 +788,17 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
   const p0 = photoUrls[0] ?? "";
   const p1 = photoUrls[1] ?? photoUrls[0] ?? "";
   const p2 = photoUrls[2] ?? photoUrls[0] ?? "";
+  /* ── Adaptive vertical layout for short iOS canvases (3-photo layout only) ──
+     vScale compresses vertical spacing so photo3 always clears the CONTINUE button.
+     Formula: p3_bottom(=168+346*v+181) + 86(footer) ≤ scaledH  →  v=(sh-435)/346
+     Android (scaledH≥781) always evaluates to vScale=1 (original positions). */
+  const _vpW4 = typeof window !== "undefined" ? window.innerWidth  : 390;
+  const _vpH4 = typeof window !== "undefined" ? window.innerHeight : 844;
+  const _sh4  = Math.ceil(_vpH4 / (_vpW4 / 390));
+  const _vScale = Math.min(1, (_sh4 - 435) / 346);
+  const _p2y = Math.round(168 + 173 * _vScale); // was 341
+  const _p3y = Math.round(168 + 346 * _vScale); // was 514
+  const _qy  = Math.round(168 + 324 * _vScale); // was 492
   return (
     <motion.div key="s4" style={{ position:"absolute", inset:0, zIndex:12, overflow:"hidden" }}
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -866,9 +879,9 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
         /* ── 3+ photos: original three-polaroid layout ── */
         <>
           <PolaroidFrame idx={0} top={168} left={6}  rotate={-7} floatDelay={0}   imageSrc={p0}/>
-          <PolaroidFrame idx={1} top={341} left={34} rotate={-2} floatDelay={0.6} imageSrc={p1}/>
-          <PolaroidFrame idx={2} top={514} left={6}  rotate={-5} floatDelay={1.1} imageSrc={p2}/>
-          <motion.div style={{ position:"absolute", right:36, top:492, width:148, textAlign:"right", zIndex:5 }}
+          <PolaroidFrame idx={1} top={_p2y} left={34} rotate={-2} floatDelay={0.6} imageSrc={p1}/>
+          <PolaroidFrame idx={2} top={_p3y} left={6}  rotate={-5} floatDelay={1.1} imageSrc={p2}/>
+          <motion.div style={{ position:"absolute", right:36, top:_qy, width:148, textAlign:"right", zIndex:5 }}
             initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
             transition={{ delay:0.9, duration:0.7 }}>
             <p style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
@@ -1359,6 +1372,12 @@ export default function BirthdayCard() {
   const [cardId, setCardId] = useState<string>(() => params.get("id") ?? "");
   const photosRaw   = params.get("photos");
   const photoUrls   = parsePhotoUrls(photosRaw);
+  /* Eagerly preload all photo images as soon as the card mounts, so they
+     are already in the browser cache by the time Scene4 renders. */
+  useEffect(() => {
+    photoUrls.filter(Boolean).forEach(url => { const i=new Image(); i.src=url; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photosRaw]);
   const personalPicUrl = params.get("personalpicture")
     ? decodeURIComponent(params.get("personalpicture")!)
     : "";
