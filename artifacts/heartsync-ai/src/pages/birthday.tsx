@@ -464,9 +464,10 @@ const BUNCHES_DEF = [
 function BunchBalloons({ flyUp }: { flyUp:boolean }) {
   const AY = 900;
   return (
-    <div style={{ position:"absolute", left:0, bottom:0, width:390, height:260, zIndex:14, pointerEvents:"none" }}>
+    <div style={{ position:"absolute", inset:0, width:"100%", zIndex:14, pointerEvents:"none", overflow:"visible" }}>
       <svg width={390} height={260} viewBox="0 700 390 260"
-        style={{ position:"absolute", bottom:0, left:0 }}>
+        style={{ position:"absolute", bottom:0, left:0, overflow:"visible" }}
+        overflow="visible">
         <defs>
           {P.map((p,i) => (
             <radialGradient key={i} id={`bpg${i}`} cx="34%" cy="28%" r="62%">
