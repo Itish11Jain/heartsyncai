@@ -8,38 +8,6 @@ import ViralReplyCTA from "@/components/ViralReplyCTA";
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
 const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallModal"));
 
-/* ── Reactive viewport size ────────────────────────────────────────────────
-   Uses window.visualViewport (supported iOS Safari 13+) which correctly
-   excludes the Safari toolbar overlay from the reported height.
-   Falls back to window.innerWidth/Height for older browsers.
-   A small debounce (100 ms) prevents excessive re-renders during scroll. */
-function useViewportSize() {
-  const [size, setSize] = useState(() => ({
-    w: typeof window !== "undefined" ? window.innerWidth  : 390,
-    h: typeof window !== "undefined" ? (window.visualViewport?.height ?? window.innerHeight) : 844,
-  }));
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    function update() {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        setSize({
-          w: window.innerWidth,
-          h: window.visualViewport?.height ?? window.innerHeight,
-        });
-      }, 100);
-    }
-    window.visualViewport?.addEventListener("resize", update);
-    window.addEventListener("resize", update);
-    update();
-    return () => {
-      clearTimeout(timer);
-      window.visualViewport?.removeEventListener("resize", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-  return size;
-}
 
 /* ─── URL helpers ─────────────────────────────────────────────────────────── */
 function getParams() {
@@ -1483,28 +1451,36 @@ export default function BirthdayCard() {
     }).catch(() => {});
   }
 
-  /* Scale the 390px design canvas to fill the *actual visible* viewport.
-     useViewportSize() uses window.visualViewport.height which correctly
-     excludes the iOS Safari bottom toolbar overlay (unlike window.innerHeight).
-     Modals are kept OUTSIDE the scaled container so position:fixed still anchors correctly. */
-  const { w: vpW, h: vpH } = useViewportSize();
-  const scale = vpW / 390;
-  const scaledH = Math.ceil(vpH / scale);
+  /* ── Scale the 390×844 design canvas to fit the device viewport.
+     Read viewport once at mount — never reactively (avoids iOS jitter/scroll).
+     On iOS: use the smaller of width-scale and height-scale so the FULL 844-unit
+     design always fits without clipping — content is scaled down ~7% on iPhone 15.
+     On Android: scale by width only (unchanged — already looks perfect). */
+  const vpW = typeof window !== "undefined" ? window.innerWidth  : 390;
+  const vpH = typeof window !== "undefined" ? window.innerHeight : 844;
+  const isIOS = typeof navigator !== "undefined"
+    && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const scale = isIOS
+    ? Math.min(vpW / 390, vpH / 844)   // fit both axes — no clipping on iPhone
+    : vpW / 390;                        // full-width on Android (unchanged)
+  const scaledH = Math.ceil(vpH / scale); // always ≥ 844 on iOS
 
   return (
     <div style={{
       position:"fixed", inset:0, overflow:"hidden",
+      overscrollBehavior:"none",           // prevent iOS rubber-band / elastic scroll
       background:"linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)",
       fontFamily:"Georgia,'Times New Roman',serif",
       userSelect:"none",
     }}>
-      {/* Scaled scene canvas — 390px design space uniformly scaled to fill viewport width */}
+      {/* Scaled scene canvas — 390px design space scaled to fit viewport.
+          Centered horizontally so any side gaps are symmetric (matters on iOS). */}
       <div style={{
         position:"absolute",
-        top:0, left:0,
+        top:0, left:"50%", marginLeft:-195,
         width:390,
         height:scaledH,
-        transformOrigin:"top left",
+        transformOrigin:"top center",
         transform:`scale(${scale})`,
         overflow:"hidden",
       }}>
