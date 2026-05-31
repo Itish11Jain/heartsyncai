@@ -747,7 +747,10 @@ function SendInner() {
           poll();
         });
       }
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, autoStickerUrlRef.current ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+      /* Fallback: if BG-removal failed (e.g. remove.bg out of credits), use the
+         original first photo so Scene 5 still shows the person's image. */
+      const stickerUrl = autoStickerUrlRef.current ?? uploadedPhotoUrls[0] ?? undefined;
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, stickerUrl, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
     }
