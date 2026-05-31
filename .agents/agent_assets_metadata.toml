@@ -11,3 +11,9 @@ id = "fDmbJv3aewQm22JAKoiDp"
 uri = "file://google-apps-script/gmail-utr-forwarder.txt"
 type = "text"
 title = "Gmail UTR Auto-Forwarder Script"
+
+[[outputs]]
+id = "pnNxYsUe_2xBzBZOkylsG"
+uri = "file://attached_assets/generated_audio/birthday_celebration.mp3"
+type = "audio"
+title = "birthday_celebration"

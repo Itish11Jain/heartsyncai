@@ -1274,6 +1274,58 @@ function Scene6({
   );
 }
 
+/* ─── Background music player hook ──────────────────────────────────────── */
+function useBirthdayMusic(disabled: boolean) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [muted, setMuted] = useState(false);
+  const [started, setStarted] = useState(false);
+  const mutedRef = useRef(false);
+
+  useEffect(() => {
+    if (disabled) return;
+    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+    const audio = new Audio(`${base}/audio/birthday_celebration.mp3`);
+    audio.loop = true;
+    audio.volume = 0.35;
+    audioRef.current = audio;
+    // Try autoplay — browsers may block it until first user gesture
+    audio.play().then(() => setStarted(true)).catch(() => { /* blocked — will start on first tap */ });
+    return () => { audio.pause(); audio.src = ""; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
+
+  /* Start on first user interaction if autoplay was blocked */
+  useEffect(() => {
+    if (disabled || started) return;
+    function tryStart() {
+      const audio = audioRef.current;
+      if (!audio || mutedRef.current) return;
+      audio.play().then(() => setStarted(true)).catch(() => {});
+    }
+    document.addEventListener("touchstart", tryStart, { once: true });
+    document.addEventListener("click", tryStart, { once: true });
+    return () => {
+      document.removeEventListener("touchstart", tryStart);
+      document.removeEventListener("click", tryStart);
+    };
+  }, [disabled, started]);
+
+  function toggleMute() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const next = !muted;
+    mutedRef.current = next;
+    setMuted(next);
+    if (next) {
+      audio.pause();
+    } else {
+      audio.play().then(() => setStarted(true)).catch(() => {});
+    }
+  }
+
+  return { muted, toggleMute };
+}
+
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export default function BirthdayCard() {
   useEffect(() => {
@@ -1292,6 +1344,9 @@ export default function BirthdayCard() {
   const isPreview   = params.get("preview") === "1";
   const isAutoplay  = params.get("autoplay") === "1";
   const isRecipient = !isSender;
+
+  // Background music — disabled in the UnlockModal preview iframe to avoid double-playback
+  const { muted: musicMuted, toggleMute } = useBirthdayMusic(isPreview);
   const [cardId, setCardId] = useState<string>(() => params.get("id") ?? "");
   const photosRaw   = params.get("photos");
   const photoUrls   = parsePhotoUrls(photosRaw);
@@ -1494,6 +1549,26 @@ export default function BirthdayCard() {
           </Suspense>
         )}
       </AnimatePresence>
+
+      {/* Floating music toggle — top-right corner */}
+      {!isPreview && (
+        <motion.button
+          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.5 }}
+          onClick={toggleMute}
+          style={{
+            position:"fixed", top:14, right:14, zIndex:60,
+            width:34, height:34, borderRadius:"50%",
+            background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)",
+            backdropFilter:"blur(8px)", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:15, lineHeight:1,
+          }}
+          whileTap={{ scale:0.88 }}
+          aria-label={musicMuted ? "Unmute music" : "Mute music"}
+        >
+          {musicMuted ? "🔇" : "🎵"}
+        </motion.button>
+      )}
 
       {/* Back link */}
       <Link href="/send?ref=card">
