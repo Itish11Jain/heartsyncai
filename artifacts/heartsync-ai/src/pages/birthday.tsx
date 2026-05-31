@@ -1289,7 +1289,7 @@ export default function BirthdayCard() {
     : "Wishing you the most magical birthday! May every moment be filled with joy and love. 🎂✨";
   const isSender    = params.get("sender") === "1";
   const isRecipient = !isSender;
-  const cardId      = params.get("id") ?? "";
+  const [cardId, setCardId] = useState<string>(() => params.get("id") ?? "");
   const photosRaw   = params.get("photos");
   const photoUrls   = parsePhotoUrls(photosRaw);
   const personalPicUrl = params.get("personalpicture")
@@ -1301,6 +1301,23 @@ export default function BirthdayCard() {
 
   /* scenes: 1 = gift, 2 = cake, 4 = polaroids, 5 = confetti+voice, 6 = message */
   const [scene, setScene] = useState<1|2|4|5|6>(1);
+
+  /* Generate a card ID for sender sessions that don't have one yet.
+     This is needed so UnlockModal can call /api/cards/:id/auto-unlock and
+     /api/cards/:id/pay-unlock with a real ID — both endpoints use INSERT … ON CONFLICT
+     so they create the hs_cards row on first successful unlock. */
+  useEffect(() => {
+    if (!isSender || cardId) return;
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const arr = new Uint8Array(8);
+    crypto.getRandomValues(arr);
+    const id = Array.from(arr, b => chars[b % chars.length]).join("");
+    setCardId(id);
+    const p = new URLSearchParams(window.location.search);
+    p.set("id", id);
+    window.history.replaceState(null, "", `${window.location.pathname}?${p.toString()}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Preload photos as early as possible so they're ready when Scene 4 appears */
   useEffect(() => {
