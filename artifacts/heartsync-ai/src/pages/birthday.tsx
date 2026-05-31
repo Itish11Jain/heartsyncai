@@ -1284,7 +1284,7 @@ function useBirthdayMusic(disabled: boolean) {
   useEffect(() => {
     if (disabled) return;
     const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    const audio = new Audio(`${base}/audio/happy_birthday.mp3`);
+    const audio = new Audio(`${base}/audio/birthday_waltz_v2.mp3`);
     audio.loop = true;
     audio.volume = 0.35;
     audioRef.current = audio;
@@ -1352,7 +1352,7 @@ export default function BirthdayCard() {
   const photoUrls   = parsePhotoUrls(photosRaw);
   const personalPicUrl = params.get("personalpicture")
     ? decodeURIComponent(params.get("personalpicture")!)
-    : photoUrls[0] ?? "";
+    : "";
   const voiceUrl = params.get("voicenote")
     ? decodeURIComponent(params.get("voicenote")!)
     : "";

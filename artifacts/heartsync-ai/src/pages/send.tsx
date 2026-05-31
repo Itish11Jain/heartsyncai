@@ -553,8 +553,7 @@ function SendInner() {
     if (senderFlag) p.set("sender", "1");
     if (cardId) p.set("id", cardId);
     if (directShare) p.set("direct_share", "1");
-    const stickerOrFallback = personalPictureUrl ?? photoUrls?.[0];
-    if (stickerOrFallback) p.set("personalpicture", stickerOrFallback);
+    if (personalPictureUrl) p.set("personalpicture", personalPictureUrl);
     if (photoUrls && photoUrls.length > 0) {
       p.set("photos", photoUrls.map(u => encodeURIComponent(u)).join(","));
     }
