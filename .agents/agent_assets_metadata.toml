@@ -17,3 +17,9 @@ id = "pnNxYsUe_2xBzBZOkylsG"
 uri = "file://attached_assets/generated_audio/birthday_celebration.mp3"
 type = "audio"
 title = "birthday_celebration"
+
+[[outputs]]
+id = "gjz_4GJeF9ow3C2nnNgWb"
+uri = "file://attached_assets/generated_audio/birthday_melody.mp3"
+type = "audio"
+title = "birthday_melody"

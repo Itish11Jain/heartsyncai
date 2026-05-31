@@ -1284,7 +1284,7 @@ function useBirthdayMusic(disabled: boolean) {
   useEffect(() => {
     if (disabled) return;
     const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    const audio = new Audio(`${base}/audio/birthday_celebration.mp3`);
+    const audio = new Audio(`${base}/audio/birthday_melody.mp3`);
     audio.loop = true;
     audio.volume = 0.35;
     audioRef.current = audio;
