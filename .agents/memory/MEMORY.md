@@ -1,1 +1,2 @@
 - [BirthdayDoor integration](birthday-integration.md) — birthday template is premium; 6-scene card at /birthday; auto-selects when occasion=birthday in send.tsx.
+- [Background removal](bg-removal.md) — sticker cutout runs RMBG-1.4 LOCALLY (transformers.js+sharp); HF inference API & remove.bg both abandoned (dead/no credits).

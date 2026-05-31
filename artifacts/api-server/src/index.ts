@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initDb } from "./lib/db";
+import { warmBgRemove } from "./lib/bgRemove";
 
 const rawPort = process.env["PORT"];
 
@@ -27,6 +28,10 @@ initDb()
       }
 
       logger.info({ port }, "Server listening");
+
+      // Warm the background-removal model in the background so the first
+      // sticker request doesn't pay the model load cost.
+      warmBgRemove();
     });
   })
   .catch((err) => {

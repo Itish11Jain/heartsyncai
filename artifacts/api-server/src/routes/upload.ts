@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import multer from "multer";
 import { Client } from "@replit/object-storage";
+import { removeBackground } from "../lib/bgRemove.js";
 
 const router = Router();
 
@@ -197,10 +198,8 @@ router.get(/^\/audio\/(.+)$/, async (req: Request, res: Response) => {
  * POST /api/upload/sticker
  * Multipart "photo" field → background removal → transparent PNG URL.
  *
- * Priority order:
- *   1. remove.bg (REMOVEBG_API_KEY) — paid, high quality
- *   2. Hugging Face Inference API (HF_API_TOKEN) — free tier, briaai/RMBG-2.0
- *   3. 503 — no service configured
+ * Background removal runs locally via the RMBG-1.4 segmentation model
+ * (@huggingface/transformers). No external API or paid credits required.
  */
 router.post(
   "/upload/sticker",
@@ -210,65 +209,13 @@ router.post(
       const file = req.file;
       if (!file) { res.status(400).json({ error: "No file uploaded." }); return; }
 
-      const removeBgKey = process.env.REMOVEBG_API_KEY;
-      const hfToken     = process.env.HF_API_TOKEN;
-
-      if (!removeBgKey && !hfToken) {
-        res.status(503).json({ error: "No background removal service configured. Set HF_API_TOKEN (free) or REMOVEBG_API_KEY." });
-        return;
-      }
-
-      let pngBuffer: Buffer | null = null;
-
-      /* ── 1. remove.bg ─────────────────────────────────────────────────── */
-      if (removeBgKey && !pngBuffer) {
-        const formData = new FormData();
-        formData.append(
-          "image_file",
-          new Blob([file.buffer], { type: file.mimetype }),
-          "photo." + (ALLOWED_IMAGE_MIME[file.mimetype] ?? "jpg"),
-        );
-        formData.append("size", "auto");
-
-        const rbgRes = await fetch("https://api.remove.bg/v1.0/removebg", {
-          method: "POST",
-          headers: { "X-Api-Key": removeBgKey },
-          body: formData,
-        });
-
-        if (rbgRes.ok) {
-          pngBuffer = Buffer.from(await rbgRes.arrayBuffer());
-        } else {
-          const errText = await rbgRes.text().catch(() => "");
-          console.error("[sticker] remove.bg error", rbgRes.status, errText, "— will try HF fallback");
-        }
-      }
-
-      /* ── 2. Hugging Face RMBG-2.0 (free) ─────────────────────────────── */
-      if (hfToken && !pngBuffer) {
-        console.info("[sticker] using HF briaai/RMBG-2.0 for background removal");
-        const hfRes = await fetch(
-          "https://router.huggingface.co/hf-inference/models/briaai/RMBG-2.0",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${hfToken}`,
-              "Content-Type": file.mimetype,
-            },
-            body: file.buffer,
-            signal: AbortSignal.timeout(45_000),
-          } as RequestInit,
-        );
-
-        if (hfRes.ok) {
-          pngBuffer = Buffer.from(await hfRes.arrayBuffer());
-        } else {
-          const errText = await hfRes.text().catch(() => "");
-          console.error("[sticker] HF inference error", hfRes.status, errText);
-        }
-      }
-
-      if (!pngBuffer) {
+      let pngBuffer: Buffer;
+      try {
+        const t0 = Date.now();
+        pngBuffer = await removeBackground(file.buffer);
+        console.info(`[sticker] background removed locally in ${Date.now() - t0}ms`);
+      } catch (err) {
+        console.error("[sticker] local background removal failed", err);
         res.status(502).json({ error: "Background removal failed. Please try again." });
         return;
       }
