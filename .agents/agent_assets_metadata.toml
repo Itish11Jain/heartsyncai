@@ -29,3 +29,9 @@ id = "xr1yoN4lI585hiUcIC9NN"
 uri = "file://attached_assets/generated_audio/happy_birthday_tune.mp3"
 type = "audio"
 title = "happy_birthday_tune"
+
+[[outputs]]
+id = "NzOl2w_83FYETMvV8URvz"
+uri = "file://attached_assets/generated_audio/birthday_waltz_v2.mp3"
+type = "audio"
+title = "birthday_waltz_v2"
