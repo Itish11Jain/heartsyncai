@@ -193,4 +193,87 @@ router.get(/^\/audio\/(.+)$/, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/upload/sticker
+ * Multipart "photo" field → remove.bg strips background → returns transparent PNG URL.
+ */
+router.post(
+  "/upload/sticker",
+  photoUpload.single("photo"),
+  async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+      if (!file) { res.status(400).json({ error: "No file uploaded." }); return; }
+
+      const apiKey = process.env.REMOVEBG_API_KEY;
+      if (!apiKey) {
+        res.status(503).json({ error: "Sticker background removal is not configured." });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append(
+        "image_file",
+        new Blob([file.buffer], { type: file.mimetype }),
+        "photo." + (ALLOWED_IMAGE_MIME[file.mimetype] ?? "jpg"),
+      );
+      formData.append("size", "auto");
+
+      const rbgRes = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: { "X-Api-Key": apiKey },
+        body: formData,
+      });
+
+      if (!rbgRes.ok) {
+        const errText = await rbgRes.text().catch(() => "");
+        console.error("[sticker] remove.bg error", rbgRes.status, errText);
+        res.status(502).json({ error: "Background removal failed. Please try again." });
+        return;
+      }
+
+      const pngBuffer = Buffer.from(await rbgRes.arrayBuffer());
+      const key = `sticker/${randomUUID()}.png`;
+
+      const result = await getStorage().uploadFromBytes(key, pngBuffer, { contentType: "image/png" });
+      if (!result.ok) {
+        console.error("[sticker] Object Storage upload failed", result.error);
+        res.status(500).json({ error: "Upload failed. Please try again." });
+        return;
+      }
+
+      const origin = `${req.protocol}://${req.get("host")}`;
+      res.json({ url: `${origin}/api/stickers/${key}` });
+    } catch (err) {
+      console.error("[sticker] POST /upload/sticker error", err);
+      res.status(500).json({ error: "internal_error" });
+    }
+  },
+);
+
+/**
+ * GET /api/stickers/*
+ * Streams a transparent PNG sticker from Object Storage.
+ */
+router.get(/^\/stickers\/(.+)$/, async (req: Request, res: Response) => {
+  try {
+    const key = (req.params as Record<string, string>)["0"];
+    if (!key) { res.status(400).json({ error: "Missing key" }); return; }
+    if (!key.startsWith("sticker/")) { res.status(403).json({ error: "Forbidden" }); return; }
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+
+    const stream = getStorage().downloadAsStream(key);
+    stream.pipe(res);
+    stream.on("error", (err: NodeJS.ErrnoException) => {
+      console.error("[sticker] Stream error", err);
+      if (!res.headersSent) res.status(err.code === "ENOENT" ? 404 : 500).end();
+    });
+  } catch (err) {
+    console.error("[sticker] GET /stickers/* error", err);
+    if (!res.headersSent) res.status(500).json({ error: "internal_error" });
+  }
+});
+
 export default router;

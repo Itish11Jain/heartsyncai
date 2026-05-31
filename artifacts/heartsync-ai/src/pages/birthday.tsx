@@ -1101,22 +1101,21 @@ function Scene5({ onNext, personalPicUrl, voiceUrl }: {
         </motion.button>
       </motion.div>
 
-      {/* Photo sticker — circular crop, bottom-center */}
+      {/* Photo sticker — transparent PNG cutout, fills bottom half with white glow */}
       {personalPicUrl && (
         <motion.div style={{
-          position:"absolute", bottom:80, left:0, right:0, zIndex:10,
-          display:"flex", justifyContent:"center", pointerEvents:"none",
+          position:"absolute", top:"50%", bottom:0,
+          left:0, right:0, zIndex:10,
+          display:"flex", alignItems:"flex-end", justifyContent:"center",
+          overflow:"hidden", pointerEvents:"none",
         }}
-          initial={{ opacity:0, scale:0.55 }} animate={{ opacity:1, scale:1 }}
+          initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
           transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
-          <div style={{
-            width:164, height:164, borderRadius:"50%", overflow:"hidden",
-            border:"5px solid white",
-            boxShadow:"0 0 0 2px rgba(212,175,55,0.5), 0 8px 32px rgba(0,0,0,0.75), 0 0 24px rgba(255,255,255,0.12)",
-          }}>
-            <img src={personalPicUrl} alt=""
-              style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
-          </div>
+          <img src={personalPicUrl} alt=""
+            style={{
+              height:"100%", width:"auto", maxWidth:"100%", display:"block",
+              filter:"drop-shadow(0 0 6px white) drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 5px 22px rgba(0,0,0,0.65))",
+            }}/>
         </motion.div>
       )}
     </motion.div>
