@@ -254,12 +254,12 @@ export default function UnlockModal({
   }
 
   /* ── Card iframe preview dimensions ──
-     We render the card at 390×693 (standard phone viewport) then scale it down
-     so it fits in a 220×380 container inside the modal. */
+     Birthday cards are designed for 844 px tall viewports; other templates for 693 px.
+     We always scale to a 220 px wide container, then compute the container height to match. */
   const IFRAME_W = 390;
-  const IFRAME_H = 693;
+  const IFRAME_H = occasion === "birthday" ? 844 : 693;
   const PREVIEW_W = 220;
-  const PREVIEW_H = 380;
+  const PREVIEW_H = Math.round(IFRAME_H * (PREVIEW_W / IFRAME_W));
   const scale = PREVIEW_W / IFRAME_W;
 
   return (

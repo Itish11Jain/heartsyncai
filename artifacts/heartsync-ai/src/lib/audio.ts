@@ -430,6 +430,14 @@ export const music = {
   },
 };
 
+/** Resume the shared AudioContext after a user gesture (needed for autoplay on direct links). */
+export function resumeAudio(): void {
+  try {
+    const ac = getCtx();
+    if (ac.state === "suspended") ac.resume().catch(() => {});
+  } catch { /* */ }
+}
+
 /* ══════════════════════════════════════════════════════════════
    HOME  — haptics only
    ══════════════════════════════════════════════════════════════ */

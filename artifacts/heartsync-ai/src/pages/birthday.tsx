@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
+import { music, resumeAudio } from "@/lib/audio";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
@@ -1126,7 +1127,7 @@ function Scene5({ onNext, personalPicUrl, voiceUrl }: {
 /* ─── Scene 6: Final message card ────────────────────────────────────────── */
 function Scene6({
   name, finalMessage, isSender, isRecipient, isUnlocked,
-  occasion, cardId,
+  occasion, cardId, showPaywallCta,
   onOpenPaywall, senderCopied, senderIgCopied,
   onShareWhatsApp, onCopyLink, onCopyForInstagram, onReplay,
 }: {
@@ -1137,6 +1138,7 @@ function Scene6({
   isUnlocked: boolean;
   occasion: string;
   cardId: string;
+  showPaywallCta: boolean;
   onOpenPaywall: () => void;
   senderCopied: boolean;
   senderIgCopied: boolean;
@@ -1232,8 +1234,10 @@ function Scene6({
                   </Link>
                 </div>
               </>
-            ) : (
-              <>
+            ) : showPaywallCta ? (
+              <motion.div
+                initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
                 <motion.button onClick={onOpenPaywall}
                   whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
                   style={{ width:"100%", padding:"16px", borderRadius:16,
@@ -1247,8 +1251,8 @@ function Scene6({
                   marginTop:10, lineHeight:1.5 }}>
                   One-time payment · Share on WhatsApp & Instagram
                 </p>
-              </>
-            )}
+              </motion.div>
+            ) : null}
           </motion.div>
         )}
 
@@ -1274,57 +1278,6 @@ function Scene6({
   );
 }
 
-/* ─── Background music player hook ──────────────────────────────────────── */
-function useBirthdayMusic(disabled: boolean) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [muted, setMuted] = useState(false);
-  const [started, setStarted] = useState(false);
-  const mutedRef = useRef(false);
-
-  useEffect(() => {
-    if (disabled) return;
-    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-    const audio = new Audio(`${base}/audio/birthday_waltz_v2.mp3`);
-    audio.loop = true;
-    audio.volume = 0.35;
-    audioRef.current = audio;
-    // Try autoplay — browsers may block it until first user gesture
-    audio.play().then(() => setStarted(true)).catch(() => { /* blocked — will start on first tap */ });
-    return () => { audio.pause(); audio.src = ""; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled]);
-
-  /* Start on first user interaction if autoplay was blocked */
-  useEffect(() => {
-    if (disabled || started) return;
-    function tryStart() {
-      const audio = audioRef.current;
-      if (!audio || mutedRef.current) return;
-      audio.play().then(() => setStarted(true)).catch(() => {});
-    }
-    document.addEventListener("touchstart", tryStart, { once: true });
-    document.addEventListener("click", tryStart, { once: true });
-    return () => {
-      document.removeEventListener("touchstart", tryStart);
-      document.removeEventListener("click", tryStart);
-    };
-  }, [disabled, started]);
-
-  function toggleMute() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const next = !muted;
-    mutedRef.current = next;
-    setMuted(next);
-    if (next) {
-      audio.pause();
-    } else {
-      audio.play().then(() => setStarted(true)).catch(() => {});
-    }
-  }
-
-  return { muted, toggleMute };
-}
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export default function BirthdayCard() {
@@ -1345,8 +1298,29 @@ export default function BirthdayCard() {
   const isAutoplay  = params.get("autoplay") === "1";
   const isRecipient = !isSender;
 
-  // Background music — disabled in the UnlockModal preview iframe to avoid double-playback
-  const { muted: musicMuted, toggleMute } = useBirthdayMusic(isPreview);
+  /* ── Background music — plays the actual "Happy Birthday to You" melody ── */
+  const [musicMuted, setMusicMuted] = useState(false);
+  useEffect(() => {
+    if (isPreview) return;
+    music.start("envelope", "birthday");
+    /* Resume AudioContext on first user gesture in case autoplay was blocked */
+    document.addEventListener("touchstart", resumeAudio, { once: true });
+    document.addEventListener("click",      resumeAudio, { once: true });
+    return () => {
+      music.stop();
+      document.removeEventListener("touchstart", resumeAudio);
+      document.removeEventListener("click",      resumeAudio);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPreview]);
+  function toggleMute() {
+    const next = !musicMuted;
+    setMusicMuted(next);
+    music.setVolume(next ? 0 : 1);
+  }
+
+  /* ── Paywall-dismissed flag — CTA only appears after the bottom sheet has been closed ── */
+  const [paywallDismissed, setPaywallDismissed] = useState(false);
   const [cardId, setCardId] = useState<string>(() => params.get("id") ?? "");
   const photosRaw   = params.get("photos");
   const photoUrls   = parsePhotoUrls(photosRaw);
@@ -1510,6 +1484,7 @@ export default function BirthdayCard() {
               isUnlocked={isUnlocked}
               occasion={occasion}
               cardId={cardId}
+              showPaywallCta={paywallDismissed}
               onOpenPaywall={handleOpenPaywall}
               senderCopied={senderCopied}
               senderIgCopied={senderIgCopied}
@@ -1531,8 +1506,8 @@ export default function BirthdayCard() {
               recipientName={name}
               occasion={occasion}
               senderShareUrl={senderShareUrl}
-              onClose={() => setShowUnlockModal(false)}
-              onSuccess={() => { setIsUnlocked(true); setShowUnlockModal(false); }}
+              onClose={() => { setShowUnlockModal(false); setPaywallDismissed(true); }}
+              onSuccess={() => { setIsUnlocked(true); setShowUnlockModal(false); setPaywallDismissed(true); }}
             />
           </Suspense>
         )}

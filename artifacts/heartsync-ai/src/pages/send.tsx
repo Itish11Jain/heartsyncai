@@ -396,6 +396,8 @@ function SendInner() {
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   // Auto background-removed version of the first photo (used as personal picture / sticker in Scene 5)
   const [autoStickerUrl, setAutoStickerUrl] = useState<string | null>(null);
+  const autoStickerUrlRef     = useRef<string | null>(null);
+  const bgRemoveInProgressRef = useRef(false);
 
 
   // Voice note recorder state
@@ -590,15 +592,21 @@ function SendInner() {
         trackEvent({ event: "photo_added", occasion, clerk_user_id: clerkUserId ?? undefined, email: userEmail ?? undefined, fingerprint: fingerprint ?? undefined, template: selectedTemplate });
 
         // For birthday cards: auto-remove background of the first photo so it appears
-        // as a transparent PNG sticker cutout in Scene 5. Fire-and-forget — if it fails
-        // (e.g. REMOVEBG_API_KEY not configured), Scene 5 falls back to the original photo.
+        // as a transparent PNG sticker cutout in Scene 5.
         if (isFirstPhoto && occasion === "birthday") {
+          bgRemoveInProgressRef.current = true;
           const sfd = new FormData();
           sfd.append("photo", file);
           fetch(`${base}/api/upload/sticker`, { method: "POST", body: sfd })
             .then(sr => sr.ok ? sr.json() : null)
-            .then((sd: { url?: string } | null) => { if (sd?.url) setAutoStickerUrl(sd.url); })
-            .catch(() => { /* ignore — falls back to original photo */ });
+            .then((sd: { url?: string } | null) => {
+              if (sd?.url) {
+                setAutoStickerUrl(sd.url);
+                autoStickerUrlRef.current = sd.url;
+              }
+            })
+            .catch(() => { /* ignore */ })
+            .finally(() => { bgRemoveInProgressRef.current = false; });
         }
       }
     } catch {
@@ -727,8 +735,19 @@ function SendInner() {
         photo_count: uploadedPhotoUrls.length,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setShowGenerating(true);
+      // If bg-remove is still in flight, wait up to 4 s for it to finish so the sticker appears
+      if (bgRemoveInProgressRef.current) {
+        await new Promise<void>(resolve => {
+          const deadline = Date.now() + 4000;
+          const poll = () => {
+            if (!bgRemoveInProgressRef.current || Date.now() >= deadline) resolve();
+            else setTimeout(poll, 150);
+          };
+          poll();
+        });
+      }
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, autoStickerUrlRef.current ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
     }
