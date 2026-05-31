@@ -248,7 +248,7 @@ router.post(
       if (hfToken && !pngBuffer) {
         console.info("[sticker] using HF briaai/RMBG-2.0 for background removal");
         const hfRes = await fetch(
-          "https://api-inference.huggingface.co/models/briaai/RMBG-2.0",
+          "https://router.huggingface.co/hf-inference/models/briaai/RMBG-2.0",
           {
             method: "POST",
             headers: {

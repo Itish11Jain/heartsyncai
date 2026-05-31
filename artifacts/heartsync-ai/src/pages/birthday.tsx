@@ -757,11 +757,25 @@ function FlowerBottomLeft() {
 function PolaroidFrame({ idx, top, left, rotate, floatDelay, imageSrc }:
   { idx:number, top:number, left:number, rotate:number, floatDelay:number, imageSrc:string }) {
   const IW=130, IH=138, BRD=11, BOT=32;
+  /* Block the entrance animation until the photo is confirmed loaded/cached.
+     This prevents the "black frame → photo pops in" lag. */
+  const [imgReady, setImgReady] = useState(false);
+  useEffect(() => {
+    if (!imageSrc) { setImgReady(true); return; }
+    const img = new Image();
+    const markReady = () => setImgReady(true);
+    img.onload  = markReady;
+    img.onerror = markReady;
+    img.src = imageSrc;
+    if (img.complete) { markReady(); return; }
+    const fallback = setTimeout(markReady, 4000);
+    return () => clearTimeout(fallback);
+  }, [imageSrc]);
   return (
     <motion.div style={{ position:"absolute", top, left, zIndex:10+idx, rotate }}
       initial={{ opacity:0, scale:0.82, y:36 }}
-      animate={{ opacity:1, scale:1, y:0 }}
-      transition={{ delay:0.18+idx*0.28, duration:0.65, ease:[0.34,1.56,0.64,1] }}>
+      animate={imgReady ? { opacity:1, scale:1, y:0 } : { opacity:0, scale:0.82, y:36 }}
+      transition={{ delay: imgReady ? 0.18+idx*0.28 : 0, duration:0.65, ease:[0.34,1.56,0.64,1] }}>
       <motion.div
         animate={{ y:[0,-7,0] }}
         transition={{ duration:3.2+idx*0.65, repeat:Infinity, ease:"easeInOut", delay:floatDelay }}>
