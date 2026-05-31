@@ -433,9 +433,14 @@ export const music = {
 /** Resume the shared AudioContext after a user gesture (needed for autoplay on direct links). */
 export function resumeAudio(): void {
   try {
-    const ac = getCtx();
-    if (ac.state === "suspended") ac.resume().catch(() => {});
+    if (!_ctx) return;
+    if (_ctx.state === "suspended") _ctx.resume().catch(() => {});
   } catch { /* */ }
+}
+
+/** Returns true if the AudioContext is still suspended (i.e. hasn't been unblocked by a gesture yet). */
+export function isAudioSuspended(): boolean {
+  return !_ctx || _ctx.state === "suspended";
 }
 
 /* ══════════════════════════════════════════════════════════════

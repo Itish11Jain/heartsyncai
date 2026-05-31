@@ -2,11 +2,44 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
-import { music, resumeAudio } from "@/lib/audio";
+import { music, resumeAudio, isAudioSuspended } from "@/lib/audio";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
 const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallModal"));
+
+/* ── Reactive viewport size ────────────────────────────────────────────────
+   Uses window.visualViewport (supported iOS Safari 13+) which correctly
+   excludes the Safari toolbar overlay from the reported height.
+   Falls back to window.innerWidth/Height for older browsers.
+   A small debounce (100 ms) prevents excessive re-renders during scroll. */
+function useViewportSize() {
+  const [size, setSize] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth  : 390,
+    h: typeof window !== "undefined" ? (window.visualViewport?.height ?? window.innerHeight) : 844,
+  }));
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    function update() {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setSize({
+          w: window.innerWidth,
+          h: window.visualViewport?.height ?? window.innerHeight,
+        });
+      }, 100);
+    }
+    window.visualViewport?.addEventListener("resize", update);
+    window.addEventListener("resize", update);
+    update();
+    return () => {
+      clearTimeout(timer);
+      window.visualViewport?.removeEventListener("resize", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+  return size;
+}
 
 /* ─── URL helpers ─────────────────────────────────────────────────────────── */
 function getParams() {
@@ -1302,14 +1335,27 @@ export default function BirthdayCard() {
   const [musicMuted, setMusicMuted] = useState(false);
   useEffect(() => {
     if (isPreview) return;
+    /* Start immediately — works on desktop/Android.
+       On iOS the AudioContext starts suspended; the gesture handler below
+       detects this and restarts music cleanly from within a user gesture
+       (required by iOS to actually play audio). */
     music.start("envelope", "birthday");
-    /* Resume AudioContext on first user gesture in case autoplay was blocked */
-    document.addEventListener("touchstart", resumeAudio, { once: true });
-    document.addEventListener("click",      resumeAudio, { once: true });
+
+    function onFirstGesture() {
+      const wasSuspended = isAudioSuspended();
+      resumeAudio();
+      if (wasSuspended) {
+        // Restart the scheduler from the current (now-resumed) time
+        music.stop();
+        music.start("envelope", "birthday");
+      }
+    }
+    document.addEventListener("touchstart", onFirstGesture, { once: true });
+    document.addEventListener("click",      onFirstGesture, { once: true });
     return () => {
       music.stop();
-      document.removeEventListener("touchstart", resumeAudio);
-      document.removeEventListener("click",      resumeAudio);
+      document.removeEventListener("touchstart", onFirstGesture);
+      document.removeEventListener("click",      onFirstGesture);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreview]);
@@ -1437,11 +1483,11 @@ export default function BirthdayCard() {
     }).catch(() => {});
   }
 
-  /* Scale the 390px design canvas to fill whatever viewport width the device has.
-     This ensures the card is edge-to-edge on every phone (iPhone 390px, Android 412-430px, etc.)
-     Modals are kept OUTSIDE the scaled container so position:fixed still anchors to the viewport. */
-  const vpW = typeof window !== "undefined" ? window.innerWidth  : 390;
-  const vpH = typeof window !== "undefined" ? window.innerHeight : 844;
+  /* Scale the 390px design canvas to fill the *actual visible* viewport.
+     useViewportSize() uses window.visualViewport.height which correctly
+     excludes the iOS Safari bottom toolbar overlay (unlike window.innerHeight).
+     Modals are kept OUTSIDE the scaled container so position:fixed still anchors correctly. */
+  const { w: vpW, h: vpH } = useViewportSize();
   const scale = vpW / 390;
   const scaledH = Math.ceil(vpH / scale);
 
