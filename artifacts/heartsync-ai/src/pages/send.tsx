@@ -395,11 +395,6 @@ function SendInner() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
 
-  // Sticker upload state (birthday-only — background is auto-removed server-side)
-  const [stickerUrl, setStickerUrl] = useState<string | null>(null);
-  const [stickerPreviewSrc, setStickerPreviewSrc] = useState<string | null>(null);
-  const [stickerUploading, setStickerUploading] = useState(false);
-  const [stickerUploadError, setStickerUploadError] = useState<string | null>(null);
 
   // Voice note recorder state
   const [voiceNoteUrl, setVoiceNoteUrl] = useState<string | null>(null);
@@ -569,32 +564,6 @@ function SendInner() {
     return `${base}/envelope.html?${p.toString()}`;
   }
 
-  async function handleStickerSelect(file: File) {
-    if (stickerUploading) return;
-    setStickerUploadError(null);
-    const previewSrc = URL.createObjectURL(file);
-    setStickerPreviewSrc(previewSrc);
-    setStickerUploading(true);
-    try {
-      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-      const fd = new FormData();
-      fd.append("photo", file);
-      const res = await fetch(`${base}/api/upload/sticker`, { method: "POST", body: fd });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({})) as { error?: string };
-        setStickerUploadError(d.error ?? "Background removal failed. Please try again.");
-        setStickerPreviewSrc(null);
-        return;
-      }
-      const data = await res.json() as { url?: string };
-      if (data.url) setStickerUrl(data.url);
-    } catch {
-      setStickerUploadError("Upload failed. Please try again.");
-      setStickerPreviewSrc(null);
-    } finally {
-      setStickerUploading(false);
-    }
-  }
 
   async function handlePhotoSelect(file: File) {
     if (photoUploading) return;
@@ -744,7 +713,7 @@ function SendInner() {
         photo_count: uploadedPhotoUrls.length,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, stickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -812,7 +781,7 @@ function SendInner() {
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, effectiveCardId, false, stickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, effectiveCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
@@ -923,7 +892,7 @@ function SendInner() {
     const cardId = pendingCardId;
     clearDraft();
     clearPaywallSnapshot();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, stickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowPaywall(false);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
@@ -933,7 +902,7 @@ function SendInner() {
   function handleWatermarkFree() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, stickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -973,7 +942,7 @@ function SendInner() {
   function handleWatermarkComplete() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, stickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -1380,92 +1349,6 @@ function SendInner() {
                   )}
                 </div>
 
-                {/* ── Photo sticker upload (birthday only) ── */}
-                {occasion === "birthday" && (
-                  <div style={{
-                    borderRadius: 14,
-                    border: `1.5px solid ${stickerUrl ? "rgba(255,215,0,0.4)" : "rgba(255,215,0,0.14)"}`,
-                    background: stickerUrl ? "rgba(255,215,0,0.04)" : "rgba(255,255,255,0.02)",
-                    padding: "12px 14px",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                      <label style={{ fontSize: 13, fontWeight: 600, color: stickerUrl ? "rgba(255,215,0,0.8)" : "rgba(255,255,255,0.55)" }}>
-                        🪄 Photo sticker
-                        <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.35)", fontSize: 11, marginLeft: 6 }}>bg auto-removed</span>
-                      </label>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "2px 7px" }}>
-                        Scene 5
-                      </span>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      {/* Preview thumbnail */}
-                      {(stickerPreviewSrc || stickerUrl) && (
-                        <div style={{
-                          width: 56, height: 72, borderRadius: 8, overflow: "hidden",
-                          background: "rgba(0,0,0,0.4)", flexShrink: 0, position: "relative",
-                          border: "1.5px solid rgba(255,215,0,0.25)",
-                        }}>
-                          <img
-                            src={stickerUrl ?? stickerPreviewSrc ?? ""}
-                            alt="sticker preview"
-                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-                              opacity: stickerUploading ? 0.4 : 1 }}
-                          />
-                          {stickerUploading && (
-                            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <span style={{ fontSize: 18 }}>✨</span>
-                            </div>
-                          )}
-                          {stickerUrl && (
-                            <button
-                              onClick={() => { setStickerUrl(null); setStickerPreviewSrc(null); setStickerUploadError(null); }}
-                              style={{
-                                position: "absolute", top: 2, right: 2, width: 16, height: 16,
-                                borderRadius: "50%", background: "rgba(0,0,0,0.7)", border: "none",
-                                color: "white", fontSize: 9, cursor: "pointer", display: "flex",
-                                alignItems: "center", justifyContent: "center", lineHeight: 1,
-                              }}
-                            >✕</button>
-                          )}
-                        </div>
-                      )}
-
-                      <label style={{ flex: 1, cursor: stickerUploading ? "not-allowed" : "pointer" }}>
-                        <input
-                          type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }}
-                          disabled={stickerUploading}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) { handleStickerSelect(f); e.target.value = ""; } }}
-                        />
-                        <div style={{
-                          display: "flex", alignItems: "center", gap: 8,
-                          background: stickerUploading ? "rgba(255,255,255,0.05)" : "rgba(255,215,0,0.07)",
-                          border: "1px solid rgba(255,215,0,0.18)",
-                          borderRadius: 10, padding: "8px 12px",
-                          opacity: stickerUploading ? 0.7 : 1,
-                        }}>
-                          <span style={{ fontSize: 15 }}>{stickerUploading ? "✨" : stickerUrl ? "🔄" : "📷"}</span>
-                          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
-                            {stickerUploading
-                              ? "Removing background…"
-                              : stickerUrl
-                                ? "Replace sticker photo"
-                                : "Upload a photo"}
-                          </span>
-                        </div>
-                      </label>
-                    </div>
-
-                    {stickerUploadError && (
-                      <p style={{ fontSize: 11, color: "#f87171", marginTop: 6 }}>{stickerUploadError}</p>
-                    )}
-                    {!stickerPreviewSrc && !stickerUrl && !stickerUploading && (
-                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", marginTop: 6 }}>
-                        Upload their photo — background removed automatically and shown as a cutout in Scene 5
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 {/* ── Voice note recorder ── */}
                 <div style={{

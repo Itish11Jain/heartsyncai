@@ -295,7 +295,7 @@ function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
         }}
           initial={{ clipPath:"inset(0 102% 0 0)" }}
           animate={{ clipPath:"inset(0 0% 0 0)" }}
-          transition={{ duration:2.8, ease:"linear", delay:0.5 }}>
+          transition={{ duration:1.4, ease:"linear", delay:0.4 }}>
           Happy Birthday
         </motion.p>
         <motion.p style={{
@@ -304,7 +304,7 @@ function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
           color:"rgba(212,175,55,0.95)", display:"block",
         }}
           initial={{ opacity:0 }} animate={{ opacity:1 }}
-          transition={{ delay:3.5, duration:1.0 }}>
+          transition={{ delay:0.4, duration:0.9 }}>
           {name}
         </motion.p>
       </div>
@@ -462,7 +462,7 @@ const BUNCHES_DEF = [
 ];
 
 function BunchBalloons({ flyUp }: { flyUp:boolean }) {
-  const AY = 900;
+  const AY = 960;
   return (
     <div style={{ position:"absolute", inset:0, width:"100%", zIndex:14, pointerEvents:"none", overflow:"visible" }}>
       <svg width={390} height={260} viewBox="0 700 390 260"
@@ -489,8 +489,8 @@ function BunchBalloons({ flyUp }: { flyUp:boolean }) {
               <g key={`${bi}-${li}`}>
                 <motion.line x1={bx} y1={by+r} x2={bunch.ax} y2={AY}
                   stroke="#C9A840" strokeWidth={0.9}
-                  animate={{ opacity: flyUp ? 0 : 0.5 }}
-                  transition={{ delay: flyUp ? flyDelay : 0, duration:0.25 }}/>
+                  animate={{ opacity: 0 }}
+                  transition={{ duration:0 }}/>
                 <motion.g
                   animate={flyUp
                     ? { y:-1220, x:flyDrift }
@@ -1289,6 +1289,8 @@ export default function BirthdayCard() {
     ? decodeMsg(msgRaw) || "Wishing you the most magical birthday! May every moment be filled with joy and love. 🎂✨"
     : "Wishing you the most magical birthday! May every moment be filled with joy and love. 🎂✨";
   const isSender    = params.get("sender") === "1";
+  const isPreview   = params.get("preview") === "1";
+  const isAutoplay  = params.get("autoplay") === "1";
   const isRecipient = !isSender;
   const [cardId, setCardId] = useState<string>(() => params.get("id") ?? "");
   const photosRaw   = params.get("photos");
@@ -1358,9 +1360,19 @@ export default function BirthdayCard() {
     return `${base}/birthday.html?${p.toString()}`;
   })();
 
+  /* Autoplay: advance through all scenes and loop — used by the UnlockModal iframe preview */
+  useEffect(() => {
+    if (!isAutoplay) return;
+    const SCENE_DURATIONS: Record<number, number> = { 1: 5000, 2: 6000, 4: 5000, 5: 6000, 6: 5000 };
+    const NEXT_SCENE: Record<number, 1|2|4|5|6> = { 1: 2, 2: 4, 4: 5, 5: 6, 6: 1 };
+    const t = setTimeout(() => { setScene(NEXT_SCENE[scene]); }, SCENE_DURATIONS[scene] ?? 5000);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, scene]);
+
   /* Auto-open paywall 3s after landing on scene 6 (once per session) */
   useEffect(() => {
-    if (scene !== 6 || !isSender || isUnlocked || autoOpenFiredRef.current) return;
+    if (scene !== 6 || !isSender || isUnlocked || autoOpenFiredRef.current || isPreview) return;
     autoOpenFiredRef.current = true;
     const t = setTimeout(() => {
       const isMobile = window.innerWidth < 768;
