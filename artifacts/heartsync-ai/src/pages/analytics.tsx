@@ -71,6 +71,16 @@ type PaymentFunnelRow = {
   step7_card_shared: string;
 };
 
+type SalesDaily = { date: string; unlocks: string; amount: string };
+type SalesByOccasion = { date: string; occasion: string; unlocks: string };
+type SalesData = {
+  total_amount: string;
+  total_unlocks: string;
+  daily: SalesDaily[];
+  by_occasion: SalesByOccasion[];
+  range?: { from: string | null; to: string | null };
+};
+
 type AnalyticsData = {
   overview: Overview;
   occasions: Occasion[];
@@ -195,6 +205,31 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
   );
 }
 
+/** Formats a numeric amount as Indian rupees, e.g. 11676 → "₹11,676". */
+function fmtRupees(v: string | number): string {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "₹0";
+  return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+}
+
+/** Formats a "YYYY-MM-DD" string as "31 May 2026" without timezone shifting. */
+function fmtDateIST(d: string): string {
+  const iso = typeof d === "string" ? d.slice(0, 10) : "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return String(d);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${m[3]} ${months[Number(m[2]) - 1]} ${m[1]}`;
+}
+
+/** Title-cases an occasion slug, e.g. "feel_good" → "Feel Good". */
+function prettyOccasion(o: string): string {
+  if (!o) return "—";
+  return o
+    .split(/[_\s]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function pct(num: string | number, denom: string | number): string {
   const n = Number(num);
   const d = Number(denom);
@@ -211,7 +246,12 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
 
   /** Which top-level tab is active. */
-  const [activeTab, setActiveTab] = useState<"overview" | "payment_funnel">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payment_funnel" | "sales">("overview");
+
+  /** Sales tab data (fetched lazily, from the payments table). */
+  const [sales, setSales] = useState<SalesData | null>(null);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesError, setSalesError] = useState<string | null>(null);
 
   /** Current date filter applied to the dashboard. Defaults to "All time". */
   const [range, setRange] = useState<DateRange>({ from: null, to: null });
@@ -271,6 +311,48 @@ export default function Analytics() {
 
     return () => { cancelled = true; };
   }, [isLoaded, user, userEmail, navigate, getToken, range.from, range.to]);
+
+  /**
+   * Lazily fetch sales data when the Sales tab is active. Re-runs whenever the
+   * date range changes so the tab stays in sync with the global filter.
+   */
+  useEffect(() => {
+    if (activeTab !== "sales") return;
+    if (!isLoaded || !user || !isSuperUser(userEmail)) return;
+
+    let cancelled = false;
+    setSalesLoading(true);
+    setSalesError(null);
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Not signed in — please reload and sign in again.");
+
+        const qs = new URLSearchParams();
+        if (range.from) qs.set("from", range.from);
+        if (range.to) qs.set("to", range.to);
+        const url = `${BASE}/api/events/sales${qs.toString() ? "?" + qs.toString() : ""}`;
+
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) {
+          throw new Error(
+            r.status === 401 || r.status === 403
+              ? `Sales API ${r.status}: your account is not authorised.`
+              : `Sales API returned ${r.status}.`,
+          );
+        }
+        const d = (await r.json()) as SalesData;
+        if (cancelled) return;
+        setSales(d);
+      } catch (e) {
+        if (!cancelled) setSalesError(String(e));
+      } finally {
+        if (!cancelled) setSalesLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeTab, isLoaded, user, userEmail, getToken, range.from, range.to]);
 
   /** Apply a quick-preset range and clear any custom-mode drafts. */
   function applyPreset(presetId: string): void {
@@ -335,8 +417,13 @@ export default function Analytics() {
 
         {/* ── Tab switcher ── */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {(["overview", "payment_funnel"] as const).map((tab) => {
-            const label = tab === "overview" ? "Overview" : "💳 Payment Funnel";
+          {(["overview", "payment_funnel", "sales"] as const).map((tab) => {
+            const label =
+              tab === "overview"
+                ? "Overview"
+                : tab === "payment_funnel"
+                  ? "💳 Payment Funnel"
+                  : "💰 Sales";
             const isActive = activeTab === tab;
             return (
               <button
@@ -492,6 +579,89 @@ export default function Analytics() {
             </div>
           )}
         </div>
+
+        {activeTab === "sales" && (() => {
+          if (salesLoading) {
+            return <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>Loading sales…</p>;
+          }
+          if (salesError) {
+            return <p style={{ color: "#ff6b6b", fontSize: 13 }}>{salesError}</p>;
+          }
+          if (!sales) {
+            return <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>No sales data yet for this range.</p>;
+          }
+          return (
+            <div style={{ marginBottom: 32 }}>
+              {/* ── Total collected ── */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, rgba(52,211,153,0.12), rgba(255,215,0,0.08))",
+                  border: "1px solid rgba(52,211,153,0.3)",
+                  borderRadius: 14,
+                  padding: "20px 22px",
+                  marginBottom: 28,
+                }}
+              >
+                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+                  Total Money Collected
+                </div>
+                <div style={{ color: "#34d399", fontSize: 38, fontWeight: 800, lineHeight: 1 }}>
+                  {fmtRupees(sales.total_amount)}
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 8 }}>
+                  {Number(sales.total_unlocks).toLocaleString("en-IN")} cards unlocked · excludes refunds &amp; Itisha Jain · {describeRange(range)}
+                </div>
+              </div>
+
+              {/* ── Daily: unlocks + amount ── */}
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                Daily Collections
+              </h2>
+              <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 28, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+                  <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Date (IST)</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Cards Unlocked</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Collected</span>
+                </div>
+                {sales.daily.length === 0 && (
+                  <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 14px" }}>No payments in this range.</p>
+                )}
+                {sales.daily.map((row, i, arr) => (
+                  <div key={row.date} style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", padding: "10px 14px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
+                    <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>{fmtDateIST(row.date)}</span>
+                    <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "right" }}>{Number(row.unlocks).toLocaleString("en-IN")}</span>
+                    <span style={{ color: "#34d399", fontWeight: 700, fontSize: 14, textAlign: "right" }}>{fmtRupees(row.amount)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Daily by occasion ── */}
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                Unlocks by Occasion
+              </h2>
+              <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.3fr 1fr", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+                  <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Date (IST)</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Occasion</span>
+                  <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "right" }}>Cards Unlocked</span>
+                </div>
+                {sales.by_occasion.length === 0 && (
+                  <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, padding: "12px 14px" }}>No payments in this range.</p>
+                )}
+                {sales.by_occasion.map((row, i, arr) => {
+                  const newDay = i === 0 || arr[i - 1].date !== row.date;
+                  return (
+                    <div key={row.date + row.occasion} style={{ display: "grid", gridTemplateColumns: "1.2fr 1.3fr 1fr", padding: "10px 14px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", borderTop: newDay && i > 0 ? "1px solid rgba(255,215,0,0.12)" : undefined }}>
+                      <span style={{ color: newDay ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.25)", fontSize: 13 }}>{newDay ? fmtDateIST(row.date) : ""}</span>
+                      <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>{prettyOccasion(row.occasion)}</span>
+                      <span style={{ color: "#FFD700", fontWeight: 700, fontSize: 14, textAlign: "right" }}>{Number(row.unlocks).toLocaleString("en-IN")}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {activeTab === "payment_funnel" && (() => {
           const pf = data.payment_funnel;

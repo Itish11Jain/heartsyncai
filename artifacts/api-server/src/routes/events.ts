@@ -732,6 +732,97 @@ router.get("/events/analytics", async (req, res) => {
 });
 
 /**
+ * GET /api/events/sales
+ *
+ * Sales analytics derived from confirmed UPI payments (hs_received_payments).
+ * Always excludes:
+ *   - refunded payments (refunded_at IS NOT NULL)
+ *   - any payment whose forwarded bank SMS names "Itisha" as the sender,
+ *     matched case-insensitively on a whole-word basis (`\yitisha\y`), so
+ *     "ITISHA JAIN" matches but innocent names like "Nitisha" do not. These
+ *     are the app owner's own self/test payments.
+ *
+ * Optional date range via ?from=YYYY-MM-DD&to=YYYY-MM-DD (IST, inclusive).
+ * Each confirmed payment corresponds to one card unlock.
+ *
+ * Auth: Clerk session — caller must be a signed-in superuser email.
+ */
+router.get("/events/sales", async (req, res) => {
+  if (!(await requireSuperuser(req, res))) return;
+
+  try {
+    const from = parseDateParam(req.query["from"]);
+    const to = parseDateParam(req.query["to"]);
+
+    // WHERE fragment over hs_received_payments. Bare column names are safe in
+    // the occasion query below because the joined subquery only exposes
+    // card_id/occasion — created_at/refunded_at/raw_sms/amount resolve to rp.
+    const conds: string[] = [
+      "refunded_at IS NULL",
+      "(raw_sms IS NULL OR raw_sms !~* '\\yitisha\\y')",
+    ];
+    const params: string[] = [];
+    if (from) {
+      params.push(from);
+      conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${params.length}::date`);
+    }
+    if (to) {
+      params.push(to);
+      conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date < ($${params.length}::date + INTERVAL '1 day')`);
+    }
+    const whereSql = conds.join(" AND ");
+
+    const [totals, daily, byOccasion] = await Promise.all([
+      pool.query(
+        `SELECT COALESCE(SUM(NULLIF(amount,'')::numeric),0) AS total_amount,
+                COUNT(*)                                    AS total_unlocks
+         FROM hs_received_payments
+         WHERE ${whereSql}`,
+        params,
+      ),
+      pool.query(
+        `SELECT to_char((created_at AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD') AS date,
+                COUNT(*)                                       AS unlocks,
+                COALESCE(SUM(NULLIF(amount,'')::numeric),0)    AS amount
+         FROM hs_received_payments
+         WHERE ${whereSql}
+         GROUP BY 1
+         ORDER BY 1 DESC`,
+        params,
+      ),
+      pool.query(
+        `SELECT to_char((rp.created_at AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD') AS date,
+                COALESCE(occ.occasion, 'unknown')                AS occasion,
+                COUNT(*)                                         AS unlocks
+         FROM hs_received_payments rp
+         LEFT JOIN (
+           SELECT card_id,
+                  MAX(occasion) FILTER (WHERE occasion IS NOT NULL AND occasion <> '') AS occasion
+           FROM hs_card_events
+           WHERE card_id IS NOT NULL
+           GROUP BY card_id
+         ) occ ON occ.card_id = rp.card_id
+         WHERE ${whereSql}
+         GROUP BY 1, 2
+         ORDER BY 1 DESC, unlocks DESC`,
+        params,
+      ),
+    ]);
+
+    return res.json({
+      total_amount: totals.rows[0]?.total_amount ?? "0",
+      total_unlocks: totals.rows[0]?.total_unlocks ?? "0",
+      daily: daily.rows,
+      by_occasion: byOccasion.rows,
+      range: { from: from ?? null, to: to ?? null },
+    });
+  } catch (err) {
+    console.error("[events/sales]", err);
+    return res.status(500).json({ error: "internal" });
+  }
+});
+
+/**
  * DELETE /api/events/reset
  * Wipes all analytics + usage data.
  * Auth: Clerk session — caller must be a signed-in superuser email.
