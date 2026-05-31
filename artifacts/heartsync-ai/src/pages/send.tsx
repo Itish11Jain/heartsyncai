@@ -394,6 +394,8 @@ function SendInner() {
   const [photoPreviewSrcs, setPhotoPreviewSrcs] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+  // Auto background-removed version of the first photo (used as personal picture / sticker in Scene 5)
+  const [autoStickerUrl, setAutoStickerUrl] = useState<string | null>(null);
 
 
   // Voice note recorder state
@@ -584,8 +586,21 @@ function SendInner() {
       }
       const data = await res.json() as { url?: string };
       if (data.url) {
+        const isFirstPhoto = uploadedPhotoUrls.length === 0;
         setUploadedPhotoUrls(prev => [...prev, data.url!]);
         trackEvent({ event: "photo_added", occasion, clerk_user_id: clerkUserId ?? undefined, email: userEmail ?? undefined, fingerprint: fingerprint ?? undefined, template: selectedTemplate });
+
+        // For birthday cards: auto-remove background of the first photo so it appears
+        // as a transparent PNG sticker cutout in Scene 5. Fire-and-forget — if it fails
+        // (e.g. REMOVEBG_API_KEY not configured), Scene 5 falls back to the original photo.
+        if (isFirstPhoto && occasion === "birthday") {
+          const sfd = new FormData();
+          sfd.append("photo", file);
+          fetch(`${base}/api/upload/sticker`, { method: "POST", body: sfd })
+            .then(sr => sr.ok ? sr.json() : null)
+            .then((sd: { url?: string } | null) => { if (sd?.url) setAutoStickerUrl(sd.url); })
+            .catch(() => { /* ignore — falls back to original photo */ });
+        }
       }
     } catch {
       setPhotoUploadError("Upload failed. Please try again.");
@@ -713,7 +728,7 @@ function SendInner() {
         photo_count: uploadedPhotoUrls.length,
       });
       clearDraft();
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setShowGenerating(true);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
@@ -781,7 +796,7 @@ function SendInner() {
     });
 
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, effectiveCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, effectiveCardId, false, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }, [
@@ -892,7 +907,7 @@ function SendInner() {
     const cardId = pendingCardId;
     clearDraft();
     clearPaywallSnapshot();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, selectedTemplate, cardId, true, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowPaywall(false);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
@@ -902,7 +917,7 @@ function SendInner() {
   function handleWatermarkFree() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, false, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
@@ -942,7 +957,7 @@ function SendInner() {
   function handleWatermarkComplete() {
     setShowWatermarkUpsell(false);
     clearDraft();
-    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+    const url = buildCardUrl(recipientName.trim(), customMsg, true, "envelope", pendingCardId, true, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
     setTimeout(() => { window.location.href = url; }, 1800);
   }
