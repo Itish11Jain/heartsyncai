@@ -1090,7 +1090,7 @@ function SendInner() {
           one step backward in the wizard; on step 1 it falls back to /
           (home). This is the only Back affordance — inline backs were
           removed to keep the form fully on one screen fold. */}
-      <div className="w-full flex items-center justify-between px-4 pt-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1 }}>
+      <div className="w-full flex items-center justify-between px-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1, paddingTop: "max(16px, env(safe-area-inset-top, 16px))" }}>
         {/* In viral reply mode step 2 is the first visible step — Back goes home, not to the hidden occasion step. */}
         {step > 1 && !(isViralReply && step === 2) ? (
           <button

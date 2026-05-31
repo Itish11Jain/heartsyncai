@@ -1451,19 +1451,14 @@ export default function BirthdayCard() {
     }).catch(() => {});
   }
 
-  /* ── Scale the 390×844 design canvas to fit the device viewport.
-     Read viewport once at mount — never reactively (avoids iOS jitter/scroll).
-     On iOS: use the smaller of width-scale and height-scale so the FULL 844-unit
-     design always fits without clipping — content is scaled down ~7% on iPhone 15.
-     On Android: scale by width only (unchanged — already looks perfect). */
+  /* ── Scale the 390×844 design canvas to fill the device screen edge-to-edge.
+     viewport-fit=cover (set in index.html) makes window.innerHeight return the
+     FULL screen height on iOS (≈844pt on iPhone 15), so scale=vpW/390 works
+     perfectly on both iOS and Android with no side gaps and no clipping. */
   const vpW = typeof window !== "undefined" ? window.innerWidth  : 390;
   const vpH = typeof window !== "undefined" ? window.innerHeight : 844;
-  const isIOS = typeof navigator !== "undefined"
-    && /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const scale = isIOS
-    ? Math.min(vpW / 390, vpH / 844)   // fit both axes — no clipping on iPhone
-    : vpW / 390;                        // full-width on Android (unchanged)
-  const scaledH = Math.ceil(vpH / scale); // always ≥ 844 on iOS
+  const scale  = vpW / 390;
+  const scaledH = Math.ceil(vpH / scale);
 
   return (
     <div style={{
@@ -1547,13 +1542,13 @@ export default function BirthdayCard() {
         )}
       </AnimatePresence>
 
-      {/* Floating music toggle — top-right corner */}
+      {/* Floating music toggle — top-right corner (clear of iOS status bar) */}
       {!isPreview && (
         <motion.button
           initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.5 }}
           onClick={toggleMute}
           style={{
-            position:"fixed", top:14, right:14, zIndex:60,
+            position:"fixed", top:"max(14px, env(safe-area-inset-top, 14px))", right:14, zIndex:60,
             width:34, height:34, borderRadius:"50%",
             background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)",
             backdropFilter:"blur(8px)", cursor:"pointer",
@@ -1567,11 +1562,11 @@ export default function BirthdayCard() {
         </motion.button>
       )}
 
-      {/* Back link */}
+      {/* Back link — clear of iOS status bar */}
       <Link href="/send?ref=card">
         <motion.div
           initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:2 }}
-          style={{ position:"fixed", top:14, left:14, fontSize:11,
+          style={{ position:"fixed", top:"max(14px, env(safe-area-inset-top, 14px))", left:14, fontSize:11,
             color:"rgba(255,255,255,0.14)", cursor:"pointer", zIndex:60,
             padding:"4px 10px", borderRadius:999, background:"rgba(255,255,255,0.04)" }}>
           ← make your own

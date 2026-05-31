@@ -903,7 +903,7 @@ export default function Home() {
         <div className="md:hidden absolute inset-0" style={{ background: "radial-gradient(ellipse at 15% 15%, rgba(168,85,247,0.12) 0%, transparent 52%), radial-gradient(ellipse at 85% 88%, rgba(244,114,182,0.1) 0%, transparent 52%)" }} />
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 pt-3 pb-4 md:pt-6 md:pb-20">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 pb-4 md:pt-6 md:pb-20" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))" }}>
         {/* Header */}
         <header className="flex justify-between items-center mb-1 md:mb-20">
           <div className="flex items-center gap-2.5">
