@@ -329,7 +329,7 @@ function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
         );
       })}
       <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:4 }}
-        viewBox="0 0 390 844" preserveAspectRatio="xMidYMid meet">
+        viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice">
         <defs>
           {S1G.map(g => (
             <radialGradient key={g.id} id={g.id} cx="34%" cy="28%" r="65%">
@@ -1400,15 +1400,14 @@ export default function BirthdayCard() {
     <div style={{
       position:"fixed", inset:0, overflow:"hidden",
       background:"linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)",
-      display:"flex", alignItems:"center", justifyContent:"center",
       fontFamily:"Georgia,'Times New Roman',serif",
       userSelect:"none",
     }}>
-      {/* Centered card container */}
+      {/* Full-screen card container */}
       <div style={{
         position:"relative",
-        width:"min(390px, 100vw)",
-        height:"min(844px, 100dvh)",
+        width:"100%",
+        height:"100%",
         overflow:"hidden",
       }}>
         <AnimatePresence mode="wait">
