@@ -1408,6 +1408,14 @@ export default function BirthdayCard() {
     }).catch(() => {});
   }
 
+  /* Scale the 390px design canvas to fill whatever viewport width the device has.
+     This ensures the card is edge-to-edge on every phone (iPhone 390px, Android 412-430px, etc.)
+     Modals are kept OUTSIDE the scaled container so position:fixed still anchors to the viewport. */
+  const vpW = typeof window !== "undefined" ? window.innerWidth  : 390;
+  const vpH = typeof window !== "undefined" ? window.innerHeight : 844;
+  const scale = vpW / 390;
+  const scaledH = Math.ceil(vpH / scale);
+
   return (
     <div style={{
       position:"fixed", inset:0, overflow:"hidden",
@@ -1415,11 +1423,14 @@ export default function BirthdayCard() {
       fontFamily:"Georgia,'Times New Roman',serif",
       userSelect:"none",
     }}>
-      {/* Full-screen card container */}
+      {/* Scaled scene canvas — 390px design space uniformly scaled to fill viewport width */}
       <div style={{
-        position:"relative",
-        width:"100%",
-        height:"100%",
+        position:"absolute",
+        top:0, left:0,
+        width:390,
+        height:scaledH,
+        transformOrigin:"top left",
+        transform:`scale(${scale})`,
         overflow:"hidden",
       }}>
         <AnimatePresence mode="wait">
@@ -1454,35 +1465,35 @@ export default function BirthdayCard() {
             />
           )}
         </AnimatePresence>
-
-        {/* Payment modals */}
-        <AnimatePresence>
-          {showUnlockModal && (
-            <Suspense fallback={null}>
-              <UnlockModal
-                cardId={cardId}
-                recipientName={name}
-                occasion={occasion}
-                senderShareUrl={senderShareUrl}
-                onClose={() => setShowUnlockModal(false)}
-                onSuccess={() => { setIsUnlocked(true); setShowUnlockModal(false); }}
-              />
-            </Suspense>
-          )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {showDesktopPaywall && (
-            <Suspense fallback={null}>
-              <WatermarkPaywallModal
-                mode="photo"
-                cardId={cardId}
-                onClose={() => setShowDesktopPaywall(false)}
-                onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
-              />
-            </Suspense>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Payment modals — outside the scale transform so position:fixed anchors to real viewport */}
+      <AnimatePresence>
+        {showUnlockModal && (
+          <Suspense fallback={null}>
+            <UnlockModal
+              cardId={cardId}
+              recipientName={name}
+              occasion={occasion}
+              senderShareUrl={senderShareUrl}
+              onClose={() => setShowUnlockModal(false)}
+              onSuccess={() => { setIsUnlocked(true); setShowUnlockModal(false); }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showDesktopPaywall && (
+          <Suspense fallback={null}>
+            <WatermarkPaywallModal
+              mode="photo"
+              cardId={cardId}
+              onClose={() => setShowDesktopPaywall(false)}
+              onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
 
       {/* Back link */}
       <Link href="/send?ref=card">
