@@ -1326,6 +1326,22 @@ export default function BirthdayCard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isUnlocked, setIsUnlocked] = useState(false);
+
+  /* On mount, check the DB to see if this card is already paid/premium.
+     This makes the page reflect the real unlock state without needing the
+     user to go through the modal again (e.g. after a manual admin unlock). */
+  useEffect(() => {
+    if (!cardId) return;
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    fetch(`${base}/api/cards/${cardId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { is_premium?: boolean } | null) => {
+        if (data?.is_premium) setIsUnlocked(true);
+      })
+      .catch(() => { /* ignore — page still works, modal will appear */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardId]);
+
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [showDesktopPaywall, setShowDesktopPaywall] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
