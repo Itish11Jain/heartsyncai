@@ -1213,6 +1213,20 @@ export default function Home() {
           </Button>
         </m.section>
         )}
+
+        {/* Legal footer — always visible (required for payment gateway verification) */}
+        <footer className="mt-8 pt-8 border-t border-white/[0.06] text-center">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-white/40 mb-3">
+            <Link href="/terms" className="hover:text-white/70 transition-colors">Terms &amp; Conditions</Link>
+            <span className="text-white/15">·</span>
+            <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy Policy</Link>
+            <span className="text-white/15">·</span>
+            <Link href="/contact" className="hover:text-white/70 transition-colors">Contact Us</Link>
+          </div>
+          <p className="text-white/20 text-xs">
+            © {new Date().getFullYear()} HeartSync AI · Gurgaon, India
+          </p>
+        </footer>
       </div>
     </div>
     </MotionConfig>

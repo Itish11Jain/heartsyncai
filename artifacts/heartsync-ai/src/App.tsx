@@ -28,6 +28,7 @@ const Generate = lazy(() => import("@/pages/generate"));
 const Report = lazy(() => import("@/pages/report"));
 const Contact = lazy(() => import("@/pages/contact"));
 const Terms = lazy(() => import("@/pages/terms"));
+const Privacy = lazy(() => import("@/pages/privacy"));
 const History = lazy(() => import("@/pages/history"));
 const Moments = lazy(() => import("@/pages/moments"));
 const DateGuide = lazy(() => import("@/pages/date-guide"));
@@ -102,6 +103,7 @@ function AppRoutes() {
       {/* Public — instant, no Clerk, no Firebase */}
       <Route path="/"><L><Home /></L></Route>
       <Route path="/terms"><L><Terms /></L></Route>
+      <Route path="/privacy"><L><Privacy /></L></Route>
       <Route path="/contact"><L><Contact /></L></Route>
       <Route path="/preview"><L><Preview /></L></Route>
       <Route path="/generate"><L><Generate /></L></Route>
