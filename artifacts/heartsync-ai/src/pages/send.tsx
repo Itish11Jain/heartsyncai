@@ -720,6 +720,13 @@ function SendInner() {
     /* We do NOT create a DB card or increment usage here — that happens   */
     /* in PremiumLockPanel after the ₹49 payment is confirmed.             */
     if (isPremiumTemplate(effectiveTemplate)) {
+      /* Generate a client-side tracking ID so card_created and card_viewed
+       * events stay linked for premium templates too. No DB card row is
+       * created here (that happens on unlock), so without this the analytics
+       * "Views" column stays 0 — the recipient's card_viewed id would never
+       * match the card_created event. Threading the same id into buildCardUrl
+       * also stops the card page from generating its own id. */
+      const trackingId = Math.random().toString(36).slice(2, 10);
       trackEvent({
         event: "card_created",
         fingerprint, clerk_user_id: clerkUserId ?? undefined,
@@ -730,6 +737,7 @@ function SendInner() {
         is_free: false,
         from_card_ref: fromCardRef,
         recipient_name: recipientName.trim() || undefined,
+        card_id: trackingId,
         has_photo: uploadedPhotoUrls.length > 0,
         has_voice_note: !!voiceNoteUrl,
         photo_count: uploadedPhotoUrls.length,
@@ -750,7 +758,7 @@ function SendInner() {
       /* Fallback: if BG-removal failed (e.g. remove.bg out of credits), use the
          original first photo so Scene 5 still shows the person's image. */
       const stickerUrl = autoStickerUrlRef.current ?? uploadedPhotoUrls[0] ?? undefined;
-      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, undefined, false, stickerUrl, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
+      const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, trackingId, false, stickerUrl, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setTimeout(() => { window.location.href = url; }, 1800);
       return;
     }

@@ -19,3 +19,16 @@ The birthday template originally shipped without it (cosmic/crystal/vinyl/envelo
 **How to apply:** whenever you add a NEW card template page, copy the `card_viewed`
 mount effect from an existing template (e.g. card.tsx / cosmic.tsx) or its Views
 column will silently stay 0.
+
+## Premium templates: card_id must be threaded through card_created
+
+The recent-cards "Views" join matches `card_created.card_id = card_viewed.card_id`.
+For premium templates (birthday/cosmic/crystal/vinyl) send.tsx's premium branch
+must generate a tracking id and pass it to BOTH the `card_created` trackEvent AND
+`buildCardUrl`. The original premium branch fired `card_created` with no card_id
+and built the URL with `id=undefined`; the card page then generated its own fresh
+id, so the recipient's `card_viewed` id never matched → Views stuck at 0.
+
+**Why:** premium templates create no DB card row at send time (only on unlock), so
+the only link between create and view is this client tracking id. Free/envelope
+branch already did this correctly; premium branch did not.
