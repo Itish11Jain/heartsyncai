@@ -28,19 +28,18 @@ hub (the hub/CDN is reachable in prod even though api-inference is not).
 - Model is warmed at server startup (`warmBgRemove()` in index.ts) so the first user request is fast.
 
 # Sticker delivery: predict-the-URL, never block on bg-removal
-Removal takes ~3-10s (serialized under load), longer than a user takes to fill in
-the card. Do NOT block card creation waiting for the cutout. Instead the client
-generates a UUID, predicts the sticker URL (`/api/stickers/sticker/<uuid>.png`),
-sends that `stickerId` to `POST /upload/sticker`, and the card opens immediately
-with the ORIGINAL photo. Scene 5 polls the predicted URL (Image() with `?r=N`
-cache-bust, ~20 tries @1.5s) and swaps the cutout in once it 404→200s.
-**Why:** the old 4s blocking wait baked the full-photo fallback into the card URL,
-permanently discarding the cutout that finished a second later.
+Bg-removal is slower than a user takes to fill in the card, so never block card
+creation waiting for the cutout — the old approach (short blocking wait) baked the
+full-photo fallback permanently into the card URL and discarded the cutout that
+finished moments later. Instead let the client predict the sticker's final URL up
+front (client-generated id), open the card immediately on the original photo, and
+have the card swap the cutout in once it becomes fetchable.
+**Why:** decouples a slow async server job from the synchronous card-creation step
+without losing the result.
 **How to apply / gotchas:**
-- `/upload/sticker` only honours a client `stickerId` when `exists(key)` is false
-  — otherwise it falls back to a random key. This stops an attacker who sees a
-  card's sticker URL from overwriting/defacing it (endpoint is unauthenticated).
-- Predicted URL parity depends on heartsync-ai being served at root (BASE_URL=/);
-  server returns `${req.protocol}://${host}/api/stickers/...`. Holds for prod.
-- On upload success/failure the client overwrites the ref with the server URL /
-  plain photo, so a failed removal stops the card polling for a file never made.
+- The sticker upload endpoint is unauthenticated, so only honour a client-supplied
+  id when nothing is stored at that key yet — otherwise anyone who sees a card's
+  sticker URL could overwrite/deface it.
+- URL prediction only works while heartsync-ai is served at root (BASE_URL=/), so
+  the client-built URL matches what the server returns; revisit if it ever moves
+  under a path prefix.

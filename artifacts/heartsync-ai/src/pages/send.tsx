@@ -2035,6 +2035,7 @@ function SendInner() {
                             value={watermarkUtr}
                             onChange={(e) => { setWatermarkUtr(e.target.value); setWatermarkUtrError(""); }}
                             data-testid="watermark-utr-input"
+                            data-clarity-mask="true"
                             className="bg-white/5 border-white/10 h-10 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
                           />
                           {watermarkUtrError && <p className="text-xs text-destructive text-center">{watermarkUtrError}</p>}

@@ -105,16 +105,16 @@
     <script>
       /* Microsoft Clarity — session recordings + heatmaps.
          Project ID is injected at build time from the VITE_CLARITY_PROJECT_ID
-         env var (never hardcoded). Loads ONLY when (a) that var is set and
-         (b) we're on the production host — so dev/preview sessions are never
-         recorded. If the var is unset, Vite leaves the literal "%...%"
-         placeholder, which the `%` check below treats as "disabled". */
+         env var, which is set ONLY in the production environment (never in the
+         repo or in dev), so the placeholder below stays literal in dev/preview
+         builds. As defence-in-depth we ALSO positively gate to the production
+         host, so the script can never run anywhere but the live site. */
       (function(){
         var id = "%VITE_CLARITY_PROJECT_ID%";
         if (!id || id.indexOf('%') !== -1) return;
         var h = window.location.hostname;
-        var isDev = h === 'localhost' || h === '127.0.0.1' || h.indexOf('.replit.dev') !== -1;
-        if (isDev) return;
+        var isProd = h === 'heartsync.in' || h === 'www.heartsync.in';
+        if (!isProd) return;
         (function(c,l,a,r,i,t,y){
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
           t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
