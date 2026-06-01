@@ -63,7 +63,6 @@ VITE_FIREBASE_APP_ID = "1:346818743348:web:ddddfd2d2ed78498808e61"
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_bW92ZWQtY2FsZi01Ni5jbGVyay5hY2NvdW50cy5kZXYk"
 
 [userenv.production]
-VITE_CLARITY_PROJECT_ID = "wlor14id68"
 
 [nix]
 channel = "stable-25_05"
