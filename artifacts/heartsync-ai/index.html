@@ -103,8 +103,15 @@
       })();
     </script>
     <script>
-      /* Microsoft Clarity — session recordings + heatmaps. Production only. */
+      /* Microsoft Clarity — session recordings + heatmaps.
+         Project ID is injected at build time from the VITE_CLARITY_PROJECT_ID
+         env var (never hardcoded). Loads ONLY when (a) that var is set and
+         (b) we're on the production host — so dev/preview sessions are never
+         recorded. If the var is unset, Vite leaves the literal "%...%"
+         placeholder, which the `%` check below treats as "disabled". */
       (function(){
+        var id = "%VITE_CLARITY_PROJECT_ID%";
+        if (!id || id.indexOf('%') !== -1) return;
         var h = window.location.hostname;
         var isDev = h === 'localhost' || h === '127.0.0.1' || h.indexOf('.replit.dev') !== -1;
         if (isDev) return;
@@ -112,7 +119,7 @@
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
           t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
           y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window,document,'clarity','script','wlor14id68');
+        })(window,document,'clarity','script',id);
       })();
     </script>
     <script>

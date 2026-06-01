@@ -1246,6 +1246,7 @@ function SendInner() {
                   </label>
                   <Input
                     placeholder="e.g. Rahul, Priya, Aditya…"
+                    data-clarity-mask="true"
                     value={recipientName}
                     onChange={e => setRecipientName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
@@ -1281,6 +1282,7 @@ function SendInner() {
                   <textarea
                     value={customMsg}
                     onChange={e => setCustomMsg(e.target.value.slice(0, 300))}
+                    data-clarity-mask="true"
                     maxLength={300}
                     rows={3}
                     style={{
@@ -1876,6 +1878,7 @@ function SendInner() {
                         placeholder="Paste UTR / Transaction ID"
                         value={paywallUtr}
                         onChange={(e) => { setPaywallUtr(e.target.value); setPaywallUtrError(""); }}
+                        data-clarity-mask="true"
                         data-testid="paywall-utr-input"
                         className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
                       />

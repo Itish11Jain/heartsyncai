@@ -987,6 +987,7 @@ export default function Home() {
                     maxLength={40}
                     placeholder="Who is the card for?"
                     aria-label="Recipient's first name"
+                    data-clarity-mask="true"
                     value={heroName}
                     onChange={e => onHeroNameChange(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); goToSendWithName(); } }}

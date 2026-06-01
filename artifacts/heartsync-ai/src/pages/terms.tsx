@@ -81,6 +81,20 @@ export default function Terms() {
                 Reports are personalised based on the scenario you describe and are generated fresh
                 each time. Reports expire 24 hours after generation.
               </p>
+              <p>
+                To improve usability, we use anonymised session recordings and heatmaps via
+                Microsoft Clarity, with sensitive form fields (such as names, messages and payment
+                references) automatically masked — see{" "}
+                <a
+                  href="https://privacy.microsoft.com/privacystatement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Microsoft's privacy statement
+                </a>
+                .
+              </p>
             </Section>
 
             <Section title="5. AI-Generated Content Disclaimer">
