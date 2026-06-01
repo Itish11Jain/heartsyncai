@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { HeartPulse, Mail, ArrowLeft } from "lucide-react";
+import { HeartPulse, Mail, Phone, MapPin, ArrowLeft } from "lucide-react";
 
 export default function Contact() {
   return (
@@ -29,12 +29,29 @@ export default function Contact() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl font-extrabold text-white mb-4">Contact Us</h1>
-          <p className="text-white/50 mb-12 text-lg">
+          {/* ── About Us ── */}
+          <h1 className="text-4xl font-extrabold text-white mb-4">About Us</h1>
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 mb-8">
+            <p className="text-white/55 leading-relaxed text-sm mb-4">
+              HeartSync AI is an AI-powered platform that helps people express how they feel —
+              through personalised, beautifully animated greeting cards for every occasion and
+              AI-generated date preparation reports. Our mission is to make heartfelt connection
+              effortless.
+            </p>
+            <p className="text-white/55 leading-relaxed text-sm">
+              HeartSync AI is owned and operated by{" "}
+              <strong className="text-white/80">Saurabh Jain</strong> (the legal entity behind this
+              service), based in Jaipur, India.
+            </p>
+          </div>
+
+          {/* ── Contact Us ── */}
+          <h2 className="text-3xl font-extrabold text-white mb-4">Contact Us</h2>
+          <p className="text-white/50 mb-8 text-base">
             We're here to help. Reach out to us for any questions, support, or feedback.
           </p>
 
-          <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8">
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 space-y-8">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
                 <Mail className="w-6 h-6 text-primary" />
@@ -50,7 +67,37 @@ export default function Contact() {
               </div>
             </div>
 
-            <div className="mt-8 pt-8 border-t border-white/[0.06]">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
+                <Phone className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-white/40 text-sm mb-1">Mobile</p>
+                <a
+                  href="tel:+919706900714"
+                  className="text-white font-semibold text-lg hover:text-primary transition-colors"
+                >
+                  +91-9706900714
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-white/40 text-sm mb-1">Registered Address</p>
+                <p className="text-white font-semibold text-lg leading-snug">
+                  Saurabh Jain
+                </p>
+                <p className="text-white/70 leading-snug">
+                  A-54, Triveni Nagar, Jaipur, Rajasthan – 302018, India
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-8 border-t border-white/[0.06]">
               <p className="text-white/40 text-sm leading-relaxed">
                 We typically respond within 24–48 hours on business days. For payment or refund
                 queries, please include your registered email address and the date of the
@@ -61,7 +108,7 @@ export default function Contact() {
 
           <div className="mt-8 text-center">
             <p className="text-white/25 text-sm">
-              HeartSync AI · Gurgaon, India
+              HeartSync AI · operated by Saurabh Jain · Jaipur, India
             </p>
           </div>
         </motion.div>

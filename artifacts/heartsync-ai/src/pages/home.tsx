@@ -1217,14 +1217,18 @@ export default function Home() {
         {/* Legal footer — always visible (required for payment gateway verification) */}
         <footer className="mt-8 pt-8 border-t border-white/[0.06] text-center">
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-white/40 mb-3">
+            <Link href="/contact" className="hover:text-white/70 transition-colors">About Us</Link>
+            <span className="text-white/15">·</span>
+            <Link href="/contact" className="hover:text-white/70 transition-colors">Contact Us</Link>
+            <span className="text-white/15">·</span>
             <Link href="/terms" className="hover:text-white/70 transition-colors">Terms &amp; Conditions</Link>
             <span className="text-white/15">·</span>
             <Link href="/privacy" className="hover:text-white/70 transition-colors">Privacy Policy</Link>
             <span className="text-white/15">·</span>
-            <Link href="/contact" className="hover:text-white/70 transition-colors">Contact Us</Link>
+            <Link href="/terms" className="hover:text-white/70 transition-colors">Refund Policy</Link>
           </div>
           <p className="text-white/20 text-xs">
-            © {new Date().getFullYear()} HeartSync AI · Gurgaon, India
+            © {new Date().getFullYear()} HeartSync AI · operated by Saurabh Jain · A-54, Triveni Nagar, Jaipur, Rajasthan – 302018, India
           </p>
         </footer>
       </div>

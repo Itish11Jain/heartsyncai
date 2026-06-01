@@ -45,9 +45,10 @@ export default function Privacy() {
             <Section title="1. Introduction">
               <p>
                 HeartSync AI ("we", "us", or "our") respects your privacy and is committed to
-                protecting your personal data. This Privacy Policy explains what information we
-                collect, how we use it, and the choices you have. The service is operated from
-                India and is intended for users aged 18 and above.
+                protecting your personal data. HeartSync AI is owned and operated by Saurabh Jain,
+                registered at A-54, Triveni Nagar, Jaipur, Rajasthan – 302018, India. This Privacy
+                Policy explains what information we collect, how we use it, and the choices you have.
+                The service is operated from India and is intended for users aged 18 and above.
               </p>
             </Section>
 

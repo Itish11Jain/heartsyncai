@@ -45,10 +45,11 @@ export default function Terms() {
 
             <Section title="1. About HeartSync AI">
               <p>
-                HeartSync AI ("we", "us", or "our") is an AI-powered relationship intelligence
-                service that generates personalised date preparation reports ("Reports") based on
-                information you provide. The service is operated from India and is intended for
-                users aged 18 and above.
+                HeartSync AI ("we", "us", or "our") is an AI-powered service that generates
+                personalised date preparation reports ("Reports") and animated greeting cards based
+                on information you provide. HeartSync AI is owned and operated by Saurabh Jain,
+                registered at A-54, Triveni Nagar, Jaipur, Rajasthan – 302018, India. The service is
+                operated from India and is intended for users aged 18 and above.
               </p>
             </Section>
 
@@ -232,7 +233,7 @@ export default function Terms() {
 
           <div className="mt-8 text-center">
             <p className="text-white/25 text-sm">
-              HeartSync AI · Gurgaon, India ·{" "}
+              HeartSync AI · operated by Saurabh Jain · Jaipur, India ·{" "}
               <Link href="/contact" className="hover:text-white/50 transition-colors">Contact Us</Link>
             </p>
           </div>
