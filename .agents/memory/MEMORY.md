@@ -1,2 +1,3 @@
 - [BirthdayDoor integration](birthday-integration.md) — birthday template is premium; 6-scene card at /birthday; auto-selects when occasion=birthday in send.tsx.
+- [Card view tracking](card-view-tracking.md) — analytics "Views" counts per-page `card_viewed` events; every new card template must fire it on recipient open or it shows 0.
 - [Background removal](bg-removal.md) — sticker cutout runs RMBG-1.4 LOCALLY (transformers.js+sharp); HF inference API & remove.bg both abandoned (dead/no credits).

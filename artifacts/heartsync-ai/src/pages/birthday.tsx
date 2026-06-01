@@ -1384,6 +1384,16 @@ export default function BirthdayCard() {
   /* ── Paywall-dismissed flag — CTA only appears after the bottom sheet has been closed ── */
   const [paywallDismissed, setPaywallDismissed] = useState(false);
   const [cardId, setCardId] = useState<string>(() => params.get("id") ?? "");
+
+  /* ── view tracking ── fire once when a recipient opens the card, mirroring
+     the other templates so the analytics "Views" column counts birthday cards. */
+  useEffect(() => {
+    if (isRecipient && !isAutoplay) {
+      trackEvent({ event: "card_viewed", occasion, template: "birthday", recipient_name: name, card_id: params.get("id") ?? undefined });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const photosRaw   = params.get("photos");
   const photoUrls   = parsePhotoUrls(photosRaw);
   /* Eagerly preload all photo images as soon as the card mounts, so they
