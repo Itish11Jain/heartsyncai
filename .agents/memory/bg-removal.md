@@ -26,3 +26,21 @@ hub (the hub/CDN is reachable in prod even though api-inference is not).
 - `sharp` must be a direct dep of api-server (transformers nests its own copy that isn't resolvable).
 - Inference is serialized (a promise chain mutex) and inputs downscaled to 1600px to bound memory — do not remove without a replacement backpressure mechanism.
 - Model is warmed at server startup (`warmBgRemove()` in index.ts) so the first user request is fast.
+
+# Sticker delivery: predict-the-URL, never block on bg-removal
+Removal takes ~3-10s (serialized under load), longer than a user takes to fill in
+the card. Do NOT block card creation waiting for the cutout. Instead the client
+generates a UUID, predicts the sticker URL (`/api/stickers/sticker/<uuid>.png`),
+sends that `stickerId` to `POST /upload/sticker`, and the card opens immediately
+with the ORIGINAL photo. Scene 5 polls the predicted URL (Image() with `?r=N`
+cache-bust, ~20 tries @1.5s) and swaps the cutout in once it 404→200s.
+**Why:** the old 4s blocking wait baked the full-photo fallback into the card URL,
+permanently discarding the cutout that finished a second later.
+**How to apply / gotchas:**
+- `/upload/sticker` only honours a client `stickerId` when `exists(key)` is false
+  — otherwise it falls back to a random key. This stops an attacker who sees a
+  card's sticker URL from overwriting/defacing it (endpoint is unauthenticated).
+- Predicted URL parity depends on heartsync-ai being served at root (BASE_URL=/);
+  server returns `${req.protocol}://${host}/api/stickers/...`. Holds for prod.
+- On upload success/failure the client overwrites the ref with the server URL /
+  plain photo, so a failed removal stops the card polling for a file never made.

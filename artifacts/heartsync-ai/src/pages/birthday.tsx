@@ -1066,11 +1066,39 @@ function EmojiOrbs() {
   );
 }
 
-function Scene5({ onNext, personalPicUrl, voiceUrl }: {
+function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
   onNext: () => void,
   personalPicUrl: string,
+  fallbackPicUrl: string,
   voiceUrl: string,
 }) {
+  /* Show the original photo immediately, then swap to the transparent cutout
+     the moment background removal finishes on the server. The cutout file may
+     not exist yet when the card first opens, so poll for it (the <img> 404s
+     until ready), and replace the photo once it loads. */
+  const [cutoutSrc, setCutoutSrc] = useState<string | null>(
+    personalPicUrl && personalPicUrl === fallbackPicUrl ? personalPicUrl : null,
+  );
+  useEffect(() => {
+    if (!personalPicUrl || personalPicUrl === fallbackPicUrl) return;
+    let cancelled = false;
+    let attempts = 0;
+    const tryLoad = () => {
+      if (cancelled) return;
+      const candidate = attempts === 0 ? personalPicUrl : `${personalPicUrl}?r=${attempts}`;
+      const img = new Image();
+      img.onload = () => { if (!cancelled) setCutoutSrc(candidate); };
+      img.onerror = () => {
+        attempts += 1;
+        if (!cancelled && attempts <= 20) setTimeout(tryLoad, 1500);
+      };
+      img.src = candidate;
+    };
+    tryLoad();
+    return () => { cancelled = true; };
+  }, [personalPicUrl, fallbackPicUrl]);
+  const displaySrc = cutoutSrc ?? (fallbackPicUrl || personalPicUrl);
+
   const hasAudio = voiceUrl.length > 0;
   /* voiceDone starts true when there's no audio — arrow appears after 2s via timer */
   const [voiceDone, setVoiceDone] = useState(!hasAudio);
@@ -1153,7 +1181,7 @@ function Scene5({ onNext, personalPicUrl, voiceUrl }: {
       </motion.div>
 
       {/* Photo sticker — transparent PNG cutout, fills bottom half with white glow */}
-      {personalPicUrl && (
+      {displaySrc && (
         <motion.div style={{
           position:"absolute", top:"50%", bottom:0,
           left:0, right:0, zIndex:10,
@@ -1162,7 +1190,7 @@ function Scene5({ onNext, personalPicUrl, voiceUrl }: {
         }}
           initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
           transition={{ delay:0.42, duration:0.85, ease:[0.34,1.56,0.64,1] }}>
-          <img src={personalPicUrl} alt=""
+          <img src={displaySrc} alt=""
             style={{
               height:"100%", width:"auto", maxWidth:"100%", display:"block",
               filter:"drop-shadow(0 0 6px white) drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 5px 22px rgba(0,0,0,0.65))",
@@ -1556,7 +1584,7 @@ export default function BirthdayCard() {
             <Scene4 key="s4" photoUrls={photoUrls} onNext={() => setScene(5)}/>
           )}
           {scene === 5 && (
-            <Scene5 key="s5" personalPicUrl={personalPicUrl} voiceUrl={voiceUrl} onNext={() => setScene(6)}/>
+            <Scene5 key="s5" personalPicUrl={personalPicUrl} fallbackPicUrl={photoUrls[0] ?? ""} voiceUrl={voiceUrl} onNext={() => setScene(6)}/>
           )}
           {scene === 6 && (
             <Scene6 key="s6"

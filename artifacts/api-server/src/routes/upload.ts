@@ -220,7 +220,21 @@ router.post(
         return;
       }
 
-      const key = `sticker/${randomUUID()}.png`;
+      // The client may supply a stable id so it can predict the sticker URL
+      // before background removal finishes — the birthday card then swaps the
+      // cutout in the moment it's ready instead of being stuck on the full photo.
+      // We only honour a client-supplied id when nothing is stored there yet, so
+      // an attacker who learns a card's sticker URL can't overwrite/deface it.
+      const rawId = typeof req.body?.stickerId === "string" ? req.body.stickerId.trim() : "";
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
+      let key = `sticker/${randomUUID()}.png`;
+      if (isUuid) {
+        const candidate = `sticker/${rawId}.png`;
+        const existsRes = await getStorage().exists(candidate);
+        if (existsRes.ok && existsRes.value === false) {
+          key = candidate;
+        }
+      }
 
       const result = await getStorage().uploadFromBytes(key, pngBuffer, { contentType: "image/png" });
       if (!result.ok) {

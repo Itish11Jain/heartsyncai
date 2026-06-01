@@ -594,18 +594,34 @@ function SendInner() {
         // For birthday cards: auto-remove background of the first photo so it appears
         // as a transparent PNG sticker cutout in Scene 5.
         if (isFirstPhoto && occasion === "birthday") {
+          // Predict the sticker URL up-front using a client-generated id, so the
+          // card can swap the transparent cutout in as soon as it's ready — even
+          // if the user creates the card before background removal finishes (it
+          // runs for a few seconds on the server). The original photo is shown
+          // immediately and the cutout replaces it once available.
+          const photoUrl = data.url!;
+          const stickerId = crypto.randomUUID();
+          const predictedUrl = `${base}/api/stickers/sticker/${stickerId}.png`;
+          setAutoStickerUrl(predictedUrl);
+          autoStickerUrlRef.current = predictedUrl;
           bgRemoveInProgressRef.current = true;
           const sfd = new FormData();
+          sfd.append("stickerId", stickerId);
           sfd.append("photo", file);
           fetch(`${base}/api/upload/sticker`, { method: "POST", body: sfd })
             .then(sr => sr.ok ? sr.json() : null)
             .then((sd: { url?: string } | null) => {
-              if (sd?.url) {
-                setAutoStickerUrl(sd.url);
-                autoStickerUrlRef.current = sd.url;
-              }
+              // On success keep the (matching) sticker URL; on failure fall back
+              // to the plain photo so the card never polls for a file that the
+              // server never produced.
+              const finalUrl = sd?.url ?? photoUrl;
+              setAutoStickerUrl(finalUrl);
+              autoStickerUrlRef.current = finalUrl;
             })
-            .catch(() => { /* ignore */ })
+            .catch(() => {
+              setAutoStickerUrl(photoUrl);
+              autoStickerUrlRef.current = photoUrl;
+            })
             .finally(() => { bgRemoveInProgressRef.current = false; });
         }
       }
@@ -744,19 +760,10 @@ function SendInner() {
       });
       clearDraft();
       setShowGenerating(true);
-      // If bg-remove is still in flight, wait up to 4 s for it to finish so the sticker appears
-      if (bgRemoveInProgressRef.current) {
-        await new Promise<void>(resolve => {
-          const deadline = Date.now() + 4000;
-          const poll = () => {
-            if (!bgRemoveInProgressRef.current || Date.now() >= deadline) resolve();
-            else setTimeout(poll, 150);
-          };
-          poll();
-        });
-      }
-      /* Fallback: if BG-removal failed (e.g. remove.bg out of credits), use the
-         original first photo so Scene 5 still shows the person's image. */
+      // No need to block on background removal: the card opens immediately with
+      // the original photo and swaps in the transparent cutout the moment it's
+      // ready (see Scene 5 in birthday.tsx). autoStickerUrl holds the predicted
+      // cutout URL; we fall back to the first photo only if no sticker was started.
       const stickerUrl = autoStickerUrlRef.current ?? uploadedPhotoUrls[0] ?? undefined;
       const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, trackingId, false, stickerUrl, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
       setTimeout(() => { window.location.href = url; }, 1800);
