@@ -158,10 +158,10 @@ export default function Terms() {
               <p>
                 For any queries related to these Terms, please contact us at{" "}
                 <a
-                  href="mailto:heartsyncai2026@gmail.com"
+                  href="mailto:saurabhj016@gmail.com"
                   className="text-primary hover:underline"
                 >
-                  heartsyncai2026@gmail.com
+                  saurabhj016@gmail.com
                 </a>
                 .
               </p>
@@ -184,8 +184,8 @@ export default function Terms() {
                 If you have purchased a credit pack and have not used any credits from that
                 specific purchase, you may request a full refund within 7 days of the purchase
                 date by contacting us at{" "}
-                <a href="mailto:heartsyncai2026@gmail.com" className="text-primary hover:underline">
-                  heartsyncai2026@gmail.com
+                <a href="mailto:saurabhj016@gmail.com" className="text-primary hover:underline">
+                  saurabhj016@gmail.com
                 </a>{" "}
                 with your registered email address and transaction reference.
               </p>
@@ -212,8 +212,8 @@ export default function Terms() {
 
             <Section title="5. How to Request a Refund">
               <p>Email us at{" "}
-                <a href="mailto:heartsyncai2026@gmail.com" className="text-primary hover:underline">
-                  heartsyncai2026@gmail.com
+                <a href="mailto:saurabhj016@gmail.com" className="text-primary hover:underline">
+                  saurabhj016@gmail.com
                 </a>{" "}
                 with:
               </p>
