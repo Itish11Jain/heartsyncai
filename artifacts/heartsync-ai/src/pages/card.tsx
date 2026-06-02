@@ -7,7 +7,7 @@ import { trackEvent } from "@/lib/trackEvent";
 
 import PolaroidFrame from "@/components/PolaroidFrame";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
-import bouquetImg from "@assets/bouquet_sorry_nobg.png";
+import bouquetImg from "@assets/bouquet_sorry_v2_nobg.png";
 
 /* Premium templates and sender auth features lazy-load only when needed.
  * Recipients of the default envelope card never download these chunks. */
@@ -1066,16 +1066,39 @@ function FlowerBurst() {
 }
 
 /* ─────────────────────── Sorry Bouquet Screen ─────────────────────── */
-/* A watercolor bouquet image that gently floats and tilts in 3D. Shown only
- * on the "sorry" occasion, inserted after the orbs and before the finale. */
+
+/* The bouquet is a single illustration. To make it feel like the flowers are
+ * being arranged into the wrap, we draw several copies of the same image, each
+ * CLIPPED to a different region (wrap, then clusters of blooms). Each clipped
+ * piece flies in from a different direction and settles into its final spot,
+ * so they reassemble into the complete bouquet. After assembling, the whole
+ * thing drifts and tilts gently in 3D. */
+const BOUQUET_PIECES: Array<{
+  clip: string;
+  from: { x?: number; y?: number; rotate?: number; scale?: number };
+  delay: number;
+}> = [
+  /* wrap + ribbon base — rises up first */
+  { clip: "inset(56% 14% 0% 14%)", from: { y: 90, scale: 0.9 }, delay: 0.05 },
+  /* lower greenery / stems bridging into the wrap */
+  { clip: "inset(44% 22% 40% 22%)", from: { y: 50, scale: 0.85 }, delay: 0.25 },
+  /* left cluster of blooms — swings in from the left */
+  { clip: "inset(22% 56% 30% 4%)", from: { x: -120, rotate: -16 }, delay: 0.45 },
+  /* right cluster of blooms — swings in from the right */
+  { clip: "inset(22% 4% 30% 56%)", from: { x: 120, rotate: 16 }, delay: 0.6 },
+  /* central blooms — drop in and bloom open */
+  { clip: "inset(24% 30% 32% 30%)", from: { y: -70, scale: 0.5 }, delay: 0.78 },
+  /* tall top spires — fall in last from above */
+  { clip: "inset(0% 34% 66% 34%)", from: { y: -110, rotate: 4 }, delay: 0.95 },
+];
 
 function FloatingBouquet() {
   return (
     <div
       style={{
-        perspective: 900,
+        perspective: 1000,
         width: "min(300px, 78vw)",
-        height: "min(300px, 78vw)",
+        height: "min(380px, 96vw)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1083,39 +1106,69 @@ function FloatingBouquet() {
     >
       {/* soft glow behind the bouquet */}
       <motion.div
-        animate={{ opacity: [0.45, 0.7, 0.45], scale: [0.95, 1.05, 0.95] }}
+        animate={{ opacity: [0.4, 0.62, 0.4], scale: [0.95, 1.05, 0.95] }}
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         style={{
           position: "absolute",
-          width: "92%",
-          height: "70%",
+          width: "90%",
+          height: "78%",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,180,210,0.45), rgba(255,150,190,0.15) 55%, transparent 75%)",
-          filter: "blur(14px)",
+          background: "radial-gradient(circle, rgba(210,180,235,0.42), rgba(255,170,200,0.16) 55%, transparent 76%)",
+          filter: "blur(16px)",
         }}
       />
-      {/* the watercolor bouquet — floats up/down while gently tilting in 3D */}
-      <motion.img
-        src={bouquetImg}
-        alt="A bouquet of flowers"
-        draggable={false}
+      {/* continuous gentle 3D float, applied after the pieces assemble */}
+      <motion.div
         animate={{
-          y: [-10, 10, -10],
-          rotateY: [-9, 9, -9],
-          rotateX: [4, -4, 4],
-          rotateZ: [-1.5, 1.5, -1.5],
+          y: [-9, 9, -9],
+          rotateY: [-8, 8, -8],
+          rotateX: [3.5, -3.5, 3.5],
+          rotateZ: [-1.2, 1.2, -1.2],
         }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 1.3 }}
         style={{
           position: "relative",
           width: "100%",
           height: "100%",
-          objectFit: "contain",
           transformStyle: "preserve-3d",
-          filter: "drop-shadow(0 26px 32px rgba(120,40,80,0.45)) drop-shadow(0 6px 14px rgba(255,120,170,0.35))",
+          filter: "drop-shadow(0 26px 32px rgba(90,40,90,0.45)) drop-shadow(0 6px 14px rgba(200,150,210,0.35))",
           willChange: "transform",
         }}
-      />
+      >
+        {BOUQUET_PIECES.map((piece, i) => (
+          <motion.img
+            key={i}
+            src={bouquetImg}
+            alt={i === 0 ? "A bouquet of flowers" : ""}
+            aria-hidden={i !== 0}
+            draggable={false}
+            initial={{
+              opacity: 0,
+              x: piece.from.x ?? 0,
+              y: piece.from.y ?? 0,
+              rotate: piece.from.rotate ?? 0,
+              scale: piece.from.scale ?? 1,
+            }}
+            animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 90,
+              damping: 13,
+              delay: piece.delay,
+              opacity: { duration: 0.5, delay: piece.delay },
+            }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              clipPath: piece.clip,
+              WebkitClipPath: piece.clip,
+            }}
+          />
+        ))}
+      </motion.div>
     </div>
   );
 }
