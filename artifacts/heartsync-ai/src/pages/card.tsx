@@ -1378,12 +1378,12 @@ function BouquetDrops() {
             rotate: [d.rot - 12, d.rot, d.rot, d.rot],
           }}
           transition={{
-            duration: 2.3,
+            duration: 3.8,
             delay: d.delay,
             repeat: Infinity,
-            repeatDelay: 2.3,
+            repeatDelay: 2.2,
             ease: "easeInOut",
-            times: [0, 0.45, 0.8, 1],
+            times: [0, 0.55, 0.82, 1],
           }}
           style={{
             position: "absolute",
@@ -1525,11 +1525,11 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
         style={{
           position: "relative",
           zIndex: 1,
-          fontSize: "min(30px, 7.4vw)",
+          fontSize: "min(23px, 5.9vw)",
           fontWeight: 600,
           textAlign: "center",
-          lineHeight: 1.4,
-          maxWidth: 360,
+          lineHeight: 1.45,
+          maxWidth: 380,
           margin: 0,
           fontFamily: "'Dancing Script', cursive",
           backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
