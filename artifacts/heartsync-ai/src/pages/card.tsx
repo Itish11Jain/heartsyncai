@@ -1283,7 +1283,133 @@ function FloatingBouquet() {
   );
 }
 
+/* The flower images reused for the ethereal falling-petal layer and for the
+ * full-screen explosion when the recipient taps Continue. */
+const PETAL_IMGS = [
+  rosePinkImg, rosePeachImg, cosmosPinkImg, anemonePurpleImg,
+  daisyWhiteImg, ranunculusYellowImg, hydrangeaBlueImg,
+];
+
+/* A continuous, gentle stream of flowers drifting down from above the screen —
+ * each one fades in near the top, sways as it falls, and fades out near the
+ * bottom, then repeats forever on its own offset so the flow never stops. */
+function PetalRain({ count = 14 }: { count?: number }) {
+  const petals = useMemo(
+    () =>
+      Array.from({ length: count }).map((_, i) => ({
+        img: PETAL_IMGS[i % PETAL_IMGS.length],
+        left: Math.random() * 100,
+        size: 26 + Math.random() * 40,
+        duration: 7 + Math.random() * 6,
+        delay: -Math.random() * 13,
+        drift: (Math.random() - 0.5) * 90,
+        spin: Math.random() > 0.5 ? 1 : -1,
+        opacity: 0.45 + Math.random() * 0.4,
+      })),
+    [count],
+  );
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      {petals.map((p, i) => (
+        <motion.img
+          key={i}
+          src={p.img}
+          alt=""
+          aria-hidden
+          draggable={false}
+          initial={{ opacity: 0, y: "-12vh", x: 0, rotate: 0 }}
+          animate={{
+            opacity: [0, p.opacity, p.opacity, 0],
+            y: ["-12vh", "112vh"],
+            x: [0, p.drift, -p.drift * 0.6, p.drift * 0.3],
+            rotate: [0, p.spin * 200],
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            repeat: Infinity,
+            ease: "linear",
+            times: [0, 0.12, 0.88, 1],
+          }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.size,
+            objectFit: "contain",
+            filter: "drop-shadow(0 4px 8px rgba(60,25,55,0.3))",
+            willChange: "transform",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* When the recipient taps Continue, the bouquet bursts into a shower of flowers
+ * that fly out from the center and fill the whole screen. */
+function FlowerExplosion({ count = 46 }: { count?: number }) {
+  const vw = typeof window !== "undefined" ? window.innerWidth : 390;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 844;
+  const bits = useMemo(
+    () =>
+      Array.from({ length: count }).map((_, i) => ({
+        img: PETAL_IMGS[i % PETAL_IMGS.length],
+        tx: (Math.random() - 0.5) * vw * 1.25,
+        ty: (Math.random() - 0.5) * vh * 1.25,
+        size: 42 + Math.random() * 90,
+        rot: (Math.random() - 0.5) * 540,
+        delay: Math.random() * 0.12,
+        dur: 0.7 + Math.random() * 0.5,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [count],
+  );
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 50 }}>
+      {bits.map((b, i) => (
+        <motion.img
+          key={i}
+          src={b.img}
+          alt=""
+          aria-hidden
+          draggable={false}
+          initial={{ x: 0, y: 0, scale: 0.2, opacity: 0, rotate: 0 }}
+          animate={{ x: b.tx, y: b.ty, scale: 1, opacity: 1, rotate: b.rot }}
+          transition={{ duration: b.dur, delay: b.delay, ease: [0.18, 0.7, 0.3, 1] }}
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "52%",
+            width: b.size,
+            height: b.size,
+            marginLeft: -b.size / 2,
+            marginTop: -b.size / 2,
+            objectFit: "contain",
+            filter: "drop-shadow(0 6px 12px rgba(60,25,55,0.4))",
+            willChange: "transform",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function BouquetScreen({ onContinue }: { onContinue: () => void }) {
+  const [exploding, setExploding] = useState(false);
+
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); }, []);
+
+  const handleContinue = useCallback(() => {
+    if (exploding) return;
+    setExploding(true);
+    /* let the flowers fill the screen before advancing to the next phase */
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(onContinue, 1050);
+  }, [exploding, onContinue]);
+
   return (
     <motion.div
       key="bouquet-scene"
@@ -1297,11 +1423,20 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
         alignItems: "center", justifyContent: "center",
         gap: "min(28px, 5vw)",
         padding: "32px 24px",
+        overflow: "hidden",
       }}
     >
+      {/* continuous ethereal stream of flowers from above */}
+      <PetalRain />
+
       <motion.div
+        style={{ position: "relative", zIndex: 1 }}
         initial={{ scale: 0.6, opacity: 0, y: 30 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
+        animate={
+          exploding
+            ? { scale: 1.5, opacity: 0, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+            : { scale: 1, opacity: 1, y: 0 }
+        }
         transition={{ type: "spring", damping: 14, stiffness: 120, delay: 0.15 }}
       >
         <FloatingBouquet />
@@ -1309,9 +1444,11 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
 
       <motion.p
         initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.6 }}
+        animate={exploding ? { opacity: 0, y: 16 } : { opacity: 1, y: 0 }}
+        transition={{ delay: exploding ? 0 : 0.7, duration: exploding ? 0.25 : 0.6 }}
         style={{
+          position: "relative",
+          zIndex: 1,
           fontSize: "min(19px, 4.8vw)",
           fontWeight: 600,
           color: "#FFE0EC",
@@ -1330,11 +1467,14 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
 
       <motion.button
         initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.1, duration: 0.5 }}
+        animate={exploding ? { opacity: 0, y: 14 } : { opacity: 1, y: 0 }}
+        transition={{ delay: exploding ? 0 : 1.1, duration: exploding ? 0.25 : 0.5 }}
         whileTap={{ scale: 0.96 }}
-        onClick={onContinue}
+        onClick={handleContinue}
+        disabled={exploding}
         style={{
+          position: "relative",
+          zIndex: 1,
           marginTop: 4,
           padding: "13px 40px",
           borderRadius: 999,
@@ -1350,6 +1490,9 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
       >
         Continue
       </motion.button>
+
+      {/* full-screen flower burst on Continue */}
+      {exploding && <FlowerExplosion />}
     </motion.div>
   );
 }
