@@ -1088,15 +1088,29 @@ function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
   fallbackPicUrl: string,
   voiceUrl: string,
 }) {
-  /* Show the original photo immediately, then swap to the transparent cutout
-     the moment background removal finishes on the server. The cutout file may
-     not exist yet when the card first opens, so poll for it (the <img> 404s
-     until ready), and replace the photo once it loads. */
-  const [cutoutSrc, setCutoutSrc] = useState<string | null>(
-    personalPicUrl && personalPicUrl === fallbackPicUrl ? personalPicUrl : null,
-  );
+  /* Show the sticker cutout as soon as it is available — never show the full
+     photo first.  Strategy:
+       1. Check the browser image cache synchronously in the useState initialiser
+          (the sticker was preloaded before Scene 5 mounts, so it is usually
+          already complete).  If cached, initialise cutoutSrc immediately → no
+          flash at all.
+       2. If not cached yet, show nothing (null) while the polling effect waits
+          for the server to finish background removal.
+       3. Only fall back to the full photo after all 20 poll attempts fail. */
+  const [cutoutSrc, setCutoutSrc] = useState<string | null>(() => {
+    if (!personalPicUrl) return null;
+    // bg removal was skipped / failed — sticker IS the full photo
+    if (personalPicUrl === fallbackPicUrl) return personalPicUrl;
+    // Check the browser image cache synchronously
+    const probe = new Image();
+    probe.src = personalPicUrl;
+    return probe.complete && probe.naturalWidth > 0 ? personalPicUrl : null;
+  });
+  const [useFallback, setUseFallback] = useState(false);
   useEffect(() => {
     if (!personalPicUrl || personalPicUrl === fallbackPicUrl) return;
+    // Already resolved from cache — no polling needed
+    if (cutoutSrc === personalPicUrl) return;
     let cancelled = false;
     let attempts = 0;
     const tryLoad = () => {
@@ -1107,13 +1121,17 @@ function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
       img.onerror = () => {
         attempts += 1;
         if (!cancelled && attempts <= 20) setTimeout(tryLoad, 1500);
+        else if (!cancelled) setUseFallback(true); // give up after ~30 s
       };
       img.src = candidate;
     };
     tryLoad();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personalPicUrl, fallbackPicUrl]);
-  const displaySrc = cutoutSrc ?? (fallbackPicUrl || personalPicUrl);
+  // While the sticker is still loading show nothing; only use the full photo
+  // as a last resort after polling gives up.
+  const displaySrc = cutoutSrc ?? (useFallback ? (fallbackPicUrl || personalPicUrl) : null);
 
   const hasAudio = voiceUrl.length > 0;
   /* voiceDone starts true when there's no audio — arrow appears after 2s via timer */
