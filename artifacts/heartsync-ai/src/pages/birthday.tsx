@@ -754,9 +754,9 @@ function FlowerBottomLeft() {
   );
 }
 
-function PolaroidFrame({ idx, top, left, rotate, floatDelay, imageSrc }:
-  { idx:number, top:number, left:number, rotate:number, floatDelay:number, imageSrc:string }) {
-  const IW=130, IH=138, BRD=11, BOT=32;
+function PolaroidFrame({ idx, top, left, rotate, floatDelay, imageSrc, iw=130, ih=138 }:
+  { idx:number, top:number, left:number, rotate:number, floatDelay:number, imageSrc:string, iw?:number, ih?:number }) {
+  const IW=iw, IH=ih, BRD=11, BOT=32;
   /* Block the entrance animation until the photo is confirmed loaded/cached.
      This prevents the "black frame → photo pops in" lag. */
   const [imgReady, setImgReady] = useState(false);
@@ -813,6 +813,22 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
   const _p2y = Math.round(168 + 173 * _vScale); // was 341
   const _p3y = Math.round(168 + 346 * _vScale); // was 514
   const _qy  = Math.round(168 + 324 * _vScale); // was 492
+  /* ── 1-photo layout: a single larger polaroid, horizontally centred and
+     vertically centred in the clear band BETWEEN the top-right flower and the
+     caption, so it never overlaps either while filling the previously-empty
+     middle. Boundaries are derived from the real occupied regions, and the
+     frame is allowed to shrink on short canvases so the no-overlap guarantee
+     always holds (correctness wins over "bigger" on rare short screens). */
+  const _oneCapH    = 60;                           // caption block (~2 lines, italic 14px) + breathing room
+  const _oneTopSafe = 350;                          // top-right flower occupies y≈128..348 → clear it
+  const _oneBotSafe = (_sh4 - 118) - _oneCapH;      // stay above the caption (also clears the bottom-left flower)
+  const _oneAvail   = _oneBotSafe - _oneTopSafe;
+  const _oneFrameH  = Math.max(150, Math.min(214, _oneAvail));
+  const _oneIh      = _oneFrameH - 43;              // BRD(11) + BOT(32)
+  const _oneIw      = Math.round(_oneIh * 0.94);    // keep the existing photo aspect
+  const _oneFrameW  = _oneIw + 22;                  // BRD(11) * 2
+  const _oneLeft    = Math.round((390 - _oneFrameW) / 2);
+  const _oneTop     = Math.round(_oneTopSafe + Math.max(0, (_oneAvail - _oneFrameH) / 2));
   return (
     <motion.div key="s4" style={{ position:"absolute", inset:0, zIndex:12, overflow:"hidden" }}
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -858,7 +874,7 @@ function Scene4({ onNext, photoUrls }: { onNext:()=>void, photoUrls:string[] }) 
       {photoUrls.length === 1 && (
         /* ── 1 photo: single large centered polaroid + caption below ── */
         <>
-          <PolaroidFrame idx={0} top={190} left={119} rotate={0} floatDelay={0} imageSrc={p0}/>
+          <PolaroidFrame idx={0} top={_oneTop} left={_oneLeft} rotate={0} floatDelay={0} imageSrc={p0} iw={_oneIw} ih={_oneIh}/>
           <motion.div style={{ position:"absolute", left:0, right:0, bottom:118, textAlign:"center",
             padding:"0 36px", zIndex:5 }}
             initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
