@@ -1222,7 +1222,7 @@ function FloatingBouquet() {
           draggable={false}
           initial={{ opacity: 0, y: 40, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 90, damping: 14, delay: 0.05 }}
+          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
           style={{
             position: "absolute",
             left: "50%",
@@ -1253,8 +1253,8 @@ function FloatingBouquet() {
               }
               transition={
                 b.drop
-                  ? { type: "spring", stiffness: 70, damping: 12, delay: 1.0 + b.delay * 2 }
-                  : { duration: 0.55, ease: "easeOut", delay: b.delay }
+                  ? { type: "spring", stiffness: 55, damping: 15, delay: 1.6 + b.delay * 3 }
+                  : { duration: 1.3, ease: [0.22, 1, 0.36, 1], delay: 0.3 + i * 0.05 }
               }
               style={{
                 position: "absolute",
