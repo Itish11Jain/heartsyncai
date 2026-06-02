@@ -801,10 +801,12 @@ function MemoryCollage({
   photoUrls,
   voiceNoteUrl,
   onContinue,
+  isSorry = false,
 }: {
   photoUrls: string[];
   voiceNoteUrl: string | null;
   onContinue: () => void;
+  isSorry?: boolean;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -853,16 +855,30 @@ function MemoryCollage({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.55 }}
         style={{
-          fontSize: 15, fontWeight: 700,
-          color: "#FFD700",
+          fontWeight: 700,
           textAlign: "center",
           letterSpacing: "0.01em",
           lineHeight: 1.4,
           padding: "0 20px",
-          textShadow: "0 0 20px rgba(255,215,0,0.4)",
+          ...(isSorry
+            ? {
+                fontSize: "min(28px, 7vw)",
+                fontFamily: "'Dancing Script', cursive",
+                backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
+                filter: "drop-shadow(0 2px 12px rgba(245,196,78,0.4))",
+              }
+            : {
+                fontSize: 15,
+                color: "#FFD700",
+                textShadow: "0 0 20px rgba(255,215,0,0.4)",
+              }),
         }}
       >
-        Every moment with you is incredible ✨
+        {isSorry ? "I will never repeat it again!" : "Every moment with you is incredible ✨"}
       </motion.p>
 
       {/* Photos */}
@@ -1569,7 +1585,7 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
           boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
         }}
       >
-        Continue
+        Please 😢
       </motion.button>
 
       {/* full-screen flower burst on Continue */}
@@ -2186,6 +2202,7 @@ export default function Card() {
               photoUrls={effectiveCollagePhotos}
               voiceNoteUrl={voiceNoteUrl}
               onContinue={() => setPhase("finale")}
+              isSorry={isSorry}
             />
           </motion.div>
         )}
