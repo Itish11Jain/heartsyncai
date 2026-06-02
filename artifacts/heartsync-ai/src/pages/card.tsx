@@ -1905,9 +1905,10 @@ export default function Card() {
   /* Bouquet (sorry only) → photos/voice note if present, else straight to finale. */
   const handleBouquetContinue = useCallback(() => {
     const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
+    /* Sorry flow stays floral all the way through: the collage screen rains
+     * flowers (PetalRain) instead of confetti, so no confetti is fired here. */
     setPhase(skipCollage ? "finale" : "collage");
-    setTimeout(fireConfetti, 600);
-  }, [effectiveCollagePhotos.length, voiceNoteUrl, fireConfetti]);
+  }, [effectiveCollagePhotos.length, voiceNoteUrl]);
 
   /* ── Autoplay mode: auto-advance all phases for the modal iframe preview ── */
   useEffect(() => {
@@ -2180,6 +2181,7 @@ export default function Card() {
               padding: isSender ? "0 0 270px" : "0",
             }}
           >
+            {isSorry && <PetalRain />}
             <MemoryCollage
               photoUrls={effectiveCollagePhotos}
               voiceNoteUrl={voiceNoteUrl}
