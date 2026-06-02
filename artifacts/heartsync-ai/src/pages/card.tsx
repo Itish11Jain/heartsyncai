@@ -931,6 +931,7 @@ function MemoryCollage({
                 <img
                   src={url}
                   alt=""
+                  decoding={isSorry ? "async" : undefined}
                   style={{
                     width: "100%",
                     aspectRatio: n === 1 ? "4/3" : "1",
@@ -1322,7 +1323,7 @@ const BOUQUET_FLOWER_IMGS = [
 /* A continuous, gentle stream of flowers drifting down from above the screen —
  * each one fades in near the top, sways as it falls, and fades out near the
  * bottom, then repeats forever on its own offset so the flow never stops. */
-function PetalRain({ count = 14 }: { count?: number }) {
+function PetalRain({ count = 10 }: { count?: number }) {
   const petals = useMemo(
     () =>
       Array.from({ length: count }).map((_, i) => ({
@@ -1367,7 +1368,6 @@ function PetalRain({ count = 14 }: { count?: number }) {
             width: p.size,
             height: p.size,
             objectFit: "contain",
-            filter: "drop-shadow(0 4px 8px rgba(60,25,55,0.3))",
             willChange: "transform",
           }}
         />
@@ -1434,7 +1434,7 @@ function BouquetDrops() {
 /* When the recipient taps Continue, the bouquet bursts into a shower of flowers
  * that fly out from the center and fill the whole screen, and keep drifting and
  * spinning (never freezing) until the next screen takes over. */
-function FlowerExplosion({ count = 46 }: { count?: number }) {
+function FlowerExplosion({ count = 30 }: { count?: number }) {
   const vw = typeof window !== "undefined" ? window.innerWidth : 390;
   const vh = typeof window !== "undefined" ? window.innerHeight : 844;
   const bits = useMemo(
@@ -1488,7 +1488,6 @@ function FlowerExplosion({ count = 46 }: { count?: number }) {
               width: "100%",
               height: "100%",
               objectFit: "contain",
-              filter: "drop-shadow(0 6px 12px rgba(60,25,55,0.4))",
               willChange: "transform",
             }}
           />
@@ -1727,7 +1726,14 @@ export default function Card() {
      * the (now lightweight WebP) flower assets too — this lets the whole
      * arrangement arrive together instead of popping in flower-by-flower. */
     if (isSorry) urls.push(...BOUQUET_FLOWER_IMGS);
-    urls.forEach(url => { const img = new Image(); img.src = url; });
+    urls.forEach(url => {
+      const img = new Image();
+      img.src = url;
+      /* Sorry flow: also force-decode now so the collage photos are already
+       * rasterized and the bouquet→polaroid handoff doesn't freeze decoding
+       * a full-size JPEG on the main thread mid-transition. */
+      if (isSorry) void img.decode?.().catch(() => {});
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
