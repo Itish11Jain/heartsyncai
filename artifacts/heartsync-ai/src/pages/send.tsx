@@ -555,7 +555,12 @@ function SendInner() {
     if (senderFlag) p.set("sender", "1");
     if (cardId) p.set("id", cardId);
     if (directShare) p.set("direct_share", "1");
-    if (personalPictureUrl) p.set("personalpicture", personalPictureUrl);
+    // The orbs-screen circle (PolaroidFrame) only renders when `personalpicture`
+    // is present. Prefer an explicit URL (e.g. the birthday cutout sticker), but
+    // fall back to the first uploaded photo so every non-birthday Envelope card
+    // still shows the photo in the circle regardless of which finalize path ran.
+    const personalPicture = personalPictureUrl ?? photoUrls?.[0];
+    if (personalPicture) p.set("personalpicture", personalPicture);
     if (photoUrls && photoUrls.length > 0) {
       p.set("photos", photoUrls.map(u => encodeURIComponent(u)).join(","));
     }
