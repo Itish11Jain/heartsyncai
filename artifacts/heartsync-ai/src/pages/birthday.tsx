@@ -1355,7 +1355,7 @@ function Scene6({
 
         {/* Sender panel */}
         {isSender && (
-          <motion.div style={{ width:"100%", maxWidth:320, marginTop:20 }}
+          <motion.div style={{ width:"100%", maxWidth:320, marginTop:36 }}
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5 }}>
             {isUnlocked ? (
               <>

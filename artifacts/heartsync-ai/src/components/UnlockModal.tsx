@@ -257,7 +257,7 @@ export default function UnlockModal({
      Birthday cards are designed for 844 px tall viewports; other templates for 693 px.
      We always scale to a 220 px wide container, then compute the container height to match. */
   const IFRAME_W = 390;
-  const IFRAME_H = occasion === "birthday" ? 844 : 693;
+  const IFRAME_H = occasion === "birthday" ? 760 : 693;
   const PREVIEW_W = 220;
   const PREVIEW_H = Math.round(IFRAME_H * (PREVIEW_W / IFRAME_W));
   const scale = PREVIEW_W / IFRAME_W;
