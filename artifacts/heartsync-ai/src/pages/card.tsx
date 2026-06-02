@@ -862,7 +862,8 @@ function MemoryCollage({
           padding: "0 20px",
           ...(isSorry
             ? {
-                fontSize: "min(28px, 7vw)",
+                fontSize: "min(25px, 6.2vw)",
+                whiteSpace: "nowrap",
                 fontFamily: "'Dancing Script', cursive",
                 backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
                 WebkitBackgroundClip: "text",
@@ -878,7 +879,7 @@ function MemoryCollage({
               }),
         }}
       >
-        {isSorry ? "I will never repeat it again!" : "Every moment with you is incredible ✨"}
+        {isSorry ? "All I want is for you to smile!" : "Every moment with you is incredible ✨"}
       </motion.p>
 
       {/* Photos */}
