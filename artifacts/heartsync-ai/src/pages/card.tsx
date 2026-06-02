@@ -1277,6 +1277,9 @@ function FloatingBouquet() {
             </motion.div>
           );
         })}
+
+        {/* flowers keep arriving into the bouquet at a regular cadence */}
+        <BouquetDrops />
       </motion.div>
     </div>
     </div>
@@ -1347,8 +1350,64 @@ function PetalRain({ count = 14 }: { count?: number }) {
   );
 }
 
+/* Flowers that keep arriving into the bouquet at a regular cadence until the
+ * recipient taps Continue — each one drops in from above, settles into the top
+ * of the arrangement, then gently fades, and the cycle repeats forever. */
+const BOUQUET_DROPS = [
+  { img: rosePinkImg, cx: 122, cy: 120, size: 60, rot: -8, delay: 0 },
+  { img: cosmosPinkImg, cx: 182, cy: 110, size: 56, rot: 10, delay: 1.2 },
+  { img: anemonePurpleImg, cx: 150, cy: 138, size: 58, rot: 0, delay: 2.4 },
+  { img: ranunculusYellowImg, cx: 132, cy: 100, size: 52, rot: 6, delay: 3.5 },
+];
+
+function BouquetDrops() {
+  return (
+    <>
+      {BOUQUET_DROPS.map((d, i) => (
+        <motion.img
+          key={`drop-${i}`}
+          src={d.img}
+          alt=""
+          aria-hidden
+          draggable={false}
+          initial={{ opacity: 0 }}
+          animate={{
+            opacity: [0, 1, 1, 0],
+            y: [-210, 0, 0, -8],
+            scale: [0.5, 1, 1, 0.95],
+            rotate: [d.rot - 12, d.rot, d.rot, d.rot],
+          }}
+          transition={{
+            duration: 2.3,
+            delay: d.delay,
+            repeat: Infinity,
+            repeatDelay: 2.3,
+            ease: "easeInOut",
+            times: [0, 0.45, 0.8, 1],
+          }}
+          style={{
+            position: "absolute",
+            left: d.cx,
+            top: d.cy,
+            width: d.size,
+            height: d.size,
+            marginLeft: -d.size / 2,
+            marginTop: -d.size / 2,
+            objectFit: "contain",
+            transformOrigin: "bottom center",
+            zIndex: 7,
+            filter: "drop-shadow(0 6px 10px rgba(60,25,55,0.4))",
+            willChange: "transform",
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 /* When the recipient taps Continue, the bouquet bursts into a shower of flowers
- * that fly out from the center and fill the whole screen. */
+ * that fly out from the center and fill the whole screen, and keep drifting and
+ * spinning (never freezing) until the next screen takes over. */
 function FlowerExplosion({ count = 46 }: { count?: number }) {
   const vw = typeof window !== "undefined" ? window.innerWidth : 390;
   const vh = typeof window !== "undefined" ? window.innerHeight : 844;
@@ -1360,6 +1419,8 @@ function FlowerExplosion({ count = 46 }: { count?: number }) {
         ty: (Math.random() - 0.5) * vh * 1.25,
         size: 42 + Math.random() * 90,
         rot: (Math.random() - 0.5) * 540,
+        spin: Math.random() > 0.5 ? 1 : -1,
+        drift: (Math.random() - 0.5) * 36,
         delay: Math.random() * 0.12,
         dur: 0.7 + Math.random() * 0.5,
       })),
@@ -1369,14 +1430,10 @@ function FlowerExplosion({ count = 46 }: { count?: number }) {
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 50 }}>
       {bits.map((b, i) => (
-        <motion.img
+        <motion.div
           key={i}
-          src={b.img}
-          alt=""
-          aria-hidden
-          draggable={false}
-          initial={{ x: 0, y: 0, scale: 0.2, opacity: 0, rotate: 0 }}
-          animate={{ x: b.tx, y: b.ty, scale: 1, opacity: 1, rotate: b.rot }}
+          initial={{ x: 0, y: 0, scale: 0.2, opacity: 0 }}
+          animate={{ x: b.tx, y: b.ty, scale: 1, opacity: 1 }}
           transition={{ duration: b.dur, delay: b.delay, ease: [0.18, 0.7, 0.3, 1] }}
           style={{
             position: "absolute",
@@ -1386,11 +1443,30 @@ function FlowerExplosion({ count = 46 }: { count?: number }) {
             height: b.size,
             marginLeft: -b.size / 2,
             marginTop: -b.size / 2,
-            objectFit: "contain",
-            filter: "drop-shadow(0 6px 12px rgba(60,25,55,0.4))",
             willChange: "transform",
           }}
-        />
+        >
+          {/* keep spinning + drifting forever so the flowers never freeze */}
+          <motion.img
+            src={b.img}
+            alt=""
+            aria-hidden
+            draggable={false}
+            animate={{ rotate: [b.rot, b.rot + b.spin * 360], y: [0, -10, 0], x: [0, b.drift, 0] }}
+            transition={{
+              rotate: { duration: 7 + (i % 4), repeat: Infinity, ease: "linear" },
+              y: { duration: 2.4 + (i % 3) * 0.4, repeat: Infinity, ease: "easeInOut" },
+              x: { duration: 3.2 + (i % 3) * 0.5, repeat: Infinity, ease: "easeInOut" },
+            }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              filter: "drop-shadow(0 6px 12px rgba(60,25,55,0.4))",
+              willChange: "transform",
+            }}
+          />
+        </motion.div>
       ))}
     </div>
   );
@@ -1449,15 +1525,19 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
         style={{
           position: "relative",
           zIndex: 1,
-          fontSize: "min(19px, 4.8vw)",
+          fontSize: "min(30px, 7.4vw)",
           fontWeight: 600,
-          color: "#FFE0EC",
           textAlign: "center",
-          lineHeight: 1.6,
-          maxWidth: 340,
+          lineHeight: 1.4,
+          maxWidth: 360,
           margin: 0,
-          textShadow: "0 0 24px rgba(255,120,170,0.4)",
-          fontFamily: "Georgia, 'Segoe UI', serif",
+          fontFamily: "'Dancing Script', cursive",
+          backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+          WebkitTextFillColor: "transparent",
+          filter: "drop-shadow(0 2px 12px rgba(245,196,78,0.4))",
         }}
       >
         I'm sorry for how I made you feel.
@@ -1476,16 +1556,17 @@ function BouquetScreen({ onContinue }: { onContinue: () => void }) {
           position: "relative",
           zIndex: 1,
           marginTop: 4,
-          padding: "13px 40px",
+          padding: "11px 46px",
           borderRadius: 999,
           border: "none",
           cursor: "pointer",
-          background: "linear-gradient(135deg, #FF6FA5 0%, #FF3D7F 100%)",
-          color: "#fff",
-          fontSize: 16,
+          background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
+          color: "#5A3A05",
+          fontSize: 22,
           fontWeight: 700,
-          letterSpacing: "0.04em",
-          boxShadow: "0 8px 28px rgba(255,61,127,0.45)",
+          letterSpacing: "0.02em",
+          fontFamily: "'Dancing Script', cursive",
+          boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
         }}
       >
         Continue

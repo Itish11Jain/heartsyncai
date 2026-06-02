@@ -3,6 +3,18 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+/* Self-hosted Dancing Script (latin subset), used only for the "sorry" bouquet
+ * screen's cursive golden headline + CTA. Single woff2 served from /public/fonts
+ * with a stable URL; font-display: swap so text paints in the cursive fallback
+ * first, then re-renders once the woff2 lands. */
+@font-face {
+  font-family: 'Dancing Script';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/dancing-script-latin.woff2') format('woff2');
+}
+
 /*
  * Self-hosted Inter Variable (latin subset only — covers all English content
  * on heartsync.in). Single 47 KB woff2 file served from /public/fonts/ with
