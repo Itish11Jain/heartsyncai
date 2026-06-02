@@ -1214,8 +1214,8 @@ function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
         </motion.button>
       </motion.div>
 
-      {/* Photo sticker — transparent PNG cutout, fills bottom half with white glow */}
-      {displaySrc && (
+      {/* Photo sticker — transparent PNG cutout OR polaroid fallback */}
+      {displaySrc && !useFallback && (
         <motion.div style={{
           position:"absolute", top:"50%", bottom:0,
           left:0, right:0, zIndex:10,
@@ -1229,6 +1229,49 @@ function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
               height:"100%", width:"auto", maxWidth:"100%", display:"block",
               filter:"drop-shadow(0 0 6px white) drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 5px 22px rgba(0,0,0,0.65))",
             }}/>
+        </motion.div>
+      )}
+      {/* Fallback: full photo in a floating polaroid with birthday emoji decorations */}
+      {displaySrc && useFallback && (
+        <motion.div style={{
+          position:"absolute", bottom:60, left:0, right:0, zIndex:10,
+          display:"flex", justifyContent:"center", pointerEvents:"none",
+        }}
+          initial={{ opacity:0, scale:0.82, y:36 }}
+          animate={{ opacity:1, scale:1, y:0 }}
+          transition={{ delay:0.42, duration:0.75, ease:[0.34,1.56,0.64,1] }}>
+          {/* Float loop */}
+          <motion.div
+            animate={{ y:[0,-8,0] }}
+            transition={{ duration:3.4, repeat:Infinity, ease:"easeInOut" }}>
+            {/* Polaroid wrapper */}
+            <div style={{ position:"relative", rotate:"3deg" }}>
+              <div style={{
+                width:190, padding:"10px 10px 34px 10px",
+                background:"#f2ede4",
+                borderRadius:4,
+                boxShadow:"0 12px 32px rgba(0,0,0,0.70), 0 3px 10px rgba(0,0,0,0.4)",
+              }}>
+                <div style={{ width:170, height:170, overflow:"hidden", borderRadius:2, background:"#1a0d08" }}>
+                  <img src={displaySrc} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                </div>
+              </div>
+              {/* 🎉 birthday cap — top-left */}
+              <span style={{
+                position:"absolute", top:-18, left:-12,
+                fontSize:34, lineHeight:1, userSelect:"none",
+                filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.45))",
+                transform:"rotate(-20deg)", display:"block",
+              }}>🎉</span>
+              {/* 🎂 cake — bottom-right */}
+              <span style={{
+                position:"absolute", bottom:-16, right:-10,
+                fontSize:30, lineHeight:1, userSelect:"none",
+                filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.45))",
+                transform:"rotate(15deg)", display:"block",
+              }}>🎂</span>
+            </div>
+          </motion.div>
         </motion.div>
       )}
     </motion.div>
