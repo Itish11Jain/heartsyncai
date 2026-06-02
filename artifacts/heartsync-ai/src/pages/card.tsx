@@ -1064,9 +1064,217 @@ function FlowerBurst() {
   );
 }
 
+/* ─────────────────────── Sorry Bouquet Screen ─────────────────────── */
+/* A soft, 3D-feeling bouquet of roses that gently floats. Shown only on
+ * the "sorry" occasion, inserted after the orbs and before the finale. */
+
+function Rose({ size, hue, delay }: { size: number; hue: string; delay: number }) {
+  const layers = [1, 0.74, 0.5, 0.28];
+  return (
+    <motion.div
+      animate={{ rotate: [-2.5, 2.5, -2.5] }}
+      transition={{ duration: 5 + delay, repeat: Infinity, ease: "easeInOut", delay }}
+      style={{ position: "relative", width: size, height: size }}
+    >
+      {layers.map((f, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: size * f,
+            height: size * f,
+            marginTop: -(size * f) / 2,
+            marginLeft: -(size * f) / 2,
+            borderRadius: "50%",
+            background: `radial-gradient(circle at 38% 32%, ${hue.replace("HSL", "94%")}, ${hue.replace("HSL", "62%")} 45%, ${hue.replace("HSL", "44%")} 100%)`,
+            boxShadow: i === 0
+              ? `inset 0 -4px 10px ${hue.replace("HSL", "32%")}, 0 4px 14px rgba(0,0,0,0.25)`
+              : `inset 0 -2px 6px ${hue.replace("HSL", "38%")}`,
+            clipPath:
+              i % 2 === 0
+                ? "polygon(50% 0,68% 18%,90% 12%,84% 36%,100% 50%,84% 64%,90% 88%,68% 82%,50% 100%,32% 82%,10% 88%,16% 64%,0 50%,16% 36%,10% 12%,32% 18%)"
+                : "polygon(50% 2%,62% 22%,84% 22%,72% 42%,92% 58%,68% 60%,62% 84%,50% 68%,38% 84%,32% 60%,8% 58%,28% 42%,16% 22%,38% 22%)",
+          }}
+        />
+      ))}
+      {/* center bud */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          width: size * 0.16,
+          height: size * 0.16,
+          marginTop: -(size * 0.08),
+          marginLeft: -(size * 0.08),
+          borderRadius: "50%",
+          background: hue.replace("HSL", "34%"),
+          boxShadow: `0 0 6px ${hue.replace("HSL", "30%")}`,
+        }}
+      />
+    </motion.div>
+  );
+}
+
+function FloatingBouquet() {
+  /* Each rose: [size, base HSL string with HSL placeholder for lightness, x, y, delay] */
+  const roses: Array<{ size: number; hue: string; x: number; y: number; delay: number }> = [
+    { size: 88, hue: "hsl(340,82%,HSL)", x: 0, y: -14, delay: 0 },
+    { size: 72, hue: "hsl(348,78%,HSL)", x: -62, y: 18, delay: 0.6 },
+    { size: 72, hue: "hsl(330,72%,HSL)", x: 62, y: 18, delay: 1.0 },
+    { size: 58, hue: "hsl(8,76%,HSL)", x: -30, y: -40, delay: 1.4 },
+    { size: 58, hue: "hsl(316,64%,HSL)", x: 32, y: -40, delay: 0.3 },
+  ];
+  return (
+    <motion.div
+      animate={{ y: [-8, 8, -8] }}
+      transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+      style={{ position: "relative", width: 240, height: 300, filter: "drop-shadow(0 24px 36px rgba(255,80,140,0.28))" }}
+    >
+      {/* soft glow */}
+      <div
+        style={{
+          position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)",
+          width: 220, height: 180, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,150,190,0.30), transparent 70%)",
+          filter: "blur(8px)", zIndex: 0,
+        }}
+      />
+      {/* stems */}
+      <div
+        style={{
+          position: "absolute", top: 120, left: "50%", transform: "translateX(-50%)",
+          width: 70, height: 160, zIndex: 1,
+        }}
+      >
+        {[-22, 0, 22].map((off, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute", top: 0, left: `calc(50% + ${off}px)`,
+              width: 5, height: 150 - Math.abs(off),
+              transform: `translateX(-50%) rotate(${off * 0.18}deg)`,
+              transformOrigin: "top center",
+              background: "linear-gradient(to bottom, #2f7d4f, #1f5e3a)",
+              borderRadius: 4,
+            }}
+          />
+        ))}
+      </div>
+      {/* wrapping cone */}
+      <div
+        style={{
+          position: "absolute", top: 168, left: "50%", transform: "translateX(-50%)",
+          width: 132, height: 130, zIndex: 2,
+          background: "linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,228,238,0.85))",
+          clipPath: "polygon(50% 100%, 8% 6%, 92% 6%)",
+          boxShadow: "inset 0 4px 12px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.18)",
+          borderRadius: "0 0 8px 8px",
+        }}
+      />
+      {/* ribbon */}
+      <div
+        style={{
+          position: "absolute", top: 206, left: "50%", transform: "translateX(-50%)",
+          fontSize: 26, zIndex: 4,
+        }}
+      >
+        🎀
+      </div>
+      {/* roses */}
+      <div style={{ position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
+        {roses.map((r, i) => (
+          <div
+            key={i}
+            style={{
+              position: "absolute", left: r.x, top: r.y,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            <Rose size={r.size} hue={r.hue} delay={r.delay} />
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function BouquetScreen({ onContinue }: { onContinue: () => void }) {
+  return (
+    <motion.div
+      key="bouquet-scene"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.4 } }}
+      transition={{ duration: 0.6 }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 35,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        gap: "min(28px, 5vw)",
+        padding: "32px 24px",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0, y: 30 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: "spring", damping: 14, stiffness: 120, delay: 0.15 }}
+      >
+        <FloatingBouquet />
+      </motion.div>
+
+      <motion.p
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7, duration: 0.6 }}
+        style={{
+          fontSize: "min(19px, 4.8vw)",
+          fontWeight: 600,
+          color: "#FFE0EC",
+          textAlign: "center",
+          lineHeight: 1.6,
+          maxWidth: 340,
+          margin: 0,
+          textShadow: "0 0 24px rgba(255,120,170,0.4)",
+          fontFamily: "Georgia, 'Segoe UI', serif",
+        }}
+      >
+        I'm sorry for how I made you feel.
+        <br />
+        Please forgive me if you can.
+      </motion.p>
+
+      <motion.button
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.1, duration: 0.5 }}
+        whileTap={{ scale: 0.96 }}
+        onClick={onContinue}
+        style={{
+          marginTop: 4,
+          padding: "13px 40px",
+          borderRadius: 999,
+          border: "none",
+          cursor: "pointer",
+          background: "linear-gradient(135deg, #FF6FA5 0%, #FF3D7F 100%)",
+          color: "#fff",
+          fontSize: 16,
+          fontWeight: 700,
+          letterSpacing: "0.04em",
+          boxShadow: "0 8px 28px rgba(255,61,127,0.45)",
+        }}
+      >
+        Continue
+      </motion.button>
+    </motion.div>
+  );
+}
+
 /* ─────────────────────────── Main Page ────────────────────────── */
 
-type Phase = "envelope" | "opening" | "polaroid" | "orbs" | "collage" | "finale";
+type Phase = "envelope" | "opening" | "polaroid" | "orbs" | "bouquet" | "collage" | "finale";
 
 export default function Card() {
   const params = useQueryParams();
@@ -1085,6 +1293,10 @@ export default function Card() {
 
   const recipientName = params.get("to") || "Friend";
   const occasion = params.get("occasion") || "thank_you";
+  /* The "sorry" occasion gets a bespoke envelope experience: a heartfelt
+   * opening headline and an extra floating-bouquet apology screen inserted
+   * after the orbs. Every other occasion is byte-for-byte unchanged. */
+  const isSorry = occasion === "sorry";
   const relation = params.get("relation") || "friend";
   const likes = params.get("likes") || "";
   const customMsg = decodeMsg(params.get("msg"));
@@ -1369,6 +1581,12 @@ export default function Card() {
       if (newClicked.size === orbs.length) {
         setTimeout(() => {
           envelope.finale();
+          if (isSorry) {
+            /* Sorry cards detour through the floating-bouquet apology screen
+             * before continuing to the photos/voice note or the finale. */
+            setPhase("bouquet");
+            return;
+          }
           const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
           setPhase(skipCollage ? "finale" : "collage");
           setTimeout(fireConfetti, personalPictureUrl ? 500 : 800);
@@ -1376,7 +1594,14 @@ export default function Card() {
       }
       return newClicked;
     });
-  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl]);
+  }, [orbs, fireEmojiParticles, fireConfetti, personalPictureUrl, isSorry, effectiveCollagePhotos.length, voiceNoteUrl]);
+
+  /* Bouquet (sorry only) → photos/voice note if present, else straight to finale. */
+  const handleBouquetContinue = useCallback(() => {
+    const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
+    setPhase(skipCollage ? "finale" : "collage");
+    setTimeout(fireConfetti, 600);
+  }, [effectiveCollagePhotos.length, voiceNoteUrl, fireConfetti]);
 
   /* ── Autoplay mode: auto-advance all phases for the modal iframe preview ── */
   useEffect(() => {
@@ -1398,6 +1623,7 @@ export default function Card() {
           if (next.size === orbs.length) {
             setTimeout(() => {
               envelope.finale();
+              if (isSorry) { setPhase("bouquet"); return; }
               const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
               setPhase(skipCollage ? "finale" : "collage");
             }, 1200);
@@ -1407,6 +1633,17 @@ export default function Card() {
       }, 800 + i * 900)
     );
     return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase]);
+
+  /* Autoplay: advance bouquet (sorry only) → photos/voice note or finale */
+  useEffect(() => {
+    if (!isAutoplay || phase !== "bouquet") return;
+    const t = setTimeout(() => {
+      const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
+      setPhase(skipCollage ? "finale" : "collage");
+    }, 3000);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);
 
@@ -1532,7 +1769,7 @@ export default function Card() {
                       textShadow: "0 0 30px rgba(255,215,0,0.6)",
                     }}
                   >
-                    ✨ A Surprise For You! ✨
+                    {isSorry ? "🌹 Something I needed to say 🌹" : "✨ A Surprise For You! ✨"}
                   </motion.p>
                 </motion.div>
               )}
@@ -1614,6 +1851,13 @@ export default function Card() {
               )}
             </AnimatePresence>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ════ PHASE 3.5: Sorry Bouquet (sorry occasion only) ════ */}
+      <AnimatePresence>
+        {phase === "bouquet" && isSorry && (
+          <BouquetScreen onContinue={handleBouquetContinue} />
         )}
       </AnimatePresence>
 

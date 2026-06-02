@@ -106,7 +106,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "❤️‍🩹", text: "You mean the world to me." },
         { emoji: "🌹", text: "Let me make it up to you." },
       ],
-      final_message: "I am so deeply sorry. I love you and I promise to do better.",
+      final_message: "I've been sitting with how much I hurt you, and I'm truly sorry. You matter to me far more than being right ever could. I promise to listen better, love you better, and never take you for granted again.",
     },
     friend: {
       title_prefix: "To someone I value deeply",
@@ -116,7 +116,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "💙", text: "I genuinely care about you." },
         { emoji: "🌱", text: "Let's grow from this together." },
       ],
-      final_message: "I'm truly sorry. You deserve better from me, and I'll do better.",
+      final_message: "I'm genuinely sorry for how I made you feel — you didn't deserve that. Our friendship means more to me than my pride ever will, and I hope you'll let me make this right.",
     },
     spouse: {
       title_prefix: "To my heart",
@@ -126,7 +126,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "❤️", text: "My love for you is unconditional." },
         { emoji: "🙏", text: "Please forgive me." },
       ],
-      final_message: "I'm so sorry, my love. You are everything to me, and I'll never stop trying.",
+      final_message: "I'm so sorry, my love. Hurting you is the last thing I ever wanted, and I can't undo it — but I can keep showing up, choosing us, and doing better every single day. You are my whole heart.",
     },
     date: {
       title_prefix: "To someone I care about",
@@ -136,7 +136,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🌸", text: "I hope we can move forward." },
         { emoji: "🙏", text: "I'm genuinely sorry." },
       ],
-      final_message: "I'm sorry. I hope you'll give me a chance to make it right.",
+      final_message: "I'm really sorry — you didn't deserve to feel that way. I care about you more than I let on, and I'd be grateful for the chance to show you the kindness you deserve.",
     },
   },
   anniversary: {
