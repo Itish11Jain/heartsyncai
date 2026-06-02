@@ -291,10 +291,10 @@ export function getFallbackTemplate(occasion: string): CardTemplate {
 
 export const OCCASIONS: { id: Occasion; label: string; emoji: string; description: string }[] = [
   { id: "feel_good", label: "Feel Good", emoji: "🌟", description: "No occasion needed — just because" },
+  { id: "sorry", label: "Sorry", emoji: "💔", description: "Skip the awkward text. Send a moment" },
   { id: "birthday", label: "Birthday", emoji: "🎂", description: "Make their whole day stop and smile" },
   { id: "congratulations", label: "Congrats!", emoji: "🏆", description: "Their big win deserves a moment" },
   { id: "thank_you", label: "Thank You", emoji: "🙏", description: "Real gratitude, not just 'tysm'" },
-  { id: "sorry", label: "Sorry", emoji: "💔", description: "Skip the awkward text. Send a moment" },
 ];
 
 export const RELATIONS: { id: Relation; label: string; sub: string; emoji: string }[] = [
