@@ -7,17 +7,17 @@ import { trackEvent } from "@/lib/trackEvent";
 
 import PolaroidFrame from "@/components/PolaroidFrame";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
-import rosePinkImg from "@assets/flowers/rose_pink.png";
-import rosePeachImg from "@assets/flowers/rose_peach.png";
-import daisyWhiteImg from "@assets/flowers/daisy_white.png";
-import anemonePurpleImg from "@assets/flowers/anemone_purple.png";
-import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.png";
-import hydrangeaBlueImg from "@assets/flowers/hydrangea_blue.png";
-import eucalyptusImg from "@assets/flowers/eucalyptus.png";
-import fernImg from "@assets/flowers/fern.png";
-import delphiniumBlueImg from "@assets/flowers/delphinium_blue.png";
-import cosmosPinkImg from "@assets/flowers/cosmos_pink.png";
-import wrapConeImg from "@assets/flowers/wrap_cone.png";
+import rosePinkImg from "@assets/flowers/rose_pink.webp";
+import rosePeachImg from "@assets/flowers/rose_peach.webp";
+import daisyWhiteImg from "@assets/flowers/daisy_white.webp";
+import anemonePurpleImg from "@assets/flowers/anemone_purple.webp";
+import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.webp";
+import hydrangeaBlueImg from "@assets/flowers/hydrangea_blue.webp";
+import eucalyptusImg from "@assets/flowers/eucalyptus.webp";
+import fernImg from "@assets/flowers/fern.webp";
+import delphiniumBlueImg from "@assets/flowers/delphinium_blue.webp";
+import cosmosPinkImg from "@assets/flowers/cosmos_pink.webp";
+import wrapConeImg from "@assets/flowers/wrap_cone.webp";
 
 /* Premium templates and sender auth features lazy-load only when needed.
  * Recipients of the default envelope card never download these chunks. */
@@ -1310,6 +1310,15 @@ const PETAL_IMGS = [
   daisyWhiteImg, ranunculusYellowImg, hydrangeaBlueImg,
 ];
 
+/* Every flower asset used anywhere in the sorry bouquet flow — warmed up front
+ * (sorry cards only) so the whole arrangement arrives together instead of
+ * popping in flower-by-flower as each image decodes. */
+const BOUQUET_FLOWER_IMGS = [
+  rosePinkImg, rosePeachImg, daisyWhiteImg, anemonePurpleImg,
+  ranunculusYellowImg, hydrangeaBlueImg, eucalyptusImg, fernImg,
+  delphiniumBlueImg, cosmosPinkImg, wrapConeImg,
+];
+
 /* A continuous, gentle stream of flowers drifting down from above the screen —
  * each one fades in near the top, sways as it falls, and fades out near the
  * bottom, then repeats forever on its own offset so the flow never stops. */
@@ -1714,6 +1723,10 @@ export default function Card() {
        plenty of time to finish the downloads in the background. ── */
   useEffect(() => {
     const urls = [personalPictureUrl, ...effectiveCollagePhotos].filter(Boolean) as string[];
+    /* Sorry cards detour through the floating-bouquet apology screen, so warm
+     * the (now lightweight WebP) flower assets too — this lets the whole
+     * arrangement arrive together instead of popping in flower-by-flower. */
+    if (isSorry) urls.push(...BOUQUET_FLOWER_IMGS);
     urls.forEach(url => { const img = new Image(); img.src = url; });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2192,7 +2205,7 @@ export default function Card() {
             key="collage-scene"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            transition={isSorry ? { duration: 0.4 } : { delay: 0.5 }}
             style={{
               position: "fixed", inset: 0, zIndex: 30,
               padding: isSender ? "0 0 270px" : "0",
