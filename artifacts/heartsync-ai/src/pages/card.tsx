@@ -7,6 +7,7 @@ import { trackEvent } from "@/lib/trackEvent";
 
 import PolaroidFrame from "@/components/PolaroidFrame";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
+import bouquetImg from "@assets/bouquet_sorry_nobg.png";
 
 /* Premium templates and sender auth features lazy-load only when needed.
  * Recipients of the default envelope card never download these chunks. */
@@ -1065,139 +1066,57 @@ function FlowerBurst() {
 }
 
 /* ─────────────────────── Sorry Bouquet Screen ─────────────────────── */
-/* A soft, 3D-feeling bouquet of roses that gently floats. Shown only on
- * the "sorry" occasion, inserted after the orbs and before the finale. */
-
-function Rose({ size, hue, delay }: { size: number; hue: string; delay: number }) {
-  const layers = [1, 0.74, 0.5, 0.28];
-  return (
-    <motion.div
-      animate={{ rotate: [-2.5, 2.5, -2.5] }}
-      transition={{ duration: 5 + delay, repeat: Infinity, ease: "easeInOut", delay }}
-      style={{ position: "relative", width: size, height: size }}
-    >
-      {layers.map((f, i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: size * f,
-            height: size * f,
-            marginTop: -(size * f) / 2,
-            marginLeft: -(size * f) / 2,
-            borderRadius: "50%",
-            background: `radial-gradient(circle at 38% 32%, ${hue.replace("HSL", "94%")}, ${hue.replace("HSL", "62%")} 45%, ${hue.replace("HSL", "44%")} 100%)`,
-            boxShadow: i === 0
-              ? `inset 0 -4px 10px ${hue.replace("HSL", "32%")}, 0 4px 14px rgba(0,0,0,0.25)`
-              : `inset 0 -2px 6px ${hue.replace("HSL", "38%")}`,
-            clipPath:
-              i % 2 === 0
-                ? "polygon(50% 0,68% 18%,90% 12%,84% 36%,100% 50%,84% 64%,90% 88%,68% 82%,50% 100%,32% 82%,10% 88%,16% 64%,0 50%,16% 36%,10% 12%,32% 18%)"
-                : "polygon(50% 2%,62% 22%,84% 22%,72% 42%,92% 58%,68% 60%,62% 84%,50% 68%,38% 84%,32% 60%,8% 58%,28% 42%,16% 22%,38% 22%)",
-          }}
-        />
-      ))}
-      {/* center bud */}
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          width: size * 0.16,
-          height: size * 0.16,
-          marginTop: -(size * 0.08),
-          marginLeft: -(size * 0.08),
-          borderRadius: "50%",
-          background: hue.replace("HSL", "34%"),
-          boxShadow: `0 0 6px ${hue.replace("HSL", "30%")}`,
-        }}
-      />
-    </motion.div>
-  );
-}
+/* A watercolor bouquet image that gently floats and tilts in 3D. Shown only
+ * on the "sorry" occasion, inserted after the orbs and before the finale. */
 
 function FloatingBouquet() {
-  /* Each rose: [size, base HSL string with HSL placeholder for lightness, x, y, delay] */
-  const roses: Array<{ size: number; hue: string; x: number; y: number; delay: number }> = [
-    { size: 88, hue: "hsl(340,82%,HSL)", x: 0, y: -14, delay: 0 },
-    { size: 72, hue: "hsl(348,78%,HSL)", x: -62, y: 18, delay: 0.6 },
-    { size: 72, hue: "hsl(330,72%,HSL)", x: 62, y: 18, delay: 1.0 },
-    { size: 58, hue: "hsl(8,76%,HSL)", x: -30, y: -40, delay: 1.4 },
-    { size: 58, hue: "hsl(316,64%,HSL)", x: 32, y: -40, delay: 0.3 },
-  ];
   return (
-    <motion.div
-      animate={{ y: [-8, 8, -8] }}
-      transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-      style={{ position: "relative", width: 240, height: 300, filter: "drop-shadow(0 24px 36px rgba(255,80,140,0.28))" }}
+    <div
+      style={{
+        perspective: 900,
+        width: "min(300px, 78vw)",
+        height: "min(300px, 78vw)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
-      {/* soft glow */}
-      <div
+      {/* soft glow behind the bouquet */}
+      <motion.div
+        animate={{ opacity: [0.45, 0.7, 0.45], scale: [0.95, 1.05, 0.95] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         style={{
-          position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)",
-          width: 220, height: 180, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,150,190,0.30), transparent 70%)",
-          filter: "blur(8px)", zIndex: 0,
+          position: "absolute",
+          width: "92%",
+          height: "70%",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,180,210,0.45), rgba(255,150,190,0.15) 55%, transparent 75%)",
+          filter: "blur(14px)",
         }}
       />
-      {/* stems */}
-      <div
-        style={{
-          position: "absolute", top: 120, left: "50%", transform: "translateX(-50%)",
-          width: 70, height: 160, zIndex: 1,
+      {/* the watercolor bouquet — floats up/down while gently tilting in 3D */}
+      <motion.img
+        src={bouquetImg}
+        alt="A bouquet of flowers"
+        draggable={false}
+        animate={{
+          y: [-10, 10, -10],
+          rotateY: [-9, 9, -9],
+          rotateX: [4, -4, 4],
+          rotateZ: [-1.5, 1.5, -1.5],
         }}
-      >
-        {[-22, 0, 22].map((off, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute", top: 0, left: `calc(50% + ${off}px)`,
-              width: 5, height: 150 - Math.abs(off),
-              transform: `translateX(-50%) rotate(${off * 0.18}deg)`,
-              transformOrigin: "top center",
-              background: "linear-gradient(to bottom, #2f7d4f, #1f5e3a)",
-              borderRadius: 4,
-            }}
-          />
-        ))}
-      </div>
-      {/* wrapping cone */}
-      <div
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         style={{
-          position: "absolute", top: 168, left: "50%", transform: "translateX(-50%)",
-          width: 132, height: 130, zIndex: 2,
-          background: "linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,228,238,0.85))",
-          clipPath: "polygon(50% 100%, 8% 6%, 92% 6%)",
-          boxShadow: "inset 0 4px 12px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.18)",
-          borderRadius: "0 0 8px 8px",
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          transformStyle: "preserve-3d",
+          filter: "drop-shadow(0 26px 32px rgba(120,40,80,0.45)) drop-shadow(0 6px 14px rgba(255,120,170,0.35))",
+          willChange: "transform",
         }}
       />
-      {/* ribbon */}
-      <div
-        style={{
-          position: "absolute", top: 206, left: "50%", transform: "translateX(-50%)",
-          fontSize: 26, zIndex: 4,
-        }}
-      >
-        🎀
-      </div>
-      {/* roses */}
-      <div style={{ position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", zIndex: 3 }}>
-        {roses.map((r, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute", left: r.x, top: r.y,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            <Rose size={r.size} hue={r.hue} delay={r.delay} />
-          </div>
-        ))}
-      </div>
-    </motion.div>
+    </div>
   );
 }
 
