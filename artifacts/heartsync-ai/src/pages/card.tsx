@@ -7,7 +7,14 @@ import { trackEvent } from "@/lib/trackEvent";
 
 import PolaroidFrame from "@/components/PolaroidFrame";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
-import bouquetImg from "@assets/bouquet_sorry_v2_nobg.png";
+import rosePinkImg from "@assets/flowers/rose_pink.png";
+import rosePeachImg from "@assets/flowers/rose_peach.png";
+import daisyWhiteImg from "@assets/flowers/daisy_white.png";
+import anemonePurpleImg from "@assets/flowers/anemone_purple.png";
+import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.png";
+import hydrangeaBlueImg from "@assets/flowers/hydrangea_blue.png";
+import eucalyptusImg from "@assets/flowers/eucalyptus.png";
+import fernImg from "@assets/flowers/fern.png";
 
 /* Premium templates and sender auth features lazy-load only when needed.
  * Recipients of the default envelope card never download these chunks. */
@@ -1067,41 +1074,81 @@ function FlowerBurst() {
 
 /* ─────────────────────── Sorry Bouquet Screen ─────────────────────── */
 
-/* The bouquet is a single illustration. To make it feel like the flowers are
- * being arranged into the wrap, we draw several copies of the same image, each
- * CLIPPED to a different region (wrap, then clusters of blooms). Each clipped
- * piece flies in from a different direction and settles into its final spot,
- * so they reassemble into the complete bouquet. After assembling, the whole
- * thing drifts and tilts gently in 3D. */
-const BOUQUET_PIECES: Array<{
-  clip: string;
-  from: { x?: number; y?: number; rotate?: number; scale?: number };
+/* The bouquet is built from individual photorealistic flower sprites (each a
+ * transparent PNG). Every bloom and leaf is its own element that flies in from
+ * a different direction, one at a time, and settles into its place in the
+ * arrangement — so it reads as real flowers being placed into a bouquet rather
+ * than a flat picture. Depth comes from per-flower sizing, layered z-index and
+ * soft drop-shadows; after assembling, the whole bouquet drifts and tilts
+ * gently in 3D. Coordinates are authored in a fixed 300×340 design box. */
+type Bloom = {
+  img: string;
+  cx: number; cy: number; /* center within the 300×340 box */
+  size: number; /* px */
+  rot: number; /* resting rotation */
+  z: number;
+  from: { x: number; y: number }; /* fly-in offset */
   delay: number;
-}> = [
-  /* wrap + ribbon base — rises up first */
-  { clip: "inset(56% 14% 0% 14%)", from: { y: 90, scale: 0.9 }, delay: 0.05 },
-  /* lower greenery / stems bridging into the wrap */
-  { clip: "inset(44% 22% 40% 22%)", from: { y: 50, scale: 0.85 }, delay: 0.25 },
-  /* left cluster of blooms — swings in from the left */
-  { clip: "inset(22% 56% 30% 4%)", from: { x: -120, rotate: -16 }, delay: 0.45 },
-  /* right cluster of blooms — swings in from the right */
-  { clip: "inset(22% 4% 30% 56%)", from: { x: 120, rotate: 16 }, delay: 0.6 },
-  /* central blooms — drop in and bloom open */
-  { clip: "inset(24% 30% 32% 30%)", from: { y: -70, scale: 0.5 }, delay: 0.78 },
-  /* tall top spires — fall in last from above */
-  { clip: "inset(0% 34% 66% 34%)", from: { y: -110, rotate: 4 }, delay: 0.95 },
+  shadow?: number; /* 0..1 strength */
+};
+
+const BOUQUET_BOX = { w: 300, h: 340 };
+
+const BLOOMS: Bloom[] = [
+  /* ── back layer: greenery, flies in first, sits behind everything ── */
+  { img: eucalyptusImg, cx: 74, cy: 112, size: 116, rot: -30, z: 1, from: { x: -170, y: 30 }, delay: 0.45, shadow: 0.2 },
+  { img: eucalyptusImg, cx: 226, cy: 112, size: 116, rot: 32, z: 1, from: { x: 170, y: 30 }, delay: 0.58, shadow: 0.2 },
+  { img: fernImg, cx: 150, cy: 68, size: 120, rot: 0, z: 1, from: { x: 0, y: -180 }, delay: 0.72, shadow: 0.2 },
+  { img: fernImg, cx: 108, cy: 92, size: 84, rot: -28, z: 1, from: { x: -120, y: -120 }, delay: 0.82, shadow: 0.2 },
+  /* ── back blooms ── */
+  { img: hydrangeaBlueImg, cx: 94, cy: 96, size: 76, rot: -10, z: 2, from: { x: -200, y: -40 }, delay: 0.36, shadow: 0.3 },
+  { img: daisyWhiteImg, cx: 208, cy: 90, size: 68, rot: 14, z: 2, from: { x: 200, y: -40 }, delay: 0.5, shadow: 0.3 },
+  { img: anemonePurpleImg, cx: 150, cy: 80, size: 66, rot: 0, z: 2, from: { x: 0, y: -200 }, delay: 0.66, shadow: 0.3 },
+  /* ── mid blooms ── */
+  { img: ranunculusYellowImg, cx: 110, cy: 132, size: 78, rot: -8, z: 3, from: { x: -180, y: 90 }, delay: 0.28, shadow: 0.4 },
+  { img: daisyWhiteImg, cx: 198, cy: 134, size: 72, rot: 10, z: 3, from: { x: 180, y: 90 }, delay: 0.42, shadow: 0.4 },
+  { img: anemonePurpleImg, cx: 204, cy: 168, size: 60, rot: 16, z: 3, from: { x: 190, y: 150 }, delay: 0.86, shadow: 0.4 },
+  /* ── front roses: biggest, land prominently up front ── */
+  { img: rosePinkImg, cx: 150, cy: 146, size: 104, rot: 0, z: 5, from: { x: 0, y: 210 }, delay: 0.14, shadow: 0.55 },
+  { img: rosePeachImg, cx: 106, cy: 170, size: 90, rot: -12, z: 4, from: { x: -150, y: 210 }, delay: 0.24, shadow: 0.55 },
+  { img: rosePinkImg, cx: 192, cy: 172, size: 86, rot: 12, z: 4, from: { x: 160, y: 210 }, delay: 0.34, shadow: 0.55 },
+  { img: ranunculusYellowImg, cx: 150, cy: 194, size: 64, rot: 0, z: 4, from: { x: 0, y: 230 }, delay: 0.95, shadow: 0.5 },
 ];
 
+/* gather point where the stems are tied with the ribbon */
+const GATHER = { x: 150, y: 252 };
+
 function FloatingBouquet() {
+  /* The arrangement is authored in a fixed 300×340 design box; we scale the
+   * whole box uniformly so the absolute flower coordinates stay valid (and
+   * never clip) on narrow screens. */
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const update = () =>
+      setScale(Math.min(1, (Math.min(window.innerWidth, 480) - 56) / BOUQUET_BOX.w));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   return (
     <div
       style={{
-        perspective: 1000,
-        width: "min(300px, 78vw)",
-        height: "min(380px, 96vw)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        position: "relative",
+        width: BOUQUET_BOX.w * scale,
+        height: BOUQUET_BOX.h * scale,
+      }}
+    >
+    <div
+      style={{
+        perspective: 1100,
+        width: BOUQUET_BOX.w,
+        height: BOUQUET_BOX.h,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        transform: `scale(${scale})`,
+        transformOrigin: "top left",
       }}
     >
       {/* soft glow behind the bouquet */}
@@ -1110,14 +1157,15 @@ function FloatingBouquet() {
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
         style={{
           position: "absolute",
-          width: "90%",
-          height: "78%",
+          top: "8%",
+          width: "92%",
+          height: "62%",
           borderRadius: "50%",
           background: "radial-gradient(circle, rgba(210,180,235,0.42), rgba(255,170,200,0.16) 55%, transparent 76%)",
           filter: "blur(16px)",
         }}
       />
-      {/* continuous gentle 3D float, applied after the pieces assemble */}
+      {/* continuous gentle 3D float, applied after the flowers assemble */}
       <motion.div
         animate={{
           y: [-9, 9, -9],
@@ -1125,50 +1173,96 @@ function FloatingBouquet() {
           rotateX: [3.5, -3.5, 3.5],
           rotateZ: [-1.2, 1.2, -1.2],
         }}
-        transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 1.3 }}
+        transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 1.6 }}
         style={{
-          position: "relative",
-          width: "100%",
-          height: "100%",
+          position: "absolute",
+          inset: 0,
           transformStyle: "preserve-3d",
-          filter: "drop-shadow(0 26px 32px rgba(90,40,90,0.45)) drop-shadow(0 6px 14px rgba(200,150,210,0.35))",
           willChange: "transform",
         }}
       >
-        {BOUQUET_PIECES.map((piece, i) => (
+        {/* stems converging into the tie point */}
+        <motion.svg
+          width={BOUQUET_BOX.w}
+          height={BOUQUET_BOX.h}
+          viewBox={`0 0 ${BOUQUET_BOX.w} ${BOUQUET_BOX.h}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          style={{ position: "absolute", inset: 0, zIndex: 0 }}
+        >
+          {[118, 134, 150, 166, 182].map((x0, i) => (
+            <path
+              key={i}
+              d={`M ${x0} 196 Q ${(x0 + GATHER.x) / 2} ${236} ${GATHER.x} ${GATHER.y + 26}`}
+              stroke="#4a8158"
+              strokeWidth={4}
+              strokeLinecap="round"
+              fill="none"
+              opacity={0.9}
+            />
+          ))}
+        </motion.svg>
+
+        {/* the flowers — each flies in and settles individually */}
+        {BLOOMS.map((b, i) => (
           <motion.img
             key={i}
-            src={bouquetImg}
+            src={b.img}
             alt={i === 0 ? "A bouquet of flowers" : ""}
             aria-hidden={i !== 0}
             draggable={false}
-            initial={{
-              opacity: 0,
-              x: piece.from.x ?? 0,
-              y: piece.from.y ?? 0,
-              rotate: piece.from.rotate ?? 0,
-              scale: piece.from.scale ?? 1,
-            }}
-            animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
+            initial={{ opacity: 0, x: b.from.x, y: b.from.y, scale: 0.35, rotate: b.rot + (b.from.x < 0 ? -25 : 25) }}
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: b.rot }}
             transition={{
               type: "spring",
-              stiffness: 90,
-              damping: 13,
-              delay: piece.delay,
-              opacity: { duration: 0.5, delay: piece.delay },
+              stiffness: 80,
+              damping: 12,
+              delay: b.delay,
+              opacity: { duration: 0.4, delay: b.delay },
             }}
             style={{
               position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
+              left: b.cx,
+              top: b.cy,
+              width: b.size,
+              height: b.size,
+              marginLeft: -b.size / 2,
+              marginTop: -b.size / 2,
               objectFit: "contain",
-              clipPath: piece.clip,
-              WebkitClipPath: piece.clip,
+              zIndex: b.z,
+              filter: `drop-shadow(0 ${4 + (b.shadow ?? 0.3) * 10}px ${6 + (b.shadow ?? 0.3) * 10}px rgba(60,25,55,${0.25 + (b.shadow ?? 0.3) * 0.3}))`,
+              willChange: "transform",
             }}
           />
         ))}
+
+        {/* satin ribbon bow tying the stems */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.4, x: "-50%", y: "-50%" }}
+          animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+          transition={{ type: "spring", stiffness: 120, damping: 11, delay: 1.05 }}
+          style={{
+            position: "absolute",
+            left: GATHER.x,
+            top: GATHER.y,
+            zIndex: 6,
+            width: 70,
+            height: 40,
+          }}
+        >
+          {/* left loop */}
+          <span style={{ position: "absolute", left: 2, top: 8, width: 30, height: 22, borderRadius: "60% 40% 50% 50%", transform: "rotate(-18deg)", background: "linear-gradient(135deg, #e7a3ad, #c46f7c)", boxShadow: "inset 0 -2px 4px rgba(120,40,60,0.4)" }} />
+          {/* right loop */}
+          <span style={{ position: "absolute", right: 2, top: 8, width: 30, height: 22, borderRadius: "40% 60% 50% 50%", transform: "rotate(18deg)", background: "linear-gradient(225deg, #e7a3ad, #c46f7c)", boxShadow: "inset 0 -2px 4px rgba(120,40,60,0.4)" }} />
+          {/* tails */}
+          <span style={{ position: "absolute", left: 28, top: 24, width: 7, height: 20, transform: "rotate(16deg)", background: "linear-gradient(#d0899a, #b25f6c)", borderRadius: "2px" }} />
+          <span style={{ position: "absolute", left: 36, top: 24, width: 7, height: 20, transform: "rotate(-16deg)", background: "linear-gradient(#d0899a, #b25f6c)", borderRadius: "2px" }} />
+          {/* knot */}
+          <span style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", width: 14, height: 16, borderRadius: 5, background: "linear-gradient(#d98d99, #b25f6c)", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+        </motion.div>
       </motion.div>
+    </div>
     </div>
   );
 }

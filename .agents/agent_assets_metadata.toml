@@ -6,6 +6,54 @@ uri = "file://artifacts/sms-forwarder/assets/images/icon.png"
 type = "image"
 title = "sms forwarder icon"
 
+[[generated]]
+id = "iiZU7M1SeY0pZaI7qVHv_"
+uri = "file://attached_assets/flowers/rose_pink.png"
+type = "image"
+title = "pink rose"
+
+[[generated]]
+id = "7g-xSpj2AnoqSbFWCK67T"
+uri = "file://attached_assets/flowers/rose_peach.png"
+type = "image"
+title = "peach rose"
+
+[[generated]]
+id = "Hlk7Jq9aovKmzPNYohEHA"
+uri = "file://attached_assets/flowers/daisy_white.png"
+type = "image"
+title = "white daisy"
+
+[[generated]]
+id = "nrlkKq6z6z5K5mMBwPp0h"
+uri = "file://attached_assets/flowers/anemone_purple.png"
+type = "image"
+title = "purple anemone"
+
+[[generated]]
+id = "GXL8Ja4oBTv4JsmfzQZEn"
+uri = "file://attached_assets/flowers/ranunculus_yellow.png"
+type = "image"
+title = "yellow ranunculus"
+
+[[generated]]
+id = "ptKKEpwQPvJabaORWSZqY"
+uri = "file://attached_assets/flowers/hydrangea_blue.png"
+type = "image"
+title = "blue hydrangea"
+
+[[generated]]
+id = "81zxJZaInkkbA8D9MRTYU"
+uri = "file://attached_assets/flowers/eucalyptus.png"
+type = "image"
+title = "eucalyptus sprig"
+
+[[generated]]
+id = "xAHW1Fj8b50kyYEG--VW5"
+uri = "file://attached_assets/flowers/fern.png"
+type = "image"
+title = "fern leaf"
+
 [[outputs]]
 id = "fDmbJv3aewQm22JAKoiDp"
 uri = "file://google-apps-script/gmail-utr-forwarder.txt"
