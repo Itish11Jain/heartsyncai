@@ -1329,21 +1329,36 @@ function Scene6({
               </>
             ) : showPaywallCta ? (
               <motion.div
-                initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
-                transition={{ duration:0.55, ease:[0.34,1.56,0.64,1] }}>
+                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
+                exit={{ opacity:0, y:-8 }}
+                transition={{ duration:0.35 }}>
+                <div style={{ textAlign:"center", marginBottom:14 }}>
+                  <p style={{ fontSize:12, color:"#D4AF37", fontWeight:600,
+                    letterSpacing:"0.01em", marginBottom:4, margin:"0 0 4px" }}>
+                    You've created a stunning card! ✨
+                  </p>
+                  <p style={{ fontSize:17, color:"#D4AF37", fontWeight:800,
+                    letterSpacing:"0.01em", margin:0 }}>
+                    Don't leave it now.
+                  </p>
+                </div>
                 <motion.button onClick={onOpenPaywall}
-                  whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
-                  style={{ width:"100%", padding:"16px", borderRadius:16,
-                    background:"linear-gradient(135deg,#C4913A,#D4AF37,#F0D060)",
+                  whileTap={{ scale:0.97 }}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                    width:"100%", height:56, borderRadius:16,
+                    background:"linear-gradient(135deg,#FFD700 0%,#FFAA00 100%)",
                     border:"none", cursor:"pointer",
-                    color:"#1c0a06", fontWeight:800, fontSize:16, letterSpacing:0.5,
-                    boxShadow:"0 4px 24px rgba(212,175,55,0.45)" }}>
-                  🔓 Unlock & Share · ₹49
+                    color:"#000", fontWeight:800, fontSize:17,
+                    boxShadow:"0 6px 28px rgba(255,165,0,0.45)" }}>
+                  Make {name} smile. Send now. ❤️
                 </motion.button>
-                <p style={{ fontSize:11, color:"rgba(255,255,255,0.22)", textAlign:"center",
-                  marginTop:10, lineHeight:1.5 }}>
-                  One-time payment · Share on WhatsApp & Instagram
-                </p>
+                <div style={{ marginTop:10, textAlign:"center" }}>
+                  <Link href="/send">
+                    <span style={{ fontSize:11, color:"rgba(212,175,55,0.3)", cursor:"pointer" }}>
+                      Make another card
+                    </span>
+                  </Link>
+                </div>
               </motion.div>
             ) : null}
           </motion.div>
@@ -1357,15 +1372,6 @@ function Scene6({
           </motion.div>
         )}
 
-        {/* Replay */}
-        <motion.button onClick={onReplay}
-          initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1 }}
-          style={{ marginTop:20, background:"none", border:"none",
-            color:"rgba(212,175,55,0.35)", fontSize:11, letterSpacing:2,
-            textTransform:"uppercase", cursor:"pointer", fontFamily:"Georgia,serif" }}
-          whileHover={{ color:"rgba(212,175,55,0.6)" }}>
-          ↺ Replay card
-        </motion.button>
       </div>
     </motion.div>
   );
