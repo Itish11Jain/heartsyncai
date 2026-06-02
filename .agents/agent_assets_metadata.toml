@@ -54,6 +54,24 @@ uri = "file://attached_assets/flowers/fern.png"
 type = "image"
 title = "fern leaf"
 
+[[generated]]
+id = "ZW6Kd1N9-PT3liLV5jbUP"
+uri = "file://attached_assets/flowers/wrap_cone.png"
+type = "image"
+title = "paper wrap cone"
+
+[[generated]]
+id = "FGIaaCi_NMtx2aFfIUp_C"
+uri = "file://attached_assets/flowers/delphinium_blue.png"
+type = "image"
+title = "blue delphinium spike"
+
+[[generated]]
+id = "9UUvToWzOf0Q0iK6ma52e"
+uri = "file://attached_assets/flowers/cosmos_pink.png"
+type = "image"
+title = "pink cosmos"
+
 [[outputs]]
 id = "fDmbJv3aewQm22JAKoiDp"
 uri = "file://google-apps-script/gmail-utr-forwarder.txt"
