@@ -573,6 +573,32 @@ function SendInner() {
   }
 
 
+  /** Resize + re-encode as JPEG 85% so uploads are 10-20× smaller than raw phone photos. */
+  function compressPhoto(file: File): Promise<File> {
+    return new Promise(resolve => {
+      const MAX_PX = 1200;
+      const img = new Image();
+      const objUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        const { naturalWidth: w, naturalHeight: h } = img;
+        const scale = Math.min(1, MAX_PX / Math.max(w, h));
+        const cw = Math.round(w * scale);
+        const ch = Math.round(h * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = cw;
+        canvas.height = ch;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, cw, ch);
+        canvas.toBlob(blob => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
+        }, "image/jpeg", 0.85);
+      };
+      img.onerror = () => { URL.revokeObjectURL(objUrl); resolve(file); };
+      img.src = objUrl;
+    });
+  }
+
   async function handlePhotoSelect(file: File) {
     if (photoUploading) return;
     setPhotoUploadError(null);
@@ -581,8 +607,9 @@ function SendInner() {
     setPhotoUploading(true);
     try {
       const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const compressed = await compressPhoto(file);
       const fd = new FormData();
-      fd.append("photo", file);
+      fd.append("photo", compressed);
       const res = await fetch(`${base}/api/upload/photo`, { method: "POST", body: fd });
       if (!res.ok) {
         const d = await res.json().catch(() => ({})) as { error?: string };
@@ -612,7 +639,7 @@ function SendInner() {
           bgRemoveInProgressRef.current = true;
           const sfd = new FormData();
           sfd.append("stickerId", stickerId);
-          sfd.append("photo", file);
+          sfd.append("photo", compressed);
           fetch(`${base}/api/upload/sticker`, { method: "POST", body: sfd })
             .then(sr => sr.ok ? sr.json() : null)
             .then((sd: { url?: string } | null) => {
