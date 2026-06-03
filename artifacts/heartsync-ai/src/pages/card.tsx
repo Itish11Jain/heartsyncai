@@ -501,6 +501,22 @@ function GoldenEnvelope({
           }}
         />
 
+        {/* Smooth inner paper — covers the upper fold creases that the flap
+            reveals when it opens, so the open envelope reads as clean stationery
+            instead of showing a central triangular "dent". Hidden behind the
+            closed flap, so the closed look is unchanged. */}
+        <div
+          style={{
+            position: "absolute", top: 0, left: 0, right: 0, height: "53%",
+            background: pal.body,
+            backgroundImage: isSorry ? `${paperGrain}, ${pal.body}` : undefined,
+            backgroundSize: isSorry ? "140px 140px, cover" : undefined,
+            backgroundBlendMode: isSorry ? "multiply, normal" : undefined,
+            boxShadow: "inset 0 8px 14px rgba(255,255,255,0.18), inset 0 -8px 14px rgba(0,0,0,0.06)",
+            pointerEvents: "none",
+          }}
+        />
+
         {/* Fold seam shadows (sorry only): soft dark lines along the diagonal
             creases + a contact shadow under the flap V, for believable depth. */}
         {isSorry && (
@@ -856,8 +872,9 @@ const Orb = memo(function Orb({
         userSelect: "none",
       }}
     >
-      {/* Empty glass orb — translucent gradient ring with a soft glow, no solid
-          fill. Gentle continuous float gives it a bit of life. */}
+      {/* Glass orb — see-through (no solid fill) but with curvature shading,
+          a specular highlight and rim light so it reads as a 3D crystal sphere.
+          Gentle continuous float gives it a bit of life. */}
       <motion.div
         animate={clicked ? { y: 0 } : { y: [-4, 4, -4] }}
         transition={
@@ -870,18 +887,46 @@ const Orb = memo(function Orb({
           height: "100%",
           borderRadius: "50%",
           background: clicked
-            ? "rgba(80,80,80,0.3)"
-            : "linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08))",
-          border: `2px solid ${clicked ? "rgba(100,100,100,0.3)" : "rgba(255,215,0,0.4)"}`,
+            ? "radial-gradient(circle at 32% 26%, rgba(200,200,200,0.4), rgba(120,120,120,0.22) 60%, rgba(80,80,80,0.18) 100%)"
+            : "radial-gradient(circle at 32% 26%, rgba(255,255,255,0.45) 0%, rgba(255,221,130,0.14) 38%, rgba(255,180,60,0.06) 70%, rgba(255,160,30,0.13) 100%)",
+          border: `1.5px solid ${clicked ? "rgba(140,140,140,0.4)" : "rgba(255,224,150,0.55)"}`,
           backdropFilter: "blur(8px)",
           boxShadow: clicked
-            ? "none"
-            : "0 8px 32px rgba(255,165,0,0.2), inset 0 1px 2px rgba(255,255,255,0.15)",
+            ? "0 6px 16px rgba(0,0,0,0.2), inset 0 4px 9px rgba(255,255,255,0.2), inset 0 -6px 12px rgba(0,0,0,0.22)"
+            : "0 10px 26px rgba(255,165,0,0.22), inset 0 6px 12px rgba(255,255,255,0.42), inset 0 -9px 16px rgba(170,105,0,0.28), inset 0 0 6px rgba(255,255,255,0.12)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "min(25px, 6.5vw)",
           position: "relative",
         }}
       >
+        {/* specular highlight (glossy reflection) */}
+        <div
+          style={{
+            position: "absolute",
+            top: "12%", left: "19%",
+            width: "34%", height: "26%",
+            borderRadius: "50%",
+            background: clicked
+              ? "radial-gradient(circle, rgba(255,255,255,0.5), rgba(255,255,255,0) 72%)"
+              : "radial-gradient(circle, rgba(255,255,255,0.92), rgba(255,255,255,0) 72%)",
+            filter: "blur(1px)",
+            pointerEvents: "none",
+          }}
+        />
+        {/* soft lower rim light for spherical volume */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "9%", left: "26%",
+            width: "48%", height: "20%",
+            borderRadius: "50%",
+            background: clicked
+              ? "radial-gradient(circle, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)"
+              : "radial-gradient(circle, rgba(255,236,180,0.4), rgba(255,236,180,0) 72%)",
+            filter: "blur(1.5px)",
+            pointerEvents: "none",
+          }}
+        />
         <span
           style={{
             display: "block",
