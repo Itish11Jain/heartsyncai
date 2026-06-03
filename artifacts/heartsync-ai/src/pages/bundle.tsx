@@ -48,12 +48,12 @@ const PHOTO = {
 // shows exactly what the recipient receives, looping continuously at 2× speed.
 // (Static public/*.html files never boot React in dev, so they froze on splash.)
 const PREVIEW_CARDS: PreviewCard[] = [
+  { id: "sorry",    label: "Sorry",    badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0814,#3d1a30)", file: "card",     query: "to=Riya&occasion=sorry&relation=partner",      loop: true,  cycleMs: 12000, pic: PHOTO.couple, photos: [PHOTO.couple, PHOTO.solo] },
+  { id: "birthday", label: "Birthday", badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#2a0810,#5e1a2e)", file: "birthday", query: "to=Riya&occasion=birthday&relation=friend",    loop: true,  cycleMs: 14000, pic: PHOTO.solo,   photos: [PHOTO.solo, PHOTO.friends, PHOTO.couple] },
   { id: "envelope", label: "Envelope", badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0a30,#3d1a5e)", file: "card",     query: "to=Riya&occasion=feel_good&relation=friend",   loop: true,  cycleMs: 12000, pic: PHOTO.solo,   photos: [PHOTO.solo, PHOTO.friends, PHOTO.couple] },
   { id: "cosmic",   label: "Cosmic",   badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04001a,#0d0034)", file: "cosmic",   query: "to=Riya&occasion=anniversary&relation=partner", loop: false, cycleMs: 9000,  pic: PHOTO.couple, photos: [PHOTO.couple, PHOTO.solo, PHOTO.friends] },
   { id: "crystal",  label: "Crystal",  badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04091a,#0a1e3d)", file: "crystal",  query: "to=Riya&occasion=feel_good&relation=friend",   loop: false, cycleMs: 7000,  pic: PHOTO.solo },
   { id: "vinyl",    label: "Vinyl",    badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#120a04,#2a1608)", file: "vinyl",    query: "to=Riya&occasion=thank_you&relation=friend",   loop: false, cycleMs: 8000,  pic: PHOTO.friends },
-  { id: "birthday", label: "Birthday", badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#2a0810,#5e1a2e)", file: "birthday", query: "to=Riya&occasion=birthday&relation=friend",    loop: true,  cycleMs: 14000, pic: PHOTO.solo,   photos: [PHOTO.solo, PHOTO.friends, PHOTO.couple] },
-  { id: "sorry",    label: "Sorry",    badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0814,#3d1a30)", file: "card",     query: "to=Riya&occasion=sorry&relation=partner",      loop: true,  cycleMs: 12000, pic: PHOTO.couple, photos: [PHOTO.couple, PHOTO.solo] },
 ];
 
 function buildPreviewUrl(card: PreviewCard) {
@@ -243,11 +243,11 @@ export default function BundlePage() {
           {/* ── Preview phase ── */}
           {phase === "info" && (
             <motion.div key="info" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div style={{ textAlign: "center", padding: "28px 0 20px" }}>
-                <div style={{ fontSize: 26, fontWeight: 900, color: "#FFD700", marginBottom: 6 }}>
+              <div style={{ textAlign: "center", padding: "14px 0 14px" }}>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "#FFD700", marginBottom: 4 }}>
                   2 Cards for ₹49
                 </div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
                   One payment · Any template · Any occasion
                 </div>
               </div>
@@ -294,12 +294,6 @@ export default function BundlePage() {
                         display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                       }}>
                         <span style={{ color: "#fff", fontWeight: 800, fontSize: 11 }}>{tpl.label}</span>
-                        <span style={{
-                          padding: "1px 7px", borderRadius: 99,
-                          background: tpl.badge === "FREE" ? "rgba(74,222,128,0.2)" : "rgba(255,215,0,0.16)",
-                          border: `1px solid ${tpl.badge === "FREE" ? "rgba(74,222,128,0.45)" : "rgba(255,215,0,0.4)"}`,
-                          fontSize: 8, fontWeight: 800, color: tpl.badgeColor, letterSpacing: "0.05em",
-                        }}>{tpl.badge}</span>
                       </div>
                     </div>
                   ))}
@@ -327,10 +321,23 @@ export default function BundlePage() {
                 </div>
               </div>
 
-              {/* Value summary */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { trackEvent({ event: "bundle_buy_clicked" }); setPhase("paying"); }}
+                style={{
+                  width: "100%", height: 58, borderRadius: 18,
+                  background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
+                  border: "none", color: "#000", fontWeight: 900, fontSize: 19,
+                  cursor: "pointer", boxShadow: "0 8px 32px rgba(255,165,0,0.45)",
+                }}
+              >
+                🔓 Get Bundle — ₹49
+              </motion.button>
+
+              {/* Value summary — below the CTA */}
               <div style={{
                 background: "rgba(255,215,0,0.05)", border: "1px solid rgba(255,215,0,0.12)",
-                borderRadius: 16, padding: "14px 18px", marginBottom: 20,
+                borderRadius: 16, padding: "14px 18px", marginTop: 16,
                 display: "flex", flexDirection: "column", gap: 8,
               }}>
                 {[
@@ -344,19 +351,6 @@ export default function BundlePage() {
                   </div>
                 ))}
               </div>
-
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => { trackEvent({ event: "bundle_buy_clicked" }); setPhase("paying"); }}
-                style={{
-                  width: "100%", height: 58, borderRadius: 18,
-                  background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
-                  border: "none", color: "#000", fontWeight: 900, fontSize: 19,
-                  cursor: "pointer", boxShadow: "0 8px 32px rgba(255,165,0,0.45)",
-                }}
-              >
-                🔓 Get Bundle — ₹49
-              </motion.button>
 
               <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 14 }}>
                 Pay via UPI · Instant unlock · No hidden charges
