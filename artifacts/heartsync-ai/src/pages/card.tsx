@@ -1636,6 +1636,7 @@ export default function Card() {
   const isRecipient = !isSender && !isPreview;
   const directShare = params.get("direct_share") === "1";
   const isAutoplay = params.get("autoplay") === "1";
+  const previewSpeed = Math.max(1, Number(params.get("speed")) || 1);
   const personalPictureUrl = (() => {
     const raw = params.get("personalpicture");
     if (!raw) return null;
@@ -1949,7 +1950,7 @@ export default function Card() {
   /* ── Autoplay mode: auto-advance all phases for the modal iframe preview ── */
   useEffect(() => {
     if (!isAutoplay || phase !== "envelope") return;
-    const t = setTimeout(handleUnlock, 1500);
+    const t = setTimeout(handleUnlock, 1500 / previewSpeed);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);
@@ -1969,11 +1970,11 @@ export default function Card() {
               if (isSorry) { setPhase("bouquet"); return; }
               const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
               setPhase(skipCollage ? "finale" : "collage");
-            }, 1200);
+            }, 1200 / previewSpeed);
           }
           return next;
         });
-      }, 800 + i * 900)
+      }, (800 + i * 900) / previewSpeed)
     );
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1985,7 +1986,7 @@ export default function Card() {
     const t = setTimeout(() => {
       const skipCollage = effectiveCollagePhotos.length === 0 && !voiceNoteUrl;
       setPhase(skipCollage ? "finale" : "collage");
-    }, 3000);
+    }, 3000 / previewSpeed);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);
@@ -1993,7 +1994,7 @@ export default function Card() {
   /* Autoplay: advance from collage → finale after showing the photos + voice note */
   useEffect(() => {
     if (!isAutoplay || phase !== "collage") return;
-    const t = setTimeout(() => setPhase("finale"), 3000);
+    const t = setTimeout(() => setPhase("finale"), 3000 / previewSpeed);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);
@@ -2007,7 +2008,7 @@ export default function Card() {
       setClickedOrbs(new Set());
       setActiveTooltip(null);
       setPhase("envelope");
-    }, 3500);
+    }, 3500 / previewSpeed);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoplay, phase]);

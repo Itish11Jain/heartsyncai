@@ -1456,6 +1456,7 @@ export default function BirthdayCard() {
   const isSender    = params.get("sender") === "1";
   const isPreview   = params.get("preview") === "1";
   const isAutoplay  = params.get("autoplay") === "1";
+  const previewSpeed = Math.max(1, Number(params.get("speed")) || 1);
   const isRecipient = !isSender;
 
   /* ── Background music — plays the actual "Happy Birthday to You" melody ── */
@@ -1583,7 +1584,7 @@ export default function BirthdayCard() {
   /* Autoplay: advance through all scenes and loop — used by the UnlockModal iframe preview */
   useEffect(() => {
     if (!isAutoplay) return;
-    const speed = isPreview ? 0.5 : 1;
+    const speed = (isPreview ? 0.5 : 1) / previewSpeed;
     const SCENE_DURATIONS: Record<number, number> = { 1: 5000*speed, 2: 6000*speed, 4: 5000*speed, 5: 6000*speed, 6: 5000*speed };
     const NEXT_SCENE: Record<number, 1|2|4|5|6> = { 1: 2, 2: 4, 4: 5, 5: 6, 6: 1 };
     const t = setTimeout(() => { setScene(NEXT_SCENE[scene]); }, SCENE_DURATIONS[scene] ?? 5000);

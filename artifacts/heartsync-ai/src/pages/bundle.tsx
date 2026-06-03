@@ -6,49 +6,39 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
-import { TemplatePreview } from "@/components/template-preview";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+const SPEED = 2; // preview playback multiplier (2× regular speed)
 
 const UPI_ID = "9706900714@pthdfc";
 const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncBundlePayment`;
 
 type PreviewCard = {
   id: "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday" | "sorry";
-  thumb: "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday";
   label: string;
   badge: "FREE" | "PREMIUM";
   badgeColor: string;
-  desc: string;
   bg: string;
   file: string;
   query: string;
+  loop: boolean;    // true = the card auto-loops itself; false = parent reloads it
+  cycleMs: number;  // real-time length of one full play (used to schedule reloads)
 };
 
-// Every card the buyer can preview live. Each opens the REAL template page
-// (public/*.html) inside the preview modal via buildPreviewUrl — so what they
-// see is exactly what the recipient will receive.
+// Every card the buyer can preview plays the REAL template page (public/*.html)
+// live inside its own tile via buildPreviewUrl — so the grid shows exactly what
+// the recipient receives, looping continuously at 2× speed.
 const PREVIEW_CARDS: PreviewCard[] = [
-  { id: "envelope", thumb: "envelope", label: "Envelope", badge: "FREE",    badgeColor: "#4ade80", desc: "Classic, heartfelt",  bg: "linear-gradient(145deg,#1a0a30,#3d1a5e)", file: "envelope.html", query: "to=Riya&occasion=feel_good&relation=friend" },
-  { id: "cosmic",   thumb: "cosmic",   label: "Cosmic",   badge: "PREMIUM", badgeColor: "#FFD700", desc: "Starry & magical",   bg: "linear-gradient(145deg,#04001a,#0d0034)", file: "cosmic.html",   query: "to=Riya&occasion=anniversary&relation=partner" },
-  { id: "crystal",  thumb: "crystal",  label: "Crystal",  badge: "PREMIUM", badgeColor: "#FFD700", desc: "Mystical & glowing", bg: "linear-gradient(145deg,#04091a,#0a1e3d)", file: "crystal.html",  query: "to=Riya&occasion=feel_good&relation=friend" },
-  { id: "vinyl",    thumb: "vinyl",    label: "Vinyl",    badge: "PREMIUM", badgeColor: "#FFD700", desc: "Warm & nostalgic",   bg: "linear-gradient(145deg,#120a04,#2a1608)", file: "vinyl.html",    query: "to=Riya&occasion=thank_you&relation=friend" },
-  { id: "birthday", thumb: "birthday", label: "Birthday", badge: "PREMIUM", badgeColor: "#FFD700", desc: "3D balloons & cake",  bg: "linear-gradient(145deg,#2a0810,#5e1a2e)", file: "birthday.html", query: "to=Riya&occasion=birthday&relation=friend" },
-  { id: "sorry",    thumb: "cosmic",   label: "Sorry",    badge: "FREE",    badgeColor: "#4ade80", desc: "Apology bouquet",    bg: "linear-gradient(145deg,#1a0814,#3d1a30)", file: "envelope.html", query: "to=Riya&occasion=sorry&relation=partner" },
+  { id: "envelope", label: "Envelope", badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0a30,#3d1a5e)", file: "envelope.html", query: "to=Riya&occasion=feel_good&relation=friend",   loop: true,  cycleMs: 12000 },
+  { id: "cosmic",   label: "Cosmic",   badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04001a,#0d0034)", file: "cosmic.html",   query: "to=Riya&occasion=anniversary&relation=partner", loop: false, cycleMs: 9000 },
+  { id: "crystal",  label: "Crystal",  badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04091a,#0a1e3d)", file: "crystal.html",  query: "to=Riya&occasion=feel_good&relation=friend",   loop: false, cycleMs: 7000 },
+  { id: "vinyl",    label: "Vinyl",    badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#120a04,#2a1608)", file: "vinyl.html",    query: "to=Riya&occasion=thank_you&relation=friend",   loop: false, cycleMs: 8000 },
+  { id: "birthday", label: "Birthday", badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#2a0810,#5e1a2e)", file: "birthday.html", query: "to=Riya&occasion=birthday&relation=friend",    loop: true,  cycleMs: 14000 },
+  { id: "sorry",    label: "Sorry",    badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0814,#3d1a30)", file: "envelope.html", query: "to=Riya&occasion=sorry&relation=partner",      loop: true,  cycleMs: 12000 },
 ];
 
 function buildPreviewUrl(card: PreviewCard) {
-  return `${BASE}/${card.file}?${card.query}&preview=1&autoplay=1`;
-}
-
-/** Mini thumbnail for the "Sorry" card (TemplatePreview has no sorry art). */
-function SorryThumb({ size }: { size: number }) {
-  return (
-    <div style={{ position: "relative", width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: "10%", borderRadius: "50%", background: "radial-gradient(circle at 50% 45%, rgba(255,120,170,0.5), rgba(180,40,90,0.14) 55%, transparent 76%)" }} />
-      <span style={{ fontSize: Math.round(size * 0.5), filter: "drop-shadow(0 2px 6px rgba(255,80,140,0.5))", animation: "hs-pulse 2.2s ease-in-out infinite" }}>💝</span>
-    </div>
-  );
+  return `${BASE}/${card.file}?${card.query}&preview=1&autoplay=1&speed=${SPEED}`;
 }
 
 const OCCASIONS = [
@@ -99,27 +89,19 @@ export default function BundlePage() {
     trackEvent({ event: "bundle_upi_copied" });
   }, []);
 
-  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-
-  const openPreview = useCallback((i: number) => {
-    setPreviewIdx(i);
-    setPreviewLoading(true);
-    trackEvent({ event: "bundle_template_preview_opened", template: PREVIEW_CARDS[i]!.id });
+  // Each non-self-looping card schedules its own reload after one full play so
+  // every tile keeps replaying continuously. Bumping the nonce remounts the iframe.
+  const [nonces, setNonces] = useState<Record<string, number>>({});
+  const reloadTimersRef = useRef<number[]>([]);
+  const reloadCard = useCallback((id: string) => {
+    setNonces((n) => ({ ...n, [id]: (n[id] ?? 0) + 1 }));
   }, []);
-  const goPreview = useCallback((i: number) => { setPreviewIdx((p) => { if (p === i) return p; setPreviewLoading(true); return i; }); }, []);
-  const closePreview = useCallback(() => setPreviewIdx(null), []);
-  const nextPreview = useCallback(() => { setPreviewIdx((p) => (p === null ? p : (p + 1) % PREVIEW_CARDS.length)); setPreviewLoading(true); }, []);
-  const prevPreview = useCallback(() => { setPreviewIdx((p) => (p === null ? p : (p - 1 + PREVIEW_CARDS.length) % PREVIEW_CARDS.length)); setPreviewLoading(true); }, []);
-
-  useEffect(() => {
-    if (previewIdx === null) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPreviewIdx(null); };
-    window.addEventListener("keydown", onKey);
-    return () => { document.body.style.overflow = prevOverflow; window.removeEventListener("keydown", onKey); };
-  }, [previewIdx]);
+  const handleTileLoad = useCallback((card: PreviewCard) => {
+    if (card.loop) return;
+    const t = window.setTimeout(() => reloadCard(card.id), card.cycleMs);
+    reloadTimersRef.current.push(t);
+  }, [reloadCard]);
+  useEffect(() => () => { reloadTimersRef.current.forEach(clearTimeout); }, []);
 
   function activateBundle(token: string, fromUtr: boolean) {
     try { localStorage.setItem("hs_bundle_token", token); } catch { /* ignore */ }
@@ -197,8 +179,6 @@ export default function BundlePage() {
     trackEvent({ event: "bundle_dashboard_shared_wa" });
   }
 
-  const active = previewIdx !== null ? PREVIEW_CARDS[previewIdx]! : null;
-
   return (
     <div style={{
       minHeight: "100dvh",
@@ -232,70 +212,49 @@ export default function BundlePage() {
                 </div>
               </div>
 
-              {/* Template carousel — tap any card to open the real template preview */}
+              {/* Live template grid — every card plays its full preview, looping at 2× */}
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase", marginBottom: 4 }}>
-                  Tap a card to preview it live
+                  Watch every card come alive
                 </div>
                 <div style={{ fontSize: 12, color: "rgba(255,215,0,0.6)", marginBottom: 12 }}>
-                  👆 See exactly what they'll receive
+                  ✨ See exactly what they'll receive — playing live
                 </div>
-                <div style={{
-                  display: "flex", gap: 12, overflowX: "auto",
-                  paddingBottom: 6, scrollbarWidth: "none",
-                  WebkitOverflowScrolling: "touch",
-                }}>
-                  {PREVIEW_CARDS.map((tpl, i) => (
-                    <motion.div
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {PREVIEW_CARDS.map((tpl) => (
+                    <div
                       key={tpl.id}
-                      initial={{ opacity: 0, scale: 0.88 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.07 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => openPreview(i)}
-                      role="button"
-                      aria-label={`Preview ${tpl.label} card`}
                       style={{
-                        position: "relative",
-                        flexShrink: 0, width: 136, borderRadius: 18,
-                        background: tpl.bg,
-                        padding: "16px 12px 12px",
+                        position: "relative", aspectRatio: "9 / 19",
+                        borderRadius: 14, overflow: "hidden", background: tpl.bg,
                         border: "1px solid rgba(255,255,255,0.1)",
-                        boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-                        display: "flex", flexDirection: "column", alignItems: "center",
-                        cursor: "pointer",
+                        boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
                       }}
                     >
-                      {/* Live animated template preview */}
-                      <div style={{ position: "relative", marginBottom: 10, width: 88, height: 88, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {tpl.id === "sorry"
-                          ? <SorryThumb size={80} />
-                          : <TemplatePreview id={tpl.thumb} size={tpl.thumb === "envelope" ? 88 : 80} />}
-                        {/* Play affordance */}
-                        <div style={{
-                          position: "absolute", bottom: -2, right: -2,
-                          width: 26, height: 26, borderRadius: "50%",
-                          background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.25)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 10, color: "#fff", paddingLeft: 2,
-                        }}>▶</div>
-                      </div>
-                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 13, marginBottom: 3, textAlign: "center" }}>
-                        {tpl.label}
-                      </div>
-                      <div style={{ textAlign: "center", fontSize: 10, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>
-                        {tpl.desc}
-                      </div>
+                      <iframe
+                        key={`${tpl.id}-${nonces[tpl.id] ?? 0}`}
+                        src={buildPreviewUrl(tpl)}
+                        title={`${tpl.label} live preview`}
+                        loading="lazy"
+                        scrolling="no"
+                        onLoad={() => handleTileLoad(tpl)}
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", pointerEvents: "none", display: "block" }}
+                      />
                       <div style={{
-                        padding: "2px 8px", borderRadius: 99,
-                        background: tpl.badge === "FREE" ? "rgba(74,222,128,0.18)" : "rgba(255,215,0,0.15)",
-                        border: `1px solid ${tpl.badge === "FREE" ? "rgba(74,222,128,0.4)" : "rgba(255,215,0,0.35)"}`,
-                        fontSize: 9, fontWeight: 800, color: tpl.badgeColor,
-                        letterSpacing: "0.06em",
+                        position: "absolute", left: 0, right: 0, bottom: 0,
+                        padding: "16px 4px 6px", pointerEvents: "none",
+                        background: "linear-gradient(to top, rgba(0,0,0,0.88), transparent)",
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                       }}>
-                        {tpl.badge}
+                        <span style={{ color: "#fff", fontWeight: 800, fontSize: 11 }}>{tpl.label}</span>
+                        <span style={{
+                          padding: "1px 7px", borderRadius: 99,
+                          background: tpl.badge === "FREE" ? "rgba(74,222,128,0.2)" : "rgba(255,215,0,0.16)",
+                          border: `1px solid ${tpl.badge === "FREE" ? "rgba(74,222,128,0.45)" : "rgba(255,215,0,0.4)"}`,
+                          fontSize: 8, fontWeight: 800, color: tpl.badgeColor, letterSpacing: "0.05em",
+                        }}>{tpl.badge}</span>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -538,76 +497,6 @@ export default function BundlePage() {
 
         </AnimatePresence>
       </div>
-
-      {/* ── Full-screen live template preview modal ── */}
-      <AnimatePresence>
-        {previewIdx !== null && active && (
-          <motion.div
-            key="tpl-preview"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closePreview}
-            style={{
-              position: "fixed", inset: 0, zIndex: 1000,
-              background: "rgba(4,0,12,0.95)", backdropFilter: "blur(8px)",
-              display: "flex", flexDirection: "column",
-            }}
-          >
-            {/* Top bar */}
-            <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 480, margin: "0 auto", padding: "14px 16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>{active.label}</span>
-                <span style={{
-                  padding: "2px 8px", borderRadius: 99,
-                  background: active.badge === "FREE" ? "rgba(74,222,128,0.18)" : "rgba(255,215,0,0.15)",
-                  border: `1px solid ${active.badge === "FREE" ? "rgba(74,222,128,0.4)" : "rgba(255,215,0,0.35)"}`,
-                  fontSize: 9, fontWeight: 800, color: active.badgeColor, letterSpacing: "0.06em",
-                }}>{active.badge}</span>
-              </div>
-              <button onClick={closePreview} aria-label="Close preview" style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>✕</button>
-            </div>
-
-            {/* Phone frame with the real card */}
-            <div onClick={(e) => e.stopPropagation()} style={{ flex: 1, minHeight: 0, width: "100%", maxWidth: 440, margin: "0 auto", padding: "0 12px", display: "flex", flexDirection: "column" }}>
-              <div style={{ position: "relative", flex: 1, borderRadius: 24, overflow: "hidden", border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 16px 50px rgba(0,0,0,0.6)", background: "#04000c" }}>
-                {previewLoading && (
-                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "rgba(255,255,255,0.5)", fontSize: 13, zIndex: 2 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", border: "3px solid rgba(255,215,0,0.25)", borderTopColor: "#FFD700", animation: "hs-spin 0.8s linear infinite" }} />
-                    Loading preview…
-                  </div>
-                )}
-                <iframe
-                  key={previewIdx}
-                  src={buildPreviewUrl(active)}
-                  title={`${active.label} card preview`}
-                  onLoad={() => setPreviewLoading(false)}
-                  style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                />
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 440, margin: "0 auto", padding: "12px 14px 18px", display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                <button onClick={prevPreview} aria-label="Previous card" style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 15, cursor: "pointer", flexShrink: 0 }}>◀</button>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {PREVIEW_CARDS.map((c, i) => (
-                    <button key={c.id} onClick={() => goPreview(i)} aria-label={c.label} style={{
-                      width: i === previewIdx ? 22 : 8, height: 8, borderRadius: 99, border: "none", cursor: "pointer", padding: 0,
-                      background: i === previewIdx ? "#FFD700" : "rgba(255,255,255,0.25)", transition: "all 0.2s",
-                    }} />
-                  ))}
-                </div>
-                <button onClick={nextPreview} aria-label="Next card" style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 15, cursor: "pointer", flexShrink: 0 }}>▶</button>
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textAlign: "center" }}>
-                ✨ Exactly what they'll receive · {PREVIEW_CARDS.length} cards to explore
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

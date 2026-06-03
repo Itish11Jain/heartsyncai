@@ -405,6 +405,7 @@ export default function CosmicCard() {
   const isSender = params.get("sender") === "1";
   const isAutoplay = params.get("autoplay") === "1";
   const isPreview = params.get("preview") === "1";
+  const previewSpeed = Math.max(1, Number(params.get("speed")) || 1);
   const isRecipient = !isSender && !isPreview;
 
   /* Parse multi-photo URLs — supports "photos" (multi) or legacy "personalpicture" */
@@ -676,7 +677,7 @@ export default function CosmicCard() {
         setTimeout(() => {
           setActiveMemory(null);
           triggerSupernova();
-        }, 2500);
+        }, 2500 / previewSpeed);
       }
     }
   }
@@ -691,11 +692,11 @@ export default function CosmicCard() {
     // hook → spawning → tapping
     timers.push(setTimeout(() => {
       setPhase("spawning");
-      setTimeout(() => setPhase("tapping"), 900);
-    }, 1500));
+      setTimeout(() => setPhase("tapping"), 900 / previewSpeed);
+    }, 1500 / previewSpeed));
     // click each of the 4 stars in turn, 2.5 s apart
     [0, 1, 2, 3].forEach((starId, i) => {
-      timers.push(setTimeout(() => handleStarClickRef.current(starId), 2600 + i * 2600));
+      timers.push(setTimeout(() => handleStarClickRef.current(starId), (2600 + i * 2600) / previewSpeed));
     });
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps

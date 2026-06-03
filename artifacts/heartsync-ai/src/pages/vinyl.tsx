@@ -132,6 +132,8 @@ export default function VinylCard() {
   })();
   const isSender = params.get("sender") === "1";
   const isPreview = params.get("preview") === "1";
+  const isAutoplay = params.get("autoplay") === "1";
+  const previewSpeed = Math.max(1, Number(params.get("speed")) || 1);
   const personalPictureUrl = (() => {
     const raw = params.get("personalpicture");
     if (!raw) return null;
@@ -143,7 +145,7 @@ export default function VinylCard() {
   const finalMessage = customMsg ?? tpl.final_message;
 
   /* ── state ── */
-  const [phase, setPhase] = useState<VinylPhase>(isPreview ? "sleeve" : "hook");
+  const [phase, setPhase] = useState<VinylPhase>(isAutoplay ? "hook" : (isPreview ? "sleeve" : "hook"));
   const [spinning, setSpinning] = useState(false);
   const [hyperSpin, setHyperSpin] = useState(false);
   const [tonearmDown, setTonearmDown] = useState(false);
@@ -151,7 +153,7 @@ export default function VinylCard() {
   const [tooltip, setTooltip] = useState<{ emoji: string; text: string } | null>(null);
   const [eqIntensity, setEqIntensity] = useState(1);
   const [playerExiting, setPlayerExiting] = useState(false);
-  const [sleeveVisible, setSleeveVisible] = useState(isPreview);
+  const [sleeveVisible, setSleeveVisible] = useState(isPreview && !isAutoplay);
   const [sleeveReady, setSleeveReady] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
@@ -181,7 +183,7 @@ export default function VinylCard() {
   const dustRef = useRef<DustDot[]>([]);
   const canvasModeRef = useRef<"ambient" | "golden">("ambient");
   const rafRef = useRef<number>(0);
-  const phaseRef = useRef<VinylPhase>(isPreview ? "sleeve" : "hook");
+  const phaseRef = useRef<VinylPhase>(isAutoplay ? "hook" : (isPreview ? "sleeve" : "hook"));
   const eqIntensityRef = useRef(1);
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eqRingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -210,6 +212,21 @@ export default function VinylCard() {
     const t = setTimeout(() => setSleeveReady(true), 700);
     return () => clearTimeout(t);
   }, [phase]);
+
+  /* ── Autoplay (bundle grid preview): hook → playing → sleeve; parent reloads to loop ── */
+  useEffect(() => {
+    if (!isAutoplay) return undefined;
+    if (phase === "hook") {
+      const t = setTimeout(() => dropNeedle(), 1200 / previewSpeed);
+      return () => clearTimeout(t);
+    }
+    if (phase === "playing") {
+      const t = setTimeout(() => triggerSleeve(), 3200 / previewSpeed);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase, previewSpeed]);
 
   /* ── clear native splash ── */
   useEffect(() => {
@@ -322,7 +339,7 @@ export default function VinylCard() {
     setTimeout(() => {
       setSpinning(true);
       setPhase("playing");
-    }, 950);
+    }, 950 / previewSpeed);
   }
 
   /* ── tap note ── */
@@ -376,9 +393,9 @@ export default function VinylCard() {
         setTimeout(() => {
           setSleeveVisible(true);
           vinyl.sleeveReveal();
-        }, 300);
-      }, 800);
-    }, 500);
+        }, 300 / previewSpeed);
+      }, 800 / previewSpeed);
+    }, 500 / previewSpeed);
   }
 
   /* ── share ── */

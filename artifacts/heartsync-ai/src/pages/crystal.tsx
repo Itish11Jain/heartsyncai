@@ -49,6 +49,8 @@ export default function CrystalCard() {
   const relation      = params.get("relation") || "friend";
   const likesParam    = params.get("likes")    || "";
   const isPreview     = params.get("preview")  === "1";
+  const isAutoplay    = params.get("autoplay") === "1";
+  const previewSpeed  = Math.max(1, Number(params.get("speed")) || 1);
   const isSender      = params.get("sender")   === "1";
   const personalPictureUrl = (() => {
     const raw = params.get("personalpicture");
@@ -150,6 +152,19 @@ export default function CrystalCard() {
     const t = setTimeout(() => advancePhase("visions"), 700);
     return () => clearTimeout(t);
   }, [phase]);
+
+  /* ── Autoplay (bundle grid preview): visions → revelation; parent reloads to loop ── */
+  useEffect(() => {
+    if (!isAutoplay || phase !== "visions") return;
+    let inner: ReturnType<typeof setTimeout>;
+    const t = setTimeout(() => {
+      setOrbsExiting(true);
+      setBallExiting(true);
+      inner = setTimeout(() => advancePhase("revelation"), 700 / previewSpeed);
+    }, 3200 / previewSpeed);
+    return () => { clearTimeout(t); clearTimeout(inner); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoplay, phase, previewSpeed]);
 
   /* ── Ball bounds ── */
   useEffect(() => {
