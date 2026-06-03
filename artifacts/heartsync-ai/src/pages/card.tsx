@@ -454,7 +454,7 @@ function GoldenEnvelope({
         perspective: 800,
         filter: isSorry
           ? "drop-shadow(0 22px 36px rgba(90,52,55,0.4)) drop-shadow(0 8px 16px rgba(90,52,55,0.24))"
-          : "drop-shadow(0 24px 48px rgba(255,165,0,0.35)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
+          : "drop-shadow(0 30px 52px rgba(120,75,0,0.5)) drop-shadow(0 12px 22px rgba(120,80,0,0.42)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
       }}
     >
       {/* Continuous gentle 3D float (sorry template only) — gives the envelope
@@ -485,7 +485,7 @@ function GoldenEnvelope({
           background: pal.body,
           boxShadow: isSorry
             ? "inset 0 2px 10px rgba(255,255,255,0.4), inset 0 -3px 12px rgba(120,70,55,0.22)"
-            : "inset 0 2px 9px rgba(255,255,255,0.32), inset 0 -3px 11px rgba(120,80,0,0.22)",
+            : "inset 0 3px 12px rgba(255,255,255,0.42), inset 0 -6px 16px rgba(90,55,0,0.32), inset -5px 0 14px rgba(90,55,0,0.18)",
           overflow: "hidden",
         }}
       >
@@ -495,8 +495,9 @@ function GoldenEnvelope({
         <div
           style={{
             position: "absolute", inset: 0,
-            background:
-              "radial-gradient(130% 80% at 50% -12%, rgba(255,255,255,0.22), transparent 58%), radial-gradient(140% 60% at 50% 122%, rgba(0,0,0,0.16), transparent 62%)",
+            background: isSorry
+              ? "radial-gradient(130% 80% at 50% -12%, rgba(255,255,255,0.22), transparent 58%), radial-gradient(140% 60% at 50% 122%, rgba(0,0,0,0.16), transparent 62%)"
+              : "radial-gradient(120% 75% at 38% -10%, rgba(255,255,255,0.5), transparent 52%), radial-gradient(150% 70% at 50% 128%, rgba(90,55,0,0.42), transparent 60%), linear-gradient(105deg, rgba(255,255,255,0.18) 0%, transparent 26%, transparent 72%, rgba(80,50,0,0.34) 100%)",
             pointerEvents: "none",
           }}
         />
@@ -679,10 +680,10 @@ function GoldenEnvelope({
               clipPath: "polygon(0 0, 100% 0, 50% 88%)",
               borderRadius: "10px 10px 0 0",
               backfaceVisibility: "hidden",
-              boxShadow: isSorry ? "inset 0 -2px 10px rgba(120,70,55,0.16)" : "inset 0 -2px 8px rgba(0,0,0,0.1)",
+              boxShadow: isSorry ? "inset 0 -2px 10px rgba(120,70,55,0.16)" : "inset 0 3px 7px rgba(255,255,255,0.3), inset 0 -4px 12px rgba(90,55,0,0.3)",
               filter: isSorry
                 ? "drop-shadow(0 6px 5px rgba(120,70,55,0.3))"
-                : "drop-shadow(0 6px 5px rgba(120,80,0,0.34))",
+                : "drop-shadow(0 11px 9px rgba(90,55,0,0.5))",
             }}
           />
           {/* Inside of flap (lighter) — same handmade paper texture as the body */}
