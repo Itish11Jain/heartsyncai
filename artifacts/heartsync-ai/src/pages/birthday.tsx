@@ -1451,8 +1451,8 @@ export default function BirthdayCard() {
   const occasion    = params.get("occasion") || "birthday";
   const msgRaw      = params.get("msg");
   const finalMessage = msgRaw
-    ? decodeMsg(msgRaw) || "Wishing you the most magical birthday! May every moment be filled with joy and love. 🎂✨"
-    : "Wishing you the most magical birthday! May every moment be filled with joy and love. 🎂✨";
+    ? decodeMsg(msgRaw) || "Happy Birthday! I hope this year brings you every bit of the joy, love, and magic you so easily give to everyone around you — today, the whole world should stop and celebrate you. 🎂✨"
+    : "Happy Birthday! I hope this year brings you every bit of the joy, love, and magic you so easily give to everyone around you — today, the whole world should stop and celebrate you. 🎂✨";
   const isSender    = params.get("sender") === "1";
   const isPreview   = params.get("preview") === "1";
   const isAutoplay  = params.get("autoplay") === "1";

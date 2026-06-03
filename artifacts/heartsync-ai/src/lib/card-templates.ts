@@ -22,7 +22,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "💡", text: "Top-tier advice and brilliant ideas." },
         { emoji: "🔥", text: "Bringing the best energy to the room." },
       ],
-      final_message: "Thank you for being an amazing friend. I truly appreciate you!",
+      final_message: "Thank you for being the kind of friend most people only wish for. You show up, you listen, and you make life lighter just by being in it — and I don't say it enough, but I'm so grateful for you.",
     },
     partner: {
       title_prefix: "To my favorite person",
@@ -32,7 +32,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🫂", text: "My ultimate safe space." },
         { emoji: "✨", text: "You are literal magic." },
       ],
-      final_message: "Thank you for everything you do. I'm so lucky to have you.",
+      final_message: "Thank you for all the little things you do that you think go unnoticed — they don't. You make ordinary days feel like something, and loving you is the easiest, luckiest part of my life.",
     },
     spouse: {
       title_prefix: "To my everything",
@@ -42,7 +42,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🏡", text: "Home is wherever you are." },
         { emoji: "💫", text: "You make life extraordinary." },
       ],
-      final_message: "Thank you for choosing me every single day. I love you deeply.",
+      final_message: "Thank you for choosing me on the good days and the hard ones, again and again. Building this life with you is my greatest joy, and I hope you feel just how deeply and completely you are loved.",
     },
     date: {
       title_prefix: "To someone special",
@@ -52,7 +52,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🦋", text: "You give me the best butterflies." },
         { emoji: "🎯", text: "I'm so glad our paths crossed." },
       ],
-      final_message: "Thank you for a genuinely amazing time. I can't stop smiling.",
+      final_message: "Thank you for a time I genuinely can't stop thinking about. You made everything feel easy and real, and I'm so glad our paths crossed — here's to many more moments just like it.",
     },
   },
   birthday: {
@@ -64,7 +64,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🎁", text: "You deserve the absolute best." },
         { emoji: "🥂", text: "Cheers to another amazing year!" },
       ],
-      final_message: "Happy Birthday! Wishing you the most incredible year ahead!",
+      final_message: "Happy Birthday to someone who makes the whole world brighter just by being in it. I hope this year quietly gives you everything you've been hoping for — you deserve all of it and so much more.",
     },
     partner: {
       title_prefix: "Happy Birthday to my love",
@@ -74,7 +74,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🌹", text: "My heart is yours today and always." },
         { emoji: "🎊", text: "This year is going to be your best one yet." },
       ],
-      final_message: "Happy Birthday, my love! I'm so grateful for every moment with you.",
+      final_message: "Happy Birthday, my love. Getting to celebrate you is my favourite thing in the world, and I promise to spend this year — and every one after — making sure you feel as cherished as you make me feel.",
     },
     spouse: {
       title_prefix: "To my partner in everything",
@@ -84,7 +84,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🥳", text: "Today is all about you, babe." },
         { emoji: "✨", text: "You light up every room you walk into." },
       ],
-      final_message: "Happy Birthday! I fall more in love with you every single day.",
+      final_message: "Happy Birthday to the person who feels like home. Every single year beside you only makes me love you more, and I can't wait to keep building this beautiful life together. Today is all about you.",
     },
     date: {
       title_prefix: "Celebrating you today",
@@ -94,7 +94,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🎂", text: "Make a wish — you've earned it." },
         { emoji: "😊", text: "Wishing you all the good things." },
       ],
-      final_message: "Happy Birthday! Hope today is as wonderful as you are.",
+      final_message: "Happy Birthday! I hope today holds every bit of the warmth and joy you bring to everyone around you. You're someone genuinely special, and I'm so happy I get to be the one wishing you the world.",
     },
   },
   sorry: {
@@ -148,7 +148,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🌅", text: "So many beautiful memories made." },
         { emoji: "💫", text: "And so many more to come." },
       ],
-      final_message: "Happy Anniversary, love. Every year with you is my favourite one yet.",
+      final_message: "Happy Anniversary, love. Every year with you is somehow my favourite yet — and through all of it, choosing you has never once felt like anything but the best decision of my life. Here's to us.",
     },
     spouse: {
       title_prefix: "To my forever person",
@@ -158,7 +158,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "❤️", text: "My love for you only grows deeper." },
         { emoji: "🕯️", text: "Here's to forever and beyond." },
       ],
-      final_message: "Happy Anniversary, my love. Thank you for being my home, my adventure, my everything.",
+      final_message: "Happy Anniversary, my love. You are my home, my adventure, and my favourite person to do absolutely nothing with. Thank you for a love that keeps growing — I'd choose this life with you a thousand times over.",
     },
     friend: {
       title_prefix: "To my ride-or-die",
@@ -168,7 +168,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "💛", text: "Our friendship is the real deal." },
         { emoji: "🥳", text: "Cheers to us!" },
       ],
-      final_message: "Happy Friendversary! Here's to all the years ahead. So grateful for you.",
+      final_message: "Happy Friendversary! Through every season and every chapter, you've stayed — and that means more than you'll ever know. So grateful for all the years behind us and every single one still ahead. To us.",
     },
     date: {
       title_prefix: "To someone unforgettable",
@@ -178,7 +178,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "💌", text: "I still can't believe how lucky I am." },
         { emoji: "🥂", text: "Here's to many more." },
       ],
-      final_message: "Happy Anniversary! You're the best part of every day. Here's to us.",
+      final_message: "Happy Anniversary! You've quietly become the best part of my every day, and I still can't believe how lucky I got. Here's to us, and to all the moments we haven't even lived yet.",
     },
   },
   feel_good: {
@@ -190,7 +190,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🌻", text: "The world is better with you in it." },
         { emoji: "✨", text: "Sending you all the good vibes." },
       ],
-      final_message: "Just a reminder that you're incredible. Keep going — you've got this!",
+      final_message: "Just a reminder that you're stronger and far more loved than you give yourself credit for. Whatever today looks like, please don't forget how much you matter — I'm always in your corner.",
     },
     partner: {
       title_prefix: "To my sunshine",
@@ -200,7 +200,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🫂", text: "I'm here for you, always." },
         { emoji: "🌟", text: "You deserve all the good things." },
       ],
-      final_message: "I just want you to know — you're doing amazing. I'm so proud of you.",
+      final_message: "I just want you to know I see everything you do, even the hard, invisible parts. You're doing so much better than you think, and I'm endlessly proud of you. I've got you — always.",
     },
     spouse: {
       title_prefix: "To my person",
@@ -210,7 +210,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🌙", text: "I love who we are together." },
         { emoji: "✨", text: "You are extraordinary." },
       ],
-      final_message: "I just wanted to remind you how much you matter. I love you so much.",
+      final_message: "On the days you feel like too much or not enough, please remember you are exactly enough for me, and always have been. You matter more than I could ever put into words. I love you so much.",
     },
     date: {
       title_prefix: "For someone I think about",
@@ -220,7 +220,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🌸", text: "Just a little something to make you smile." },
         { emoji: "💫", text: "You deserve all good things." },
       ],
-      final_message: "Just sending some good vibes your way. You deserve to feel amazing today!",
+      final_message: "Just a little reminder that you're someone really special, and the world is a softer place with you in it. I hope today is kind to you — you deserve every good thing coming your way.",
     },
   },
   congratulations: {
@@ -232,7 +232,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🥂", text: "Time to celebrate — big time." },
         { emoji: "🔥", text: "Honestly? Not even surprised." },
       ],
-      final_message: "Congratulations!! I'm SO proud of you. You worked hard for this and you deserve every bit of it!",
+      final_message: "Congratulations!! I am SO proud of you — and honestly, not even a little surprised. I saw how hard you worked for this when no one was watching, and you've earned every single bit of it. Celebrate big.",
     },
     partner: {
       title_prefix: "To the most capable person I know",
@@ -242,7 +242,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🎊", text: "This is just the beginning." },
         { emoji: "💖", text: "So incredibly proud of you." },
       ],
-      final_message: "Congratulations, love! Watching you achieve your dreams is the most beautiful thing. So proud!",
+      final_message: "Congratulations, my love! Getting to watch you chase your dreams and actually catch them is the most beautiful thing. I'm so proud of you, and I'll be cheering the loudest from the front row, always.",
     },
     spouse: {
       title_prefix: "My person — what a star!",
@@ -252,7 +252,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🎉", text: "Today is YOUR day." },
         { emoji: "❤️", text: "I'm your biggest fan, always." },
       ],
-      final_message: "Congratulations! You deserve every celebration today. I'm so proud to be by your side.",
+      final_message: "Congratulations! I've seen the early mornings, the quiet doubt, and the determination behind this — and you deserve every second of today. I'm endlessly proud to stand beside you. Let's celebrate you.",
     },
     date: {
       title_prefix: "Celebrating you!",
@@ -262,7 +262,7 @@ const TEMPLATES: Record<string, Record<string, CardTemplate>> = {
         { emoji: "🥂", text: "A proper celebration is in order." },
         { emoji: "✨", text: "Genuinely happy for you." },
       ],
-      final_message: "Congratulations! This is amazing news. You should be so proud of yourself!",
+      final_message: "Congratulations! This is such wonderful news, and honestly, no one deserves it more. I hope you let yourself feel proud today — you worked for this, and it shows. So genuinely happy for you.",
     },
   },
 };
@@ -285,7 +285,7 @@ export function getFallbackTemplate(occasion: string): CardTemplate {
       { emoji: "🌟", text: "The world is better with you in it." },
       { emoji: "🎉", text: "Here's to you!" },
     ],
-    final_message: "Wishing you all the happiness in the world.",
+    final_message: "Wishing you all the happiness in the world — and a little reminder of just how much you truly matter.",
   };
 }
 
@@ -329,7 +329,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎉", text: "Celebrating us. Always!" },
         { emoji: "🪐", text: "May the universe always favor you." },
       ],
-      final_message: "Thank you for this thoughtful surprise. My universe is better with you in it!",
+      final_message: "Of all the stars in the sky, the universe was kind enough to put you in my orbit. Thank you for this — my whole world is brighter with you in it, and I hope you always know how much you mean to me.",
     },
     partner: {
       hook_title: "✨ A Universe of Gratitude ✨",
@@ -340,7 +340,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎉", text: "Celebrating us. Always!" },
         { emoji: "🪐", text: "May the universe always favor you." },
       ],
-      final_message: "Thank you for this thoughtful surprise. My universe is better with you in it!",
+      final_message: "In a universe this vast, finding you feels like the rarest kind of luck. Thank you for every little thing you do — loving you is the brightest constant in my sky, and I'm endlessly grateful for you.",
     },
     spouse: {
       hook_title: "✨ A Universe of Gratitude ✨",
@@ -351,7 +351,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎉", text: "Celebrating us. Always!" },
         { emoji: "🪐", text: "May the universe always favor you." },
       ],
-      final_message: "Thank you for this thoughtful surprise. My universe is better with you in it!",
+      final_message: "Across this whole endless universe, there's nowhere I'd rather be than right beside you. Thank you for choosing me, again and again — every day is brighter because you're in it. I love you more than words.",
     },
     date: {
       hook_title: "✨ A Universe of Gratitude ✨",
@@ -362,7 +362,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎉", text: "Celebrating us. Always!" },
         { emoji: "🪐", text: "May the universe always favor you." },
       ],
-      final_message: "Thank you for this thoughtful surprise. My universe is better with you in it!",
+      final_message: "Some people feel like a whole galaxy the moment you meet them — you're one of them. Thank you for this; my universe is undeniably better with you in it, and I can't wait to see where the stars take us.",
     },
   },
   birthday: {
@@ -375,7 +375,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎁", text: "You deserve the absolute best." },
         { emoji: "🥂", text: "Cheers to another amazing year!" },
       ],
-      final_message: "Happy Birthday! Wishing you the most incredible year ahead!",
+      final_message: "Happy Birthday, you absolute star. Another trip around the sun, and the universe is still so lucky to hold your light. Here's to a year as bright and boundless as you are — now go out and shine.",
     },
     partner: {
       hook_title: "✨ A Stellar Birthday ✨",
@@ -386,7 +386,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🍰", text: "Even sweeter than the cake." },
         { emoji: "🌟", text: "My shining star today and always." },
       ],
-      final_message: "Happy Birthday, my love! I love celebrating you today and every single day.",
+      final_message: "Happy Birthday, my love. You're the centre of my whole universe, and getting to celebrate you today is my favourite kind of magic. I'll keep choosing you across every lifetime and every star.",
     },
     spouse: {
       hook_title: "✨ A Cosmic Celebration ✨",
@@ -397,7 +397,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🌹", text: "You grow more beautiful every year." },
         { emoji: "🌟", text: "My constant star in this galaxy." },
       ],
-      final_message: "Happy Birthday, my love. Every year with you is the best year yet.",
+      final_message: "Happy Birthday, my love. Every year with you is the best one yet — as if the whole universe keeps conspiring to make our story brighter. I'm so grateful to orbit this life right beside you.",
     },
     date: {
       hook_title: "✨ A Stellar Day for a Stellar Person ✨",
@@ -408,7 +408,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "✨", text: "You light up every room you're in." },
         { emoji: "🥂", text: "Here's to you and this incredible year!" },
       ],
-      final_message: "Happy Birthday! Wishing you a day as wonderful as you are.",
+      final_message: "Happy Birthday! You light up every room like you're made of stardust — because, honestly, I think you are. I hope today is as wonderful and radiant as you. Here's to your brightest year yet.",
     },
   },
   anniversary: {
@@ -421,7 +421,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎉", text: "Years of memories and counting." },
         { emoji: "💛", text: "Here's to many more adventures." },
       ],
-      final_message: "Happy Anniversary! So grateful our friendship has stood the test of time.",
+      final_message: "Happy Anniversary to a friendship that's outlasted more trips around the sun than I can count. Through every season, you've stayed — and I'm so grateful the universe wrote our stories side by side. Here's to many more.",
     },
     partner: {
       hook_title: "✨ One More Orbit Together ✨",
@@ -432,7 +432,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🎉", text: "Celebrating us. Always." },
         { emoji: "🚀", text: "So many more adventures ahead." },
       ],
-      final_message: "Happy Anniversary, my love. Here's to us — today, tomorrow, and always.",
+      final_message: "Happy Anniversary, my love. One more orbit around the sun, hand in hand — and you're still my favourite place in the entire universe. Here's to us: today, tomorrow, and every star still ahead.",
     },
     spouse: {
       hook_title: "✨ A Lifetime of Stars ✨",
@@ -443,7 +443,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🏡", text: "Every home is paradise with you." },
         { emoji: "🌌", text: "You are my whole universe." },
       ],
-      final_message: "Happy Anniversary. Choosing you is the greatest thing I've ever done.",
+      final_message: "Happy Anniversary. In a universe of infinite chances, choosing you is the greatest thing I've ever done — and I'd do it again in every lifetime. You are, and will always be, my whole sky.",
     },
     date: {
       hook_title: "✨ Something Worth Celebrating ✨",
@@ -454,7 +454,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "✨", text: "Something magical about us." },
         { emoji: "🥂", text: "Cheers to whatever this beautiful thing is." },
       ],
-      final_message: "Here's to us. I'm so happy we found each other.",
+      final_message: "Happy Anniversary! Somewhere between all the stars, our paths crossed — and I've been grateful ever since. Here's to us, and to whatever beautiful, magical thing this is becoming. I'm so glad it's you.",
     },
   },
   sorry: {
@@ -467,7 +467,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🤝", text: "I want to make things right." },
         { emoji: "⏳", text: "Take your time, but know I'm sorry." },
       ],
-      final_message: "I am truly sorry. Let's move past this when you're ready.",
+      final_message: "I've been sitting with how much I let you down, and I'm truly sorry. A friendship like ours is rare in this whole universe, and I'm not willing to lose it over my mistake. Let's find our way back when you're ready.",
     },
     partner: {
       hook_title: "✨ Let Me Make It Right ✨",
@@ -478,7 +478,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "❤️‍🩹", text: "You mean the world to me." },
         { emoji: "🌹", text: "Let me make it up to you." },
       ],
-      final_message: "I am so deeply sorry. I love you and I promise to do better.",
+      final_message: "I'm so sorry — hurting you is the last thing my heart ever wanted. You're the centre of my universe, and being right will never matter more than being good to you. I love you, and I promise to do better.",
     },
     spouse: {
       hook_title: "✨ I'm So Sorry ✨",
@@ -489,7 +489,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "❤️‍🩹", text: "Your happiness means everything to me." },
         { emoji: "🌹", text: "I will make this right." },
       ],
-      final_message: "I am deeply sorry. I love you and I will do better, always.",
+      final_message: "I'm deeply sorry, my love. I can't undo the hurt, but I can keep showing up, choosing us, and doing better under every star. You are my whole universe, and I'll never stop trying to be worthy of you.",
     },
     date: {
       hook_title: "✨ I'm Sorry ✨",
@@ -500,7 +500,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🤝", text: "I'd love the chance to make it up." },
         { emoji: "✨", text: "You're worth so much more than that." },
       ],
-      final_message: "I'm sorry. You deserve better, and I want to show you that.",
+      final_message: "I'm genuinely sorry — you didn't deserve to feel that way. You're worth so much more than my mistake, and if you'll let me, I'd love the chance to show you the kindness the universe meant for you.",
     },
   },
   feel_good: {
@@ -513,7 +513,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "💫", text: "You are made of stardust." },
         { emoji: "⭐", text: "Your unique spark matters." },
       ],
-      final_message: "Never forget how incredibly awesome you are. Keep shining!",
+      final_message: "Never forget that you're made of stardust and built for brighter things. On the heavy days, let this be your reminder: the universe is better with you in it, and so am I. Keep shining, always.",
     },
     partner: {
       hook_title: "✨ A Love Note from the Galaxy ✨",
@@ -524,7 +524,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "✨", text: "Thank you, brilliant stardust." },
         { emoji: "🧑‍🚀", text: "Keep shining, cosmic traveler." },
       ],
-      final_message: "You are incredible. Never forget that for a single second.",
+      final_message: "You are incredible — please don't ever forget that, not for a single second. You're the brightest star in my sky, and even on your hardest days, your light reaches further than you'll ever know.",
     },
     spouse: {
       hook_title: "✨ A Love Note from the Galaxy ✨",
@@ -535,7 +535,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🪐", text: "The universe favors you." },
         { emoji: "🌟", text: "Your energy illuminates all." },
       ],
-      final_message: "You are my everything. I hope you never forget that.",
+      final_message: "You are my entire universe, and I hope you never forget it. Whatever today brought, please remember how deeply you're loved and how much you matter — to me, you've always been the whole sky.",
     },
     date: {
       hook_title: "✨ A Little Cosmic Cheer ✨",
@@ -546,7 +546,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "💫", text: "You are made of stardust." },
         { emoji: "🪐", text: "The universe favors you." },
       ],
-      final_message: "Just wanted you to know you're pretty amazing. Keep being you!",
+      final_message: "Just a little cosmic reminder that you're pretty amazing, exactly as you are. The world is softer and brighter with you in it — so keep being you, and let today be kind to you. You deserve that.",
     },
   },
   congratulations: {
@@ -559,7 +559,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🍾", text: "Time to pop the champagne!" },
         { emoji: "🚀", text: "The sky is truly the limit." },
       ],
-      final_message: "Huge congratulations on your achievement! So incredibly proud of you.",
+      final_message: "Huge congratulations, you absolute supernova! I always knew you were destined for big things, and watching you get here has meant everything. So incredibly proud — now go celebrate among the stars.",
     },
     partner: {
       hook_title: "✨ A Supernova Achievement ✨",
@@ -570,7 +570,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🍾", text: "Champagne is calling!" },
         { emoji: "🌟", text: "The world hasn't seen anything yet." },
       ],
-      final_message: "Congratulations! Your achievement is extraordinary, and so are you.",
+      final_message: "Congratulations, my love! Your achievement is extraordinary — and so are you. Watching you reach for the stars and actually catch them is the most beautiful thing I know. So proud to be yours.",
     },
     spouse: {
       hook_title: "✨ My Champion ✨",
@@ -581,7 +581,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🍾", text: "We are absolutely celebrating this!" },
         { emoji: "🌟", text: "Limitless — that's you." },
       ],
-      final_message: "Congratulations! I've never been more proud. Let's celebrate you!",
+      final_message: "Congratulations! I've watched every late night and quiet doubt behind this moment, and you deserve all of it and more. I've never been prouder. You're my favourite star in the whole universe — let's celebrate you.",
     },
     date: {
       hook_title: "✨ Way to Go! ✨",
@@ -592,7 +592,7 @@ const COSMIC: Record<string, Record<string, CosmicTemplate>> = {
         { emoji: "🍾", text: "This calls for a celebration." },
         { emoji: "✨", text: "You are genuinely unstoppable." },
       ],
-      final_message: "Congratulations! You should be so proud of yourself today.",
+      final_message: "Congratulations! The whole universe seems to be celebrating you today, and rightfully so. You should be so proud of yourself — I certainly am. Here's to this, and to every bright thing still ahead.",
     },
   },
 };
@@ -613,7 +613,7 @@ export function getCosmicFallback(occasion: string): CosmicTemplate {
       { emoji: "✨", text: "The universe conspired to make you." },
       { emoji: "🚀", text: "Limitless — always." },
     ],
-    final_message: "Wishing you all the happiness in the universe.",
+    final_message: "Wishing you all the happiness in the universe — and a reminder that your light reaches so much further than you know.",
   };
 }
 
@@ -645,7 +645,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "💡", title: "Bright Ideas", text: "Top-tier advice and brilliant ideas." },
         { emoji: "🔥", title: "Good Energy", text: "Bringing the best energy to the room." },
       ],
-      final_message: "Thank you for being an amazing friend. I truly appreciate you!",
+      final_message: "Thank you for being the kind of friend the best songs are written about. You show up, you stay, and you make everything better — I'm so lucky to have you, and I hope you always know it.",
     },
     partner: {
       album_title: "For My Favourite Person",
@@ -657,7 +657,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🫂", title: "Safe Place", text: "My ultimate safe space — always." },
         { emoji: "✨", title: "Literal Magic", text: "You are, quite simply, magic." },
       ],
-      final_message: "Thank you for everything you do. I'm so lucky to have you.",
+      final_message: "Thank you for every little thing you do that you think slips by unnoticed — it doesn't, and neither do you. You're my favourite person and my favourite feeling, and I'm so lucky to get to love you.",
     },
     spouse: {
       album_title: "To My Everything",
@@ -669,7 +669,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🏡", title: "Home", text: "Home is wherever you are." },
         { emoji: "💫", title: "Extraordinary", text: "You make life extraordinary." },
       ],
-      final_message: "Thank you for choosing me every single day. I love you deeply.",
+      final_message: "Thank you for choosing me every single day, through every verse and every chorus of this life. Loving you is the easiest thing I've ever done, and I hope you feel just how deeply I mean it.",
     },
     date: {
       album_title: "Something Special",
@@ -681,7 +681,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🦋", title: "Butterflies", text: "You give me the best butterflies." },
         { emoji: "🎯", title: "Glad We Met", text: "I'm so glad our paths crossed." },
       ],
-      final_message: "Thank you for a genuinely amazing time. I can't stop smiling.",
+      final_message: "Thank you for a time I keep replaying like my favourite song. You made everything feel easy and real, and I genuinely can't stop smiling — I'm so glad our paths crossed. Here's to the next track.",
     },
   },
   birthday: {
@@ -695,7 +695,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🎁", title: "You Deserve It", text: "You deserve the absolute best." },
         { emoji: "🥂", title: "Cheers!", text: "Cheers to another amazing year!" },
       ],
-      final_message: "Happy Birthday! Wishing you the most incredible year ahead!",
+      final_message: "Happy Birthday, legend. Here's to you — to every memory we've made and every one still coming. I hope this year turns out to be your best one yet, because honestly, no one deserves it more. Go celebrate big.",
     },
     partner: {
       album_title: "Happy Birthday, My Love",
@@ -707,7 +707,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🌹", title: "Always Yours", text: "My heart is yours today and always." },
         { emoji: "🎊", title: "Best Year Yet", text: "This year is going to be your best one yet." },
       ],
-      final_message: "Happy Birthday, my love! I'm so grateful for every moment with you.",
+      final_message: "Happy Birthday, my love. Getting to celebrate you is my favourite thing, full stop. I'm so grateful for every single moment with you, and I promise to spend this year making you feel as loved as you are.",
     },
     spouse: {
       album_title: "To My Partner in Everything",
@@ -719,7 +719,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🥳", title: "All About You", text: "Today is all about you, babe." },
         { emoji: "✨", title: "Every Room", text: "You light up every room you walk into." },
       ],
-      final_message: "Happy Birthday! I fall more in love with you every single day.",
+      final_message: "Happy Birthday to the one who feels like home. I fall a little more in love with you every single year, and I can't wait to keep writing this life together. Today is all yours — soak up every second.",
     },
     date: {
       album_title: "Celebrating You Today",
@@ -731,7 +731,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🎂", title: "Make a Wish", text: "Make a wish — you've earned it." },
         { emoji: "😊", title: "All Good Things", text: "Wishing you all the good things." },
       ],
-      final_message: "Happy Birthday! Hope today is as wonderful as you are.",
+      final_message: "Happy Birthday! I hope today is as warm and wonderful as you are. You bring such good energy everywhere you go, and I'm genuinely so happy I get to be one of the people wishing you the whole world.",
     },
   },
   sorry: {
@@ -745,7 +745,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "❤️‍🩹", title: "You Mean the World", text: "You mean the world to me." },
         { emoji: "🌹", title: "Let Me Try", text: "Let me make it up to you." },
       ],
-      final_message: "I am so deeply sorry. I love you and I promise to do better.",
+      final_message: "I'm so deeply sorry — hurting you is the last thing I ever wanted. You mean more to me than being right ever could, and I'm not going anywhere. I love you, and I promise, every single day, to do better.",
     },
     friend: {
       album_title: "I'm Sorry, Truly",
@@ -757,7 +757,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "💙", title: "I Care", text: "I genuinely care about you." },
         { emoji: "🌱", title: "Grow Together", text: "Let's grow from this together." },
       ],
-      final_message: "I'm truly sorry. You deserve better from me, and I'll do better.",
+      final_message: "I'm truly sorry — you deserved so much better from me. Our friendship matters more than my pride ever will, and I'd far rather own my mistake than lose you over it. I hope you'll let me make this right.",
     },
     spouse: {
       album_title: "To My Heart",
@@ -769,7 +769,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "❤️", title: "Unconditional", text: "My love for you is unconditional." },
         { emoji: "🙏", title: "Please Forgive Me", text: "Please forgive me." },
       ],
-      final_message: "I'm so sorry, my love. You are everything to me, and I'll never stop trying.",
+      final_message: "I'm so sorry, my love. I can't take back the hurt, but I can keep showing up and choosing us, every single day. You are everything to me, and I'll never stop trying to be the person you deserve.",
     },
     date: {
       album_title: "An Honest Apology",
@@ -781,7 +781,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🌸", title: "Moving Forward", text: "I hope we can move forward." },
         { emoji: "🙏", title: "Genuinely Sorry", text: "I'm genuinely sorry." },
       ],
-      final_message: "I'm sorry. I hope you'll give me a chance to make it right.",
+      final_message: "I'm genuinely sorry — you didn't deserve to feel that way. I care about you more than I let on, and if you'll give me the chance, I'd love to show you the kindness you should have had all along.",
     },
   },
   feel_good: {
@@ -795,7 +795,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🌻", title: "The World Needs You", text: "The world is better with you in it." },
         { emoji: "✨", title: "Good Vibes", text: "Sending you all the good vibes." },
       ],
-      final_message: "Just a reminder that you're incredible. Keep going — you've got this!",
+      final_message: "Just a reminder that you're stronger and more loved than you let yourself believe. Whatever today looks like, don't forget how much you matter — I'm always in your corner, cheering you on.",
     },
     partner: {
       album_title: "To My Sunshine",
@@ -807,7 +807,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🫂", title: "Always Here", text: "I'm here for you, always." },
         { emoji: "🌟", title: "All the Good Things", text: "You deserve all the good things." },
       ],
-      final_message: "I just want you to know — you're doing amazing. I'm so proud of you.",
+      final_message: "I just want you to know I see everything you do, even the invisible, exhausting parts. You're doing so much better than you think, and I'm endlessly proud of you. I've got you — always.",
     },
     spouse: {
       album_title: "To My Person",
@@ -819,7 +819,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🌙", title: "Who We Are", text: "I love who we are together." },
         { emoji: "✨", title: "Extraordinary", text: "You are extraordinary." },
       ],
-      final_message: "I just wanted to remind you how much you matter. I love you so much.",
+      final_message: "On the days you feel like too much or not enough, please remember you're exactly enough for me — you always have been. You matter more than words can hold, and I love you more than I can say.",
     },
     date: {
       album_title: "A Little Something",
@@ -831,7 +831,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🌸", title: "Just Smiling", text: "Just a little something to make you smile." },
         { emoji: "💫", title: "Good Things Coming", text: "You deserve all good things." },
       ],
-      final_message: "Just sending some good vibes your way. You deserve to feel amazing today!",
+      final_message: "Just a little something to remind you how special you are. The world's a softer place with you in it, and I hope today treats you gently — you deserve every good thing headed your way.",
     },
   },
   congratulations: {
@@ -845,7 +845,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🥂", title: "Big Time Celebrate", text: "Time to celebrate — big time." },
         { emoji: "🔥", title: "Not Even Surprised", text: "Honestly? Not even surprised." },
       ],
-      final_message: "Congratulations!! I'm SO proud of you. You worked hard for this and you deserve every bit of it!",
+      final_message: "Congratulations!! I am SO proud of you — and honestly, not even surprised. I saw how hard you worked for this when no one else was watching, and you've earned every bit of it. Now go celebrate, big time.",
     },
     partner: {
       album_title: "My Most Capable Person",
@@ -857,7 +857,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🎊", title: "Just the Beginning", text: "This is just the beginning." },
         { emoji: "💖", title: "Incredibly Proud", text: "So incredibly proud of you." },
       ],
-      final_message: "Congratulations, love! Watching you achieve your dreams is the most beautiful thing. So proud!",
+      final_message: "Congratulations, my love! Watching you chase your dreams and actually catch them is the most beautiful thing I know. I'm so proud of you, and I'll always be cheering the loudest from the front row.",
     },
     spouse: {
       album_title: "My Person — What a Star!",
@@ -869,7 +869,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🎉", title: "Your Day", text: "Today is YOUR day." },
         { emoji: "❤️", title: "Biggest Fan", text: "I'm your biggest fan, always." },
       ],
-      final_message: "Congratulations! You deserve every celebration today. I'm so proud to be by your side.",
+      final_message: "Congratulations! I've seen the quiet doubt and the late nights behind this, and you deserve every second of today. I'm endlessly proud to stand beside you — let's celebrate exactly how special you are.",
     },
     date: {
       album_title: "Celebrating You!",
@@ -881,7 +881,7 @@ const VINYL: Record<string, Record<string, VinylTemplate>> = {
         { emoji: "🥂", title: "Proper Celebration", text: "A proper celebration is in order." },
         { emoji: "✨", title: "Happy for You", text: "Genuinely happy for you." },
       ],
-      final_message: "Congratulations! This is amazing news. You should be so proud of yourself!",
+      final_message: "Congratulations! This is wonderful news, and no one deserves it more than you. I hope you let yourself feel proud today — you worked for this, and it shows. I'm genuinely so happy for you.",
     },
   },
 };
@@ -1216,6 +1216,6 @@ export function getVinylFallback(occasion: string): VinylTemplate {
       { emoji: "🌟", title: "Here for You", text: "The world is better with you in it." },
       { emoji: "🎉", title: "Here's to You", text: "Here's to you!" },
     ],
-    final_message: "Wishing you all the happiness in the world.",
+    final_message: "Wishing you all the happiness in the world — and a reminder of just how much you truly matter.",
   };
 }
