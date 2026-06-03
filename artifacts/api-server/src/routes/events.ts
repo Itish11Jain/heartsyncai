@@ -772,7 +772,7 @@ router.get("/events/sales", async (req, res) => {
     }
     const whereSql = conds.join(" AND ");
 
-    const [totals, daily, byOccasion] = await Promise.all([
+    const [totals, daily, byOccasion, last24h] = await Promise.all([
       pool.query(
         `SELECT COALESCE(SUM(NULLIF(amount,'')::numeric),0) AS total_amount,
                 COUNT(*)                                    AS total_unlocks
@@ -807,11 +807,23 @@ router.get("/events/sales", async (req, res) => {
          ORDER BY 1 DESC, unlocks DESC`,
         params,
       ),
+      // Rolling 24-hour window: always relative to "now", independent of the
+      // from/to date filter, so the widget always shows the live last-24h count.
+      pool.query(
+        `SELECT COUNT(*)                                    AS unlocks,
+                COALESCE(SUM(NULLIF(amount,'')::numeric),0) AS amount
+         FROM hs_received_payments
+         WHERE refunded_at IS NULL
+           AND (raw_sms IS NULL OR raw_sms !~* '\\yitisha\\y')
+           AND created_at >= NOW() - INTERVAL '24 hours'`,
+      ),
     ]);
 
     return res.json({
       total_amount: totals.rows[0]?.total_amount ?? "0",
       total_unlocks: totals.rows[0]?.total_unlocks ?? "0",
+      last_24h_unlocks: last24h.rows[0]?.unlocks ?? "0",
+      last_24h_amount: last24h.rows[0]?.amount ?? "0",
       daily: daily.rows,
       by_occasion: byOccasion.rows,
       range: { from: from ?? null, to: to ?? null },

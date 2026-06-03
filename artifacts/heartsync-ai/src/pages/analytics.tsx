@@ -76,6 +76,8 @@ type SalesByOccasion = { date: string; occasion: string; unlocks: string };
 type SalesData = {
   total_amount: string;
   total_unlocks: string;
+  last_24h_unlocks?: string;
+  last_24h_amount?: string;
   daily: SalesDaily[];
   by_occasion: SalesByOccasion[];
   range?: { from: string | null; to: string | null };
@@ -592,6 +594,34 @@ export default function Analytics() {
           }
           return (
             <div style={{ marginBottom: 32 }}>
+              {/* ── Payments in the last 24 hours (rolling window, ignores date filter) ── */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, rgba(255,215,0,0.14), rgba(255,165,0,0.08))",
+                  border: "1px solid rgba(255,215,0,0.35)",
+                  borderRadius: 14,
+                  padding: "18px 22px",
+                  marginBottom: 16,
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+                    ⏱ Payments · Last 24 Hours
+                  </div>
+                  <div style={{ color: "#FFD700", fontSize: 38, fontWeight: 800, lineHeight: 1 }}>
+                    {Number(sales.last_24h_unlocks ?? 0).toLocaleString("en-IN")}
+                  </div>
+                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 8 }}>
+                    {fmtRupees(sales.last_24h_amount ?? 0)} collected · rolling window from now
+                  </div>
+                </div>
+              </div>
+
               {/* ── Total collected ── */}
               <div
                 style={{
