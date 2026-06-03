@@ -213,7 +213,7 @@ function createConfettiParticles(canvasW: number, colors: string[]): Particle[] 
 
 /* ─────────────────────────── SlideToUnlock ────────────────────── */
 
-function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
+function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; isSorry?: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [thumbX, setThumbX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -262,12 +262,12 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
         ref={trackRef}
         style={{
           width: trackWidth,
-          height: thumbSize + 8,
+          height: thumbSize + (isSorry ? 24 : 8),
           borderRadius: 999,
           background: "rgba(255,255,255,0.07)",
           border: "1.5px solid rgba(255,215,0,0.25)",
           position: "relative",
-          overflow: "hidden",
+          overflow: isSorry ? "visible" : "hidden",
           boxShadow: "0 0 30px rgba(255,215,0,0.08)",
           userSelect: "none",
         }}
@@ -277,6 +277,7 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
             position: "absolute",
             left: 0, top: 0, bottom: 0,
             width: `${(thumbX + thumbSize / 2)}px`,
+            borderRadius: 999,
             background: "linear-gradient(90deg, rgba(255,215,0,0.18), rgba(255,165,0,0.1))",
             transition: dragging ? "none" : "all 0.3s",
           }}
@@ -285,14 +286,19 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
           style={{
             position: "absolute", inset: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, fontWeight: 500,
-            color: `rgba(255,255,255,${0.45 - progress * 0.45})`,
+            fontSize: isSorry ? 19 : 13,
+            fontWeight: isSorry ? 600 : 500,
+            color: isSorry
+              ? `rgba(245,196,78,${0.85 - progress * 0.85})`
+              : `rgba(255,255,255,${0.45 - progress * 0.45})`,
+            fontFamily: isSorry ? "'Dancing Script', cursive" : undefined,
             letterSpacing: "0.04em",
             pointerEvents: "none",
             paddingLeft: thumbSize + 16,
+            textShadow: isSorry ? "0 1px 8px rgba(245,196,78,0.35)" : undefined,
           }}
         >
-          {unlocked ? "✓" : "Slide to unlock →"}
+          {unlocked ? "✓" : isSorry ? "Slide the rose to open →" : "Slide to unlock →"}
         </div>
         <motion.div
           onPointerDown={handlePointerDown}
@@ -301,7 +307,9 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
           onPointerLeave={handlePointerUp}
           animate={{
             x: thumbX + 4,
-            boxShadow: unlocked
+            boxShadow: isSorry
+              ? "none"
+              : unlocked
               ? "0 0 0 4px rgba(255,215,0,0.35), 0 0 24px rgba(255,215,0,0.6)"
               : dragging
               ? "0 0 0 3px rgba(255,215,0,0.25), 0 0 16px rgba(255,215,0,0.4)"
@@ -310,11 +318,13 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
           transition={{ duration: dragging ? 0 : 0.3, ease: "easeOut" }}
           style={{
             position: "absolute",
-            top: 4,
+            top: isSorry ? 12 : 4,
             width: thumbSize,
             height: thumbSize,
             borderRadius: "50%",
-            background: unlocked
+            background: isSorry
+              ? "transparent"
+              : unlocked
               ? "linear-gradient(135deg, #22c55e, #16a34a)"
               : "linear-gradient(135deg, #FFD700, #FFA500)",
             cursor: unlocked ? "default" : "grab",
@@ -323,7 +333,48 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
             touchAction: "none",
           }}
         >
-          {unlocked ? "✓" : "→"}
+          {isSorry ? (
+            <>
+              {/* soft glow behind the draggable rose */}
+              <motion.div
+                animate={{
+                  opacity: unlocked ? [0.55, 0.85, 0.55] : dragging ? 0.7 : [0.35, 0.55, 0.35],
+                  scale: unlocked ? [1, 1.18, 1] : 1,
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                style={{
+                  position: "absolute",
+                  inset: -7,
+                  borderRadius: "50%",
+                  background: unlocked
+                    ? "radial-gradient(circle, rgba(130,235,160,0.65), transparent 70%)"
+                    : "radial-gradient(circle, rgba(255,215,0,0.55), transparent 70%)",
+                  filter: "blur(2px)",
+                  pointerEvents: "none",
+                }}
+              />
+              {/* the 3D rose the user drags */}
+              <motion.img
+                src={rosePinkImg}
+                alt=""
+                aria-hidden
+                draggable={false}
+                animate={dragging ? { rotate: 0, y: 0 } : { rotate: [-7, 7, -7], y: [0, -1.5, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                style={{
+                  position: "relative",
+                  width: thumbSize * 1.4,
+                  height: thumbSize * 1.4,
+                  objectFit: "contain",
+                  transformOrigin: "bottom center",
+                  filter: "drop-shadow(0 4px 8px rgba(80,30,60,0.5))",
+                  pointerEvents: "none",
+                }}
+              />
+            </>
+          ) : (
+            unlocked ? "✓" : "→"
+          )}
         </motion.div>
       </div>
     </motion.div>
@@ -335,9 +386,11 @@ function SlideToUnlock({ onUnlock }: { onUnlock: () => void }) {
 function GoldenEnvelope({
   recipientName,
   opening,
+  isSorry = false,
 }: {
   recipientName: string;
   opening: boolean;
+  isSorry?: boolean;
 }) {
   const envW = "min(340px, 88vw)";
   const envH = "min(210px, 53vw)";
@@ -349,9 +402,31 @@ function GoldenEnvelope({
         height: envH,
         position: "relative",
         perspective: 800,
-        filter: "drop-shadow(0 24px 48px rgba(255,165,0,0.35)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
+        filter: isSorry
+          ? "drop-shadow(0 28px 54px rgba(120,40,70,0.45)) drop-shadow(0 22px 40px rgba(255,165,0,0.3)) drop-shadow(0 0 90px rgba(255,215,0,0.18))"
+          : "drop-shadow(0 24px 48px rgba(255,165,0,0.35)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
       }}
     >
+      {/* Continuous gentle 3D float (sorry template only) — gives the envelope
+          the same lifelike depth as the flower bouquet. */}
+      <motion.div
+        animate={
+          isSorry && !opening
+            ? { y: [-5, 5, -5], rotateY: [-6, 6, -6], rotateX: [2.5, -2.5, 2.5], rotateZ: [-1, 1, -1] }
+            : { y: 0, rotateY: 0, rotateX: 0, rotateZ: 0 }
+        }
+        transition={
+          isSorry && !opening
+            ? { duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }
+            : { duration: 0.4 }
+        }
+        style={{
+          position: "absolute",
+          inset: 0,
+          transformStyle: "preserve-3d",
+          willChange: isSorry ? "transform" : undefined,
+        }}
+      >
       {/* Envelope body */}
       <div
         style={{
@@ -526,6 +601,64 @@ function GoldenEnvelope({
           />
         </motion.div>
       </div>
+
+      {/* Beautiful rose tucked into the top-right corner (sorry template only) */}
+      {isSorry && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.4, rotate: -28 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 60, damping: 13, delay: 0.5 }}
+          style={{
+            position: "absolute",
+            top: "-13%",
+            right: "-6%",
+            width: "min(104px, 28vw)",
+            height: "min(104px, 28vw)",
+            zIndex: 30,
+            transform: "translateZ(40px)",
+            pointerEvents: "none",
+          }}
+        >
+          {/* small foliage sprig behind the bloom for natural depth */}
+          <motion.img
+            src={eucalyptusImg}
+            alt=""
+            aria-hidden
+            draggable={false}
+            animate={{ rotate: [18, 26, 18] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              position: "absolute",
+              left: "-26%",
+              top: "18%",
+              width: "78%",
+              height: "78%",
+              objectFit: "contain",
+              transformOrigin: "bottom center",
+              filter: "drop-shadow(0 6px 10px rgba(40,60,40,0.35))",
+            }}
+          />
+          {/* the rose */}
+          <motion.img
+            src={rosePinkImg}
+            alt=""
+            aria-hidden
+            draggable={false}
+            animate={{ rotate: [-6, 6, -6], y: [0, -3, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              transformOrigin: "bottom center",
+              filter: "drop-shadow(0 8px 14px rgba(80,30,60,0.5))",
+            }}
+          />
+        </motion.div>
+      )}
+      </motion.div>
     </div>
   );
 }
@@ -2102,29 +2235,46 @@ export default function Card() {
                   transition={{ duration: 0.5 }}
                 >
                   <motion.p
-                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    animate={isSorry ? {} : { opacity: [0.7, 1, 0.7] }}
                     transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                    style={{
-                      fontSize: "min(18px, 4.5vw)",
-                      fontWeight: 700,
-                      color: "#FFD700",
-                      letterSpacing: "0.05em",
-                      textAlign: "center",
-                      textShadow: "0 0 30px rgba(255,215,0,0.6)",
-                    }}
+                    style={
+                      isSorry
+                        ? {
+                            fontSize: "min(27px, 7vw)",
+                            fontWeight: 600,
+                            letterSpacing: "0.01em",
+                            textAlign: "center",
+                            margin: 0,
+                            fontFamily: "'Dancing Script', cursive",
+                            backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
+                            WebkitBackgroundClip: "text",
+                            backgroundClip: "text",
+                            color: "transparent",
+                            WebkitTextFillColor: "transparent",
+                            filter: "drop-shadow(0 2px 12px rgba(245,196,78,0.4))",
+                          }
+                        : {
+                            fontSize: "min(18px, 4.5vw)",
+                            fontWeight: 700,
+                            color: "#FFD700",
+                            letterSpacing: "0.05em",
+                            textAlign: "center",
+                            textShadow: "0 0 30px rgba(255,215,0,0.6)",
+                          }
+                    }
                   >
-                    {isSorry ? "🌹 Something I needed to say 🌹" : "✨ A Surprise For You! ✨"}
+                    {isSorry ? "Something I needed to say" : "✨ A Surprise For You! ✨"}
                   </motion.p>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <GoldenEnvelope recipientName={recipientName} opening={phase === "opening"} />
+            <GoldenEnvelope recipientName={recipientName} opening={phase === "opening"} isSorry={isSorry} />
 
             <AnimatePresence>
               {phase === "envelope" && (
                 <motion.div key="slider" exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.25 }}>
-                  <SlideToUnlock onUnlock={handleUnlock} />
+                  <SlideToUnlock onUnlock={handleUnlock} isSorry={isSorry} />
                 </motion.div>
               )}
             </AnimatePresence>
