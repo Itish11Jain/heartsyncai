@@ -395,6 +395,37 @@ function GoldenEnvelope({
   const envW = "min(340px, 88vw)";
   const envH = "min(210px, 53vw)";
 
+  /* Soft blush-cream "stationery paper" palette for the sorry template — warmer
+     and more romantic than the bright gold, tuned to the bouquet aesthetic. */
+  const pal = isSorry
+    ? {
+        body: "linear-gradient(145deg, #FBEFE7 0%, #F4DDD0 30%, #ECCBBA 58%, #DFB6A3 82%, #D0A28E 100%)",
+        fold: "#C99683",
+        bottomFold: "#BC8773",
+        innerLight: "linear-gradient(to bottom, rgba(255,250,246,0.45), rgba(255,238,228,0.05))",
+        toLabel: "rgba(120,62,55,0.62)",
+        toName: "rgba(78,34,30,0.92)",
+        deco: "rgba(190,118,118,0.6)",
+        flapOuter: "linear-gradient(172deg, #EFD7C9 0%, #E1BEAD 45%, #D2A48F 100%)",
+        flapInner: "linear-gradient(to bottom, #FBEFE7 0%, #EBC9B7 100%)",
+      }
+    : {
+        body: "linear-gradient(145deg, #F5C518 0%, #FFD700 28%, #FFBC00 55%, #E8AA00 80%, #D4960A 100%)",
+        fold: "#C49000",
+        bottomFold: "#B8870A",
+        innerLight: "linear-gradient(to bottom, rgba(255,250,220,0.25), rgba(255,255,200,0.05))",
+        toLabel: "rgba(80,40,0,0.65)",
+        toName: "rgba(45,18,0,0.9)",
+        deco: "rgba(200,130,0,0.7)",
+        flapOuter: "linear-gradient(172deg, #E8B800 0%, #D4A000 45%, #C49000 100%)",
+        flapInner: "linear-gradient(to bottom, #FFE566 0%, #FFCC00 100%)",
+      };
+
+  /* Lightweight procedural paper grain (SVG fractal noise as a data URI) +
+     subtle woven fibers, layered over the paper for tactile realism. */
+  const paperGrain =
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
   return (
     <div
       style={{
@@ -403,7 +434,7 @@ function GoldenEnvelope({
         position: "relative",
         perspective: 800,
         filter: isSorry
-          ? "drop-shadow(0 28px 54px rgba(120,40,70,0.45)) drop-shadow(0 22px 40px rgba(255,165,0,0.3)) drop-shadow(0 0 90px rgba(255,215,0,0.18))"
+          ? "drop-shadow(0 26px 50px rgba(120,55,70,0.4)) drop-shadow(0 16px 34px rgba(200,120,120,0.28)) drop-shadow(0 0 90px rgba(235,180,180,0.22))"
           : "drop-shadow(0 24px 48px rgba(255,165,0,0.35)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
       }}
     >
@@ -432,8 +463,10 @@ function GoldenEnvelope({
         style={{
           position: "absolute", inset: 0,
           borderRadius: 10,
-          background: "linear-gradient(145deg, #F5C518 0%, #FFD700 28%, #FFBC00 55%, #E8AA00 80%, #D4960A 100%)",
-          boxShadow: "inset 0 2px 8px rgba(255,255,255,0.25), inset 0 -2px 8px rgba(0,0,0,0.15)",
+          background: pal.body,
+          boxShadow: isSorry
+            ? "inset 0 2px 10px rgba(255,255,255,0.4), inset 0 -3px 12px rgba(120,70,55,0.22)"
+            : "inset 0 2px 8px rgba(255,255,255,0.25), inset 0 -2px 8px rgba(0,0,0,0.15)",
           overflow: "hidden",
         }}
       >
@@ -441,7 +474,7 @@ function GoldenEnvelope({
         <div
           style={{
             position: "absolute", inset: 0,
-            background: "linear-gradient(to right, #C49000, transparent 42%)",
+            background: `linear-gradient(to right, ${pal.fold}, transparent 42%)`,
             clipPath: "polygon(0 100%, 44% 52%, 0 4%)",
             opacity: 0.55,
           }}
@@ -450,7 +483,7 @@ function GoldenEnvelope({
         <div
           style={{
             position: "absolute", inset: 0,
-            background: "linear-gradient(to left, #C49000, transparent 42%)",
+            background: `linear-gradient(to left, ${pal.fold}, transparent 42%)`,
             clipPath: "polygon(100% 100%, 56% 52%, 100% 4%)",
             opacity: 0.55,
           }}
@@ -459,7 +492,7 @@ function GoldenEnvelope({
         <div
           style={{
             position: "absolute", inset: 0,
-            background: "#B8870A",
+            background: pal.bottomFold,
             clipPath: "polygon(0 100%, 44% 52%, 56% 52%, 100% 100%)",
             opacity: 0.6,
           }}
@@ -468,9 +501,42 @@ function GoldenEnvelope({
         <div
           style={{
             position: "absolute", top: "5%", left: "30%", right: "30%", bottom: "30%",
-            background: "linear-gradient(to bottom, rgba(255,250,220,0.25), rgba(255,255,200,0.05))",
+            background: pal.innerLight,
           }}
         />
+
+        {/* Paper texture: fine grain + woven fibers + a soft top-light sheen
+            (sorry template only) for tactile, realistic stationery. */}
+        {isSorry && (
+          <>
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                backgroundImage: paperGrain,
+                backgroundSize: "140px 140px",
+                opacity: 0.5,
+                mixBlendMode: "multiply",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                backgroundImage:
+                  "repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(25deg, rgba(120,70,55,0.045) 0px, rgba(120,70,55,0.045) 1px, transparent 1px, transparent 5px)",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                background:
+                  "radial-gradient(120% 80% at 30% 0%, rgba(255,252,248,0.5), transparent 55%), radial-gradient(120% 90% at 70% 110%, rgba(120,70,55,0.16), transparent 60%)",
+                pointerEvents: "none",
+              }}
+            />
+          </>
+        )}
 
         {/* To label — centered at bottom, prominent */}
         <div
@@ -479,30 +545,30 @@ function GoldenEnvelope({
             bottom: "10%",
             left: "50%",
             transform: "translateX(-50%)",
-            fontFamily: "Georgia, serif",
-            fontSize: "min(15px, 3.8vw)",
-            color: "rgba(80,40,0,0.65)",
-            fontStyle: "italic",
+            fontFamily: isSorry ? "'Dancing Script', cursive" : "Georgia, serif",
+            fontSize: isSorry ? "min(18px, 4.6vw)" : "min(15px, 3.8vw)",
+            color: pal.toLabel,
+            fontStyle: isSorry ? "normal" : "italic",
             textAlign: "center",
             whiteSpace: "nowrap",
           }}
         >
           To:{" "}
-          <span style={{ fontWeight: 800, fontSize: "min(18px, 4.6vw)", color: "rgba(45,18,0,0.9)" }}>
+          <span style={{ fontWeight: 800, fontSize: isSorry ? "min(22px, 5.6vw)" : "min(18px, 4.6vw)", color: pal.toName }}>
             {recipientName}
           </span>
         </div>
 
-        {/* Star decoration */}
+        {/* Corner decoration */}
         <div
           style={{
             position: "absolute", top: 10, right: 14,
             fontSize: "min(11px, 3vw)",
-            color: "rgba(200,130,0,0.7)",
+            color: pal.deco,
             letterSpacing: 2,
           }}
         >
-          ✦ ✦ ✦
+          {isSorry ? "❀ ❀ ❀" : "✦ ✦ ✦"}
         </div>
       </div>
 
@@ -578,22 +644,25 @@ function GoldenEnvelope({
             position: "relative",
           }}
         >
-          {/* Outside of flap (gold) */}
+          {/* Outside of flap */}
           <div
             style={{
               position: "absolute", inset: 0,
-              background: "linear-gradient(172deg, #E8B800 0%, #D4A000 45%, #C49000 100%)",
+              background: pal.flapOuter,
+              backgroundImage: isSorry ? `${paperGrain}, ${pal.flapOuter}` : pal.flapOuter,
+              backgroundSize: isSorry ? "140px 140px, cover" : undefined,
+              backgroundBlendMode: isSorry ? "multiply, normal" : undefined,
               clipPath: "polygon(0 0, 100% 0, 50% 88%)",
               borderRadius: "10px 10px 0 0",
               backfaceVisibility: "hidden",
-              boxShadow: "inset 0 -2px 8px rgba(0,0,0,0.1)",
+              boxShadow: isSorry ? "inset 0 -2px 10px rgba(120,70,55,0.16)" : "inset 0 -2px 8px rgba(0,0,0,0.1)",
             }}
           />
-          {/* Inside of flap (lighter gold) */}
+          {/* Inside of flap (lighter) */}
           <div
             style={{
               position: "absolute", inset: 0,
-              background: "linear-gradient(to bottom, #FFE566 0%, #FFCC00 100%)",
+              background: pal.flapInner,
               clipPath: "polygon(0 0, 100% 0, 50% 88%)",
               transform: "rotateX(180deg)",
               backfaceVisibility: "hidden",

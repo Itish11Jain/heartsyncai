@@ -11,6 +11,11 @@ flow and the `occasion=sorry` flow. All sorry-specific visuals are gated behind 
 the surprise flow is untouched.
 
 Sorry-only treatment, matching the bouquet screen's look:
+- Envelope uses a soft blush-cream "stationery paper" palette (not the gold of
+  the default flow), centralized in a `pal` object inside `GoldenEnvelope`.
+- Realistic paper texture = SVG fractal-noise grain (data URI, mixBlendMode
+  multiply) + woven repeating-linear-gradient fibers + a radial top-light sheen.
+  Lightweight/procedural — no image asset needed.
 - Envelope wrapped in a continuous gentle 3D float (paused while `opening`) + deeper
   multi-layer drop-shadow, mirroring `FloatingBouquet`'s 3D drift.
 - A decorative rose (`rosePinkImg`) + small eucalyptus sprig tucked into the
