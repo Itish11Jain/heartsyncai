@@ -859,11 +859,11 @@ const Orb = memo(function Orb({
           width: "100%",
           height: "100%",
           borderRadius: "50%",
-          background: clicked ? "#16161b" : "#100a24",
-          border: `1px solid ${clicked ? "rgba(120,120,130,0.22)" : "rgba(255,214,140,0.3)"}`,
+          background: clicked ? "#130d27" : "#120b28",
+          border: "none",
           boxShadow: clicked
-            ? "0 2px 6px rgba(0,0,0,0.4), inset 0 3px 7px rgba(0,0,0,0.7), inset 0 -2px 4px rgba(255,255,255,0.08)"
-            : "0 12px 26px rgba(0,0,0,0.55), 0 0 16px rgba(255,196,90,0.12), inset 0 3px 4px rgba(255,226,160,0.4), inset 0 -5px 9px rgba(0,0,0,0.75)",
+            ? "inset 4px 4px 9px rgba(0,0,0,0.85), inset -4px -4px 8px rgba(120,98,175,0.2)"
+            : "-5px -5px 11px rgba(125,100,180,0.24), 7px 9px 18px rgba(0,0,0,0.85), inset 2px 2px 3px rgba(255,230,180,0.28), inset -4px -5px 9px rgba(0,0,0,0.7)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "min(25px, 6.5vw)",
           position: "relative",
