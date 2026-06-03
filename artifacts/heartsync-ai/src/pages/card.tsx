@@ -844,9 +844,10 @@ const Orb = memo(function Orb({
         userSelect: "none",
       }}
     >
-      {/* Dark orb — solidly filled with the deep cosmic backdrop tone (no inner
-          glow or highlight); only a thin gold rim and a grounding drop-shadow
-          define it. Gentle continuous float gives it a bit of life. */}
+      {/* Dark orb — solidly filled with the deep cosmic backdrop tone and
+          embossed: a soft light catch along the top rim with a dark recess at
+          the bottom makes it read as raised from the surface. On tap it inverts
+          to a pressed-in (debossed) look. Gentle float gives it life. */}
       <motion.div
         animate={clicked ? { y: 0 } : { y: [-4, 4, -4] }}
         transition={
@@ -859,10 +860,10 @@ const Orb = memo(function Orb({
           height: "100%",
           borderRadius: "50%",
           background: clicked ? "#16161b" : "#100a24",
-          border: `1px solid ${clicked ? "rgba(120,120,130,0.3)" : "rgba(255,214,140,0.42)"}`,
+          border: `1px solid ${clicked ? "rgba(120,120,130,0.22)" : "rgba(255,214,140,0.3)"}`,
           boxShadow: clicked
-            ? "0 6px 16px rgba(0,0,0,0.4)"
-            : "0 13px 28px rgba(0,0,0,0.55), 0 0 18px rgba(255,196,90,0.18)",
+            ? "0 2px 6px rgba(0,0,0,0.4), inset 0 3px 7px rgba(0,0,0,0.7), inset 0 -2px 4px rgba(255,255,255,0.08)"
+            : "0 12px 26px rgba(0,0,0,0.55), 0 0 16px rgba(255,196,90,0.12), inset 0 3px 4px rgba(255,226,160,0.4), inset 0 -5px 9px rgba(0,0,0,0.75)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "min(25px, 6.5vw)",
           position: "relative",
