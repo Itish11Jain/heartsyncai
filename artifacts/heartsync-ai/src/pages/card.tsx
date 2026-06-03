@@ -856,9 +856,8 @@ const Orb = memo(function Orb({
         userSelect: "none",
       }}
     >
-      {/* Glossy 3D sphere body — filled with a radial light-to-shadow gradient,
-          a specular highlight, rim light and a grounding drop-shadow so it reads
-          as a solid orb with the same lifelike depth as the bouquet. */}
+      {/* Empty glass orb — translucent gradient ring with a soft glow, no solid
+          fill. Gentle continuous float gives it a bit of life. */}
       <motion.div
         animate={clicked ? { y: 0 } : { y: [-4, 4, -4] }}
         transition={
@@ -871,36 +870,23 @@ const Orb = memo(function Orb({
           height: "100%",
           borderRadius: "50%",
           background: clicked
-            ? "radial-gradient(circle at 33% 27%, #B9B9B9 0%, #8C8C8C 52%, #5E5E5E 100%)"
-            : "radial-gradient(circle at 33% 27%, #FFF6CC 0%, #FFDE6B 20%, #F6B41E 48%, #D98A06 76%, #A86200 100%)",
+            ? "rgba(80,80,80,0.3)"
+            : "linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.08))",
+          border: `2px solid ${clicked ? "rgba(100,100,100,0.3)" : "rgba(255,215,0,0.4)"}`,
+          backdropFilter: "blur(8px)",
           boxShadow: clicked
-            ? "0 5px 14px rgba(0,0,0,0.3), inset 0 -5px 10px rgba(0,0,0,0.35), inset 0 4px 8px rgba(255,255,255,0.25)"
-            : "0 12px 26px rgba(120,70,0,0.45), 0 5px 12px rgba(80,45,0,0.35), inset 0 -8px 15px rgba(120,60,0,0.5), inset 0 6px 11px rgba(255,255,255,0.55)",
+            ? "none"
+            : "0 8px 32px rgba(255,165,0,0.2), inset 0 1px 2px rgba(255,255,255,0.15)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "min(25px, 6.5vw)",
           position: "relative",
         }}
       >
-        {/* specular highlight */}
-        {!clicked && (
-          <div
-            style={{
-              position: "absolute",
-              top: "13%", left: "20%",
-              width: "36%", height: "27%",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,255,255,0) 72%)",
-              filter: "blur(1px)",
-              pointerEvents: "none",
-            }}
-          />
-        )}
         <span
           style={{
             display: "block",
             position: "relative",
             zIndex: 1,
-            textShadow: clicked ? undefined : "0 1px 3px rgba(90,50,0,0.4)",
             filter: clicked ? "grayscale(100%)" : undefined,
           }}
         >
