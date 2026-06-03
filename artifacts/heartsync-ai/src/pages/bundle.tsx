@@ -8,7 +8,15 @@ import { useLocation } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-const SPEED = 2; // preview playback multiplier (2× regular speed)
+const SPEED = 1; // preview playback multiplier (1× = real-time)
+
+// Card pages are built for a phone viewport. We render each preview iframe at the
+// real device resolution and scale it down to fit its tile, so the preview keeps
+// the exact phone aspect ratio + layout instead of cramping at the tile's width.
+const DEVICE_W = 390;
+const DEVICE_H = 844;
+const GRID_GAP = 8;
+const GRID_COLS = 3;
 
 const UPI_ID = "9706900714@pthdfc";
 const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncBundlePayment`;
@@ -103,6 +111,22 @@ export default function BundlePage() {
     reloadTimersRef.current.push(t);
   }, [reloadCard]);
   useEffect(() => () => { reloadTimersRef.current.forEach(clearTimeout); }, []);
+
+  // Measure tile width → scale factor so each iframe (rendered at DEVICE_W) fits.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [tileScale, setTileScale] = useState(0);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const compute = () => {
+      const tileW = (el.clientWidth - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+      if (tileW > 0) setTileScale(tileW / DEVICE_W);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   function activateBundle(token: string, fromUtr: boolean) {
     try { localStorage.setItem("hs_bundle_token", token); } catch { /* ignore */ }
@@ -221,26 +245,33 @@ export default function BundlePage() {
                 <div style={{ fontSize: 12, color: "rgba(255,215,0,0.6)", marginBottom: 12 }}>
                   ✨ See exactly what they'll receive — playing live
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                <div ref={gridRef} style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: GRID_GAP }}>
                   {PREVIEW_CARDS.map((tpl) => (
                     <div
                       key={tpl.id}
                       style={{
-                        position: "relative", aspectRatio: "9 / 19",
+                        position: "relative", aspectRatio: `${DEVICE_W} / ${DEVICE_H}`,
                         borderRadius: 14, overflow: "hidden", background: tpl.bg,
                         border: "1px solid rgba(255,255,255,0.1)",
                         boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
                       }}
                     >
-                      <iframe
-                        key={`${tpl.id}-${nonces[tpl.id] ?? 0}`}
-                        src={buildPreviewUrl(tpl)}
-                        title={`${tpl.label} live preview`}
-                        loading="lazy"
-                        scrolling="no"
-                        onLoad={() => handleTileLoad(tpl)}
-                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none", pointerEvents: "none", display: "block" }}
-                      />
+                      {tileScale > 0 && (
+                        <iframe
+                          key={`${tpl.id}-${nonces[tpl.id] ?? 0}`}
+                          src={buildPreviewUrl(tpl)}
+                          title={`${tpl.label} live preview`}
+                          loading="lazy"
+                          scrolling="no"
+                          onLoad={() => handleTileLoad(tpl)}
+                          style={{
+                            position: "absolute", top: 0, left: 0,
+                            width: DEVICE_W, height: DEVICE_H,
+                            transform: `scale(${tileScale})`, transformOrigin: "top left",
+                            border: "none", pointerEvents: "none", display: "block",
+                          }}
+                        />
+                      )}
                       <div style={{
                         position: "absolute", left: 0, right: 0, bottom: 0,
                         padding: "16px 4px 6px", pointerEvents: "none",
