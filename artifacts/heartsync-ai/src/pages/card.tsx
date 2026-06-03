@@ -643,25 +643,34 @@ function GoldenEnvelope({
             position: "relative",
           }}
         >
-          {/* Outside of flap */}
+          {/* Outside of flap — lifted off the body with a soft cast shadow under
+              its V edge and a gentle top sheen so it reads as raised, not flat. */}
           <div
             style={{
               position: "absolute", inset: 0,
               background: pal.flapOuter,
-              backgroundImage: isSorry ? `${paperGrain}, ${pal.flapOuter}` : pal.flapOuter,
-              backgroundSize: isSorry ? "140px 140px, cover" : undefined,
-              backgroundBlendMode: isSorry ? "multiply, normal" : undefined,
+              backgroundImage: isSorry
+                ? `linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 32%), ${paperGrain}, ${pal.flapOuter}`
+                : `linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 34%), ${pal.flapOuter}`,
+              backgroundSize: isSorry ? "cover, 140px 140px, cover" : undefined,
+              backgroundBlendMode: isSorry ? "normal, multiply, normal" : undefined,
               clipPath: "polygon(0 0, 100% 0, 50% 88%)",
               borderRadius: "10px 10px 0 0",
               backfaceVisibility: "hidden",
               boxShadow: isSorry ? "inset 0 -2px 10px rgba(120,70,55,0.16)" : "inset 0 -2px 8px rgba(0,0,0,0.1)",
+              filter: isSorry
+                ? "drop-shadow(0 6px 5px rgba(120,70,55,0.3))"
+                : "drop-shadow(0 6px 5px rgba(120,80,0,0.34))",
             }}
           />
-          {/* Inside of flap (lighter) */}
+          {/* Inside of flap (lighter) — same handmade paper texture as the body */}
           <div
             style={{
               position: "absolute", inset: 0,
               background: pal.flapInner,
+              backgroundImage: isSorry ? `${paperGrain}, ${pal.flapInner}` : pal.flapInner,
+              backgroundSize: isSorry ? "140px 140px, cover" : undefined,
+              backgroundBlendMode: isSorry ? "multiply, normal" : undefined,
               clipPath: "polygon(0 0, 100% 0, 50% 88%)",
               transform: "rotateX(180deg)",
               backfaceVisibility: "hidden",
@@ -805,7 +814,7 @@ const Orb = memo(function Orb({
           height: "100%",
           borderRadius: "50%",
           background: clicked ? "#130d27" : "#120b28",
-          border: "none",
+          border: `1px solid ${clicked ? "rgba(180,150,90,0.22)" : "rgba(255,200,120,0.38)"}`,
           boxShadow: clicked
             ? "inset 4px 4px 9px rgba(0,0,0,0.85), inset -4px -4px 8px rgba(120,98,175,0.2)"
             : "-5px -5px 11px rgba(125,100,180,0.24), 7px 9px 18px rgba(0,0,0,0.85), inset 2px 2px 3px rgba(255,230,180,0.28), inset -4px -5px 9px rgba(0,0,0,0.7)",
