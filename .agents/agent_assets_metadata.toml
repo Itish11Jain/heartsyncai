@@ -72,6 +72,24 @@ uri = "file://attached_assets/flowers/cosmos_pink.png"
 type = "image"
 title = "pink cosmos"
 
+[[generated]]
+id = "n5pHXDzpBtDPeLKDsFeWR"
+uri = "file://artifacts/heartsync-ai/public/sample/photo-1.png"
+type = "image"
+title = "sample photo 1"
+
+[[generated]]
+id = "L2Mg1AOMqtE2OOKe2TBQ-"
+uri = "file://artifacts/heartsync-ai/public/sample/photo-2.png"
+type = "image"
+title = "sample photo 2"
+
+[[generated]]
+id = "XE9s7e_QsKN_fMLaK3YE2"
+uri = "file://artifacts/heartsync-ai/public/sample/photo-3.png"
+type = "image"
+title = "sample photo 3"
+
 [[outputs]]
 id = "fDmbJv3aewQm22JAKoiDp"
 uri = "file://google-apps-script/gmail-utr-forwarder.txt"

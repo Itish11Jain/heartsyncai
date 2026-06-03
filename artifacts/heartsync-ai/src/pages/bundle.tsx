@@ -31,6 +31,16 @@ type PreviewCard = {
   query: string;
   loop: boolean;    // true = the card auto-loops itself; false = parent reloads it
   cycleMs: number;  // real-time length of one full play (used to schedule reloads)
+  pic?: string;     // "personalpicture" — single photo (orbs/polaroid screen)
+  photos?: string[];// "photos" — collage/multi-photo screen
+};
+
+// Sample recipient photos so each preview shows the real personalised
+// experience (polaroid + collage), not an empty placeholder card.
+const PHOTO = {
+  solo:   "/sample/photo-1.jpg",
+  couple: "/sample/photo-2.jpg",
+  friends:"/sample/photo-3.jpg",
 };
 
 // Every card the buyer can preview plays the REAL animated React template route
@@ -38,16 +48,21 @@ type PreviewCard = {
 // shows exactly what the recipient receives, looping continuously at 2× speed.
 // (Static public/*.html files never boot React in dev, so they froze on splash.)
 const PREVIEW_CARDS: PreviewCard[] = [
-  { id: "envelope", label: "Envelope", badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0a30,#3d1a5e)", file: "card",     query: "to=Riya&occasion=feel_good&relation=friend",   loop: true,  cycleMs: 12000 },
-  { id: "cosmic",   label: "Cosmic",   badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04001a,#0d0034)", file: "cosmic",   query: "to=Riya&occasion=anniversary&relation=partner", loop: false, cycleMs: 9000 },
-  { id: "crystal",  label: "Crystal",  badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04091a,#0a1e3d)", file: "crystal",  query: "to=Riya&occasion=feel_good&relation=friend",   loop: false, cycleMs: 7000 },
-  { id: "vinyl",    label: "Vinyl",    badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#120a04,#2a1608)", file: "vinyl",    query: "to=Riya&occasion=thank_you&relation=friend",   loop: false, cycleMs: 8000 },
-  { id: "birthday", label: "Birthday", badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#2a0810,#5e1a2e)", file: "birthday", query: "to=Riya&occasion=birthday&relation=friend",    loop: true,  cycleMs: 14000 },
-  { id: "sorry",    label: "Sorry",    badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0814,#3d1a30)", file: "card",     query: "to=Riya&occasion=sorry&relation=partner",      loop: true,  cycleMs: 12000 },
+  { id: "envelope", label: "Envelope", badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0a30,#3d1a5e)", file: "card",     query: "to=Riya&occasion=feel_good&relation=friend",   loop: true,  cycleMs: 12000, pic: PHOTO.solo,   photos: [PHOTO.solo, PHOTO.friends, PHOTO.couple] },
+  { id: "cosmic",   label: "Cosmic",   badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04001a,#0d0034)", file: "cosmic",   query: "to=Riya&occasion=anniversary&relation=partner", loop: false, cycleMs: 9000,  pic: PHOTO.couple, photos: [PHOTO.couple, PHOTO.solo, PHOTO.friends] },
+  { id: "crystal",  label: "Crystal",  badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#04091a,#0a1e3d)", file: "crystal",  query: "to=Riya&occasion=feel_good&relation=friend",   loop: false, cycleMs: 7000,  pic: PHOTO.solo },
+  { id: "vinyl",    label: "Vinyl",    badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#120a04,#2a1608)", file: "vinyl",    query: "to=Riya&occasion=thank_you&relation=friend",   loop: false, cycleMs: 8000,  pic: PHOTO.friends },
+  { id: "birthday", label: "Birthday", badge: "PREMIUM", badgeColor: "#FFD700", bg: "linear-gradient(145deg,#2a0810,#5e1a2e)", file: "birthday", query: "to=Riya&occasion=birthday&relation=friend",    loop: true,  cycleMs: 14000, pic: PHOTO.solo,   photos: [PHOTO.solo, PHOTO.friends, PHOTO.couple] },
+  { id: "sorry",    label: "Sorry",    badge: "FREE",    badgeColor: "#4ade80", bg: "linear-gradient(145deg,#1a0814,#3d1a30)", file: "card",     query: "to=Riya&occasion=sorry&relation=partner",      loop: true,  cycleMs: 12000, pic: PHOTO.couple, photos: [PHOTO.couple, PHOTO.solo] },
 ];
 
 function buildPreviewUrl(card: PreviewCard) {
-  return `${BASE}/${card.file}?${card.query}&preview=1&autoplay=1&speed=${SPEED}`;
+  let url = `${BASE}/${card.file}?${card.query}&preview=1&autoplay=1&speed=${SPEED}`;
+  if (card.pic) url += `&personalpicture=${BASE}${card.pic}`;
+  if (card.photos?.length) {
+    url += `&photos=${card.photos.map((p) => `${BASE}${p}`).join(",")}`;
+  }
+  return url;
 }
 
 const OCCASIONS = [
