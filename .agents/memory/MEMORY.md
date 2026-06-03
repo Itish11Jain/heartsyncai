@@ -2,3 +2,4 @@
 - [Card view tracking](card-view-tracking.md) — analytics "Views" counts per-page `card_viewed` events; every new card template must fire it on recipient open or it shows 0.
 - [Background removal](bg-removal.md) — sticker cutout runs RMBG-1.4 LOCALLY (transformers.js+sharp); HF inference API & remove.bg both abandoned (dead/no credits).
 - [Card image assets](card-image-assets.md) — export card scene art as small resized WebP + preload it (gated per occasion); source-res PNGs caused flower-by-flower pop-in & transition freeze.
+- [Bundle page card previews](bundle-previews.md) — preview grid iframes must load React routes (/card, /cosmic…), never static public/*.html (which don't boot React in dev → frozen splash).

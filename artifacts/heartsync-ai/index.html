@@ -195,8 +195,10 @@
           }
         }
 
-        // Skip splash when sender or preview query params are set (those flows render their own UI fast)
-        if ((isCard && (isSender || isPreview))) {
+        // Skip splash for any preview route (bundle grid iframes: /card, /cosmic,
+        // /crystal, /vinyl, /birthday) and for card sender flows — they render
+        // their own UI fast and must start the card animation immediately.
+        if (isPreview || (isCard && isSender)) {
           el.style.display = 'none';
           return;
         }
