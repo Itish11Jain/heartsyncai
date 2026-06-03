@@ -403,8 +403,6 @@ function GoldenEnvelope({
   const pal = isSorry
     ? {
         body: "linear-gradient(145deg, #FBEFE7 0%, #F4DDD0 30%, #ECCBBA 58%, #DFB6A3 82%, #D0A28E 100%)",
-        fold: "#C99683",
-        bottomFold: "#BC8773",
         innerLight: "linear-gradient(to bottom, rgba(255,250,246,0.45), rgba(255,238,228,0.05))",
         toLabel: "rgba(120,62,55,0.62)",
         toName: "rgba(78,34,30,0.92)",
@@ -414,8 +412,6 @@ function GoldenEnvelope({
       }
     : {
         body: "linear-gradient(145deg, #F5C518 0%, #FFD700 28%, #FFBC00 55%, #E8AA00 80%, #D4960A 100%)",
-        fold: "#C49000",
-        bottomFold: "#B8870A",
         innerLight: "linear-gradient(to bottom, rgba(255,250,220,0.25), rgba(255,255,200,0.05))",
         toLabel: "rgba(80,40,0,0.65)",
         toName: "rgba(45,18,0,0.9)",
@@ -428,6 +424,14 @@ function GoldenEnvelope({
      subtle woven fibers, layered over the paper for tactile realism. */
   const paperGrain =
     "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
+  /* Four triangular facets meeting at the centre. Each plane carries a slightly
+     different flat shade so the diagonal seams read as crisp, clean folds —
+     no muddy wide gradients or blurred smudges. Light comes from the top. */
+  const facetTop = isSorry ? "rgba(255,250,245,0.16)" : "rgba(255,250,210,0.18)";
+  const facetLeft = isSorry ? "rgba(150,98,82,0.05)" : "rgba(150,110,10,0.05)";
+  const facetRight = isSorry ? "rgba(150,98,82,0.10)" : "rgba(150,110,10,0.11)";
+  const facetBottom = isSorry ? "rgba(120,72,58,0.17)" : "rgba(120,88,8,0.18)";
 
   return (
     <div
@@ -473,31 +477,36 @@ function GoldenEnvelope({
           overflow: "hidden",
         }}
       >
-        {/* Left fold */}
+        {/* Top facet (lit) — mostly hidden behind the closed flap */}
         <div
           style={{
             position: "absolute", inset: 0,
-            background: `linear-gradient(to right, ${pal.fold}, transparent 42%)`,
-            clipPath: "polygon(0 100%, 44% 52%, 0 4%)",
-            opacity: isSorry ? 0.68 : 0.55,
+            background: facetTop,
+            clipPath: "polygon(0 0, 50% 50%, 100% 0)",
           }}
         />
-        {/* Right fold */}
+        {/* Left facet */}
         <div
           style={{
             position: "absolute", inset: 0,
-            background: `linear-gradient(to left, ${pal.fold}, transparent 42%)`,
-            clipPath: "polygon(100% 100%, 56% 52%, 100% 4%)",
-            opacity: isSorry ? 0.68 : 0.55,
+            background: facetLeft,
+            clipPath: "polygon(0 0, 50% 50%, 0 100%)",
           }}
         />
-        {/* Bottom fold */}
+        {/* Right facet */}
         <div
           style={{
             position: "absolute", inset: 0,
-            background: pal.bottomFold,
-            clipPath: "polygon(0 100%, 44% 52%, 56% 52%, 100% 100%)",
-            opacity: isSorry ? 0.72 : 0.6,
+            background: facetRight,
+            clipPath: "polygon(100% 0, 50% 50%, 100% 100%)",
+          }}
+        />
+        {/* Bottom facet (shadowed) */}
+        <div
+          style={{
+            position: "absolute", inset: 0,
+            background: facetBottom,
+            clipPath: "polygon(0 100%, 50% 50%, 100% 100%)",
           }}
         />
 
@@ -512,48 +521,11 @@ function GoldenEnvelope({
             backgroundImage: isSorry ? `${paperGrain}, ${pal.body}` : undefined,
             backgroundSize: isSorry ? "140px 140px, cover" : undefined,
             backgroundBlendMode: isSorry ? "multiply, normal" : undefined,
-            boxShadow: "inset 0 8px 14px rgba(255,255,255,0.18), inset 0 -8px 14px rgba(0,0,0,0.06)",
+            boxShadow: "inset 0 8px 14px rgba(255,255,255,0.16)",
             pointerEvents: "none",
           }}
         />
 
-        {/* Fold seam shadows (sorry only): soft dark lines along the diagonal
-            creases + a contact shadow under the flap V, for believable depth. */}
-        {isSorry && (
-          <>
-            {/* shadow the lower triangles cast just beneath the flap's V edges */}
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                background:
-                  "linear-gradient(to right, transparent 0%, rgba(110,62,52,0.0) 40%, rgba(110,62,52,0.5) 50%, rgba(110,62,52,0.0) 60%, transparent 100%)",
-                clipPath: "polygon(50% 52%, 56% 56%, 4% 100%, 0 96%)",
-                filter: "blur(2px)",
-                opacity: 0.55,
-                pointerEvents: "none",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                background:
-                  "linear-gradient(to left, transparent 0%, rgba(110,62,52,0.0) 40%, rgba(110,62,52,0.5) 50%, rgba(110,62,52,0.0) 60%, transparent 100%)",
-                clipPath: "polygon(50% 52%, 44% 56%, 96% 100%, 100% 96%)",
-                filter: "blur(2px)",
-                opacity: 0.55,
-                pointerEvents: "none",
-              }}
-            />
-            {/* darken the deep center where all folds meet */}
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                background: "radial-gradient(40% 30% at 50% 56%, rgba(90,48,40,0.28), transparent 70%)",
-                pointerEvents: "none",
-              }}
-            />
-          </>
-        )}
         {/* Inner light */}
         <div
           style={{
@@ -872,8 +844,9 @@ const Orb = memo(function Orb({
         userSelect: "none",
       }}
     >
-      {/* Glass orb — see-through (no solid fill) but with curvature shading,
-          a specular highlight and rim light so it reads as a 3D crystal sphere.
+      {/* Dark 3D orb — filled with the deep cosmic backdrop tone so it reads as a
+          polished obsidian/crystal sphere: top-lit radial gradient, a glossy
+          specular highlight, a warm gold rim, and a grounding drop-shadow.
           Gentle continuous float gives it a bit of life. */}
       <motion.div
         animate={clicked ? { y: 0 } : { y: [-4, 4, -4] }}
@@ -887,13 +860,12 @@ const Orb = memo(function Orb({
           height: "100%",
           borderRadius: "50%",
           background: clicked
-            ? "radial-gradient(circle at 32% 26%, rgba(200,200,200,0.4), rgba(120,120,120,0.22) 60%, rgba(80,80,80,0.18) 100%)"
-            : "radial-gradient(circle at 32% 26%, rgba(255,255,255,0.45) 0%, rgba(255,221,130,0.14) 38%, rgba(255,180,60,0.06) 70%, rgba(255,160,30,0.13) 100%)",
-          border: `1.5px solid ${clicked ? "rgba(140,140,140,0.4)" : "rgba(255,224,150,0.55)"}`,
-          backdropFilter: "blur(8px)",
+            ? "radial-gradient(circle at 33% 27%, #2b2b32 0%, #18181d 52%, #0c0c12 100%)"
+            : "radial-gradient(circle at 33% 27%, #43295f 0%, #25143f 38%, #140b27 72%, #0a0518 100%)",
+          border: `1px solid ${clicked ? "rgba(120,120,130,0.3)" : "rgba(255,214,140,0.42)"}`,
           boxShadow: clicked
-            ? "0 6px 16px rgba(0,0,0,0.2), inset 0 4px 9px rgba(255,255,255,0.2), inset 0 -6px 12px rgba(0,0,0,0.22)"
-            : "0 10px 26px rgba(255,165,0,0.22), inset 0 6px 12px rgba(255,255,255,0.42), inset 0 -9px 16px rgba(170,105,0,0.28), inset 0 0 6px rgba(255,255,255,0.12)",
+            ? "0 6px 16px rgba(0,0,0,0.4), inset 0 4px 9px rgba(255,255,255,0.06), inset 0 -8px 14px rgba(0,0,0,0.55)"
+            : "0 13px 28px rgba(0,0,0,0.55), 0 0 18px rgba(255,196,90,0.18), inset 0 7px 13px rgba(255,228,170,0.16), inset 0 -11px 20px rgba(0,0,0,0.6)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "min(25px, 6.5vw)",
           position: "relative",
@@ -903,26 +875,26 @@ const Orb = memo(function Orb({
         <div
           style={{
             position: "absolute",
-            top: "12%", left: "19%",
-            width: "34%", height: "26%",
+            top: "11%", left: "20%",
+            width: "32%", height: "24%",
             borderRadius: "50%",
             background: clicked
-              ? "radial-gradient(circle, rgba(255,255,255,0.5), rgba(255,255,255,0) 72%)"
-              : "radial-gradient(circle, rgba(255,255,255,0.92), rgba(255,255,255,0) 72%)",
+              ? "radial-gradient(circle, rgba(255,255,255,0.32), rgba(255,255,255,0) 72%)"
+              : "radial-gradient(circle, rgba(255,248,225,0.85), rgba(255,235,180,0) 72%)",
             filter: "blur(1px)",
             pointerEvents: "none",
           }}
         />
-        {/* soft lower rim light for spherical volume */}
+        {/* warm lower rim light for spherical volume */}
         <div
           style={{
             position: "absolute",
-            bottom: "9%", left: "26%",
-            width: "48%", height: "20%",
+            bottom: "10%", left: "27%",
+            width: "46%", height: "18%",
             borderRadius: "50%",
             background: clicked
-              ? "radial-gradient(circle, rgba(255,255,255,0.12), rgba(255,255,255,0) 70%)"
-              : "radial-gradient(circle, rgba(255,236,180,0.4), rgba(255,236,180,0) 72%)",
+              ? "radial-gradient(circle, rgba(255,255,255,0.08), rgba(255,255,255,0) 70%)"
+              : "radial-gradient(circle, rgba(255,196,110,0.5), rgba(255,196,110,0) 72%)",
             filter: "blur(1.5px)",
             pointerEvents: "none",
           }}
