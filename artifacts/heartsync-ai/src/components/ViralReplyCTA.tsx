@@ -2,13 +2,6 @@ import { useEffect } from "react";
 import { trackEvent } from "@/lib/trackEvent";
 import type { TemplateId } from "@/lib/usage";
 
-const VIRAL_NEXT: Record<string, TemplateId> = {
-  envelope: "cosmic",
-  cosmic: "vinyl",
-  vinyl: "crystal",
-  crystal: "envelope",
-};
-
 interface ViralReplyCTAProps {
   template: TemplateId;
 }
@@ -24,11 +17,8 @@ export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
   function handleClick() {
     trackEvent({ event: "viral_cta_clicked", template });
     const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-    window.location.href = `${base}/send?source=reply&received=${template}&utm_source=viral_reply`;
+    window.location.href = `${base}/?source=reply&received=${template}&utm_source=viral_reply`;
   }
-
-  const nextTpl = VIRAL_NEXT[template];
-  const nextEmoji = nextTpl === "cosmic" ? "✨" : nextTpl === "vinyl" ? "🎵" : nextTpl === "crystal" ? "🔮" : "💌";
 
   return (
     <div style={{
@@ -64,7 +54,7 @@ export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
         Feeling the love?
       </p>
       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginBottom: 14, lineHeight: 1.55 }}>
-        Send one back ✨ You've unlocked a secret {nextEmoji} 3D template to surprise them.
+        Create a card yourself to make someone feel special. ✨
       </p>
 
       <button
@@ -80,7 +70,7 @@ export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
           boxShadow: "0 4px 18px rgba(255,180,0,0.35)",
         }}
       >
-        Send love back ❤️
+        Send Love ❤️
       </button>
     </div>
   );
