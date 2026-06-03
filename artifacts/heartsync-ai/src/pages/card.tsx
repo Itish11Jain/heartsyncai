@@ -844,10 +844,9 @@ const Orb = memo(function Orb({
         userSelect: "none",
       }}
     >
-      {/* Dark 3D orb — filled with the deep cosmic backdrop tone so it reads as a
-          polished obsidian/crystal sphere: top-lit radial gradient, a glossy
-          specular highlight, a warm gold rim, and a grounding drop-shadow.
-          Gentle continuous float gives it a bit of life. */}
+      {/* Dark orb — solidly filled with the deep cosmic backdrop tone (no inner
+          glow or highlight); only a thin gold rim and a grounding drop-shadow
+          define it. Gentle continuous float gives it a bit of life. */}
       <motion.div
         animate={clicked ? { y: 0 } : { y: [-4, 4, -4] }}
         transition={
@@ -859,46 +858,16 @@ const Orb = memo(function Orb({
           width: "100%",
           height: "100%",
           borderRadius: "50%",
-          background: clicked
-            ? "radial-gradient(circle at 33% 27%, #2b2b32 0%, #18181d 52%, #0c0c12 100%)"
-            : "radial-gradient(circle at 33% 27%, #43295f 0%, #25143f 38%, #140b27 72%, #0a0518 100%)",
+          background: clicked ? "#16161b" : "#100a24",
           border: `1px solid ${clicked ? "rgba(120,120,130,0.3)" : "rgba(255,214,140,0.42)"}`,
           boxShadow: clicked
-            ? "0 6px 16px rgba(0,0,0,0.4), inset 0 4px 9px rgba(255,255,255,0.06), inset 0 -8px 14px rgba(0,0,0,0.55)"
-            : "0 13px 28px rgba(0,0,0,0.55), 0 0 18px rgba(255,196,90,0.18), inset 0 7px 13px rgba(255,228,170,0.16), inset 0 -11px 20px rgba(0,0,0,0.6)",
+            ? "0 6px 16px rgba(0,0,0,0.4)"
+            : "0 13px 28px rgba(0,0,0,0.55), 0 0 18px rgba(255,196,90,0.18)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "min(25px, 6.5vw)",
           position: "relative",
         }}
       >
-        {/* specular highlight (glossy reflection) */}
-        <div
-          style={{
-            position: "absolute",
-            top: "11%", left: "20%",
-            width: "32%", height: "24%",
-            borderRadius: "50%",
-            background: clicked
-              ? "radial-gradient(circle, rgba(255,255,255,0.32), rgba(255,255,255,0) 72%)"
-              : "radial-gradient(circle, rgba(255,248,225,0.85), rgba(255,235,180,0) 72%)",
-            filter: "blur(1px)",
-            pointerEvents: "none",
-          }}
-        />
-        {/* warm lower rim light for spherical volume */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10%", left: "27%",
-            width: "46%", height: "18%",
-            borderRadius: "50%",
-            background: clicked
-              ? "radial-gradient(circle, rgba(255,255,255,0.08), rgba(255,255,255,0) 70%)"
-              : "radial-gradient(circle, rgba(255,196,110,0.5), rgba(255,196,110,0) 72%)",
-            filter: "blur(1.5px)",
-            pointerEvents: "none",
-          }}
-        />
         <span
           style={{
             display: "block",
