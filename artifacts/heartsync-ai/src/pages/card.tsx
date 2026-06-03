@@ -276,9 +276,12 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
           style={{
             position: "absolute",
             left: 0, top: 0, bottom: 0,
-            width: `${(thumbX + thumbSize / 2)}px`,
+            width: isSorry ? `${thumbX}px` : `${(thumbX + thumbSize / 2)}px`,
             borderRadius: 999,
-            background: "linear-gradient(90deg, rgba(255,215,0,0.18), rgba(255,165,0,0.1))",
+            background: isSorry
+              ? "linear-gradient(90deg, rgba(245,196,78,0.16), rgba(220,150,90,0.08))"
+              : "linear-gradient(90deg, rgba(255,215,0,0.18), rgba(255,165,0,0.1))",
+            opacity: isSorry && thumbX < 2 ? 0 : 1,
             transition: dragging ? "none" : "all 0.3s",
           }}
         />
@@ -298,7 +301,7 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
             textShadow: isSorry ? "0 1px 8px rgba(245,196,78,0.35)" : undefined,
           }}
         >
-          {unlocked ? "✓" : isSorry ? "Slide the rose to open →" : "Slide to unlock →"}
+          {unlocked ? "✓" : isSorry ? "Slide the flower to open →" : "Slide to unlock →"}
         </div>
         <motion.div
           onPointerDown={handlePointerDown}
@@ -353,9 +356,9 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
                   pointerEvents: "none",
                 }}
               />
-              {/* the 3D rose the user drags */}
+              {/* the 3D bloom the user drags */}
               <motion.img
-                src={rosePinkImg}
+                src={ranunculusYellowImg}
                 alt=""
                 aria-hidden
                 draggable={false}
@@ -367,7 +370,7 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
                   height: thumbSize * 1.4,
                   objectFit: "contain",
                   transformOrigin: "bottom center",
-                  filter: "drop-shadow(0 4px 8px rgba(80,30,60,0.5))",
+                  filter: "drop-shadow(0 4px 8px rgba(90,60,30,0.45))",
                   pointerEvents: "none",
                 }}
               />
@@ -434,7 +437,7 @@ function GoldenEnvelope({
         position: "relative",
         perspective: 800,
         filter: isSorry
-          ? "drop-shadow(0 26px 50px rgba(120,55,70,0.4)) drop-shadow(0 16px 34px rgba(200,120,120,0.28)) drop-shadow(0 0 90px rgba(235,180,180,0.22))"
+          ? "drop-shadow(0 22px 36px rgba(90,52,55,0.4)) drop-shadow(0 8px 16px rgba(90,52,55,0.24))"
           : "drop-shadow(0 24px 48px rgba(255,165,0,0.35)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
       }}
     >
@@ -531,7 +534,7 @@ function GoldenEnvelope({
               style={{
                 position: "absolute", inset: 0,
                 background:
-                  "radial-gradient(120% 80% at 30% 0%, rgba(255,252,248,0.5), transparent 55%), radial-gradient(120% 90% at 70% 110%, rgba(120,70,55,0.16), transparent 60%)",
+                  "radial-gradient(120% 80% at 50% -10%, rgba(255,252,248,0.45), transparent 55%), radial-gradient(120% 70% at 50% 120%, rgba(120,70,55,0.1), transparent 65%)",
                 pointerEvents: "none",
               }}
             />
@@ -707,9 +710,9 @@ function GoldenEnvelope({
               filter: "drop-shadow(0 6px 10px rgba(40,60,40,0.35))",
             }}
           />
-          {/* the rose */}
+          {/* the bloom */}
           <motion.img
-            src={rosePinkImg}
+            src={ranunculusYellowImg}
             alt=""
             aria-hidden
             draggable={false}
@@ -722,7 +725,7 @@ function GoldenEnvelope({
               height: "100%",
               objectFit: "contain",
               transformOrigin: "bottom center",
-              filter: "drop-shadow(0 8px 14px rgba(80,30,60,0.5))",
+              filter: "drop-shadow(0 8px 14px rgba(90,60,30,0.45))",
             }}
           />
         </motion.div>
