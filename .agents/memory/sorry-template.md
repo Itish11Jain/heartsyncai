@@ -18,13 +18,13 @@ Sorry-only treatment, matching the bouquet screen's look:
   Lightweight/procedural — no image asset needed.
 - Envelope wrapped in a continuous gentle 3D float (paused while `opening`) + deeper
   multi-layer drop-shadow, mirroring `FloatingBouquet`'s 3D drift.
-- The corner bloom + draggable slider bloom use `ranunculusYellowImg` (yellow,
-  sunflower-like cheer) — NOT a rose. Bloom flowers must come from the existing
-  bouquet assets in `attached_assets/flowers/`; don't generate new ones.
-- A decorative bloom + small eucalyptus sprig tucked into the
+- The corner bloom + draggable slider bloom use `rosePinkImg` (user reverted a
+  ranunculus experiment back to the rose). Bloom flowers must come from the
+  existing bouquet assets in `attached_assets/flowers/`; don't generate new ones.
+- A decorative rose + small eucalyptus sprig tucked into the
   envelope's top-right corner. Keep it low enough (`top` ~ -13%) so it does NOT
   overlap the cursive heading above.
-- `SlideToUnlock` knob is a draggable bloom image instead of the round button.
+- `SlideToUnlock` knob is a draggable rose image instead of the round button.
   Drag/unlock math is unchanged.
 - Headline + slider text use `'Dancing Script', cursive` with the gold gradient.
 

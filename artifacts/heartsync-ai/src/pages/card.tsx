@@ -301,7 +301,7 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
             textShadow: isSorry ? "0 1px 8px rgba(245,196,78,0.35)" : undefined,
           }}
         >
-          {unlocked ? "✓" : isSorry ? "Slide the flower to open →" : "Slide to unlock →"}
+          {unlocked ? "✓" : isSorry ? "Slide the rose to open →" : "Slide to unlock →"}
         </div>
         <motion.div
           onPointerDown={handlePointerDown}
@@ -356,9 +356,9 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
                   pointerEvents: "none",
                 }}
               />
-              {/* the 3D bloom the user drags */}
+              {/* the 3D rose the user drags */}
               <motion.img
-                src={ranunculusYellowImg}
+                src={rosePinkImg}
                 alt=""
                 aria-hidden
                 draggable={false}
@@ -370,7 +370,7 @@ function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; is
                   height: thumbSize * 1.4,
                   objectFit: "contain",
                   transformOrigin: "bottom center",
-                  filter: "drop-shadow(0 4px 8px rgba(90,60,30,0.45))",
+                  filter: "drop-shadow(0 4px 8px rgba(80,30,60,0.5))",
                   pointerEvents: "none",
                 }}
               />
@@ -479,7 +479,7 @@ function GoldenEnvelope({
             position: "absolute", inset: 0,
             background: `linear-gradient(to right, ${pal.fold}, transparent 42%)`,
             clipPath: "polygon(0 100%, 44% 52%, 0 4%)",
-            opacity: 0.55,
+            opacity: isSorry ? 0.68 : 0.55,
           }}
         />
         {/* Right fold */}
@@ -488,7 +488,7 @@ function GoldenEnvelope({
             position: "absolute", inset: 0,
             background: `linear-gradient(to left, ${pal.fold}, transparent 42%)`,
             clipPath: "polygon(100% 100%, 56% 52%, 100% 4%)",
-            opacity: 0.55,
+            opacity: isSorry ? 0.68 : 0.55,
           }}
         />
         {/* Bottom fold */}
@@ -497,9 +497,47 @@ function GoldenEnvelope({
             position: "absolute", inset: 0,
             background: pal.bottomFold,
             clipPath: "polygon(0 100%, 44% 52%, 56% 52%, 100% 100%)",
-            opacity: 0.6,
+            opacity: isSorry ? 0.72 : 0.6,
           }}
         />
+
+        {/* Fold seam shadows (sorry only): soft dark lines along the diagonal
+            creases + a contact shadow under the flap V, for believable depth. */}
+        {isSorry && (
+          <>
+            {/* shadow the lower triangles cast just beneath the flap's V edges */}
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                background:
+                  "linear-gradient(to right, transparent 0%, rgba(110,62,52,0.0) 40%, rgba(110,62,52,0.5) 50%, rgba(110,62,52,0.0) 60%, transparent 100%)",
+                clipPath: "polygon(50% 52%, 56% 56%, 4% 100%, 0 96%)",
+                filter: "blur(2px)",
+                opacity: 0.55,
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                background:
+                  "linear-gradient(to left, transparent 0%, rgba(110,62,52,0.0) 40%, rgba(110,62,52,0.5) 50%, rgba(110,62,52,0.0) 60%, transparent 100%)",
+                clipPath: "polygon(50% 52%, 44% 56%, 96% 100%, 100% 96%)",
+                filter: "blur(2px)",
+                opacity: 0.55,
+                pointerEvents: "none",
+              }}
+            />
+            {/* darken the deep center where all folds meet */}
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                background: "radial-gradient(40% 30% at 50% 56%, rgba(90,48,40,0.28), transparent 70%)",
+                pointerEvents: "none",
+              }}
+            />
+          </>
+        )}
         {/* Inner light */}
         <div
           style={{
@@ -508,28 +546,53 @@ function GoldenEnvelope({
           }}
         />
 
-        {/* Paper texture: fine grain + woven fibers + a soft top-light sheen
-            (sorry template only) for tactile, realistic stationery. */}
+        {/* Paper texture: multi-scale grain + woven fibers + mottled blotches +
+            a soft top-light sheen (sorry template only) for tactile, realistic
+            handmade stationery. */}
         {isSorry && (
           <>
+            {/* coarse grain */}
             <div
               style={{
                 position: "absolute", inset: 0,
                 backgroundImage: paperGrain,
-                backgroundSize: "140px 140px",
-                opacity: 0.5,
+                backgroundSize: "180px 180px",
+                opacity: 0.72,
                 mixBlendMode: "multiply",
                 pointerEvents: "none",
               }}
             />
+            {/* fine speckle for tooth */}
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                backgroundImage: paperGrain,
+                backgroundSize: "70px 70px",
+                opacity: 0.42,
+                mixBlendMode: "multiply",
+                pointerEvents: "none",
+              }}
+            />
+            {/* woven fibers (warp + weft) */}
             <div
               style={{
                 position: "absolute", inset: 0,
                 backgroundImage:
-                  "repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(25deg, rgba(120,70,55,0.045) 0px, rgba(120,70,55,0.045) 1px, transparent 1px, transparent 5px)",
+                  "repeating-linear-gradient(115deg, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.07) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(25deg, rgba(120,70,55,0.08) 0px, rgba(120,70,55,0.08) 1px, transparent 1px, transparent 5px)",
                 pointerEvents: "none",
               }}
             />
+            {/* faint mottled blotches (handmade paper unevenness) */}
+            <div
+              style={{
+                position: "absolute", inset: 0,
+                backgroundImage:
+                  "radial-gradient(circle at 22% 30%, rgba(120,70,55,0.07), transparent 18%), radial-gradient(circle at 72% 24%, rgba(255,250,246,0.12), transparent 16%), radial-gradient(circle at 60% 72%, rgba(120,70,55,0.06), transparent 22%), radial-gradient(circle at 34% 78%, rgba(255,250,246,0.1), transparent 20%)",
+                mixBlendMode: "multiply",
+                pointerEvents: "none",
+              }}
+            />
+            {/* soft top-light sheen + faint bottom shading */}
             <div
               style={{
                 position: "absolute", inset: 0,
@@ -710,9 +773,9 @@ function GoldenEnvelope({
               filter: "drop-shadow(0 6px 10px rgba(40,60,40,0.35))",
             }}
           />
-          {/* the bloom */}
+          {/* the rose */}
           <motion.img
-            src={ranunculusYellowImg}
+            src={rosePinkImg}
             alt=""
             aria-hidden
             draggable={false}
@@ -725,7 +788,7 @@ function GoldenEnvelope({
               height: "100%",
               objectFit: "contain",
               transformOrigin: "bottom center",
-              filter: "drop-shadow(0 8px 14px rgba(90,60,30,0.45))",
+              filter: "drop-shadow(0 8px 14px rgba(80,30,60,0.5))",
             }}
           />
         </motion.div>
