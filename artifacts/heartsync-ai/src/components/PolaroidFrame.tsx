@@ -96,7 +96,9 @@ export default function PolaroidFrame({ src }: Props) {
         }}
       />
 
-      {/* Photo circle — shimmer until image arrives */}
+      {/* Photo circle — shimmer until image arrives. Domed/3D: casts a real
+          shadow below + inset rim shading so it reads as a raised glossy lens
+          rather than a flat 2D disc (matches the bouquet's lifted feel). */}
       <div
         style={{
           width: "100%",
@@ -105,6 +107,8 @@ export default function PolaroidFrame({ src }: Props) {
           overflow: "hidden",
           background: "radial-gradient(circle at 40% 35%, rgba(80,40,120,0.9) 0%, rgba(20,10,40,0.95) 100%)",
           position: "relative",
+          boxShadow:
+            "0 16px 30px rgba(0,0,0,0.55), 0 7px 14px rgba(0,0,0,0.4), inset 0 3px 7px rgba(255,255,255,0.28), inset 0 -12px 22px rgba(0,0,0,0.5)",
         }}
       >
         {/* Shimmer sweep + cute loader — hidden once image is ready */}
@@ -156,6 +160,23 @@ export default function PolaroidFrame({ src }: Props) {
             opacity: 1,
           }}
         />
+        {/* Curved-glass sheen — a soft top-left highlight that simulates light
+            catching a domed surface, selling the 3D lens look. Only once the
+            photo is in, so it never tints the loader. */}
+        {imgLoaded && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            pointerEvents: "none",
+            background:
+              "radial-gradient(120% 90% at 32% 22%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.12) 22%, rgba(255,255,255,0) 48%)",
+            mixBlendMode: "screen",
+            zIndex: 3,
+          }}
+        />
+        )}
       </div>
     </motion.div>
   );
