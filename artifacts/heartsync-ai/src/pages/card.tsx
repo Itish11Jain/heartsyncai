@@ -457,29 +457,24 @@ function GoldenEnvelope({
           : "drop-shadow(0 24px 48px rgba(255,165,0,0.35)) drop-shadow(0 0 80px rgba(255,215,0,0.15))",
       }}
     >
-      {/* Continuous gentle 3D float — gives the envelope lifelike depth. The
-          sorry template keeps its original, bouquet-tuned motion; the golden
-          template floats a touch more buoyantly. */}
+      {/* Continuous gentle 3D float (sorry template only) — gives the envelope
+          the same lifelike depth as the flower bouquet. */}
       <motion.div
         animate={
-          !opening
-            ? isSorry
-              ? { y: [-5, 5, -5], rotateY: [-6, 6, -6], rotateX: [2.5, -2.5, 2.5], rotateZ: [-1, 1, -1] }
-              : { y: [-7, 7, -7], rotateY: [-8, 8, -8], rotateX: [3.5, -3.5, 3.5], rotateZ: [-1.4, 1.4, -1.4] }
+          isSorry && !opening
+            ? { y: [-5, 5, -5], rotateY: [-6, 6, -6], rotateX: [2.5, -2.5, 2.5], rotateZ: [-1, 1, -1] }
             : { y: 0, rotateY: 0, rotateX: 0, rotateZ: 0 }
         }
         transition={
-          !opening
-            ? isSorry
-              ? { duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }
-              : { duration: 5.8, repeat: Infinity, ease: "easeInOut", delay: 0.3 }
+          isSorry && !opening
+            ? { duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }
             : { duration: 0.4 }
         }
         style={{
           position: "absolute",
           inset: 0,
           transformStyle: "preserve-3d",
-          willChange: !opening ? "transform" : undefined,
+          willChange: isSorry ? "transform" : undefined,
         }}
       >
       {/* Envelope body */}
@@ -490,7 +485,7 @@ function GoldenEnvelope({
           background: pal.body,
           boxShadow: isSorry
             ? "inset 0 2px 10px rgba(255,255,255,0.4), inset 0 -3px 12px rgba(120,70,55,0.22)"
-            : "inset 0 3px 12px rgba(255,255,255,0.5), inset 0 -5px 16px rgba(120,80,0,0.35), inset 0 0 34px rgba(255,200,60,0.18)",
+            : "inset 0 2px 9px rgba(255,255,255,0.32), inset 0 -3px 11px rgba(120,80,0,0.22)",
           overflow: "hidden",
         }}
       >
@@ -558,52 +553,6 @@ function GoldenEnvelope({
                 position: "absolute", inset: 0,
                 background:
                   "radial-gradient(120% 80% at 50% -10%, rgba(255,252,248,0.45), transparent 55%), radial-gradient(120% 70% at 50% 120%, rgba(120,70,55,0.1), transparent 65%)",
-                pointerEvents: "none",
-              }}
-            />
-          </>
-        )}
-
-        {/* Gold foil texture (golden template only): fine grain for tooth, a
-            brushed-foil streak, mottled shimmer blotches and a diagonal sheen —
-            gives the metallic gold a tactile, 3D pressed-foil feel. */}
-        {!isSorry && (
-          <>
-            {/* fine metallic grain */}
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                backgroundImage: paperGrain,
-                backgroundSize: "120px 120px",
-                opacity: 0.3,
-                mixBlendMode: "overlay",
-                pointerEvents: "none",
-              }}
-            />
-            {/* brushed-foil micro streaks */}
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                backgroundImage:
-                  "repeating-linear-gradient(118deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 5px), repeating-linear-gradient(118deg, rgba(150,95,0,0.08) 0px, rgba(150,95,0,0.08) 1px, transparent 1px, transparent 9px)",
-                pointerEvents: "none",
-              }}
-            />
-            {/* mottled shimmer (uneven foil reflection) */}
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                backgroundImage:
-                  "radial-gradient(circle at 24% 28%, rgba(255,245,200,0.28), transparent 20%), radial-gradient(circle at 74% 22%, rgba(255,255,255,0.22), transparent 16%), radial-gradient(circle at 62% 74%, rgba(150,95,0,0.12), transparent 24%), radial-gradient(circle at 32% 78%, rgba(255,240,190,0.2), transparent 22%)",
-                pointerEvents: "none",
-              }}
-            />
-            {/* diagonal moving-light sheen band */}
-            <div
-              style={{
-                position: "absolute", inset: 0,
-                background:
-                  "linear-gradient(118deg, transparent 30%, rgba(255,255,255,0.32) 47%, rgba(255,255,255,0.05) 53%, transparent 66%)",
                 pointerEvents: "none",
               }}
             />
