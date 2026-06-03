@@ -1147,10 +1147,18 @@ function MemoryCollage({
                   delay: 0.8 + i * 0.4,
                 }}
                 style={{
-                  background: "#fffcf0",
+                  background: isSorry
+                    ? "linear-gradient(160deg, #fffdf6 0%, #fff7e6 55%, #f3e4c4 100%)"
+                    : "#fffcf0",
                   padding: n === 1 ? "8px 8px 28px" : "6px 6px 22px",
                   borderRadius: 3,
-                  boxShadow: "0 10px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)",
+                  /* Sorry: a deeper, layered cast shadow lifts the print off the
+                     background while a top highlight + bottom inset bevel give the
+                     paper real thickness — a 3D bouquet-style lift. */
+                  boxShadow: isSorry
+                    ? "0 20px 36px rgba(60,30,25,0.5), 0 8px 14px rgba(60,30,25,0.42), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -3px 7px rgba(150,110,80,0.28)"
+                    : "0 10px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)",
+                  border: isSorry ? "1px solid rgba(255,255,255,0.65)" : undefined,
                 }}
               >
                 <img
@@ -1176,8 +1184,12 @@ function MemoryCollage({
                 style={{
                   position: "absolute",
                   bottom: -6, right: -6,
-                  fontSize: 24,
-                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
+                  fontSize: isSorry ? 30 : 24,
+                  /* Sorry: stacked drop-shadows give the sticker a raised,
+                     3D bouquet-style pop off the print. */
+                  filter: isSorry
+                    ? "drop-shadow(0 1px 0 rgba(255,255,255,0.6)) drop-shadow(0 3px 3px rgba(0,0,0,0.32)) drop-shadow(0 7px 9px rgba(80,40,30,0.4))"
+                    : "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
                   userSelect: "none",
                   pointerEvents: "none",
                   lineHeight: 1,
