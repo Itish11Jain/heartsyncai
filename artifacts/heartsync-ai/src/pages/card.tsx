@@ -403,7 +403,6 @@ function GoldenEnvelope({
   const pal = isSorry
     ? {
         body: "linear-gradient(145deg, #FBEFE7 0%, #F4DDD0 30%, #ECCBBA 58%, #DFB6A3 82%, #D0A28E 100%)",
-        innerLight: "linear-gradient(to bottom, rgba(255,250,246,0.45), rgba(255,238,228,0.05))",
         toLabel: "rgba(120,62,55,0.62)",
         toName: "rgba(78,34,30,0.92)",
         deco: "rgba(190,118,118,0.6)",
@@ -412,7 +411,6 @@ function GoldenEnvelope({
       }
     : {
         body: "linear-gradient(145deg, #F5C518 0%, #FFD700 28%, #FFBC00 55%, #E8AA00 80%, #D4960A 100%)",
-        innerLight: "linear-gradient(to bottom, rgba(255,250,220,0.25), rgba(255,255,200,0.05))",
         toLabel: "rgba(80,40,0,0.65)",
         toName: "rgba(45,18,0,0.9)",
         deco: "rgba(200,130,0,0.7)",
@@ -424,14 +422,6 @@ function GoldenEnvelope({
      subtle woven fibers, layered over the paper for tactile realism. */
   const paperGrain =
     "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
-
-  /* Four triangular facets meeting at the centre. Each plane carries a slightly
-     different flat shade so the diagonal seams read as crisp, clean folds —
-     no muddy wide gradients or blurred smudges. Light comes from the top. */
-  const facetTop = isSorry ? "rgba(255,250,245,0.16)" : "rgba(255,250,210,0.18)";
-  const facetLeft = isSorry ? "rgba(150,98,82,0.05)" : "rgba(150,110,10,0.05)";
-  const facetRight = isSorry ? "rgba(150,98,82,0.10)" : "rgba(150,110,10,0.11)";
-  const facetBottom = isSorry ? "rgba(120,72,58,0.17)" : "rgba(120,88,8,0.18)";
 
   return (
     <div
@@ -477,60 +467,15 @@ function GoldenEnvelope({
           overflow: "hidden",
         }}
       >
-        {/* Top facet (lit) — mostly hidden behind the closed flap */}
+        {/* Soft, smooth body shading — a gentle top-light sheen and a subtle
+            bottom-pocket darkening give the envelope quiet depth without any
+            hard fold lines or seams. */}
         <div
           style={{
             position: "absolute", inset: 0,
-            background: facetTop,
-            clipPath: "polygon(0 0, 50% 50%, 100% 0)",
-          }}
-        />
-        {/* Left facet */}
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background: facetLeft,
-            clipPath: "polygon(0 0, 50% 50%, 0 100%)",
-          }}
-        />
-        {/* Right facet */}
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background: facetRight,
-            clipPath: "polygon(100% 0, 50% 50%, 100% 100%)",
-          }}
-        />
-        {/* Bottom facet (shadowed) */}
-        <div
-          style={{
-            position: "absolute", inset: 0,
-            background: facetBottom,
-            clipPath: "polygon(0 100%, 50% 50%, 100% 100%)",
-          }}
-        />
-
-        {/* Smooth inner paper — covers the upper fold creases that the flap
-            reveals when it opens, so the open envelope reads as clean stationery
-            instead of showing a central triangular "dent". Hidden behind the
-            closed flap, so the closed look is unchanged. */}
-        <div
-          style={{
-            position: "absolute", top: 0, left: 0, right: 0, height: "53%",
-            background: pal.body,
-            backgroundImage: isSorry ? `${paperGrain}, ${pal.body}` : undefined,
-            backgroundSize: isSorry ? "140px 140px, cover" : undefined,
-            backgroundBlendMode: isSorry ? "multiply, normal" : undefined,
-            boxShadow: "inset 0 8px 14px rgba(255,255,255,0.16)",
+            background:
+              "radial-gradient(130% 80% at 50% -12%, rgba(255,255,255,0.22), transparent 58%), radial-gradient(140% 60% at 50% 122%, rgba(0,0,0,0.16), transparent 62%)",
             pointerEvents: "none",
-          }}
-        />
-
-        {/* Inner light */}
-        <div
-          style={{
-            position: "absolute", top: "5%", left: "30%", right: "30%", bottom: "30%",
-            background: pal.innerLight,
           }}
         />
 
