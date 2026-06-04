@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
+import { getPriceArm } from "@/lib/priceArm";
 
 /* Radix UI (TooltipProvider + Toaster) is not needed for the first paint.
  * Lazy-loading this wrapper removes the 22 KB gzip radix chunk from the
@@ -97,6 +98,11 @@ function AppRoutes() {
   const needsClerk = AUTH_ROUTE_PREFIXES.some(
     (p) => location === p || location.startsWith(p + "/"),
   );
+
+  // Resolve (and persist) the price A/B arm at boot. This locks in any ?arm=
+  // testing override immediately, before any paywall reads it, so navigating
+  // away from the override URL still shows the forced arm.
+  useEffect(() => { getPriceArm(); }, []);
 
   const switchEl = (
     <Switch>
