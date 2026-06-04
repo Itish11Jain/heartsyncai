@@ -8,7 +8,7 @@ import { useLocation } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-const SPEED = 1; // preview playback multiplier (1× = real-time)
+const SPEED = 2; // preview playback multiplier (2× = faster looping previews)
 
 // Card pages are built for a phone viewport. We render each preview iframe at the
 // real device resolution and scale it down to fit its tile, so the preview keeps
