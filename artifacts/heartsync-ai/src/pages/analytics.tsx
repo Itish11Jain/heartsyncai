@@ -71,7 +71,7 @@ type PaymentFunnelRow = {
   step7_card_shared: string;
 };
 
-type PriceArmRow = { price: number; created: string; paid: string; paid_tagged?: string };
+type PriceArmRow = { price: number; created: string; paid: string };
 type PriceArmOccasionRow = { price: number; occasion: string; created: string; paid: string };
 
 type SalesDaily = { date: string; unlocks: string; amount: string };
@@ -1018,8 +1018,7 @@ export default function Analytics() {
                 Price A/B Test · ₹49 vs ₹99
               </h2>
               <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, lineHeight: 1.5, marginBottom: 10 }}>
-                <strong style={{ color: "rgba(255,255,255,0.6)" }}>Paid</strong> = real ₹49/₹99 payments received (accurate for the whole range).{" "}
-                <strong style={{ color: "rgba(255,255,255,0.6)" }}>Created</strong> &amp; conversion % only count from when arm tagging went live, so a “—” rate next to real paid counts is expected for earlier conversions.
+                Counts cards created &amp; paid that carry a ₹49/₹99 arm tag, from when tagging went live (4 Jun, 8:18 PM IST). Conversions before that point aren’t shown here because they were never tagged.
               </p>
               {arms.length === 0 ? (
                 <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginBottom: 24 }}>
@@ -1036,7 +1035,7 @@ export default function Analytics() {
                       }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                           <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 18 }}>₹{a.price}</span>
-                          <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 20 }}>{conv(a.paid_tagged ?? "0", a.created)}</span>
+                          <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 20 }}>{conv(a.paid, a.created)}</span>
                         </div>
                         <div style={{ display: "flex", gap: 16 }}>
                           <div>

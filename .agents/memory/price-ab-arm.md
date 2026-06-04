@@ -29,19 +29,20 @@ The Gmail Apps Script UTR forwarder amount allowlist must stay in sync with the
 live arms (currently {49,50,99,100} ±0.5) or valid payments get dropped before
 they ever reach the API.
 
-**Rule: A/B "paid" conversions come from REAL payments, not arm-tagged events.**
-The arm tag lives only in the browser and is only persisted onto card events
-from the deploy that ships tracking — so any conversion before that go-live has
-a NULL arm and an event-tagged "paid" count silently reads ~0 for historical
-ranges. Source paid from `hs_received_payments.amount` (₹49 vs ₹99, normalize
-the text values '49'/'49.00'/'99'/'99.00') with the sales-handler exclusions
-(refunds, owner test payers/UTRs) + IST date range. This is accurate
-retroactively. `created` (denominator) can only come from arm-tagged
-`card_created`, so it is forward-only and cannot be backfilled.
-**Why:** owner panicked seeing near-zero A/B numbers; money was intact, only the
-attribution source was wrong.
-**How to apply:** keep the conversion-RATE numerator/denominator in the SAME
-epoch — rate = tagged paid (`paid_tagged`, from `card_paid` events) ÷ tagged
-`created`; never divide real-payment paid by tagged created or the rate blows
-past 100% over ranges spanning the go-live. Show real-payment `paid` as the
-headline count, label `created`/rate as "from tagging go-live".
+**Rule: the A/B panel counts ONE consistent tagged epoch — both `created` and
+`paid` from arm-tagged events (`card_created` / `card_paid` with `price IN
+(49,99)`), floored at `AB_EXPERIMENT_START` (the instant tagging first persisted
+onto events; do NOT mix real-payment counts into it).**
+The arm tag lives only in the browser and only began persisting onto events
+from the deploy that shipped tracking, so earlier conversions have a NULL arm
+and can never be backfilled. An earlier attempt sourced `paid` from real
+payments (`hs_received_payments.amount`) to recover historical numbers, but that
+mixes a tagged numerator/denominator with an untagged baseline → owner found the
+"₹49 paid 197 / created 0" readout confusing and asked to show only the clean
+tagged window. So: floor every A/B query at `AB_EXPERIMENT_START` and keep
+created+paid+conversion% all from tagged events.
+**Why:** consistency over completeness — a small honest like-for-like window
+beats a large mixed-epoch one that yields nonsense rates (e.g. >100%).
+**How to apply:** `AB_EXPERIMENT_START` is a hardcoded UTC constant inlined as a
+`::timestamptz` literal in events.ts; bump it only if tagging is reset. Real
+total revenue by price still lives in the separate Sales section (payments).

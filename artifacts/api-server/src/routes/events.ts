@@ -83,6 +83,17 @@ const EXCLUDED_UTR_SQL_LIST = EXCLUDED_PAYMENT_UTRS
   .join(",");
 
 /**
+ * Price A/B experiment start — the moment arm tagging (₹49/₹99) first began
+ * persisting onto BOTH card_created and card_paid events in production. The
+ * A/B panel counts only events from this point so created, paid, and the
+ * conversion rate share one consistent epoch. Earlier conversions were never
+ * tagged (the arm lived only in the browser), so including them would mix a
+ * tagged numerator with an untagged baseline. Stored as a fixed UTC instant
+ * (2026-06-04 20:18 IST = 14:48 UTC).
+ */
+const AB_EXPERIMENT_START = "2026-06-04T14:48:00Z";
+
+/**
  * Builds the shared WHERE-fragment + ordered parameter list for every
  * analytics aggregate query. Combines:
  *   - superuser email exclusion
@@ -571,40 +582,6 @@ router.get("/events/analytics", async (req, res) => {
     }
 
     /**
-     * Price A/B "paid" filter over hs_received_payments. The per-device arm
-     * tag only began persisting onto card events from the deploy that shipped
-     * tracking, so counting paid conversions from tagged events undercounts
-     * every conversion before that. The real money is the source of truth:
-     * a ₹49 payment is a ₹49-arm conversion, a ₹99 payment is a ₹99-arm one.
-     * This makes the readout accurate retroactively (e.g. from experiment
-     * start) regardless of when event tagging went live. Mirrors the sales
-     * handler's exclusions (refunds, owner test payments) + IST date range.
-     */
-    const abPayConds: string[] = ["refunded_at IS NULL"];
-    const abPayParams: string[] = [];
-    const abPayerStart = abPayParams.length + 1;
-    abPayParams.push(...EXCLUDED_PAYER_PATTERNS);
-    if (EXCLUDED_PAYER_PATTERNS.length > 0) {
-      abPayConds.push(
-        `(raw_sms IS NULL OR NOT (${EXCLUDED_PAYER_PATTERNS.map(
-          (_, i) => `raw_sms ~* $${abPayerStart + i}`,
-        ).join(" OR ")}))`,
-      );
-    }
-    if (EXCLUDED_UTR_SQL_LIST) {
-      abPayConds.push(`(utr IS NULL OR utr NOT IN (${EXCLUDED_UTR_SQL_LIST}))`);
-    }
-    if (from) {
-      abPayParams.push(from);
-      abPayConds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${abPayParams.length}::date`);
-    }
-    if (to) {
-      abPayParams.push(to);
-      abPayConds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date < ($${abPayParams.length}::date + INTERVAL '1 day')`);
-    }
-    const abPayWhere = abPayConds.join(" AND ");
-
-    /**
      * "Recent cards" view-count subquery shares the exact same filter as the
      * outer SELECT (same email exclusions, same recipient exclusions, same
      * date range). Because the placeholders ($1, $2, …) are identical in both
@@ -628,7 +605,6 @@ router.get("/events/analytics", async (req, res) => {
       mediaBreakdown,
       priceAb,
       priceAbOccasions,
-      priceAbPaid,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -875,70 +851,55 @@ router.get("/events/analytics", async (req, res) => {
           params,
         ),
         /* ── Price A/B test: per-arm created → paid readout ──
-         * created  = card_created events tagged with this arm
-         * paid     = distinct cards with a card_paid event tagged with this arm
+         * Both created and paid come from arm-tagged events, so the panel
+         * counts a single consistent epoch: from when arm tagging went live
+         * (AB_EXPERIMENT_START). Earlier untagged conversions are intentionally
+         * excluded so created/paid/conversion% are all like-for-like.
+         *   created = card_created events tagged with this arm
+         *   paid    = distinct cards with a card_paid event tagged with this arm
          * Conversion is computed client-side as paid / created. */
         pool.query(
           `SELECT price,
              COUNT(*) FILTER (WHERE event = 'card_created')             AS created,
              COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_paid') AS paid
            FROM hs_card_events
-           WHERE price IN (49, 99) AND ${whereSql}
+           WHERE price IN (49, 99)
+             AND created_at >= '${AB_EXPERIMENT_START}'::timestamptz
+             AND ${whereSql}
            GROUP BY price ORDER BY price`,
           params,
         ),
-        /* ── Price A/B test: per-arm × occasion breakdown ── */
+        /* ── Price A/B test: per-arm × occasion breakdown (same epoch) ── */
         pool.query(
           `SELECT price, occasion,
              COUNT(*) FILTER (WHERE event = 'card_created')             AS created,
              COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_paid') AS paid
            FROM hs_card_events
            WHERE price IN (49, 99) AND occasion IS NOT NULL
-             AND event IN ('card_created', 'card_paid') AND ${whereSql}
+             AND event IN ('card_created', 'card_paid')
+             AND created_at >= '${AB_EXPERIMENT_START}'::timestamptz
+             AND ${whereSql}
            GROUP BY price, occasion ORDER BY price, created DESC`,
           params,
-        ),
-        /* ── Price A/B test: paid conversions from REAL payments by amount ──
-         * Source of truth for "paid" (see abPayWhere note). ₹49/₹99 amounts
-         * are stored as text ('49.00','49','99.00','99'); normalise to the arm. */
-        pool.query(
-          `SELECT
-             CASE WHEN NULLIF(amount,'')::numeric = 49 THEN 49
-                  WHEN NULLIF(amount,'')::numeric = 99 THEN 99 END AS price,
-             COUNT(*) AS paid
-           FROM hs_received_payments
-           WHERE NULLIF(amount,'')::numeric IN (49, 99) AND ${abPayWhere}
-           GROUP BY 1 ORDER BY 1`,
-          abPayParams,
         ),
       ]);
 
     /**
-     * Merge the two A/B sources: `created` comes from arm-tagged events
-     * (only available from when tracking shipped — forward-looking), while
-     * `paid` comes from real payments by amount (accurate retroactively).
-     * Always emit both arms so the panel renders even when one side is 0.
+     * Both `created` and `paid` come from arm-tagged events since
+     * AB_EXPERIMENT_START, so they share one epoch and the conversion rate is
+     * like-for-like. Always emit both arms so the panel renders even when one
+     * side is 0.
      */
-    const paidByArm = new Map<number, number>();
-    for (const r of priceAbPaid.rows as Array<{ price: number | null; paid: string }>) {
-      if (r.price === 49 || r.price === 99) paidByArm.set(r.price, Number(r.paid) || 0);
-    }
     const createdByArm = new Map<number, number>();
-    const paidTaggedByArm = new Map<number, number>();
+    const paidByArm = new Map<number, number>();
     for (const r of priceAb.rows as Array<{ price: number; created: string; paid: string }>) {
       createdByArm.set(Number(r.price), Number(r.created) || 0);
-      paidTaggedByArm.set(Number(r.price), Number(r.paid) || 0);
+      paidByArm.set(Number(r.price), Number(r.paid) || 0);
     }
-    // `paid` = real payments (accurate for the whole range).
-    // `paid_tagged` = arm-tagged card_paid events; used ONLY as the conversion
-    // numerator so the rate is like-for-like with `created` (same forward-only
-    // tagged epoch). Mixing real-payment paid with tagged created would inflate
-    // the rate past 100% for ranges spanning the tracking go-live.
     const mergedPriceAb = [49, 99].map((price) => ({
       price,
       created: String(createdByArm.get(price) ?? 0),
       paid: String(paidByArm.get(price) ?? 0),
-      paid_tagged: String(paidTaggedByArm.get(price) ?? 0),
     }));
 
     return res.json({
