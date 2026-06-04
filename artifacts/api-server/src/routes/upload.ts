@@ -15,6 +15,17 @@ function getStorage(): Client {
   return _storage;
 }
 
+/** Download an Object Storage object into a single Buffer. */
+function downloadToBuffer(key: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const stream = getStorage().downloadAsStream(key);
+    stream.on("data", (c: Buffer) => chunks.push(Buffer.from(c)));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+  });
+}
+
 const ALLOWED_IMAGE_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/jpg": "jpg",
@@ -209,13 +220,35 @@ router.post(
   photoUpload.single("photo"),
   async (req: Request, res: Response) => {
     try {
-      const file = req.file;
-      if (!file) { res.status(400).json({ error: "No file uploaded." }); return; }
+      // Source bytes: prefer an already-uploaded photo referenced by its storage
+      // key (the client does NOT re-upload the image bytes — that would compete
+      // with the remaining photo uploads on a slow mobile uplink). Fall back to a
+      // directly-uploaded file for backward compatibility.
+      let sourceBuffer: Buffer;
+      const photoKey = typeof req.body?.photoKey === "string" ? req.body.photoKey.trim() : "";
+      if (photoKey) {
+        if (!photoKey.startsWith("photo/")) {
+          res.status(400).json({ error: "Invalid photo reference." });
+          return;
+        }
+        try {
+          sourceBuffer = await downloadToBuffer(photoKey);
+        } catch (err) {
+          console.error("[sticker] failed to load source photo", err);
+          res.status(400).json({ error: "Source photo not found." });
+          return;
+        }
+      } else if (req.file) {
+        sourceBuffer = req.file.buffer;
+      } else {
+        res.status(400).json({ error: "No file uploaded." });
+        return;
+      }
 
       let pngBuffer: Buffer;
       try {
         const t0 = Date.now();
-        pngBuffer = await removeBackground(file.buffer);
+        pngBuffer = await removeBackground(sourceBuffer);
         console.info(`[sticker] background removed locally in ${Date.now() - t0}ms`);
       } catch (err) {
         console.error("[sticker] local background removal failed", err);

@@ -25,11 +25,16 @@ hub (the hub/CDN is reachable in prod even though api-inference is not).
 - esbuild must externalize `@huggingface/transformers`, `sharp`, `onnxruntime-*` (see build.mjs externals).
 - `sharp` must be a direct dep of api-server (transformers nests its own copy that isn't resolvable).
 - Inference is serialized (a promise chain mutex) and inputs downscaled to 1600px to bound memory — do not remove without a replacement backpressure mechanism.
-- **Model load + inference + the RGBA compositing run in a dedicated worker
-  thread** (`bgRemoveWorker.ts`, emitted as `dist/bgRemoveWorker.mjs` via a 2nd
-  esbuild entry), spawned lazily by `bgRemove.ts` and terminated after 60s idle.
-  Do NOT warm at startup and do NOT move it back in-process — see
-  [upload-perf.md] for why (it was starving ordinary photo/voice uploads).
+- **Model load + inference + RGBA compositing run IN-PROCESS** (lazy-loaded on
+  first `/upload/sticker`), serialized via a promise-chain mutex. Do NOT warm at
+  startup.
+- **NEVER move bg-removal into a `worker_thread`.** `onnxruntime-node` is a
+  non-context-aware native addon: it loads fine in the first worker but a
+  *respawned* worker's `dlopen` throws `Module did not self-register`
+  (`ERR_DLOPEN_FAILED`). A worker that self-terminates on idle then respawns
+  therefore breaks the sticker feature in production (it looked fine in dev only
+  because the idle/respawn boundary was never crossed). In-process inference runs
+  on libuv worker threads anyway, so it does not hard-block the event loop.
 
 # Sticker delivery: predict-the-URL, never block on bg-removal
 Bg-removal is slower than a user takes to fill in the card, so never block card

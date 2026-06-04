@@ -14,23 +14,27 @@ background-removal model. Two settings are required to keep uploads fast:
   Do NOT pass `contentType` — it is not a valid `UploadOptions` field in
   `@replit/object-storage` v1 (only `compress` exists); the GET routes set the
   Content-Type header on download instead.
-- **Bg-removal runs in a dedicated WORKER THREAD, never in-process, never warmed
-  at startup.** `bgRemove.ts` lazily spawns `bgRemoveWorker.ts` (model + ONNX
-  inference + RGBA compositing) on the first `/upload/sticker` (birthday only)
-  and `worker.terminate()`s it after 60s idle to reclaim the model's memory.
-  **Why:** in-process, the model's resident memory + the synchronous pixel loop
-  competed with the same Node process that serves uploads, so birthday cards
-  (the only flow that loads the model) stalled photo/voice uploads — sometimes
-  forever. A worker isolates its V8 heap + CPU and lets us free it when idle.
-  **How to apply:** worker is a 2nd esbuild entry → `dist/bgRemoveWorker.mjs`
-  (sibling of index.mjs); resolve its path via `fileURLToPath(import.meta.url)`.
-  Scope worker `error`/`exit` handlers with `if (worker !== w) return;` so an
-  idle-terminated worker never rejects the next worker's in-flight jobs.
+- **Bg-removal runs IN-PROCESS (lazy-loaded, serialized), never warmed at
+  startup, and MUST NOT run in a worker_thread.** A worker_thread attempt was
+  reverted: `onnxruntime-node` is non-context-aware and a respawned worker fails
+  with `Module did not self-register` (`ERR_DLOPEN_FAILED`), which broke the
+  birthday sticker in production. See [bg-removal.md] for the addon-reload detail.
+  ONNX inference already runs on libuv threads, so in-process does not hard-block
+  the event loop; serialize jobs + downscale inputs to bound memory.
+
+- **The birthday sticker must NOT make the client re-upload the photo bytes.**
+  The first photo is uploaded once to `/upload/photo`; the sticker request then
+  sends only the resulting `photoKey` and the server fetches it from Object
+  Storage internally. **Why:** re-uploading the full image to `/upload/sticker`
+  ran concurrently with photos 2 & 3 and saturated slow mobile uplinks, so the
+  later photos "never loaded." Server-side photo uploads themselves are ~150ms;
+  the stall was client uplink contention, not the server.
 
 - **Client uploads have a 60s AbortController timeout** so a stalled request
   surfaces a clear error instead of spinning forever. The photo `<input>` is
-  `multiple` and the selected files are processed in order (preserves the
-  birthday "first photo → sticker cutout" logic and preview↔url ordering).
+  `multiple` and files are processed sequentially; the first-photo sticker
+  trigger is gated on the `autoStickerUrlRef` ref (not a stale state closure) so
+  a multi-select batch fires bg-removal exactly once.
 
 **resvg fonts:** `@resvg/resvg-js` 2.6.2 has no `fontBuffers` option (silently
 ignored → no glyphs). Load OG-image fonts via `fontFiles` (paths), not buffers.

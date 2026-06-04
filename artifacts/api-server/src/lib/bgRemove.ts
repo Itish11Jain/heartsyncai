@@ -1,131 +1,106 @@
-/**
- * Background-removal client.
- *
- * The actual model load, ONNX inference and RGBA compositing run in a dedicated
- * worker thread (`bgRemoveWorker.ts`) so none of that heavy CPU or the model's
- * memory ever touches the main thread that serves photo/voice uploads. The
- * worker is spawned lazily on first use and torn down after a period of
- * inactivity, which fully reclaims the model's memory between cards.
- */
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { Worker } from "node:worker_threads";
+import sharp from "sharp";
+import {
+  AutoModel,
+  AutoProcessor,
+  RawImage,
+  type PreTrainedModel,
+  type Processor,
+} from "@huggingface/transformers";
 
-// Tear the worker (and the model it holds) down after this long with no jobs,
-// returning the instance to its baseline memory footprint.
-const IDLE_TIMEOUT_MS = 60_000;
+const MODEL_ID = "briaai/RMBG-1.4";
 
-interface WorkerResponse {
-  id: number;
-  ok: boolean;
-  output?: Uint8Array;
-  error?: string;
-}
+let _loadPromise: Promise<{ model: PreTrainedModel; processor: Processor }> | null = null;
 
-interface Pending {
-  resolve: (buf: Buffer) => void;
-  reject: (err: Error) => void;
-}
-
-let worker: Worker | null = null;
-let nextId = 1;
-let idleTimer: NodeJS.Timeout | null = null;
-const pending = new Map<number, Pending>();
-
-function workerPath(): string {
-  // `bgRemove.ts` is bundled into dist/index.mjs and the worker is emitted as
-  // dist/bgRemoveWorker.mjs (a sibling), so resolve relative to this module.
-  const dir = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(dir, "bgRemoveWorker.mjs");
-}
-
-function clearIdleTimer(): void {
-  if (idleTimer) {
-    clearTimeout(idleTimer);
-    idleTimer = null;
+function load(): Promise<{ model: PreTrainedModel; processor: Processor }> {
+  if (!_loadPromise) {
+    _loadPromise = (async () => {
+      const t0 = Date.now();
+      const [model, processor] = await Promise.all([
+        AutoModel.from_pretrained(MODEL_ID),
+        AutoProcessor.from_pretrained(MODEL_ID),
+      ]);
+      console.info(`[bgRemove] model "${MODEL_ID}" loaded in ${Date.now() - t0}ms`);
+      return { model, processor };
+    })().catch((err) => {
+      // Reset so a later request can retry if the first load failed.
+      _loadPromise = null;
+      throw err;
+    });
   }
+  return _loadPromise;
 }
 
-function scheduleIdleShutdown(): void {
-  clearIdleTimer();
-  idleTimer = setTimeout(() => {
-    idleTimer = null;
-    if (worker && pending.size === 0) {
-      const w = worker;
-      worker = null;
-      w.terminate().catch(() => {});
-      console.info("[bgRemove] worker idle, terminated to free memory");
-    }
-  }, IDLE_TIMEOUT_MS);
-  // Don't let the idle timer keep the process alive on its own.
-  idleTimer.unref?.();
-}
+// Cap the resolution we composite at. The model itself downsamples internally,
+// so a huge source image only inflates memory during mask resize + compositing
+// without improving sticker quality. 1600px on the long edge is plenty for a card.
+const MAX_DIMENSION = 1600;
 
-function failAllPending(err: Error): void {
-  for (const { reject } of pending.values()) {
-    reject(err);
-  }
-  pending.clear();
-}
-
-function getWorker(): Worker {
-  if (worker) return worker;
-
-  const w = new Worker(workerPath());
-
-  w.on("message", (msg: WorkerResponse) => {
-    const job = pending.get(msg.id);
-    if (!job) return;
-    pending.delete(msg.id);
-    if (msg.ok && msg.output) {
-      job.resolve(Buffer.from(msg.output));
-    } else {
-      job.reject(new Error(msg.error ?? "background removal failed"));
-    }
-    if (pending.size === 0) scheduleIdleShutdown();
-  });
-
-  w.on("error", (err) => {
-    console.error("[bgRemove] worker error", err);
-    // Only react if this is still the active worker. An old worker we
-    // deliberately replaced/terminated must never touch the new worker's jobs.
-    if (worker !== w) return;
-    worker = null;
-    failAllPending(err instanceof Error ? err : new Error(String(err)));
-  });
-
-  w.on("exit", (code) => {
-    // Ignore exits from a worker we already swapped out (e.g. idle shutdown);
-    // its jobs were settled when it stopped being the active worker.
-    if (worker !== w) return;
-    worker = null;
-    if (pending.size > 0) {
-      failAllPending(new Error(`bgRemove worker exited (code ${code})`));
-    }
-  });
-
-  worker = w;
-  return w;
+// Serialize inference so a burst of simultaneous requests cannot spin up many
+// concurrent ONNX runs and exhaust CPU/RAM. ONNX already uses multiple threads
+// internally, so one job at a time keeps the box healthy under load.
+let _chain: Promise<unknown> = Promise.resolve();
+function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const next = _chain.then(fn, fn);
+  // Keep the chain alive regardless of individual success/failure.
+  _chain = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
 }
 
 /**
  * Remove the background from an image buffer.
- * Runs the RMBG-1.4 segmentation model in a worker thread (no external API)
- * and composites the predicted mask as the alpha channel of the original image.
+ * Runs the RMBG-1.4 segmentation model locally (no external API) and
+ * composites the predicted mask as the alpha channel of the original image.
+ *
+ * Runs in-process: ONNX inference happens on libuv worker threads (it does not
+ * block the main event loop), and inference is serialized to bound memory/CPU.
+ * NOTE: do NOT move this into a worker_thread — `onnxruntime-node` is a
+ * non-context-aware native addon and fails with "Module did not self-register"
+ * (ERR_DLOPEN_FAILED) when loaded into a second/respawned worker thread.
  *
  * @returns a transparent PNG buffer.
  */
-export function removeBackground(input: Buffer): Promise<Buffer> {
-  const id = nextId++;
-  const w = getWorker();
-  clearIdleTimer();
+export async function removeBackground(input: Buffer): Promise<Buffer> {
+  const { model, processor } = await load();
 
-  return new Promise<Buffer>((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    // Copy into a fresh, transferable ArrayBuffer so we hand ownership to the
-    // worker without disturbing the caller's buffer.
-    const copy = new Uint8Array(input.byteLength);
-    copy.set(input);
-    w.postMessage({ id, input: copy }, [copy.buffer]);
+  // Downscale very large uploads to bound memory during compositing.
+  const normalized = await sharp(input)
+    .rotate() // honour EXIF orientation
+    .resize(MAX_DIMENSION, MAX_DIMENSION, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .toBuffer();
+
+  return runExclusive(async () => {
+    const image = await RawImage.fromBlob(
+      new Blob([new Uint8Array(normalized)]),
+    );
+    const { pixel_values } = await processor(image);
+    const { output } = await model({ input: pixel_values });
+
+    // output: [1, 1, H, W] foreground probability in 0..1
+    const maskImg = await RawImage.fromTensor(
+      output[0].mul(255).to("uint8"),
+    ).resize(image.width, image.height);
+    const mask = Buffer.from(maskImg.data);
+
+    const { data: rgba, info } = await sharp(normalized)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const pixels = info.width * info.height;
+    for (let i = 0; i < pixels; i++) {
+      rgba[i * 4 + 3] = mask[i];
+    }
+
+    return sharp(rgba, {
+      raw: { width: info.width, height: info.height, channels: 4 },
+    })
+      .png()
+      .toBuffer();
   });
 }

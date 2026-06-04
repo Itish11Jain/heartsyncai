@@ -639,19 +639,24 @@ function SendInner() {
       }
       const data = await res.json() as { url?: string };
       if (data.url) {
-        const isFirstPhoto = uploadedPhotoUrls.length === 0;
         setUploadedPhotoUrls(prev => [...prev, data.url!]);
         trackEvent({ event: "photo_added", occasion, clerk_user_id: clerkUserId ?? undefined, email: userEmail ?? undefined, fingerprint: fingerprint ?? undefined, template: selectedTemplate });
 
-        // For birthday cards: auto-remove background of the first photo so it appears
-        // as a transparent PNG sticker cutout in Scene 5.
-        if (isFirstPhoto && occasion === "birthday") {
+        // For birthday cards: auto-remove background of the first photo so it
+        // appears as a transparent PNG sticker cutout in Scene 5. Gate on the
+        // ref (not a stale `uploadedPhotoUrls.length` closure) so a multi-select
+        // batch fires this exactly once, for the first photo only.
+        if (occasion === "birthday" && !autoStickerUrlRef.current) {
           // Predict the sticker URL up-front using a client-generated id, so the
           // card can swap the transparent cutout in as soon as it's ready — even
           // if the user creates the card before background removal finishes (it
           // runs for a few seconds on the server). The original photo is shown
           // immediately and the cutout replaces it once available.
           const photoUrl = data.url!;
+          // Reference the photo we JUST uploaded by its storage key so the
+          // server can fetch it internally — no re-upload of the image bytes,
+          // which would otherwise compete with photos 2 & 3 on a slow uplink.
+          const photoKey = photoUrl.split("/api/photos/")[1] ?? "";
           const stickerId = crypto.randomUUID();
           const predictedUrl = `${base}/api/stickers/sticker/${stickerId}.png`;
           setAutoStickerUrl(predictedUrl);
@@ -659,7 +664,7 @@ function SendInner() {
           bgRemoveInProgressRef.current = true;
           const sfd = new FormData();
           sfd.append("stickerId", stickerId);
-          sfd.append("photo", compressed);
+          sfd.append("photoKey", photoKey);
           fetch(`${base}/api/upload/sticker`, { method: "POST", body: sfd })
             .then(sr => sr.ok ? sr.json() : null)
             .then((sd: { url?: string } | null) => {
