@@ -8,7 +8,7 @@
  * returning visitor always sees the same price.
  *
  * Each arm keeps the same "~50% off" discount framing: the live price is shown
- * struck through against an anchor (49 → ₹99 anchor, 99 → ₹199 anchor), so only
+ * struck through against an anchor (49 → ₹99 anchor, 99 → ₹149 anchor), so only
  * the number the customer pays varies between arms.
  */
 
@@ -23,7 +23,7 @@ export interface PriceConfig {
   anchor: number;
 }
 
-const ANCHOR: Record<PriceArm, number> = { 49: 99, 99: 199 };
+const ANCHOR: Record<PriceArm, number> = { 49: 99, 99: 149 };
 
 /** Deterministic 0/1 bucket from a string (same hash family as makeFingerprint). */
 function bucket(seed: string): PriceArm {
