@@ -41,8 +41,21 @@ query joins `hs_card_events c` to a view-count subquery that also selected
 `card_id` resolves to `c.card_id`; do NOT qualify the shared filter string itself,
 since other queries apply it to a single unaliased `hs_card_events`.
 
-**Key limitation:** the newest payment emails are stored as a redirect URL with
-no readable payer name/VPA, so name/VPA matching only covers plaintext records —
-her *future* test payments may be unidentifiable and slip through. Her cards also
-have NULL fingerprint and no account, so fingerprint/login can't identify her
-either; the payment-text match is the only reliable handle.
+**Opaque payments → exclude by exact UTR (`EXCLUDED_PAYMENT_UTRS`):** the newest
+payment emails are stored as a redirect URL with no readable payer name/VPA, AND
+her test cards carry NULL `recipient_name`, NULL fingerprint, and no account — so
+name/VPA/recipient/fingerprint/login can ALL miss them. There is no automatic data
+signal that distinguishes such an owner test payment from a real customer's. The
+only stable handle is the exact UPI reference number (UTR). `EXCLUDED_PAYMENT_UTRS`
+(digit-only, validated, inlined into SQL — safe only because hardcoded constants)
+is wired into `buildEventFilter()` (drops events on the unlocked card), the
+`/events/sales` shared `whereSql` (totals/daily/byOccasion), and the rolling-24h
+query. Always use `(utr IS NULL OR utr NOT IN (...))` — bare `utr NOT IN` would
+drop NULL-utr rows.
+**Why:** owner flagged a ₹99 redirect-URL test payment that nothing else could
+catch; verified in prod it dropped that one unlock (19/₹1031 → 18/₹932) and no
+other.
+**How to apply:** each *future* opaque owner test payment must have its UTR added
+to `EXCLUDED_PAYMENT_UTRS` by hand — there is no auto-detect. A better long-term
+fix would be capturing the real payer VPA at ingestion (the Android SMS forwarder
+sees the raw bank SMS) instead of only the redirect URL.

@@ -57,6 +57,32 @@ const EXCLUDED_PAYER_PATTERNS: string[] = [
 ];
 
 /**
+ * The owner's newest test payments arrive as opaque redirect-URL emails with no
+ * readable payer name/VPA, so EXCLUDED_PAYER_PATTERNS can never match them. The
+ * only stable handle on those is the exact UPI reference number (UTR). List the
+ * owner's own test-payment UTRs here to drop them from BOTH sales and analytics.
+ *
+ * Each value MUST be digits only — they are validated and then inlined directly
+ * into SQL (no bind params), which is safe precisely because they are trusted,
+ * hardcoded, digit-only constants. Never put user-supplied input here.
+ */
+const EXCLUDED_PAYMENT_UTRS: string[] = [
+  "207656468448", // ₹99 owner test payment, 4 Jun 2026 (opaque redirect-URL email)
+];
+// Fail loudly on a malformed (non-digit) entry instead of silently dropping it,
+// which would otherwise let an owner test payment leak back into the stats.
+const _badUtr = EXCLUDED_PAYMENT_UTRS.find((u) => !/^\d+$/.test(u));
+if (_badUtr !== undefined) {
+  throw new Error(
+    `EXCLUDED_PAYMENT_UTRS entries must be digits only; got ${JSON.stringify(_badUtr)}`,
+  );
+}
+/** Quoted, comma-joined for inlining: e.g. `'123','456'` (or "" if none). */
+const EXCLUDED_UTR_SQL_LIST = EXCLUDED_PAYMENT_UTRS
+  .map((u) => `'${u}'`)
+  .join(",");
+
+/**
  * Builds the shared WHERE-fragment + ordered parameter list for every
  * analytics aggregate query. Combines:
  *   - superuser email exclusion
@@ -91,15 +117,20 @@ function buildEventFilter(opts: { from?: string | null; to?: string | null } = {
 
   // Exclude events on cards that were unlocked by an excluded payer's (Itisha's)
   // test payment. The subquery guards against NULL card_id so NOT IN is safe.
-  if (EXCLUDED_PAYER_PATTERNS.length > 0) {
+  if (EXCLUDED_PAYER_PATTERNS.length > 0 || EXCLUDED_UTR_SQL_LIST) {
     const payerStart = params.length + 1;
     params.push(...EXCLUDED_PAYER_PATTERNS);
+    const matchParts: string[] = [];
+    if (EXCLUDED_PAYER_PATTERNS.length > 0) {
+      matchParts.push(
+        EXCLUDED_PAYER_PATTERNS.map((_, i) => `raw_sms ~* $${payerStart + i}`).join(" OR "),
+      );
+    }
+    if (EXCLUDED_UTR_SQL_LIST) matchParts.push(`utr IN (${EXCLUDED_UTR_SQL_LIST})`);
     conds.push(
       `(card_id IS NULL OR card_id NOT IN (
          SELECT card_id FROM hs_received_payments
-         WHERE card_id IS NOT NULL AND (${EXCLUDED_PAYER_PATTERNS.map(
-           (_, i) => `raw_sms ~* $${payerStart + i}`,
-         ).join(" OR ")})
+         WHERE card_id IS NOT NULL AND (${matchParts.join(" OR ")})
        ))`,
     );
   }
@@ -895,6 +926,10 @@ router.get("/events/sales", async (req, res) => {
         (_, i) => `raw_sms ~* $${payerStart + i}`,
       ).join(" OR ")}))`,
     );
+    // Exclude the owner's opaque (redirect-URL) test payments by exact UTR.
+    if (EXCLUDED_UTR_SQL_LIST) {
+      conds.push(`(utr IS NULL OR utr NOT IN (${EXCLUDED_UTR_SQL_LIST}))`);
+    }
     if (from) {
       params.push(from);
       conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${params.length}::date`);
@@ -950,6 +985,7 @@ router.get("/events/sales", async (req, res) => {
            AND (raw_sms IS NULL OR NOT (${EXCLUDED_PAYER_PATTERNS.map(
              (_, i) => `raw_sms ~* $${i + 1}`,
            ).join(" OR ")}))
+           ${EXCLUDED_UTR_SQL_LIST ? `AND (utr IS NULL OR utr NOT IN (${EXCLUDED_UTR_SQL_LIST}))` : ""}
            AND created_at >= NOW() - INTERVAL '24 hours'`,
         [...EXCLUDED_PAYER_PATTERNS],
       ),
