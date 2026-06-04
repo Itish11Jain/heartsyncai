@@ -73,8 +73,12 @@ function processMessage(msg) {
 
   var amount = amountMatch[1].replace(/,/g, "");
   var amountNum = parseFloat(amount);
-  if (amountNum < 49 || amountNum > 50) {
-    Logger.log("Skipping payment outside ₹49-50 range: Rs." + amount + " | UTR " + utr);
+  // Price A/B test: accept both arms (₹49 / ₹99) plus the +₹1 some users round
+  // up to. Anything outside this allowlist is a non-HeartSync payment.
+  var ALLOWED_AMOUNTS = [49, 50, 99, 100];
+  var amountAllowed = ALLOWED_AMOUNTS.some(function (a) { return Math.abs(amountNum - a) < 0.5; });
+  if (!amountAllowed) {
+    Logger.log("Skipping payment outside allowed amounts (49/50/99/100): Rs." + amount + " | UTR " + utr);
     markProcessed(msg.getId());  // mark so we don't check again
     return;
   }

@@ -71,6 +71,9 @@ type PaymentFunnelRow = {
   step7_card_shared: string;
 };
 
+type PriceArmRow = { price: number; created: string; paid: string };
+type PriceArmOccasionRow = { price: number; occasion: string; created: string; paid: string };
+
 type SalesDaily = { date: string; unlocks: string; amount: string };
 type SalesByOccasion = { date: string; occasion: string; unlocks: string };
 type SalesData = {
@@ -97,6 +100,8 @@ type AnalyticsData = {
   user_cards?: UserCardRow[];
   payment_funnel?: PaymentFunnelRow | null;
   media_breakdown?: { cards_with_voice: string; cards_with_multi_photo: string } | null;
+  price_ab?: PriceArmRow[];
+  price_ab_occasions?: PriceArmOccasionRow[];
   range?: { from: string | null; to: string | null };
 };
 
@@ -997,6 +1002,76 @@ export default function Analytics() {
           <Stat label="Cards with Voice Note" value={String(data.media_breakdown?.cards_with_voice ?? 0)} sub="recorded voice attached" />
           <Stat label="Cards with 2+ Photos" value={String(data.media_breakdown?.cards_with_multi_photo ?? 0)} sub="multi-photo collage" />
         </div>
+
+        {/* ── Price A/B Test (₹49 vs ₹99) ── */}
+        {(() => {
+          const arms = data.price_ab ?? [];
+          const occ = data.price_ab_occasions ?? [];
+          const armColor = (p: number) => (p === 49 ? "#69F0AE" : "#FFB347");
+          const conv = (paid: string, created: string) => {
+            const c = Number(created);
+            return c > 0 ? `${((Number(paid) / c) * 100).toFixed(1)}%` : "—";
+          };
+          return (
+            <>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                Price A/B Test · ₹49 vs ₹99
+              </h2>
+              {arms.length === 0 ? (
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginBottom: 24 }}>
+                  No tagged events in this range yet. New cards are assigned a sticky ₹49 or ₹99 arm per device — data appears here as they create &amp; unlock.
+                </p>
+              ) : (
+                <>
+                  {/* Per-arm summary cards */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+                    {arms.map((a) => (
+                      <div key={a.price} style={{
+                        flex: "1 1 200px", background: "rgba(255,255,255,0.04)",
+                        border: `1px solid ${armColor(a.price)}33`, borderRadius: 12, padding: "14px 16px",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 18 }}>₹{a.price}</span>
+                          <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 20 }}>{conv(a.paid, a.created)}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 16 }}>
+                          <div>
+                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Created</div>
+                            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>{a.created}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Paid</div>
+                            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>{a.paid}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Per-arm × occasion breakdown */}
+                  {occ.length > 0 && (
+                    <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,215,0,0.1)", marginBottom: 24, overflow: "hidden" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "60px 1fr 70px 70px 70px", padding: "8px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+                        {["Arm", "Occasion", "Created", "Paid", "Conv%"].map((h, i) => (
+                          <span key={h} style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", textAlign: i >= 2 ? "right" : "left" }}>{h}</span>
+                        ))}
+                      </div>
+                      {occ.map((r, i) => (
+                        <div key={`${r.price}-${r.occasion}-${i}`} style={{ display: "grid", gridTemplateColumns: "60px 1fr 70px 70px 70px", padding: "9px 14px", borderBottom: i < occ.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
+                          <span style={{ color: armColor(r.price), fontWeight: 800, fontSize: 13 }}>₹{r.price}</span>
+                          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>{r.occasion}</span>
+                          <span style={{ color: "#FFD700", fontWeight: 700, fontSize: 14, textAlign: "right" }}>{r.created}</span>
+                          <span style={{ color: "rgba(255,215,0,0.7)", fontWeight: 700, fontSize: 14, textAlign: "right" }}>{r.paid}</span>
+                          <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, textAlign: "right" }}>{conv(r.paid, r.created)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          );
+        })()}
 
         {/* ── Photo Paywall Funnel ── */}
         {(() => {

@@ -13,11 +13,11 @@ import { useAuth, useClerk } from "@clerk/react";
 import { Check, Copy, Info, Loader2 } from "lucide-react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
+import { getPriceConfig } from "@/lib/priceArm";
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 const UPI_DISPLAY = "110193250";
 const UPI_VPA     = "8905158970@upi";
-const AMOUNT      = 49;
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -93,6 +93,9 @@ export default function PremiumLockPanel({
   const clerk = useClerk();
   const { usage, loading: usageLoading, fingerprint, refetch: refetchUsage, userEmail } = useCardUsage();
 
+  /** Sticky ₹49/₹99 A/B price arm for this device + its discount anchor. */
+  const { price, anchor } = getPriceConfig();
+
   const [phase, setPhase]       = useState<Phase>("checking");
   const [utr, setUtr]           = useState("");
   const [utrError, setUtrError] = useState("");
@@ -155,7 +158,7 @@ export default function PremiumLockPanel({
   }, [isSignedIn, isLoaded, phase]);
 
   /* ── UPI deep-link ─────────────────────────────────────────────────── */
-  const upiUri = `upi://pay?pa=${encodeURIComponent(UPI_VPA)}&pn=${encodeURIComponent("HeartSync AI")}&am=${AMOUNT.toFixed(2)}&cu=INR&tn=${encodeURIComponent("HeartSync Premium")}`;
+  const upiUri = `upi://pay?pa=${encodeURIComponent(UPI_VPA)}&pn=${encodeURIComponent("HeartSync AI")}&am=${price.toFixed(2)}&cu=INR&tn=${encodeURIComponent("HeartSync Premium")}`;
   const qrSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
 
   /* ── Copy UPI ID ────────────────────────────────────────────────────── */
@@ -221,6 +224,7 @@ export default function PremiumLockPanel({
             occasion,
             recipient_name: recipientName || undefined,
             ...(msgParam ? { message_b64: msgParam } : {}),
+            price,
           }),
         });
         if (cardRes.ok) {
@@ -292,7 +296,7 @@ export default function PremiumLockPanel({
         }}>🔗 Copy Link</button>
         <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 10, cursor: "pointer" }}
           onClick={reopenPaywall}>
-          Tap any button to unlock · ₹49 one-time
+          Tap any button to unlock · ₹{price} one-time
         </p>
       </motion.div>
     );
@@ -327,8 +331,8 @@ export default function PremiumLockPanel({
           }}
         >
           ✨{" "}
-          <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹99</span>
-          {" "}₹49 · Unlock &amp; Share
+          <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹{anchor}</span>
+          {" "}₹{price} · Unlock &amp; Share
           {" "}<span style={{
             background: "rgba(255,80,50,0.22)", border: "1px solid rgba(255,80,50,0.45)",
             color: "#ff6b4a", fontSize: 9, fontWeight: 800, padding: "2px 6px",
@@ -336,8 +340,8 @@ export default function PremiumLockPanel({
           }}>⚡ Limited Time</span>
         </button>
         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
-          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹99</span>
-          <span style={{ color: "rgba(255,255,255,0.35)" }}>₹49 one-time · All 3 premium templates forever</span>
+          <span style={{ color: "rgba(255,255,255,0.2)", textDecoration: "line-through" }}>₹{anchor}</span>
+          <span style={{ color: "rgba(255,255,255,0.35)" }}>₹{price} one-time · All 3 premium templates forever</span>
           <span style={{
             background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
             color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px",
@@ -454,8 +458,8 @@ export default function PremiumLockPanel({
               Unlock &amp; Share Your Card
             </h1>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
-              <span style={{ color: "rgba(255,255,255,0.28)", textDecoration: "line-through" }}>₹99</span>
-              <span style={{ color: "rgba(255,215,0,0.75)", fontWeight: 700 }}>₹49</span>
+              <span style={{ color: "rgba(255,255,255,0.28)", textDecoration: "line-through" }}>₹{anchor}</span>
+              <span style={{ color: "rgba(255,215,0,0.75)", fontWeight: 700 }}>₹{price}</span>
               — yours forever.
             </p>
           </div>
@@ -469,8 +473,8 @@ export default function PremiumLockPanel({
           }}>
             <div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-                <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹49</div>
-                <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 15, fontWeight: 400 }}>₹99</span>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>₹{price}</div>
+                <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontSize: 15, fontWeight: 400 }}>₹{anchor}</span>
                 <span style={{
                   background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)",
                   color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px",
@@ -497,7 +501,7 @@ export default function PremiumLockPanel({
             {/* QR + UPI ID */}
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
               <a href={upiUri} style={{ background: "#fff", borderRadius: 12, padding: 6, display: "block", flexShrink: 0 }}>
-                <img src={qrSrc} alt="UPI QR ₹49" style={{ width: 96, height: 96, borderRadius: 8, display: "block" }} />
+                <img src={qrSrc} alt={`UPI QR ₹${price}`} style={{ width: 96, height: 96, borderRadius: 8, display: "block" }} />
               </a>
               <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 4, lineHeight: 1.4 }}>
@@ -524,7 +528,7 @@ export default function PremiumLockPanel({
                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
                   <Info size={11} style={{ color: "rgba(255,255,255,0.22)", flexShrink: 0 }} />
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.28)" }}>
-                    Pay <strong style={{ color: "rgba(255,255,255,0.55)" }}>exactly ₹49</strong> — scan, tap, or copy
+                    Pay <strong style={{ color: "rgba(255,255,255,0.55)" }}>exactly ₹{price}</strong> — scan, tap, or copy
                   </p>
                 </div>
               </div>

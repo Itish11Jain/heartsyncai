@@ -27,6 +27,7 @@ const LazyClerkBridge = lazy(async () => {
   };
 });
 import { trackEvent } from "@/lib/trackEvent";
+import { getPriceArm } from "@/lib/priceArm";
 import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
@@ -831,6 +832,7 @@ function SendInner() {
             photo_url: uploadedPhotoUrls[0] ?? null,
             photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
             voice_note_url: voiceNoteUrl ?? null,
+            price: getPriceArm(),
             fbp,
             fbc,
           }),
@@ -916,6 +918,7 @@ function SendInner() {
             photo_url: uploadedPhotoUrls[0] ?? null,
             photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
             voice_note_url: voiceNoteUrl ?? null,
+            price: getPriceArm(),
           }),
         });
         if (cardRes.ok) {

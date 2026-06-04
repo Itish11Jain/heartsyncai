@@ -140,6 +140,8 @@ const ENSURE_TABLE = `
   CREATE INDEX IF NOT EXISTS hs_card_events_utm_source ON hs_card_events(utm_source);
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS has_voice_note BOOLEAN;
   ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS photo_count SMALLINT;
+  ALTER TABLE hs_card_events ADD COLUMN IF NOT EXISTS price SMALLINT;
+  CREATE INDEX IF NOT EXISTS hs_card_events_price ON hs_card_events(price);
 `;
 
 const ENSURE_VITALS_TABLE = `
@@ -277,12 +279,17 @@ router.post("/events/card", async (req, res) => {
       occasion, template, channel,
       has_likes, used_custom_msg, is_free, from_card_ref,
       recipient_name, card_id, has_photo, has_voice_note, photo_count,
-      utm_source, utm_medium, utm_campaign,
+      utm_source, utm_medium, utm_campaign, price,
     } = req.body as Record<string, unknown>;
 
     if (!event || typeof event !== "string") {
       return res.status(400).json({ error: "event required" });
     }
+
+    // Price A/B arm — only ever 49 or 99; anything else stored as NULL.
+    const priceVal =
+      price === 49 || price === "49" ? 49 :
+      price === 99 || price === "99" ? 99 : null;
 
     // Silently drop events from superuser
     if (typeof email === "string" && SUPERUSER_EMAILS.includes(email)) {
@@ -306,8 +313,8 @@ router.post("/events/card", async (req, res) => {
       `INSERT INTO hs_card_events
          (event, fingerprint, clerk_user_id, email, occasion, template,
           channel, has_likes, used_custom_msg, is_free, from_card_ref, recipient_name, card_id,
-          has_photo, has_voice_note, photo_count, utm_source, utm_medium, utm_campaign)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+          has_photo, has_voice_note, photo_count, utm_source, utm_medium, utm_campaign, price)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
       [
         event,
         fingerprint ?? null,
@@ -328,6 +335,7 @@ router.post("/events/card", async (req, res) => {
         capUtm(utm_source, 60),
         capUtm(utm_medium, 60),
         capUtm(utm_campaign, 80),
+        priceVal,
       ],
     );
 
@@ -461,6 +469,8 @@ router.get("/events/analytics", async (req, res) => {
       userCards,
       paymentFunnel,
       mediaBreakdown,
+      priceAb,
+      priceAbOccasions,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -706,6 +716,30 @@ router.get("/events/analytics", async (req, res) => {
            FROM hs_card_events WHERE ${whereSql}`,
           params,
         ),
+        /* ── Price A/B test: per-arm created → paid readout ──
+         * created  = card_created events tagged with this arm
+         * paid     = distinct cards with a card_paid event tagged with this arm
+         * Conversion is computed client-side as paid / created. */
+        pool.query(
+          `SELECT price,
+             COUNT(*) FILTER (WHERE event = 'card_created')             AS created,
+             COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_paid') AS paid
+           FROM hs_card_events
+           WHERE price IN (49, 99) AND ${whereSql}
+           GROUP BY price ORDER BY price`,
+          params,
+        ),
+        /* ── Price A/B test: per-arm × occasion breakdown ── */
+        pool.query(
+          `SELECT price, occasion,
+             COUNT(*) FILTER (WHERE event = 'card_created')             AS created,
+             COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_paid') AS paid
+           FROM hs_card_events
+           WHERE price IN (49, 99) AND occasion IS NOT NULL
+             AND event IN ('card_created', 'card_paid') AND ${whereSql}
+           GROUP BY price, occasion ORDER BY price, created DESC`,
+          params,
+        ),
       ]);
 
     return res.json({
@@ -722,6 +756,8 @@ router.get("/events/analytics", async (req, res) => {
       user_cards: userCards.rows,
       payment_funnel: paymentFunnel.rows[0] ?? null,
       media_breakdown: mediaBreakdown.rows[0] ?? null,
+      price_ab: priceAb.rows,
+      price_ab_occasions: priceAbOccasions.rows,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });

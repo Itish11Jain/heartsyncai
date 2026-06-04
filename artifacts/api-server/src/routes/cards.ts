@@ -7,6 +7,28 @@ const router = Router();
 
 const META_PIXEL_ID = "1510201040837057";
 
+/**
+ * Price A/B arm normaliser. Returns 49, 99, or null (unknown) so we never
+ * store anything other than the two valid arms on a card.
+ */
+function normPrice(price: unknown): 49 | 99 | null {
+  if (price === 49 || price === "49") return 49;
+  if (price === 99 || price === "99") return 99;
+  return null;
+}
+
+/**
+ * Maps a price arm to the set of UPI amounts that count as a valid payment for
+ * it (covers the bare amount and the +₹1 some users round up to). Returns null
+ * when the arm is unknown — callers then fall back to the legacy `>= 49` gate.
+ */
+function amountTier(price: unknown): number[] | null {
+  const arm = normPrice(price);
+  if (arm === 49) return [49, 50];
+  if (arm === 99) return [99, 100];
+  return null;
+}
+
 async function fireMetaCapi(
   eventId: string,
   cardId: string,
@@ -210,8 +232,9 @@ router.post("/cards", async (req, res) => {
   }
 
   try {
-    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url, photo_urls, voice_note_url, fbp, fbc } =
+    const { id: clientId, template, occasion, recipient_name, message_b64, photo_url, photo_urls, voice_note_url, fbp, fbc, price } =
       req.body as Record<string, unknown>;
+    const priceVal = normPrice(price);
 
     // Allow callers to supply a pre-existing client-generated tracking ID
     // (e.g. after UTR payment when the card was created anonymously and never
@@ -245,8 +268,8 @@ router.post("/cards", async (req, res) => {
         const freshId = await uniqueId();
         await pool.query(
           `INSERT INTO hs_cards
-             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url, fbp, fbc)
-           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9,$10,$11)`,
+             (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url, fbp, fbc, price)
+           VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9,$10,$11,$12)`,
           [freshId, clerkUserId,
             typeof template === "string" ? template : null,
             typeof occasion === "string" ? occasion : null,
@@ -256,7 +279,8 @@ router.post("/cards", async (req, res) => {
             Array.isArray(photo_urls) ? photo_urls.filter((u): u is string => typeof u === "string") : null,
             typeof voice_note_url === "string" ? voice_note_url : null,
             typeof fbp === "string" && fbp ? fbp : null,
-            typeof fbc === "string" && fbc ? fbc : null],
+            typeof fbc === "string" && fbc ? fbc : null,
+            priceVal],
         );
         res.json({ id: freshId });
         return;
@@ -265,8 +289,8 @@ router.post("/cards", async (req, res) => {
 
     await pool.query(
       `INSERT INTO hs_cards
-         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url, fbp, fbc)
-       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9,$10,$11)`,
+         (id, clerk_user_id, template, occasion, recipient_name, message_b64, is_watermarked, is_premium, photo_url, photo_urls, voice_note_url, fbp, fbc, price)
+       VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE,$7,$8,$9,$10,$11,$12)`,
       [
         id,
         clerkUserId,
@@ -279,6 +303,7 @@ router.post("/cards", async (req, res) => {
         typeof voice_note_url === "string" ? voice_note_url : null,
         typeof fbp === "string" && fbp ? fbp : null,
         typeof fbc === "string" && fbc ? fbc : null,
+        priceVal,
       ],
     );
 
@@ -489,15 +514,25 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
  */
 router.post("/cards/:id/auto-unlock", async (req, res) => {
   const { id } = req.params;
-  const { eventId, fbp, fbc } = (req.body ?? {}) as { eventId?: string; fbp?: string | null; fbc?: string | null };
+  const { eventId, fbp, fbc, price } = (req.body ?? {}) as { eventId?: string; fbp?: string | null; fbc?: string | null; price?: unknown };
 
   try {
+    // Prefer the arm already stored on the card (set at creation) over the
+    // client-supplied price so a tampered/missing body can't loosen the gate.
+    const stored = await pool.query<{ price: number | null }>(
+      `SELECT price FROM hs_cards WHERE id = $1`,
+      [id],
+    );
+    const priceVal = normPrice(stored.rows[0]?.price) ?? normPrice(price);
+    const tier = amountTier(priceVal);
+
     const { rows } = await pool.query<{ id: number; utr: string }>(
       `SELECT id, utr FROM hs_received_payments
        WHERE used_at IS NULL
          AND created_at > NOW() - INTERVAL '5 minutes'
-         AND CAST(amount AS numeric) >= 49
+         AND ${tier ? `CAST(amount AS numeric) = ANY($1::numeric[])` : `CAST(amount AS numeric) >= 49`}
        ORDER BY created_at DESC LIMIT 1`,
+      tier ? [tier] : [],
     );
 
     if (rows.length === 0) {
@@ -513,19 +548,21 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     );
 
     await pool.query(
-      `INSERT INTO hs_cards (id, is_watermarked, is_premium, fbp, fbc)
-       VALUES ($1, FALSE, TRUE, $2, $3)
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium, fbp, fbc, price)
+       VALUES ($1, FALSE, TRUE, $2, $3, $4)
        ON CONFLICT (id) DO UPDATE SET is_watermarked = FALSE, is_premium = TRUE,
          fbp = COALESCE(EXCLUDED.fbp, hs_cards.fbp),
-         fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc)`,
-      [id, fbp ?? null, fbc ?? null],
+         fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc),
+         price = COALESCE(EXCLUDED.price, hs_cards.price)`,
+      [id, fbp ?? null, fbc ?? null, priceVal],
     );
 
-    const cardRow = await pool.query<{ occasion: string }>(
-      `SELECT occasion FROM hs_cards WHERE id = $1`,
+    const cardRow = await pool.query<{ occasion: string; price: number | null }>(
+      `SELECT occasion, price FROM hs_cards WHERE id = $1`,
       [id],
     );
     const occasion = cardRow.rows[0]?.occasion ?? null;
+    const eventPrice = priceVal ?? cardRow.rows[0]?.price ?? null;
 
     await pool.query(
       `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4, full_utr, unlock_method) VALUES ($1, $2, $3, 'auto_unlock')`,
@@ -533,9 +570,9 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     );
 
     await pool.query(
-      `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel)
-       VALUES ('card_paid', $1, $2, $3, 'auto_unlock')`,
-      [id, occasion, `srv_${id}`],
+      `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel, price)
+       VALUES ('card_paid', $1, $2, $3, 'auto_unlock', $4)`,
+      [id, occasion, `srv_${id}`, eventPrice],
     );
 
     console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
@@ -558,7 +595,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
  */
 router.post("/cards/:id/pay-unlock", async (req, res) => {
   const { id } = req.params;
-  const { utr, eventId, fbp, fbc } = req.body as { utr?: unknown; eventId?: string; fbp?: string | null; fbc?: string | null };
+  const { utr, eventId, fbp, fbc, price } = req.body as { utr?: unknown; eventId?: string; fbp?: string | null; fbc?: string | null; price?: unknown };
 
   if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
     res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
@@ -568,13 +605,22 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
   const last4 = utr.trim();
 
   try {
+    // Prefer the arm already stored on the card (set at creation) over the
+    // client-supplied price so a tampered/missing body can't loosen the gate.
+    const stored = await pool.query<{ price: number | null }>(
+      `SELECT price FROM hs_cards WHERE id = $1`,
+      [id],
+    );
+    const priceVal = normPrice(stored.rows[0]?.price) ?? normPrice(price);
+    const tier = amountTier(priceVal);
+
     // Match against the last 4 digits of any unused received UTR
     const { rows } = await pool.query<{ id: number; utr: string }>(
       `SELECT id, utr FROM hs_received_payments
        WHERE RIGHT(utr, 4) = $1 AND used_at IS NULL
-         AND CAST(amount AS numeric) >= 49
+         AND ${tier ? `CAST(amount AS numeric) = ANY($2::numeric[])` : `CAST(amount AS numeric) >= 49`}
        ORDER BY created_at DESC LIMIT 1`,
-      [last4],
+      tier ? [last4, tier] : [last4],
     );
 
     if (rows.length === 0) {
@@ -595,20 +641,22 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
 
     // Upsert card as unlocked — store fbp/fbc for CAPI match quality
     await pool.query(
-      `INSERT INTO hs_cards (id, is_watermarked, is_premium, fbp, fbc)
-       VALUES ($1, FALSE, TRUE, $2, $3)
+      `INSERT INTO hs_cards (id, is_watermarked, is_premium, fbp, fbc, price)
+       VALUES ($1, FALSE, TRUE, $2, $3, $4)
        ON CONFLICT (id) DO UPDATE
          SET is_watermarked = FALSE, is_premium = TRUE,
            fbp = COALESCE(EXCLUDED.fbp, hs_cards.fbp),
-           fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc)`,
-      [id, fbp ?? null, fbc ?? null],
+           fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc),
+           price = COALESCE(EXCLUDED.price, hs_cards.price)`,
+      [id, fbp ?? null, fbc ?? null, priceVal],
     );
 
-    const cardRow = await pool.query<{ occasion: string }>(
-      `SELECT occasion FROM hs_cards WHERE id = $1`,
+    const cardRow = await pool.query<{ occasion: string; price: number | null }>(
+      `SELECT occasion, price FROM hs_cards WHERE id = $1`,
       [id],
     );
     const occasion = cardRow.rows[0]?.occasion ?? null;
+    const eventPrice = priceVal ?? cardRow.rows[0]?.price ?? null;
 
     // Record submission with full UTR and method for audit trail
     await pool.query(
@@ -618,9 +666,9 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
 
     // Server-side card_paid event — recorded even if the client closes the page
     await pool.query(
-      `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel)
-       VALUES ('card_paid', $1, $2, $3, 'manual_utr')`,
-      [id, occasion, `srv_${id}`],
+      `INSERT INTO hs_card_events (event, card_id, occasion, fingerprint, channel, price)
+       VALUES ('card_paid', $1, $2, $3, 'manual_utr', $4)`,
+      [id, occasion, `srv_${id}`, eventPrice],
     );
 
     console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);

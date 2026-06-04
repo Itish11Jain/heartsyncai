@@ -179,6 +179,8 @@ export async function initDb(): Promise<void> {
     END $$;
     -- Track which bundle was used to unlock a card (NULL = paid individually)
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS bundle_id UUID;
+    -- Price A/B test: the arm (49 or 99) this card was created/unlocked under.
+    ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS price SMALLINT;
   `);
 
   /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal

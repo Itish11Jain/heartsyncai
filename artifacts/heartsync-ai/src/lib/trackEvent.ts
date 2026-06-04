@@ -14,6 +14,8 @@
  * to the campaign that brought the user.
  */
 
+import { getPriceArm } from "./priceArm";
+
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const UTM_KEY = "hs_utm";
 
@@ -86,6 +88,8 @@ export type CardEventPayload = {
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
+  /** Price A/B arm (₹49 or ₹99). Auto-attached from the device's sticky arm. */
+  price?: number;
 };
 
 /** Returns true when running on a non-production origin (Replit dev proxy or localhost). */
@@ -106,9 +110,12 @@ export function trackEvent(payload: CardEventPayload): void {
 
   const utm = readStoredUtm();
 
-  // Stored UTM attaches to every event but the caller may override per-event.
+  // Stored UTM + price arm attach to every event but the caller may override
+  // per-event. Attaching the arm to every event lets the analytics readout
+  // slice any funnel step (created → paid) by price arm.
   const body = JSON.stringify({
     ...utm,
+    price: getPriceArm(),
     ...payload,
     fingerprint: payload.fingerprint ?? fp,
   });
