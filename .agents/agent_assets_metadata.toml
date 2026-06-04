@@ -90,6 +90,24 @@ uri = "file://artifacts/heartsync-ai/public/sample/photo-3.png"
 type = "image"
 title = "sample photo 3"
 
+[[generated]]
+id = "WaaXmWew20qZchl2cq7b6"
+uri = "file://attached_assets/balloons/balloon_gold.png"
+type = "image"
+title = "gold balloon"
+
+[[generated]]
+id = "q_clKcrUdI_yA5zf3qPQx"
+uri = "file://attached_assets/balloons/balloon_rosegold.png"
+type = "image"
+title = "rose gold balloon"
+
+[[generated]]
+id = "LSz4f4jUpZRUnfOhywixV"
+uri = "file://attached_assets/balloons/balloon_pearl.png"
+type = "image"
+title = "pearl balloon"
+
 [[outputs]]
 id = "fDmbJv3aewQm22JAKoiDp"
 uri = "file://google-apps-script/gmail-utr-forwarder.txt"

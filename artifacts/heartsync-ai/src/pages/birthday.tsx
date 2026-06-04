@@ -4,6 +4,9 @@ import { Link } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
 import { music, resumeAudio, isAudioSuspended } from "@/lib/audio";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
+import balloonRoseGold from "@assets/balloons/balloon_rosegold.webp";
+import balloonGold from "@assets/balloons/balloon_gold.webp";
+import balloonPearl from "@assets/balloons/balloon_pearl.webp";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
 const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallModal"));
@@ -102,14 +105,6 @@ function TwinkleBackground() {
 }
 
 /* ─── Scene 1 data ─────────────────────────────────────────────────────── */
-const S1G = [
-  { id:"sg0", hi:"#D89880", mid:"#C9846A", lo:"#B87060" },
-  { id:"sg1", hi:"#E4BE55", mid:"#D4AF37", lo:"#C09A25" },
-  { id:"sg2", hi:"#EDB890", mid:"#E8A07A", lo:"#D08060" },
-  { id:"sg3", hi:"#D09A42", mid:"#C4913A", lo:"#B07A28" },
-  { id:"sg4", hi:"#D89878", mid:"#C88868", lo:"#B87060" },
-  { id:"sg5", hi:"#D8A888", mid:"#C89878", lo:"#B88060" },
-];
 const BOUQUET = [
   { cx:152, cy:490, r:40, gi:0, dur:2.4, delay:0.0, amp:6 },
   { cx:234, cy:462, r:37, gi:1, dur:2.9, delay:0.4, amp:7 },
@@ -118,6 +113,11 @@ const BOUQUET = [
   { cx:252, cy:398, r:37, gi:4, dur:2.5, delay:0.9, amp:6 },
 ];
 const GBX=195, GBY=740, GBW=94, GBH=70, GBD=26;
+/* Photorealistic balloon sprites — give the opening screen real depth (the same
+   image-sprite approach as the sorry-template bouquet). Indexed to match the
+   six balloon slots in this scene. */
+const BIMG = [balloonRoseGold, balloonGold, balloonPearl, balloonGold, balloonPearl, balloonRoseGold];
+const BALLOON_AR = 1.55; /* height / width of the balloon sprite box */
 const S1_CONF = [
   {x:52,y:108,s:9,c:"#D4AF37",r:15},{x:318,y:82,s:7,c:"#D4AF37",r:-22},
   {x:78,y:218,s:8,c:"#C9846A",r:30},{x:334,y:192,s:10,c:"#D4AF37",r:-15},
@@ -194,17 +194,20 @@ function GiftBoxSVG() {
 
 function BouquetBalloonSVG({ cx, cy, r, gi, dur, delay, amp }:
   { cx:number; cy:number; r:number; gi:number; dur:number; delay:number; amp:number }) {
-  const gid = S1G[gi].id;
-  const strPath = `M${cx} ${cy+r+4} Q${cx+(cx-GBX)*0.12} ${(cy+r+(GBY-GBH))/2} ${GBX} ${GBY-GBH}`;
+  const img = BIMG[gi % BIMG.length];
+  const W = r * 2.05;
+  const H = W * BALLOON_AR;
+  const bx = cx - W / 2;
+  const by = cy - H * 0.42;
+  const knotY = by + H * 0.985;
+  const strPath = `M${cx} ${knotY} Q${cx+(cx-GBX)*0.12} ${(knotY+(GBY-GBH))/2} ${GBX} ${GBY-GBH}`;
   return (
-    <motion.g animate={{ y:[0,-amp,0,amp*0.5,0], rotate:[-1.5,1.5,-0.5,1,-1.5] }}
+    <motion.g animate={{ y:[0,-amp,0,amp*0.5,0], rotate:[-1.5,1.5,-0.5,1,-1.5], scaleX:[1,0.97,1,0.985,1] }}
       style={{ originX:`${cx}px`, originY:`${cy}px` }}
       transition={{ duration:dur, repeat:Infinity, ease:"easeInOut", delay }}>
       <path d={strPath} fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.5}/>
-      <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
-      <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
-        fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
-      <ellipse cx={cx} cy={cy+r+4} rx={5} ry={4} fill={`url(#${gid})`} opacity={0.85}/>
+      <image href={img} x={bx} y={by} width={W} height={H}
+        preserveAspectRatio="xMidYMax meet" filter="url(#balloonShadow)"/>
     </motion.g>
   );
 }
@@ -216,7 +219,12 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
   const _vpH = typeof window !== "undefined" ? window.innerHeight : 844;
   const _sh  = Math.ceil(_vpH / (_vpW / 390));
   const cy   = _sh < 820 ? 255 + Math.round((820 - _sh) * 0.3) : 255;
-  const gid = S1G[5].id;
+  const img = BIMG[5];
+  const W = r * 2.05;
+  const H = W * BALLOON_AR;
+  const bx = cx - W / 2;
+  const by = cy - H * 0.42;
+  const knotY = by + H * 0.985;
   const [popped, setPopped] = useState(false);
   const handleTap = () => {
     if (popped) return;
@@ -226,7 +234,7 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
   return (
     <g>
       {!popped && (
-        <path d={`M${cx} ${cy+r+5} Q${cx+14} 560 ${GBX} ${GBY-GBH}`}
+        <path d={`M${cx} ${knotY} Q${cx+14} 560 ${GBX} ${GBY-GBH}`}
           fill="none" stroke="#D4AF37" strokeWidth={1.3} opacity={0.42}/>
       )}
       {!popped && (
@@ -260,18 +268,17 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
           transition={{ duration:0.28 }}/>
       )}
       <motion.g
-        animate={popped ? { opacity:0 } : { y:[0,-13,0,9,0], rotate:[-2,2,-1,2.5,-2] }}
+        animate={popped ? { opacity:0 } : { y:[0,-13,0,9,0], rotate:[-2,2,-1,2.5,-2], scaleX:[1,0.965,1,0.98,1] }}
         transition={popped
           ? { duration:0.18, ease:"easeIn" }
           : { duration:3.8, repeat:Infinity, ease:"easeInOut" }}
-        onClick={handleTap} style={{ cursor:"pointer" }}>
-        <circle cx={cx} cy={cy} r={r} fill={`url(#${gid})`}/>
-        <ellipse cx={cx-r*0.4} cy={cy-r*0.62} rx={r*0.2} ry={r*0.13}
-          fill="white" opacity={0.5} transform={`rotate(-30,${cx-r*0.4},${cy-r*0.62})`}/>
-        <ellipse cx={cx} cy={cy+r+5} rx={6} ry={5} fill={`url(#${gid})`} opacity={0.85}/>
+        onClick={handleTap}
+        style={{ cursor:"pointer", originX:`${cx}px`, originY:`${cy}px` }}>
+        <image href={img} x={bx} y={by} width={W} height={H}
+          preserveAspectRatio="xMidYMax meet" filter="url(#balloonShadow)"/>
         <text x={cx} y={cy+5} textAnchor="middle"
           fontFamily="Georgia,serif" fontStyle="italic" fontSize={13}
-          fill="rgba(255,255,255,0.75)">tap ✦</text>
+          fill="rgba(86,40,28,0.78)" style={{ pointerEvents:"none" }}>tap ✦</text>
       </motion.g>
     </g>
   );
@@ -338,13 +345,11 @@ function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
       <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", zIndex:4 }}
         viewBox="0 0 390 844" preserveAspectRatio="xMidYMid slice">
         <defs>
-          {S1G.map(g => (
-            <radialGradient key={g.id} id={g.id} cx="34%" cy="28%" r="65%">
-              <stop offset="0%"  stopColor={g.hi}/>
-              <stop offset="46%" stopColor={g.mid}/>
-              <stop offset="100%" stopColor={g.lo}/>
-            </radialGradient>
-          ))}
+          {/* Soft contact shadow that gives each balloon real depth against the
+              dark scene — mirrors the drop-shadow on the sorry-template bouquet. */}
+          <filter id="balloonShadow" x="-50%" y="-40%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="7" stdDeviation="6" floodColor="#160604" floodOpacity="0.5"/>
+          </filter>
         </defs>
         {S1_CONF.map((p,i) => (
           <motion.rect key={i} x={p.x-p.s/2} y={p.y-p.s/2} width={p.s} height={p.s}
@@ -1514,6 +1519,12 @@ export default function BirthdayCard() {
     photoUrls.filter(Boolean).forEach(url => { const i=new Image(); i.src=url; });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photosRaw]);
+
+  /* Warm up the realistic balloon sprites before Scene 1 paints so the opening
+     screen arrives fully rendered instead of popping in balloon-by-balloon. */
+  useEffect(() => {
+    [balloonRoseGold, balloonGold, balloonPearl].forEach(src => { const i = new Image(); i.src = src; });
+  }, []);
   const personalPicUrl = params.get("personalpicture")
     ? decodeURIComponent(params.get("personalpicture")!)
     : "";
