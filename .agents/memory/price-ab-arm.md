@@ -29,10 +29,24 @@ The Gmail Apps Script UTR forwarder amount allowlist must stay in sync with the
 live arms (currently {49,50,99,100} ±0.5) or valid payments get dropped before
 they ever reach the API.
 
-**Rule: the A/B panel counts ONE consistent tagged epoch — both `created` and
-`paid` from arm-tagged events (`card_created` / `card_paid` with `price IN
-(49,99)`), floored at `AB_EXPERIMENT_START` (the instant tagging first persisted
-onto events; do NOT mix real-payment counts into it).**
+**Rule: `card_paid` events do NOT carry a reliable arm in their own `price`
+column — source the A/B `paid` count from the authoritative `hs_cards.price`.**
+Two `card_paid` rows exist per unlock (server insert + client `trackEvent`) and
+the event-level `price` is effectively always NULL, so any `card_paid ... WHERE
+price IN (49,99)` filter silently counts zero. The panel's `paid` is computed
+via a correlated subquery that maps each paid card to `hs_cards.price`; the same
+`buildEventFilter` `whereSql` fragment is spliced into BOTH the outer query and
+the subquery, reusing the one positional `params` array (Postgres allows the same
+`$N` many times, and bare cols resolve to whichever scope they're injected in).
+`created` stays sourced from the event-level `price` (`card_created` is tagged).
+**How to apply:** keep `hs_cards.price` trustworthy — both unlock routes set it
+via `armPrice = stored/body arm ?? armFromPaidAmount(matched payment amount)`
+(49/50→49, 99/100→99) on the upsert AND the server `card_paid` event. That amount
+fallback is the safety net when the client/stored arm is missing.
+
+**Rule: the A/B panel counts ONE consistent tagged epoch — `created` from
+arm-tagged `card_created` events and `paid` from `hs_cards.price`,
+floored at `AB_EXPERIMENT_START` (do NOT mix real-payment counts into it).**
 The arm tag lives only in the browser and only began persisting onto events
 from the deploy that shipped tracking, so earlier conversions have a NULL arm
 and can never be backfilled. An earlier attempt sourced `paid` from real

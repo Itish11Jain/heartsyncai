@@ -860,9 +860,15 @@ router.get("/events/analytics", async (req, res) => {
          * Conversion is computed client-side as paid / created. */
         pool.query(
           `SELECT price,
-             COUNT(*) FILTER (WHERE event = 'card_created')             AS created,
-             COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_paid') AS paid
-           FROM hs_card_events
+             COUNT(*) FILTER (WHERE event = 'card_created') AS created,
+             (SELECT COUNT(DISTINCT ce.card_id)
+                FROM hs_card_events ce
+                WHERE ce.event = 'card_paid'
+                  AND ce.created_at >= '${AB_EXPERIMENT_START}'::timestamptz
+                  AND ce.card_id IN (SELECT id FROM hs_cards WHERE price = e.price)
+                  AND ${whereSql}
+             ) AS paid
+           FROM hs_card_events e
            WHERE price IN (49, 99)
              AND created_at >= '${AB_EXPERIMENT_START}'::timestamptz
              AND ${whereSql}
@@ -872,11 +878,18 @@ router.get("/events/analytics", async (req, res) => {
         /* ── Price A/B test: per-arm × occasion breakdown (same epoch) ── */
         pool.query(
           `SELECT price, occasion,
-             COUNT(*) FILTER (WHERE event = 'card_created')             AS created,
-             COUNT(DISTINCT card_id) FILTER (WHERE event = 'card_paid') AS paid
-           FROM hs_card_events
+             COUNT(*) FILTER (WHERE event = 'card_created') AS created,
+             (SELECT COUNT(DISTINCT ce.card_id)
+                FROM hs_card_events ce
+                WHERE ce.event = 'card_paid'
+                  AND ce.occasion = e.occasion
+                  AND ce.created_at >= '${AB_EXPERIMENT_START}'::timestamptz
+                  AND ce.card_id IN (SELECT id FROM hs_cards WHERE price = e.price)
+                  AND ${whereSql}
+             ) AS paid
+           FROM hs_card_events e
            WHERE price IN (49, 99) AND occasion IS NOT NULL
-             AND event IN ('card_created', 'card_paid')
+             AND event = 'card_created'
              AND created_at >= '${AB_EXPERIMENT_START}'::timestamptz
              AND ${whereSql}
            GROUP BY price, occasion ORDER BY price, created DESC`,

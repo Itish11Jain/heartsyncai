@@ -29,6 +29,20 @@ function amountTier(price: unknown): number[] | null {
   return null;
 }
 
+/**
+ * Derives the ₹49/₹99 A/B arm from the actual amount received (the authoritative
+ * signal — real money). UPI rounding means 49/50 → 49 and 99/100 → 99. Used as a
+ * fallback so the arm is always recorded on the card + card_paid event even when
+ * the client/stored price is missing, which otherwise breaks the A/B paid readout.
+ */
+function armFromPaidAmount(amount: unknown): 49 | 99 | null {
+  const n = Math.round(Number(amount));
+  if (!Number.isFinite(n)) return null;
+  if (n >= 99) return 99;
+  if (n >= 49) return 49;
+  return null;
+}
+
 async function fireMetaCapi(
   eventId: string,
   cardId: string,
@@ -526,8 +540,8 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     const priceVal = normPrice(stored.rows[0]?.price) ?? normPrice(price);
     const tier = amountTier(priceVal);
 
-    const { rows } = await pool.query<{ id: number; utr: string }>(
-      `SELECT id, utr FROM hs_received_payments
+    const { rows } = await pool.query<{ id: number; utr: string; amount: string }>(
+      `SELECT id, utr, amount FROM hs_received_payments
        WHERE used_at IS NULL
          AND created_at > NOW() - INTERVAL '5 minutes'
          AND ${tier ? `CAST(amount AS numeric) = ANY($1::numeric[])` : `CAST(amount AS numeric) >= 49`}
@@ -541,6 +555,9 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     }
 
     const matchedUtr = rows[0]!.utr;
+    // Prefer the explicit arm (stored/body); fall back to the actual amount
+    // received so the arm is always recorded on the card + card_paid event.
+    const armPrice = priceVal ?? armFromPaidAmount(rows[0]!.amount);
 
     await pool.query(
       `UPDATE hs_received_payments SET used_at = NOW(), card_id = $2, unlock_method = 'auto_unlock' WHERE utr = $1`,
@@ -554,7 +571,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
          fbp = COALESCE(EXCLUDED.fbp, hs_cards.fbp),
          fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc),
          price = COALESCE(EXCLUDED.price, hs_cards.price)`,
-      [id, fbp ?? null, fbc ?? null, priceVal],
+      [id, fbp ?? null, fbc ?? null, armPrice],
     );
 
     const cardRow = await pool.query<{ occasion: string; price: number | null }>(
@@ -562,7 +579,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
       [id],
     );
     const occasion = cardRow.rows[0]?.occasion ?? null;
-    const eventPrice = priceVal ?? cardRow.rows[0]?.price ?? null;
+    const eventPrice = armPrice ?? cardRow.rows[0]?.price ?? null;
 
     await pool.query(
       `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4, full_utr, unlock_method) VALUES ($1, $2, $3, 'auto_unlock')`,
@@ -615,8 +632,8 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     const tier = amountTier(priceVal);
 
     // Match against the last 4 digits of any unused received UTR
-    const { rows } = await pool.query<{ id: number; utr: string }>(
-      `SELECT id, utr FROM hs_received_payments
+    const { rows } = await pool.query<{ id: number; utr: string; amount: string }>(
+      `SELECT id, utr, amount FROM hs_received_payments
        WHERE RIGHT(utr, 4) = $1 AND used_at IS NULL
          AND ${tier ? `CAST(amount AS numeric) = ANY($2::numeric[])` : `CAST(amount AS numeric) >= 49`}
        ORDER BY created_at DESC LIMIT 1`,
@@ -632,6 +649,9 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     }
 
     const matchedUtr = rows[0]!.utr;
+    // Prefer the explicit arm (stored/body); fall back to the actual amount
+    // received so the arm is always recorded on the card + card_paid event.
+    const armPrice = priceVal ?? armFromPaidAmount(rows[0]!.amount);
 
     // Mark the full UTR as used, record which card and method consumed it
     await pool.query(
@@ -648,7 +668,7 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
            fbp = COALESCE(EXCLUDED.fbp, hs_cards.fbp),
            fbc = COALESCE(EXCLUDED.fbc, hs_cards.fbc),
            price = COALESCE(EXCLUDED.price, hs_cards.price)`,
-      [id, fbp ?? null, fbc ?? null, priceVal],
+      [id, fbp ?? null, fbc ?? null, armPrice],
     );
 
     const cardRow = await pool.query<{ occasion: string; price: number | null }>(
@@ -656,7 +676,7 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
       [id],
     );
     const occasion = cardRow.rows[0]?.occasion ?? null;
-    const eventPrice = priceVal ?? cardRow.rows[0]?.price ?? null;
+    const eventPrice = armPrice ?? cardRow.rows[0]?.price ?? null;
 
     // Record submission with full UTR and method for audit trail
     await pool.query(

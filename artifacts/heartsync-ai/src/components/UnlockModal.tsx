@@ -172,7 +172,7 @@ export default function UnlockModal({
         });
         if (res.ok) {
           cleanup();
-          trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          trackEvent({ event: "card_paid", occasion, card_id: cardId, price });
           if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
             (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: price, currency: "INR" }, { eventID: autoEventId });
           }
@@ -231,7 +231,7 @@ export default function UnlockModal({
         });
         if (res.ok) {
           cleanup();
-          trackEvent({ event: "card_paid", occasion, card_id: cardId });
+          trackEvent({ event: "card_paid", occasion, card_id: cardId, price });
           if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
             (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: price, currency: "INR" }, { eventID: utrEventId });
           }
