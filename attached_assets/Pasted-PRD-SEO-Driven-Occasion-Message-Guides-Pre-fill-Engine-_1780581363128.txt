@@ -1,0 +1,116 @@
+PRD: SEO-Driven Occasion Message Guides & Pre-fill Engine
+1. Project Overview
+Build a scalable content directory for HeartSync that drives organic search traffic. The system will programmatically generate (or serve from a CMS/database) SEO-optimized landing pages containing pre-written message templates for various occasions.
+
+Crucially, each text template will feature a one-click conversion mechanism that routes the user to the HeartSync card builder, automatically pre-filling the text area with their chosen message.
+
+2. Core Objectives
+Capture long-tail organic search traffic (e.g., "What to write in an apology card to girlfriend").
+
+Remove user friction (writer's block) by providing copy-paste solutions.
+
+Drive users seamlessly into the ₹49 checkout funnel via deep-linked "Create Card" buttons.
+
+3. Technical Requirements
+A. Data Structure (Message Schema)
+The system requires a database table or a structured JSON file to store the text templates. The schema must include:
+
+id: Unique identifier (UUID).
+
+occasion_type: String (Enum: sorry, feel_good, birthday, congrats, thank_you).
+
+category: String (e.g., "For Him", "For Her", "Professional", "Funny").
+
+message_text: Text (The actual paragraph/message).
+
+seo_slug: String (URL-friendly slug, e.g., best-apology-messages-for-boyfriend).
+
+page_title: String (For the <title> tag).
+
+meta_description: String.
+
+B. URL Routing & SEO Pages
+Create a dynamic routing system to serve these pages cleanly.
+
+Directory Index: /messages/ (Shows all occasion categories).
+
+Category Pages: /messages/[occasion_type]/ (e.g., /messages/sorry).
+
+Specific SEO Pages: /messages/[occasion_type]/[seo_slug] (e.g., /messages/birthday/last-minute-wishes).
+
+Technical SEO: All pages must include dynamic meta tags, canonical URLs, and mobile-first responsive HTML.
+
+C. The Deep-Link Pre-fill Mechanism (Critical Feature)
+The card builder page (/build or equivalent) must be updated to accept URL parameters and automatically inject them into the text-entry state.
+
+Incoming URL Example: heartsync.in/build?occasion=sorry&text=I%20am%20so%20sorry%20for...
+
+Logic: On page load, if the text query parameter exists, instantly populate the card's text field with the decoded string.
+
+4. UI/UX Specifications
+A. Page Layout (The SEO Guide)
+H1 Header: Matches the SEO search intent (e.g., "15 Sincere Apology Messages for Your Partner").
+
+Introduction: A short 2-3 sentence paragraph validating the user's situation.
+
+Template Cards: Each message is displayed in its own clean UI box.
+
+Displays the text clearly.
+
+Features a primary Call-to-Action (CTA) button directly below the text: "Send this in a digital envelope - ₹49".
+
+Features a secondary ghost button: "Copy Text".
+
+B. Occasion Taxonomies to Seed
+The database must be seeded with these 5 core occasions and sub-categories:
+
+1. Sorry (Focus: Relationship Repair)
+
+After a minor argument.
+
+For forgetting a special date.
+
+Long-distance text apologies.
+
+2. Feel Good (Focus: Daily Affection)
+
+Morning texts to wake up to.
+
+"Just thinking of you" paragraphs.
+
+Cheer up / mental health support messages.
+
+3. Birthday (Focus: Speed & Emotion)
+
+Belated birthday wishes (humorous).
+
+Romantic birthday paragraphs.
+
+Last-minute wishes for friends.
+
+4. Congrats (Focus: Milestones)
+
+New job / Promotion.
+
+Graduation / Exams passed.
+
+Engagement / Wedding.
+
+5. Thank You (Focus: Gratitude)
+
+For a specific gift.
+
+Professional / Mentorship appreciation.
+
+Being there during a hard time.
+
+5. Implementation Steps for Replit AI
+Define Schema: Create the JSON or DB schema for the templates.
+
+Seed Data: Generate 3-5 sample templates for all 5 occasions to populate the database.
+
+Build UI Components: Create the SEO page layout and the individual "Template Card" component with the CTA buttons.
+
+Set up Routing: Build the dynamic /messages/... routes.
+
+Update Builder: Modify the existing card builder to parse URL query parameters (?text=...) and set the initial state of the text editor.
