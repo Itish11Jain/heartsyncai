@@ -34,6 +34,29 @@ function isExcludedRecipient(name: unknown): boolean {
 }
 
 /**
+ * The site owner (Itisha Jain) makes test payments from her own UPI, which
+ * pollute every analytics metric. Identify those payments by the payer name or
+ * her UPI VPA as they appear in the raw bank SMS/email (`hs_received_payments.raw_sms`).
+ *
+ * CRITICAL: match her full name or VPA only — never a bare surname like "Jain",
+ * because real paying customers (e.g. "Somya Jain", VPA 800573821) must NOT be
+ * excluded. These are Postgres `~*` (case-insensitive regex) patterns.
+ *
+ * Two layers of defence:
+ *  1. ensureExcludedPayersPurged() deletes her existing payments + the cards
+ *     they unlocked + every event on those cards (one-shot per server start).
+ *  2. buildEventFilter() drops events whose card_id ties to one of her payments
+ *     from every analytics aggregate.
+ *
+ * Limitation: the newest payment emails are stored as a redirect URL with no
+ * readable payer name/VPA, so name/VPA matching only covers plaintext records.
+ */
+const EXCLUDED_PAYER_PATTERNS: string[] = [
+  "Sender:\\s*ITISHA JAIN",
+  "VPA:\\s*8905158970",
+];
+
+/**
  * Builds the shared WHERE-fragment + ordered parameter list for every
  * analytics aggregate query. Combines:
  *   - superuser email exclusion
@@ -65,6 +88,21 @@ function buildEventFilter(opts: { from?: string | null; to?: string | null } = {
       (_, i) => `recipient_name !~* $${recipStart + i}`,
     ).join(" AND ")})`,
   );
+
+  // Exclude events on cards that were unlocked by an excluded payer's (Itisha's)
+  // test payment. The subquery guards against NULL card_id so NOT IN is safe.
+  if (EXCLUDED_PAYER_PATTERNS.length > 0) {
+    const payerStart = params.length + 1;
+    params.push(...EXCLUDED_PAYER_PATTERNS);
+    conds.push(
+      `(card_id IS NULL OR card_id NOT IN (
+         SELECT card_id FROM hs_received_payments
+         WHERE card_id IS NOT NULL AND (${EXCLUDED_PAYER_PATTERNS.map(
+           (_, i) => `raw_sms ~* $${payerStart + i}`,
+         ).join(" OR ")})
+       ))`,
+    );
+  }
 
   if (opts.from) {
     params.push(opts.from);
@@ -253,6 +291,59 @@ async function ensureExcludedRecipientsPurged(): Promise<void> {
   }
 }
 
+/**
+ * One-shot purge of the site owner's (Itisha's) test payments and everything
+ * derived from them: the cards her payments unlocked, every event on those
+ * cards, and the payment rows themselves. Memoised per process; idempotent
+ * (re-running matches nothing once the rows are gone). Wrapped in a transaction
+ * so a partial failure leaves the data consistent.
+ */
+let _purgedExcludedPayers = false;
+async function ensureExcludedPayersPurged(): Promise<void> {
+  if (_purgedExcludedPayers) return;
+  if (EXCLUDED_PAYER_PATTERNS.length === 0) {
+    _purgedExcludedPayers = true;
+    return;
+  }
+  const orClause = EXCLUDED_PAYER_PATTERNS.map(
+    (_, i) => `raw_sms ~* $${i + 1}`,
+  ).join(" OR ");
+  // card_ids of cards unlocked by her test payments. Evaluated before the
+  // payments are deleted (payments are removed last).
+  const cardSel = `SELECT card_id FROM hs_received_payments
+                   WHERE card_id IS NOT NULL AND (${orClause})`;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const evDel = await client.query(
+      `DELETE FROM hs_card_events WHERE card_id IN (${cardSel})`,
+      [...EXCLUDED_PAYER_PATTERNS],
+    );
+    const cardDel = await client.query(
+      `DELETE FROM hs_cards WHERE id IN (${cardSel})`,
+      [...EXCLUDED_PAYER_PATTERNS],
+    );
+    const payDel = await client.query(
+      `DELETE FROM hs_received_payments WHERE ${orClause}`,
+      [...EXCLUDED_PAYER_PATTERNS],
+    );
+    await client.query("COMMIT");
+    const total =
+      (evDel.rowCount ?? 0) + (cardDel.rowCount ?? 0) + (payDel.rowCount ?? 0);
+    if (total > 0) {
+      console.log(
+        `[events] purged Itisha test data — events:${evDel.rowCount} cards:${cardDel.rowCount} payments:${payDel.rowCount}`,
+      );
+    }
+    _purgedExcludedPayers = true;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("[events] failed to purge excluded payers", err);
+  } finally {
+    client.release();
+  }
+}
+
 /** Returns true when the request originates from a dev/staging domain. */
 function isDevRequest(req: Request): boolean {
   const origin = req.get("origin") ?? req.get("referer") ?? "";
@@ -418,6 +509,7 @@ router.get("/events/analytics", async (req, res) => {
     await ensureEventsTable();
     await ensureVitalsTable();
     await ensureExcludedRecipientsPurged();
+    await ensureExcludedPayersPurged();
 
     const from = parseDateParam(req.query["from"]);
     const to = parseDateParam(req.query["to"]);
@@ -773,10 +865,10 @@ router.get("/events/analytics", async (req, res) => {
  * Sales analytics derived from confirmed UPI payments (hs_received_payments).
  * Always excludes:
  *   - refunded payments (refunded_at IS NOT NULL)
- *   - any payment whose forwarded bank SMS names "Itisha" as the sender,
- *     matched case-insensitively on a whole-word basis (`\yitisha\y`), so
- *     "ITISHA JAIN" matches but innocent names like "Nitisha" do not. These
- *     are the app owner's own self/test payments.
+ *   - the app owner's own self/test payments, matched via EXCLUDED_PAYER_PATTERNS
+ *     (payer name "ITISHA JAIN" or her UPI VPA 8905158970). The patterns are
+ *     anchored to the sender/VPA fields so real customers (e.g. "Somya Jain")
+ *     are never caught.
  *
  * Optional date range via ?from=YYYY-MM-DD&to=YYYY-MM-DD (IST, inclusive).
  * Each confirmed payment corresponds to one card unlock.
@@ -793,11 +885,16 @@ router.get("/events/sales", async (req, res) => {
     // WHERE fragment over hs_received_payments. Bare column names are safe in
     // the occasion query below because the joined subquery only exposes
     // card_id/occasion — created_at/refunded_at/raw_sms/amount resolve to rp.
-    const conds: string[] = [
-      "refunded_at IS NULL",
-      "(raw_sms IS NULL OR raw_sms !~* '\\yitisha\\y')",
-    ];
+    const conds: string[] = ["refunded_at IS NULL"];
     const params: string[] = [];
+    // Exclude the owner's own UPI test payments (see EXCLUDED_PAYER_PATTERNS).
+    const payerStart = params.length + 1;
+    params.push(...EXCLUDED_PAYER_PATTERNS);
+    conds.push(
+      `(raw_sms IS NULL OR NOT (${EXCLUDED_PAYER_PATTERNS.map(
+        (_, i) => `raw_sms ~* $${payerStart + i}`,
+      ).join(" OR ")}))`,
+    );
     if (from) {
       params.push(from);
       conds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${params.length}::date`);
@@ -850,8 +947,11 @@ router.get("/events/sales", async (req, res) => {
                 COALESCE(SUM(NULLIF(amount,'')::numeric),0) AS amount
          FROM hs_received_payments
          WHERE refunded_at IS NULL
-           AND (raw_sms IS NULL OR raw_sms !~* '\\yitisha\\y')
+           AND (raw_sms IS NULL OR NOT (${EXCLUDED_PAYER_PATTERNS.map(
+             (_, i) => `raw_sms ~* $${i + 1}`,
+           ).join(" OR ")}))
            AND created_at >= NOW() - INTERVAL '24 hours'`,
+        [...EXCLUDED_PAYER_PATTERNS],
       ),
     ]);
 

@@ -2,6 +2,7 @@
 - [Card view tracking](card-view-tracking.md) — analytics "Views" counts per-page `card_viewed` events; every new card template must fire it on recipient open or it shows 0.
 - [Background removal](bg-removal.md) — sticker cutout runs RMBG-1.4 LOCALLY (transformers.js+sharp); HF inference API & remove.bg both abandoned (dead/no credits).
 - [Card image assets](card-image-assets.md) — export card scene art as small resized WebP + preload it (gated per occasion); source-res PNGs caused flower-by-flower pop-in & transition freeze.
+- [Owner test-payment exclusion](owner-test-payment-exclusion.md) — keep Itisha's own UPI payments out of analytics; match name/anchored-VPA only (never bare "Jain" — Somya Jain is real); purge + filter in events.ts.
 - [Price A/B arm sourcing](price-ab-arm.md) — ₹49/₹99 sticky-per-device arm; every card POST must send price, unlock routes must trust STORED arm not request body, keep Gmail allowlist in sync.
 - [Sorry template Screen 1](sorry-template.md) — envelope screen is isSorry-gated: blush textured-paper envelope, 3D float, corner+slider rose (from bouquet assets), seam/fold shadows, cursive-gold text; sorry slider track is overflow:visible to avoid clipping the rose.
 - [Bundle page card previews](bundle-previews.md) — preview grid iframes must load React routes (/card, /cosmic…), never static public/*.html (which don't boot React in dev → frozen splash).
