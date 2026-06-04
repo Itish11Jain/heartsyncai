@@ -230,7 +230,7 @@ function AudioPlayer({ audioUrl, onEnded: onEndedProp, autoPlay }: {
 
 /* ─────────────────────────── SilverTypewriter ───────────────────────────── */
 
-function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; emoji?: string; variant?: "silver" | "ink" }) {
+function SilverTypewriter({ text, emoji, variant = "silver" }: { text: string; emoji?: string; variant?: "silver" | "ink" | "cosmic" }) {
   const [displayed, setDisplayed] = useState("");
 
   useEffect(() => {

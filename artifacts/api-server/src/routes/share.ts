@@ -179,9 +179,7 @@ router.get("/og-image", (req, res) => {
   try {
     const resvg = new Resvg(svg, {
       font: {
-        fontBuffers: [fontBold, ...(fontReg ? [fontReg] : [])].map(
-          (b) => new Uint8Array(b!),
-        ),
+        fontFiles: [FONT_BOLD, ...(fontReg ? [FONT_REG] : [])],
         defaultFontFamily: "DejaVu Sans",
         loadSystemFonts: false,
       },

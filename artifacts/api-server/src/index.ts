@@ -1,7 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initDb } from "./lib/db";
-import { warmBgRemove } from "./lib/bgRemove";
 
 const rawPort = process.env["PORT"];
 
@@ -29,9 +28,11 @@ initDb()
 
       logger.info({ port }, "Server listening");
 
-      // Warm the background-removal model in the background so the first
-      // sticker request doesn't pay the model load cost.
-      warmBgRemove();
+      // The background-removal model is loaded lazily on the first sticker
+      // request (birthday cards only). We deliberately do NOT warm it at
+      // startup so instances that never remove a background don't carry its
+      // memory cost — which otherwise creates memory pressure that slows down
+      // ordinary photo/audio uploads on small production instances.
     });
   })
   .catch((err) => {

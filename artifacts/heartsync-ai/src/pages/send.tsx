@@ -623,7 +623,14 @@ function SendInner() {
       const compressed = await compressPhoto(file);
       const fd = new FormData();
       fd.append("photo", compressed);
-      const res = await fetch(`${base}/api/upload/photo`, { method: "POST", body: fd });
+      const ac = new AbortController();
+      const to = setTimeout(() => ac.abort(), 60000);
+      let res: Response;
+      try {
+        res = await fetch(`${base}/api/upload/photo`, { method: "POST", body: fd, signal: ac.signal });
+      } finally {
+        clearTimeout(to);
+      }
       if (!res.ok) {
         const d = await res.json().catch(() => ({})) as { error?: string };
         setPhotoUploadError(d.error ?? "Upload failed. Please try again.");
@@ -670,8 +677,11 @@ function SendInner() {
             .finally(() => { bgRemoveInProgressRef.current = false; });
         }
       }
-    } catch {
-      setPhotoUploadError("Upload failed. Please try again.");
+    } catch (err) {
+      const aborted = err instanceof DOMException && err.name === "AbortError";
+      setPhotoUploadError(aborted
+        ? "Upload timed out. Check your connection and try again."
+        : "Upload failed. Please try again.");
       setPhotoPreviewSrcs(prev => prev.filter(s => s !== previewSrc));
     } finally {
       setPhotoUploading(false);
@@ -736,7 +746,14 @@ function SendInner() {
       const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
       const fd = new FormData();
       fd.append("audio", blob, "voice.webm");
-      const res = await fetch(`${base}/api/upload/audio`, { method: "POST", body: fd });
+      const ac = new AbortController();
+      const to = setTimeout(() => ac.abort(), 60000);
+      let res: Response;
+      try {
+        res = await fetch(`${base}/api/upload/audio`, { method: "POST", body: fd, signal: ac.signal });
+      } finally {
+        clearTimeout(to);
+      }
       if (!res.ok) {
         const d = await res.json().catch(() => ({})) as { error?: string };
         setVoiceUploadError(d.error ?? "Upload failed. Please try again.");
@@ -744,8 +761,11 @@ function SendInner() {
       }
       const data = await res.json() as { url?: string };
       if (data.url) setVoiceNoteUrl(data.url);
-    } catch {
-      setVoiceUploadError("Upload failed. Please try again.");
+    } catch (err) {
+      const aborted = err instanceof DOMException && err.name === "AbortError";
+      setVoiceUploadError(aborted
+        ? "Upload timed out. Check your connection and try again."
+        : "Upload failed. Please try again.");
     } finally {
       setVoiceUploading(false);
     }

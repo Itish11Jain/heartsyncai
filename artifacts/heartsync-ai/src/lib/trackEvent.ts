@@ -90,6 +90,8 @@ export type CardEventPayload = {
   utm_campaign?: string;
   /** Price A/B arm (₹49 or ₹99). Auto-attached from the device's sticky arm. */
   price?: number;
+  /** Zero-based index, e.g. which memory star was unlocked. */
+  index?: number;
 };
 
 /** Returns true when running on a non-production origin (Replit dev proxy or localhost). */

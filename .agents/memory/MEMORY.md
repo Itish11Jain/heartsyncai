@@ -1,6 +1,7 @@
 - [BirthdayDoor integration](birthday-integration.md) — birthday template is premium; 6-scene card at /birthday; auto-selects when occasion=birthday in send.tsx.
 - [Card view tracking](card-view-tracking.md) — analytics "Views" counts per-page `card_viewed` events; every new card template must fire it on recipient open or it shows 0.
 - [Background removal](bg-removal.md) — sticker cutout runs RMBG-1.4 LOCALLY (transformers.js+sharp); HF inference API & remove.bg both abandoned (dead/no credits).
+- [Upload performance](upload-perf.md) — uploads must use `compress:false` (never `contentType`); don't warm the bg model at startup; client has 60s abort timeout.
 - [Card image assets](card-image-assets.md) — export card scene art as small resized WebP + preload it (gated per occasion); source-res PNGs caused flower-by-flower pop-in & transition freeze.
 - [Owner test-payment exclusion](owner-test-payment-exclusion.md) — keep the owner's own UPI test payments out of analytics; match on field-anchored name/VPA only (never a bare surname — a real customer shares it); purge + filter in events.ts.
 - [Price A/B arm sourcing](price-ab-arm.md) — ₹49/₹99 sticky arm; card POSTs send price, unlock routes trust STORED arm + amount fallback; panel `paid` reads hs_cards.price (card_paid event price is NULL).

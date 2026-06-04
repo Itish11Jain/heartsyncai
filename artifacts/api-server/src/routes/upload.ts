@@ -74,8 +74,10 @@ router.post(
       const ext = ALLOWED_IMAGE_MIME[file.mimetype] ?? "jpg";
       const key = `photo/${randomUUID()}.${ext}`;
 
+      // compress:false — JPEG/PNG/WebP are already compressed, so gzip wastes
+      // CPU per upload for ~no size win and slows the request.
       const result = await getStorage().uploadFromBytes(key, file.buffer, {
-        contentType: file.mimetype,
+        compress: false,
       });
 
       if (!result.ok) {
@@ -114,8 +116,9 @@ router.post(
       const ext = ALLOWED_AUDIO_MIME[file.mimetype] ?? "webm";
       const key = `audio/${randomUUID()}.${ext}`;
 
+      // compress:false — audio (webm/ogg/mp3/mp4) is already compressed.
       const result = await getStorage().uploadFromBytes(key, file.buffer, {
-        contentType: file.mimetype,
+        compress: false,
       });
 
       if (!result.ok) {
@@ -236,7 +239,7 @@ router.post(
         }
       }
 
-      const result = await getStorage().uploadFromBytes(key, pngBuffer, { contentType: "image/png" });
+      const result = await getStorage().uploadFromBytes(key, pngBuffer, { compress: false });
       if (!result.ok) {
         console.error("[sticker] Object Storage upload failed", result.error);
         res.status(500).json({ error: "Upload failed. Please try again." });
