@@ -99,10 +99,13 @@ function AppRoutes() {
     (p) => location === p || location.startsWith(p + "/"),
   );
 
-  // Resolve (and persist) the price A/B arm at boot. This locks in any ?arm=
-  // testing override immediately, before any paywall reads it, so navigating
-  // away from the override URL still shows the forced arm.
-  useEffect(() => { getPriceArm(); }, []);
+  // Persist a QA ?arm= override at boot so it takes effect before any paywall
+  // reads it, even after navigating away from the override URL. Gated on the
+  // param's presence so real users keep their original sticky assignment and
+  // timing untouched — they always see the price they first saw.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("arm")) getPriceArm();
+  }, []);
 
   const switchEl = (
     <Switch>
