@@ -666,12 +666,12 @@ router.get("/events/analytics", async (req, res) => {
                   COALESCE(v.view_count, 0) AS view_count
            FROM hs_card_events c
            LEFT JOIN (
-             SELECT card_id, COUNT(*) AS view_count
+             SELECT card_id AS vc, COUNT(*) AS view_count
              FROM hs_card_events
              WHERE event = 'card_viewed' AND card_id IS NOT NULL
                AND ${whereSql}
              GROUP BY card_id
-           ) v ON v.card_id = c.card_id
+           ) v ON v.vc = c.card_id
            WHERE c.event = 'card_created' AND ${whereSql}
            ORDER BY c.created_at DESC
            LIMIT 20`,
