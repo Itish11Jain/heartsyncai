@@ -94,7 +94,7 @@ title = "sample photo 3"
 id = "WaaXmWew20qZchl2cq7b6"
 uri = "file://attached_assets/balloons/balloon_gold.png"
 type = "image"
-title = "gold balloon"
+title = "round gold balloon"
 
 [[generated]]
 id = "q_clKcrUdI_yA5zf3qPQx"
@@ -106,7 +106,7 @@ title = "rose gold balloon"
 id = "LSz4f4jUpZRUnfOhywixV"
 uri = "file://attached_assets/balloons/balloon_pearl.png"
 type = "image"
-title = "pearl balloon"
+title = "round pearl balloon"
 
 [[outputs]]
 id = "fDmbJv3aewQm22JAKoiDp"
