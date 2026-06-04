@@ -15,7 +15,13 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      { in: path.resolve(artifactDir, "src/index.ts"), out: "index" },
+      {
+        in: path.resolve(artifactDir, "src/lib/bgRemoveWorker.ts"),
+        out: "bgRemoveWorker",
+      },
+    ],
     platform: "node",
     bundle: true,
     format: "esm",
