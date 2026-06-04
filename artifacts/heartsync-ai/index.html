@@ -165,6 +165,7 @@
         var isCard = path === '/card' || path.endsWith('/card');
         var isHome = path === '/' || path === '';
         var isSend = path === '/send' || path.endsWith('/send');
+        var isMessages = path === '/messages' || path.indexOf('/messages/') !== -1 || path.endsWith('/messages');
         var isSender = p.get('sender') === '1';
         var isPreview = p.get('preview') === '1';
         var el = document.getElementById('hs-splash');
@@ -199,7 +200,9 @@
         // Skip splash for any preview route (bundle grid iframes: /card, /cosmic,
         // /crystal, /vinyl, /birthday) and for card sender flows — they render
         // their own UI fast and must start the card animation immediately.
-        if (isPreview || (isCard && isSender)) {
+        // /messages SEO pages are pre-rendered to real static HTML — show that
+        // content instantly instead of covering it with the loading splash.
+        if (isPreview || (isCard && isSender) || isMessages) {
           el.style.display = 'none';
           return;
         }

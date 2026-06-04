@@ -33,6 +33,9 @@ const Privacy = lazy(() => import("@/pages/privacy"));
 const History = lazy(() => import("@/pages/history"));
 const Moments = lazy(() => import("@/pages/moments"));
 const DateGuide = lazy(() => import("@/pages/date-guide"));
+const MessagesIndex = lazy(() => import("@/pages/messages-index"));
+const MessagesCategory = lazy(() => import("@/pages/messages-category"));
+const MessageGuide = lazy(() => import("@/pages/messages-guide"));
 const CardExperience = lazy(() => import("@/pages/card"));
 const CrystalCard = lazy(() => import("@/pages/crystal"));
 const CosmicCard = lazy(() => import("@/pages/cosmic"));
@@ -120,6 +123,10 @@ function AppRoutes() {
       <Route path="/history"><L><History /></L></Route>
       <Route path="/moments"><L><Moments /></L></Route>
       <Route path="/date-guide"><L><DateGuide /></L></Route>
+      {/* SEO message guides — pre-rendered to static HTML at build time. */}
+      <Route path="/messages"><L><MessagesIndex /></L></Route>
+      <Route path="/messages/:occasion/:slug"><L><MessageGuide /></L></Route>
+      <Route path="/messages/:occasion"><L><MessagesCategory /></L></Route>
       <Route path="/card"><L><CardExperience /></L></Route>
       <Route path="/crystal"><L><CrystalCard /></L></Route>
       <Route path="/cosmic"><L><CosmicCard /></L></Route>

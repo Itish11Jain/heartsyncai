@@ -358,7 +358,19 @@ function SendInner() {
   // Viral reply pre-selects "partner" so the user can tap through quickly.
   const [relation, setRelation] = useState(isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""));
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
-  const [customMsg, setCustomMsg] = useState(isViralReply ? "Thank you for this cute gesture!" : (initialDraft?.customMsg ?? ""));
+  // SEO message-guide deep link: /send?occasion=…&text=… pre-fills the message
+  // box. An explicit `text` param expresses fresh intent, so it wins over any
+  // saved draft. The re-seed effect below only replaces an EMPTY message, so a
+  // pre-filled message is never clobbered by the default-template logic.
+  const prefillText = (() => {
+    const raw = searchParams.get("text") ?? "";
+    return raw.trim().slice(0, 300);
+  })();
+  const [customMsg, setCustomMsg] = useState(
+    isViralReply
+      ? "Thank you for this cute gesture!"
+      : (prefillText || initialDraft?.customMsg || ""),
+  );
   // Template selection is intentionally NOT restored from draft — Envelope is always
   // the predictable default on a fresh load. Selections survive the in-page lifecycle
   // (signin modal, paywall modal) via React state, which is what matters for the flow.
