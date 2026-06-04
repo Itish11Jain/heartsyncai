@@ -51,6 +51,12 @@ const PAYWALL_KEY = "hs_paywall_state_v1";
 const PAYWALL_TTL_MS = 60 * 60 * 1000;
 type PaywallStage = "plan" | "done";
 type WatermarkStage = "choose" | "upi" | "done";
+type PhotoSlot = {
+  id: string;
+  previewSrc: string;
+  url: string | null;
+  status: "uploading" | "done" | "error";
+};
 interface PaywallSnapshot {
   open: boolean;
   stage: PaywallStage;
@@ -403,9 +409,17 @@ function SendInner() {
   const [watermarkUpiCopied, setWatermarkUpiCopied] = useState(false);
 
   // Multi-photo upload state (up to 4 photos)
-  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
-  const [photoPreviewSrcs, setPhotoPreviewSrcs] = useState<string[]>([]);
-  const [photoUploading, setPhotoUploading] = useState(false);
+  // Each selected photo is an independent slot so uploads run in parallel and a
+  // slow/failed one never blocks the others. `uploadedPhotoUrls` (used widely
+  // below) and `photoUploading` are derived from it so downstream code is
+  // unchanged.
+  const [photoSlots, setPhotoSlots] = useState<PhotoSlot[]>([]);
+  const uploadedPhotoUrls = useMemo(
+    () => photoSlots.filter(s => s.url).map(s => s.url!),
+    [photoSlots],
+  );
+  const photoPreviewSrcs = useMemo(() => photoSlots.map(s => s.previewSrc), [photoSlots]);
+  const photoUploading = photoSlots.some(s => s.status === "uploading");
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   // Auto background-removed version of the first photo (used as personal picture / sticker in Scene 5)
   const [autoStickerUrl, setAutoStickerUrl] = useState<string | null>(null);
@@ -612,12 +626,17 @@ function SendInner() {
     });
   }
 
-  async function handlePhotoSelect(file: File) {
-    if (photoUploading) return;
+  async function handlePhotoSelect(file: File, isFirstPhoto: boolean) {
     setPhotoUploadError(null);
+    const slotId = crypto.randomUUID();
     const previewSrc = URL.createObjectURL(file);
-    setPhotoPreviewSrcs(prev => [...prev, previewSrc]);
-    setPhotoUploading(true);
+    // Register the slot immediately so its thumbnail + spinner appear right away.
+    // Each slot uploads independently; one slow/failed photo can't block others.
+    setPhotoSlots(prev => [...prev, { id: slotId, previewSrc, url: null, status: "uploading" }]);
+    const dropSlot = () => {
+      setPhotoSlots(prev => prev.filter(s => s.id !== slotId));
+      URL.revokeObjectURL(previewSrc);
+    };
     try {
       const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
       const compressed = await compressPhoto(file);
@@ -634,19 +653,19 @@ function SendInner() {
       if (!res.ok) {
         const d = await res.json().catch(() => ({})) as { error?: string };
         setPhotoUploadError(d.error ?? "Upload failed. Please try again.");
-        setPhotoPreviewSrcs(prev => prev.filter(s => s !== previewSrc));
+        dropSlot();
         return;
       }
       const data = await res.json() as { url?: string };
       if (data.url) {
-        setUploadedPhotoUrls(prev => [...prev, data.url!]);
+        setPhotoSlots(prev => prev.map(s => s.id === slotId ? { ...s, url: data.url!, status: "done" } : s));
         trackEvent({ event: "photo_added", occasion, clerk_user_id: clerkUserId ?? undefined, email: userEmail ?? undefined, fingerprint: fingerprint ?? undefined, template: selectedTemplate });
 
-        // For birthday cards: auto-remove background of the first photo so it
-        // appears as a transparent PNG sticker cutout in Scene 5. Gate on the
-        // ref (not a stale `uploadedPhotoUrls.length` closure) so a multi-select
-        // batch fires this exactly once, for the first photo only.
-        if (occasion === "birthday" && !autoStickerUrlRef.current) {
+        // For birthday cards: auto-remove background of the FIRST photo so it
+        // appears as a transparent PNG sticker cutout in Scene 5. Gate on both
+        // the first-photo flag (captured at selection time, before any parallel
+        // upload finishes) and the ref, so this fires exactly once.
+        if (occasion === "birthday" && isFirstPhoto && !autoStickerUrlRef.current) {
           // Predict the sticker URL up-front using a client-generated id, so the
           // card can swap the transparent cutout in as soon as it's ready — even
           // if the user creates the card before background removal finishes (it
@@ -668,10 +687,15 @@ function SendInner() {
           fetch(`${base}/api/upload/sticker`, { method: "POST", body: sfd })
             .then(sr => sr.ok ? sr.json() : null)
             .then((sd: { url?: string } | null) => {
-              // On success keep the (matching) sticker URL; on failure fall back
-              // to the plain photo so the card never polls for a file that the
-              // server never produced.
-              const finalUrl = sd?.url ?? photoUrl;
+              // On success adopt the server's ACTUAL sticker URL (its stored key
+              // can differ from our predicted id in the rare case the storage
+              // existence check fails and it falls back to a random key), but
+              // force https so it can never be blocked as mixed content on the
+              // https card. On failure fall back to the plain photo so the card
+              // never polls for a file that the server never produced.
+              const finalUrl = sd?.url
+                ? sd.url.replace(/^http:\/\//, "https://")
+                : photoUrl;
               setAutoStickerUrl(finalUrl);
               autoStickerUrlRef.current = finalUrl;
             })
@@ -687,9 +711,7 @@ function SendInner() {
       setPhotoUploadError(aborted
         ? "Upload timed out. Check your connection and try again."
         : "Upload failed. Please try again.");
-      setPhotoPreviewSrcs(prev => prev.filter(s => s !== previewSrc));
-    } finally {
-      setPhotoUploading(false);
+      dropSlot();
     }
   }
 
@@ -1398,23 +1420,23 @@ function SendInner() {
 
                   {/* Thumbnail row */}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {photoPreviewSrcs.map((src, i) => (
+                    {photoSlots.map((slot) => (
                       <div
-                        key={src}
+                        key={slot.id}
                         style={{
                           width: 58, height: 58, borderRadius: 10, position: "relative", flexShrink: 0,
                           overflow: "hidden",
                           border: "1.5px solid rgba(255,215,0,0.3)",
-                          opacity: photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length ? 0.5 : 1,
+                          opacity: slot.status === "uploading" ? 0.5 : 1,
                         }}
                       >
-                        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%", imageOrientation: "from-image" }} />
-                        {(i < uploadedPhotoUrls.length) && (
+                        <img src={slot.previewSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%", imageOrientation: "from-image" }} />
+                        {slot.status === "done" && (
                           <button
                             type="button"
                             onClick={() => {
-                              setUploadedPhotoUrls(prev => prev.filter((_, j) => j !== i));
-                              setPhotoPreviewSrcs(prev => prev.filter((_, j) => j !== i));
+                              URL.revokeObjectURL(slot.previewSrc);
+                              setPhotoSlots(prev => prev.filter(s => s.id !== slot.id));
                             }}
                             style={{
                               position: "absolute", top: 2, right: 2, width: 18, height: 18,
@@ -1424,7 +1446,7 @@ function SendInner() {
                             }}
                           >✕</button>
                         )}
-                        {photoUploading && i === photoPreviewSrcs.length - 1 && i >= uploadedPhotoUrls.length && (
+                        {slot.status === "uploading" && (
                           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <Loader2 size={18} style={{ color: "rgba(255,215,0,0.9)", animation: "spin 1s linear infinite" }} />
                           </div>
@@ -1432,8 +1454,8 @@ function SendInner() {
                       </div>
                     ))}
 
-                    {/* Add photo button */}
-                    {uploadedPhotoUrls.length < 3 && !photoUploading && (
+                    {/* Add photo button — stays available while other photos upload */}
+                    {photoSlots.length < 3 && (
                       <label style={{ cursor: "pointer" }}>
                         <div style={{
                           width: 58, height: 58, borderRadius: 10, flexShrink: 0,
@@ -1442,22 +1464,23 @@ function SendInner() {
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 22,
                         }}>
-                          {photoPreviewSrcs.length === 0 ? "🖼️" : "+"}
+                          {photoSlots.length === 0 ? "🖼️" : "+"}
                         </div>
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
                           multiple
-                          disabled={photoUploading}
                           style={{ display: "none" }}
-                          onChange={async e => {
+                          onChange={e => {
                             const files = Array.from(e.target.files ?? []);
-                            const slotsLeft = Math.max(0, 3 - photoPreviewSrcs.length);
+                            const slotsLeft = Math.max(0, 3 - photoSlots.length);
                             const toProcess = files.slice(0, slotsLeft);
                             e.target.value = "";
-                            for (const f of toProcess) {
-                              await handlePhotoSelect(f);
-                            }
+                            const startedEmpty = photoSlots.length === 0;
+                            // Fire all uploads in parallel — no await — so a slow
+                            // photo never blocks the others. The first photo of an
+                            // empty set drives the birthday sticker.
+                            toProcess.forEach((f, idx) => { void handlePhotoSelect(f, startedEmpty && idx === 0); });
                           }}
                         />
                       </label>

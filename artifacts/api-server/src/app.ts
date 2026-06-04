@@ -9,6 +9,12 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// The app runs behind Replit's proxy (dev preview + Autoscale deployment), which
+// terminates TLS and forwards over http. Trust the proxy so `req.protocol`
+// reflects `x-forwarded-proto` (https) — otherwise uploaded photo/audio/sticker
+// URLs are built as http:// and become mixed content on the https card page.
+app.set("trust proxy", true);
+
 app.use(
   pinoHttp({
     logger,

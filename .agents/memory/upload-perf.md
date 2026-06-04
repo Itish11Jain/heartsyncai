@@ -32,9 +32,15 @@ background-removal model. Two settings are required to keep uploads fast:
 
 - **Client uploads have a 60s AbortController timeout** so a stalled request
   surfaces a clear error instead of spinning forever. The photo `<input>` is
-  `multiple` and files are processed sequentially; the first-photo sticker
-  trigger is gated on the `autoStickerUrlRef` ref (not a stale state closure) so
-  a multi-select batch fires bg-removal exactly once.
+  `multiple`. Multi-photo uploads run via a single `photoSlots` state where each
+  slot uploads INDEPENDENTLY/IN PARALLEL — there is NO shared boolean guard or
+  sequential `await`. **Why:** a shared in-flight lock made the 2nd photo "keep
+  loading" until the 1st finished; on a slow uplink it looked stuck. Per-slot
+  status + ID-targeted updates keep concurrent completions from clobbering each
+  other. The birthday sticker is gated at selection time on
+  `occasion==="birthday" && isFirstPhoto && !autoStickerUrlRef.current`, so it
+  fires bg-removal once for the first photo (edge: if the first photo's upload
+  fails, the sticker won't trigger).
 
 **resvg fonts:** `@resvg/resvg-js` 2.6.2 has no `fontBuffers` option (silently
 ignored → no glyphs). Load OG-image fonts via `fontFiles` (paths), not buffers.
