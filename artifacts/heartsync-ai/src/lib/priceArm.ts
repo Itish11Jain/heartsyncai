@@ -38,6 +38,14 @@ function bucket(seed: string): PriceArm {
 export function getPriceArm(): PriceArm {
   if (typeof window === "undefined") return 49;
   try {
+    // Testing override: ?arm=49 or ?arm=99 forces (and persists) an arm so QA
+    // can view either variant on demand. Once set it sticks like a normal arm.
+    const override = new URLSearchParams(window.location.search).get("arm");
+    if (override === "49" || override === "99") {
+      localStorage.setItem(ARM_KEY, override);
+      return Number(override) as PriceArm;
+    }
+
     const stored = localStorage.getItem(ARM_KEY);
     if (stored === "49" || stored === "99") return Number(stored) as PriceArm;
 
