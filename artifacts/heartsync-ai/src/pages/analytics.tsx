@@ -71,7 +71,7 @@ type PaymentFunnelRow = {
   step7_card_shared: string;
 };
 
-type PriceArmRow = { price: number; created: string; paid: string };
+type PriceArmRow = { price: number; created: string; paid: string; paid_tagged?: string };
 type PriceArmOccasionRow = { price: number; occasion: string; created: string; paid: string };
 
 type SalesDaily = { date: string; unlocks: string; amount: string };
@@ -1014,9 +1014,13 @@ export default function Analytics() {
           };
           return (
             <>
-              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
                 Price A/B Test · ₹49 vs ₹99
               </h2>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, lineHeight: 1.5, marginBottom: 10 }}>
+                <strong style={{ color: "rgba(255,255,255,0.6)" }}>Paid</strong> = real ₹49/₹99 payments received (accurate for the whole range).{" "}
+                <strong style={{ color: "rgba(255,255,255,0.6)" }}>Created</strong> &amp; conversion % only count from when arm tagging went live, so a “—” rate next to real paid counts is expected for earlier conversions.
+              </p>
               {arms.length === 0 ? (
                 <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginBottom: 24 }}>
                   No tagged events in this range yet. New cards are assigned a sticky ₹49 or ₹99 arm per device — data appears here as they create &amp; unlock.
@@ -1032,7 +1036,7 @@ export default function Analytics() {
                       }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                           <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 18 }}>₹{a.price}</span>
-                          <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 20 }}>{conv(a.paid, a.created)}</span>
+                          <span style={{ color: armColor(a.price), fontWeight: 800, fontSize: 20 }}>{conv(a.paid_tagged ?? "0", a.created)}</span>
                         </div>
                         <div style={{ display: "flex", gap: 16 }}>
                           <div>

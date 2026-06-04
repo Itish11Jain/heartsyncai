@@ -28,3 +28,20 @@ then `normPrice(stored) ?? normPrice(body)` before computing the amount tier.
 The Gmail Apps Script UTR forwarder amount allowlist must stay in sync with the
 live arms (currently {49,50,99,100} ±0.5) or valid payments get dropped before
 they ever reach the API.
+
+**Rule: A/B "paid" conversions come from REAL payments, not arm-tagged events.**
+The arm tag lives only in the browser and is only persisted onto card events
+from the deploy that ships tracking — so any conversion before that go-live has
+a NULL arm and an event-tagged "paid" count silently reads ~0 for historical
+ranges. Source paid from `hs_received_payments.amount` (₹49 vs ₹99, normalize
+the text values '49'/'49.00'/'99'/'99.00') with the sales-handler exclusions
+(refunds, owner test payers/UTRs) + IST date range. This is accurate
+retroactively. `created` (denominator) can only come from arm-tagged
+`card_created`, so it is forward-only and cannot be backfilled.
+**Why:** owner panicked seeing near-zero A/B numbers; money was intact, only the
+attribution source was wrong.
+**How to apply:** keep the conversion-RATE numerator/denominator in the SAME
+epoch — rate = tagged paid (`paid_tagged`, from `card_paid` events) ÷ tagged
+`created`; never divide real-payment paid by tagged created or the rate blows
+past 100% over ranges spanning the go-live. Show real-payment `paid` as the
+headline count, label `created`/rate as "from tagging go-live".

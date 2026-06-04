@@ -571,6 +571,40 @@ router.get("/events/analytics", async (req, res) => {
     }
 
     /**
+     * Price A/B "paid" filter over hs_received_payments. The per-device arm
+     * tag only began persisting onto card events from the deploy that shipped
+     * tracking, so counting paid conversions from tagged events undercounts
+     * every conversion before that. The real money is the source of truth:
+     * a ₹49 payment is a ₹49-arm conversion, a ₹99 payment is a ₹99-arm one.
+     * This makes the readout accurate retroactively (e.g. from experiment
+     * start) regardless of when event tagging went live. Mirrors the sales
+     * handler's exclusions (refunds, owner test payments) + IST date range.
+     */
+    const abPayConds: string[] = ["refunded_at IS NULL"];
+    const abPayParams: string[] = [];
+    const abPayerStart = abPayParams.length + 1;
+    abPayParams.push(...EXCLUDED_PAYER_PATTERNS);
+    if (EXCLUDED_PAYER_PATTERNS.length > 0) {
+      abPayConds.push(
+        `(raw_sms IS NULL OR NOT (${EXCLUDED_PAYER_PATTERNS.map(
+          (_, i) => `raw_sms ~* $${abPayerStart + i}`,
+        ).join(" OR ")}))`,
+      );
+    }
+    if (EXCLUDED_UTR_SQL_LIST) {
+      abPayConds.push(`(utr IS NULL OR utr NOT IN (${EXCLUDED_UTR_SQL_LIST}))`);
+    }
+    if (from) {
+      abPayParams.push(from);
+      abPayConds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date >= $${abPayParams.length}::date`);
+    }
+    if (to) {
+      abPayParams.push(to);
+      abPayConds.push(`(created_at AT TIME ZONE 'Asia/Kolkata')::date < ($${abPayParams.length}::date + INTERVAL '1 day')`);
+    }
+    const abPayWhere = abPayConds.join(" AND ");
+
+    /**
      * "Recent cards" view-count subquery shares the exact same filter as the
      * outer SELECT (same email exclusions, same recipient exclusions, same
      * date range). Because the placeholders ($1, $2, …) are identical in both
@@ -594,6 +628,7 @@ router.get("/events/analytics", async (req, res) => {
       mediaBreakdown,
       priceAb,
       priceAbOccasions,
+      priceAbPaid,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -863,7 +898,48 @@ router.get("/events/analytics", async (req, res) => {
            GROUP BY price, occasion ORDER BY price, created DESC`,
           params,
         ),
+        /* ── Price A/B test: paid conversions from REAL payments by amount ──
+         * Source of truth for "paid" (see abPayWhere note). ₹49/₹99 amounts
+         * are stored as text ('49.00','49','99.00','99'); normalise to the arm. */
+        pool.query(
+          `SELECT
+             CASE WHEN NULLIF(amount,'')::numeric = 49 THEN 49
+                  WHEN NULLIF(amount,'')::numeric = 99 THEN 99 END AS price,
+             COUNT(*) AS paid
+           FROM hs_received_payments
+           WHERE NULLIF(amount,'')::numeric IN (49, 99) AND ${abPayWhere}
+           GROUP BY 1 ORDER BY 1`,
+          abPayParams,
+        ),
       ]);
+
+    /**
+     * Merge the two A/B sources: `created` comes from arm-tagged events
+     * (only available from when tracking shipped — forward-looking), while
+     * `paid` comes from real payments by amount (accurate retroactively).
+     * Always emit both arms so the panel renders even when one side is 0.
+     */
+    const paidByArm = new Map<number, number>();
+    for (const r of priceAbPaid.rows as Array<{ price: number | null; paid: string }>) {
+      if (r.price === 49 || r.price === 99) paidByArm.set(r.price, Number(r.paid) || 0);
+    }
+    const createdByArm = new Map<number, number>();
+    const paidTaggedByArm = new Map<number, number>();
+    for (const r of priceAb.rows as Array<{ price: number; created: string; paid: string }>) {
+      createdByArm.set(Number(r.price), Number(r.created) || 0);
+      paidTaggedByArm.set(Number(r.price), Number(r.paid) || 0);
+    }
+    // `paid` = real payments (accurate for the whole range).
+    // `paid_tagged` = arm-tagged card_paid events; used ONLY as the conversion
+    // numerator so the rate is like-for-like with `created` (same forward-only
+    // tagged epoch). Mixing real-payment paid with tagged created would inflate
+    // the rate past 100% for ranges spanning the tracking go-live.
+    const mergedPriceAb = [49, 99].map((price) => ({
+      price,
+      created: String(createdByArm.get(price) ?? 0),
+      paid: String(paidByArm.get(price) ?? 0),
+      paid_tagged: String(paidTaggedByArm.get(price) ?? 0),
+    }));
 
     return res.json({
       overview: overview.rows[0],
@@ -879,7 +955,7 @@ router.get("/events/analytics", async (req, res) => {
       user_cards: userCards.rows,
       payment_funnel: paymentFunnel.rows[0] ?? null,
       media_breakdown: mediaBreakdown.rows[0] ?? null,
-      price_ab: priceAb.rows,
+      price_ab: mergedPriceAb,
       price_ab_occasions: priceAbOccasions.rows,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
