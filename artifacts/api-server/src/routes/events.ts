@@ -71,6 +71,7 @@ const EXCLUDED_PAYMENT_UTRS: string[] = [
   "307422714787", // ₹49 owner test payment, 5 Jun 2026 (opaque redirect-URL email)
   "207706692345", // ₹99 owner test payment, 5 Jun 2026 (opaque redirect-URL email)
   "307430706481", // ₹49 owner test payment, 5 Jun 2026 (opaque redirect-URL email)
+  "900000000001", // owner manual share-unlock for card cqkb3gc1, 5 Jun 2026 (no real payment)
 ];
 // Fail loudly on a malformed (non-digit) entry instead of silently dropping it,
 // which would otherwise let an owner test payment leak back into the stats.
