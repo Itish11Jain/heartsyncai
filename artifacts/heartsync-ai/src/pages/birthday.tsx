@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
 import { music, resumeAudio, isAudioSuspended } from "@/lib/audio";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
+import { scaleCount } from "@/lib/deviceCapability";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
 const WatermarkPaywallModal = lazy(() => import("@/components/WatermarkPaywallModal"));
@@ -50,6 +51,11 @@ const TW_ORBS = Array.from({length:6},(_,i)=>({
 }));
 
 function TwinkleBackground() {
+  // High-end devices render the full decorative field unchanged; low-end /
+  // reduced-motion get fewer twinkles so the opening scene paints faster.
+  const dots = TW_DOTS.slice(0, scaleCount(TW_DOTS.length, 0.45, 0.2));
+  const sparkles = TW_SPARKLES.slice(0, scaleCount(TW_SPARKLES.length, 0.45, 0.2));
+  const crossCount = scaleCount(10, 0.4, 0.2);
   return (
     <div style={{ position:"absolute", inset:0, zIndex:1, pointerEvents:"none",
       background:"linear-gradient(175deg,#1c0a06 0%,#0e0502 100%)" }}>
@@ -61,14 +67,14 @@ function TwinkleBackground() {
             transition={{duration:o.dur, repeat:Infinity, delay:o.delay, ease:"easeInOut"}}
             style={{transformOrigin:`${o.x}px ${o.y}px`}}/>
         ))}
-        {TW_DOTS.map((s,i)=>(
+        {dots.map((s,i)=>(
           <motion.circle key={i} cx={s.x} cy={s.y} r={s.r}
             fill={s.color}
             animate={{opacity:[0.04,0.95,0.1,0.8,0.04], scale:[1,1.6,1,1.3,1]}}
             transition={{duration:s.dur, repeat:Infinity, delay:s.delay, ease:"easeInOut"}}
             style={{transformOrigin:`${s.x}px ${s.y}px`}}/>
         ))}
-        {[...Array(10)].map((_,i)=>{
+        {[...Array(crossCount)].map((_,i)=>{
           const x=(i*211+89)%340+25, y=(i*137+110)%660+90, s=4+(i%4)*1.5;
           const col=["#FFD700","#F5E0A0","#FFF8E8"][i%3];
           return (
@@ -87,7 +93,7 @@ function TwinkleBackground() {
         <ellipse cx={335} cy={180} rx={75} ry={58}  fill="#5C3A10" opacity={0.20}/>
         <ellipse cx={195} cy={750} rx={125} ry={75} fill="#7A3820" opacity={0.18}/>
       </svg>
-      {TW_SPARKLES.map((p,i)=>(
+      {sparkles.map((p,i)=>(
         <motion.div key={i} style={{position:"absolute", left:p.x, top:p.y, zIndex:2, pointerEvents:"none"}}
           animate={{y:[0,-p.ry,0], x:[0,p.rx,0,-p.rx*0.5,0], opacity:[0,0.85,0.35,0.7,0], scale:[0.4,1,0.6,1,0.4]}}
           transition={{duration:p.dur, repeat:Infinity, delay:p.delay, ease:"easeInOut"}}>

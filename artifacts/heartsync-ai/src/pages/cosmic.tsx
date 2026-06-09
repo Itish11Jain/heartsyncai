@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { getCosmicTemplate, getCosmicFallback } from "@/lib/card-templates";
+import { scaleCount } from "@/lib/deviceCapability";
 import { cosmic as cosmicAudio, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
@@ -513,7 +514,10 @@ export default function CosmicCard() {
     };
     onResize();
     window.addEventListener("resize", onResize);
-    ambientRef.current = Array.from({ length: 200 }, () => ({
+    // High-end devices keep the full 200-star field; only low-end / reduced-motion
+    // get fewer ambient particles so the canvas loop stays smooth.
+    const ambientCount = scaleCount(200, 0.4, 0.15);
+    ambientRef.current = Array.from({ length: ambientCount }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
       vx: (Math.random() - 0.5) * 0.18,
@@ -533,6 +537,9 @@ export default function CosmicCard() {
 
   /* ── canvas draw loop ── */
   const drawLoop = useCallback(() => {
+    // Race-proof the hidden-tab pause: if a frame is already in flight when the
+    // tab is hidden, bail before rescheduling so the loop fully stops.
+    if (typeof document !== "undefined" && document.hidden) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -591,8 +598,18 @@ export default function CosmicCard() {
   }, []);
 
   useEffect(() => {
+    // Pause the rAF loop while the tab is hidden — invisible to an active
+    // viewer, saves battery/CPU on every device. Resumes on return.
+    const onVis = () => {
+      cancelAnimationFrame(rafRef.current);
+      if (!document.hidden) rafRef.current = requestAnimationFrame(drawLoop);
+    };
+    document.addEventListener("visibilitychange", onVis);
     rafRef.current = requestAnimationFrame(drawLoop);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      cancelAnimationFrame(rafRef.current);
+    };
   }, [drawLoop]);
 
   /* ── press & hold ── */

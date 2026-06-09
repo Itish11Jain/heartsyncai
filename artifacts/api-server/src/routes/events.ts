@@ -246,6 +246,12 @@ const ENSURE_VITALS_TABLE = `
 
 const VITAL_NAMES = new Set(["LCP", "FCP", "TTFB", "INP", "CLS"]);
 
+/* Template pages with no real-user traffic — only previews / QA opens. Their
+ * occasional 5–7s samples skew the PAGE LOAD P75/P90 long tail, so they are
+ * excluded from the web-vitals dashboard aggregation. Add or remove paths
+ * here if one of these templates is later promoted to real traffic. */
+const VITALS_EXCLUDED_PATHS = ["/vinyl", "/crystal"];
+
 /**
  * Run ENSURE_TABLE / ENSURE_VITALS_TABLE *once* per process. The original
  * code ran the full DDL block on every event POST, and those `ALTER TABLE
@@ -583,6 +589,17 @@ router.get("/events/analytics", async (req, res) => {
       vitalsWhere = conds.join(" AND ");
     } else {
       vitalsWhere = `created_at > NOW() - INTERVAL '24 hours'`;
+    }
+
+    /* Drop the no-real-traffic template pages (see VITALS_EXCLUDED_PATHS) from
+     * the aggregation so their preview/QA samples stop inflating the tail.
+     * NULL page_path rows are kept; exact path and any sub-path are excluded. */
+    for (const p of VITALS_EXCLUDED_PATHS) {
+      vitalsParams.push(p);
+      const exact = vitalsParams.length;
+      vitalsParams.push(`${p}/%`);
+      const sub = vitalsParams.length;
+      vitalsWhere += ` AND (page_path IS NULL OR (page_path <> $${exact} AND page_path NOT LIKE $${sub}))`;
     }
 
     /**
