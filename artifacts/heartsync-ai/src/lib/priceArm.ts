@@ -25,6 +25,18 @@ export interface PriceConfig {
 
 const ANCHOR: Record<PriceArm, number> = { 49: 99, 99: 149 };
 
+/**
+ * Temporary global override. When set to a price, EVERY visitor sees that price
+ * — including returning visitors previously bucketed to the other arm — because
+ * it bypasses both the sticky stored arm and the fingerprint bucket. It is NOT
+ * persisted to localStorage, so setting this back to `null` cleanly restores the
+ * deterministic 50/50 ₹49/₹99 A/B split with no leftover stickiness.
+ *
+ * The `?arm=49` / `?arm=99` QA override still wins over this so either price can
+ * be previewed on demand.
+ */
+const FORCE_ARM: PriceArm | null = 49;
+
 /** Deterministic 0/1 bucket from a string (same hash family as makeFingerprint). */
 function bucket(seed: string): PriceArm {
   let h = 0;
@@ -45,6 +57,10 @@ export function getPriceArm(): PriceArm {
       localStorage.setItem(ARM_KEY, override);
       return Number(override) as PriceArm;
     }
+
+    // Global force override (not persisted) — show one price to everyone,
+    // including returning visitors with a different stored arm.
+    if (FORCE_ARM !== null) return FORCE_ARM;
 
     const stored = localStorage.getItem(ARM_KEY);
     if (stored === "49" || stored === "99") return Number(stored) as PriceArm;
