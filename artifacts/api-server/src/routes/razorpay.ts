@@ -68,16 +68,21 @@ function verifyPaymentSignature(orderId: string, paymentId: string, signature: s
 /**
  * Unlock a single card from a verified Razorpay payment. Mirrors the existing
  * /cards/:id/auto-unlock effect (card row + unlock submission + card_paid event
- * + Meta CAPI) so downstream lock/analytics/CAPI are unchanged. Idempotent: the
- * submission/event/CAPI only run once (guarded on full_utr) so the webhook and
- * the client verify call can't double-fire.
+ * + Meta CAPI) so downstream lock/analytics/CAPI are unchanged. The unlock is
+ * retry-safe (runs every call); the one-time analytics event + CAPI are gated by
+ * `fireOnce` so the webhook and the client verify call can't double-fire.
  */
 async function fulfillCardUnlock(
   cardId: string,
   amountRupees: number,
   paymentId: string,
   opts: { fbp?: string | null; fbc?: string | null; eventId?: string; clientIp?: string; userAgent?: string },
+  fireOnce: boolean,
 ): Promise<void> {
+  // The unlock itself (below) is fully idempotent and runs on every call so a
+  // retry after a partial failure always completes. `fireOnce` (the atomic order
+  // claim) gates only the non-idempotent one-time side effects: the card_paid
+  // analytics event + the Meta CAPI fire.
   await pool.query(
     `UPDATE hs_received_payments SET used_at = NOW(), card_id = $2, unlock_method = 'razorpay'
      WHERE utr = $1 AND used_at IS NULL`,
@@ -94,16 +99,15 @@ async function fulfillCardUnlock(
     [cardId, opts.fbp ?? null, opts.fbc ?? null, amountRupees],
   );
 
-  // Record the unlock submission once. If this inserts a row, it's the first
-  // fulfillment for this payment — fire the analytics event + CAPI exactly once.
-  const sub = await pool.query(
+  // Bookkeeping submission row (idempotent on full_utr).
+  await pool.query(
     `INSERT INTO hs_card_unlock_submissions (card_id, utr_last4, full_utr, unlock_method)
      SELECT $1, $2, $3, 'razorpay'
      WHERE NOT EXISTS (SELECT 1 FROM hs_card_unlock_submissions WHERE full_utr = $3)`,
     [cardId, paymentId.slice(-4), paymentId],
   );
 
-  if ((sub.rowCount ?? 0) > 0) {
+  if (fireOnce) {
     const cardRow = await pool.query<{ occasion: string | null }>(
       `SELECT occasion FROM hs_cards WHERE id = $1`,
       [cardId],
@@ -189,18 +193,28 @@ async function fulfillOrder(
   paymentId: string,
   opts: { fbp?: string | null; fbc?: string | null; eventId?: string; clientIp?: string; userAgent?: string } = {},
 ): Promise<{ kind: Kind; cardId?: string | null; token?: string | null }> {
+  // Confirmed payment row (idempotent).
   await pool.query(
     `INSERT INTO hs_received_payments (utr, amount, raw_sms) VALUES ($1, $2, $3)
      ON CONFLICT (utr) DO NOTHING`,
     [paymentId, String(order.amount), `razorpay ${order.kind}`],
   );
-  await pool.query(
-    `UPDATE hs_razorpay_orders SET status = 'paid', payment_id = $2 WHERE order_id = $1`,
+
+  // Atomically claim this order. Only the first caller (client verify OR the
+  // webhook backstop) to flip status -> paid gets fireOnce=true; it alone runs
+  // the non-idempotent one-time side effects (card_paid analytics event + Meta
+  // CAPI). The kind-specific unlock below still runs on EVERY call — every path
+  // is idempotent (ON CONFLICT / re-derivable) — so a retry after a partial
+  // failure always completes the actual fulfillment instead of being skipped.
+  const claim = await pool.query(
+    `UPDATE hs_razorpay_orders SET status = 'paid', payment_id = $2
+     WHERE order_id = $1 AND status <> 'paid'`,
     [order.order_id, paymentId],
   );
+  const fireOnce = (claim.rowCount ?? 0) > 0;
 
   if (order.kind === "card" && order.card_id) {
-    await fulfillCardUnlock(order.card_id, order.amount, paymentId, opts);
+    await fulfillCardUnlock(order.card_id, order.amount, paymentId, opts, fireOnce);
     return { kind: "card", cardId: order.card_id };
   }
   if (order.kind === "bundle") {
@@ -379,8 +393,8 @@ router.post("/razorpay/verify", async (req, res) => {
 /**
  * POST /api/razorpay/webhook
  * Server-to-server backstop. Verifies the webhook HMAC against the raw body
- * (captured in app.ts) and fulfils any order not already marked paid. Always
- * returns 200 on handled errors so Razorpay doesn't enter a retry storm.
+ * (captured in app.ts) and calls fulfillOrder (the sole idempotency authority).
+ * Always returns 200 on handled errors so Razorpay doesn't enter a retry storm.
  */
 router.post("/razorpay/webhook", async (req, res) => {
   if (!WEBHOOK_SECRET) {
@@ -409,21 +423,29 @@ router.post("/razorpay/webhook", async (req, res) => {
   }
 
   try {
-    const entity = (payload as { payload?: { payment?: { entity?: { id?: string; order_id?: string } } } })
+    const event = (payload as { event?: string })?.event;
+    const entity = (payload as { payload?: { payment?: { entity?: { id?: string; order_id?: string; status?: string } } } })
       ?.payload?.payment?.entity;
     const paymentId = entity?.id;
     const orderId = entity?.order_id;
+    // Only fulfil on an actually-successful (captured) payment. A signed but
+    // non-success event (payment.failed / payment.authorized) must never unlock.
+    const isCaptured = event === "payment.captured" || entity?.status === "captured";
 
-    if (paymentId && orderId) {
+    if (paymentId && orderId && isCaptured) {
       const orderRow = await pool.query<OrderRow>(
         `SELECT order_id, kind, card_id, clerk_user_id, amount, status
          FROM hs_razorpay_orders WHERE order_id = $1`,
         [orderId],
       );
       const order = orderRow.rows[0];
-      if (order && order.status !== "paid") {
+      if (order) {
+        // No status pre-check here: fulfillOrder is the sole idempotency
+        // authority. Its idempotent unlock runs every call (so a retry after a
+        // partial failure recovers), while its atomic claim ensures the one-time
+        // analytics event + CAPI fire at most once across verify + webhook.
         await fulfillOrder(order, paymentId);
-        console.log(`[razorpay] webhook fulfilled order=${orderId} payment=${paymentId}`);
+        console.log(`[razorpay] webhook processed order=${orderId} payment=${paymentId}`);
       }
     }
 

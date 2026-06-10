@@ -10,3 +10,4 @@
 - [Sorry template Screen 1](sorry-template.md) — envelope screen is isSorry-gated: blush textured-paper envelope, 3D float, corner+slider rose (from bouquet assets), seam/fold shadows, cursive-gold text; sorry slider track is overflow:visible to avoid clipping the rose.
 - [Bundle page card previews](bundle-previews.md) — preview grid iframes must load React routes (/card, /cosmic…), never static public/*.html (which don't boot React in dev → frozen splash).
 - [Capability-gated animation](capability-gated-animation.md) — scale anim by device tier; default HIGH, downgrade only on positive low-end signals (iOS Safari lacks deviceMemory, so unknown must stay high).
+- [Razorpay fulfillment idempotency](razorpay-fulfillment-idempotency.md) — verify + webhook both fulfill; use atomic order status compare-and-set gate so one-time side effects (card_paid event, Meta CAPI) fire exactly once.

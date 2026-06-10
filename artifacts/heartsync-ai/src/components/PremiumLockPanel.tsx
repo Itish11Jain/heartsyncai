@@ -3,7 +3,7 @@
  *
  * Renders on the sender view of crystal/cosmic/vinyl card pages.
  * Implements the full 1-2 punch flow:
- *   locked → sign-in gate → paywall (UPI ₹49) → confetti + share unlock
+ *   locked → sign-in gate → paywall (Razorpay) → confetti + share unlock
  *
  * The parent is responsible for showing share buttons once `onUnlocked` fires.
  */
@@ -390,7 +390,7 @@ export default function PremiumLockPanel({
     );
   }
 
-  /* Paywall — UPI ₹49 (shown after sign-in) */
+  /* Paywall — Razorpay (shown after sign-in) */
   return (
     <AnimatePresence>
       <motion.div

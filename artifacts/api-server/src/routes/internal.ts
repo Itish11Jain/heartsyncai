@@ -1,15 +1,21 @@
 import { Router } from "express";
-import { pool } from "../lib/db";
 
 const router = Router();
 
 /**
- * POST /api/internal/upi-payment
- * Called by the Android SMS Forwarder app when a ₹49 credit SMS is detected.
- * Secured with ADMIN_SECRET in Authorization header.
- * Body: { utr: string, raw_sms?: string, amount?: string }
+ * POST /api/internal/upi-payment  — DEPRECATED / DISABLED
+ *
+ * Previously called by the Android SMS Forwarder app when a ₹49 credit SMS was
+ * detected, to seed hs_received_payments by UTR. Payments are now handled by
+ * Razorpay Standard Checkout: on a verified payment the Razorpay verify/webhook
+ * flow writes the confirmed hs_received_payments row directly. To prevent stray
+ * SMS-derived rows from creating phantom/unmatched payments, this ingest is
+ * disabled and intentionally no longer writes anything.
+ *
+ * The auth check is preserved so the legacy forwarder app still receives a clean,
+ * authenticated response (HTTP 410 Gone) and can stop retrying.
  */
-router.post("/internal/upi-payment", async (req, res) => {
+router.post("/internal/upi-payment", (req, res) => {
   const authHeader = req.headers["authorization"];
   const adminSecret = process.env["ADMIN_SECRET"];
 
@@ -18,36 +24,11 @@ router.post("/internal/upi-payment", async (req, res) => {
     return;
   }
 
-  const { utr, raw_sms, amount } = req.body as {
-    utr?: unknown;
-    raw_sms?: unknown;
-    amount?: unknown;
-  };
-
-  if (typeof utr !== "string" || !/^\d{12}$/.test(utr.trim())) {
-    res.status(400).json({
-      error: "validation_error",
-      message: "utr must be exactly 12 digits",
-    });
-    return;
-  }
-
-  const cleanUtr = utr.trim();
-  const cleanAmount = typeof amount === "string" ? amount.slice(0, 20) : null;
-  const cleanSms = typeof raw_sms === "string" ? raw_sms.slice(0, 500) : null;
-
-  try {
-    await pool.query(
-      `INSERT INTO hs_received_payments (utr, amount, raw_sms)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (utr) DO NOTHING`,
-      [cleanUtr, cleanAmount, cleanSms],
-    );
-    res.json({ ok: true, utr: cleanUtr });
-  } catch (err) {
-    console.error("[internal] POST /internal/upi-payment error", err);
-    res.status(500).json({ error: "internal_error" });
-  }
+  res.status(410).json({
+    error: "gone",
+    message:
+      "SMS forwarder ingest is disabled. Payments are now processed via Razorpay.",
+  });
 });
 
 
