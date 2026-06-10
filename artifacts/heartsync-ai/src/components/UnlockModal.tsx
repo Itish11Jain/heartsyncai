@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
-import { getPriceConfig } from "@/lib/priceArm";
+import { getPriceConfigForOccasion } from "@/lib/priceArm";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -76,8 +76,8 @@ export default function UnlockModal({
   onSuccess,
   slowOpen = false,
 }: Props) {
-  /** Sticky ₹49/₹99 A/B price arm for this device + its discount anchor. */
-  const { price, anchor } = getPriceConfig();
+  /** Occasion-based price (₹99 birthday/sorry · ₹49 others) + discount anchor. */
+  const { price, anchor } = getPriceConfigForOccasion(occasion);
   const [phase, setPhase] = useState<ModalPhase>("preview");
   const [utrVisible, setUtrVisible] = useState(false);
   const [utr, setUtr] = useState("");

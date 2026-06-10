@@ -5,6 +5,7 @@ import { getCosmicTemplate, getCosmicFallback } from "@/lib/card-templates";
 import { scaleCount } from "@/lib/deviceCapability";
 import { cosmic as cosmicAudio, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import { getOccasionPrice } from "@/lib/priceArm";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
@@ -1173,7 +1174,7 @@ export default function CosmicCard() {
                         🔓 Unlock &amp; Share the card
                       </motion.button>
                       <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
-                        ₹49 one-time · No sign-in required
+                        ₹{getOccasionPrice(occasion)} one-time · No sign-in required
                       </p>
                     </motion.div>
                   )
@@ -1352,6 +1353,7 @@ export default function CosmicCard() {
             <WatermarkPaywallModal
               mode="photo"
               cardId={localCardId}
+              occasion={occasion}
               onClose={() => setShowDesktopPaywall(false)}
               onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
             />

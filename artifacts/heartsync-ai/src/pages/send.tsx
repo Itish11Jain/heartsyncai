@@ -27,7 +27,7 @@ const LazyClerkBridge = lazy(async () => {
   };
 });
 import { trackEvent } from "@/lib/trackEvent";
-import { getPriceArm } from "@/lib/priceArm";
+import { getOccasionPrice, getPriceConfigForOccasion } from "@/lib/priceArm";
 import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
@@ -361,6 +361,8 @@ function SendInner() {
   const [dir, setDir] = useState(1);
   // Viral reply always uses thank_you regardless of URL params or draft state.
   const [occasion, setOccasion] = useState(isViralReply ? "thank_you" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"));
+  // Occasion-based unlock pricing (₹99 birthday/sorry · ₹49 others) + anchor.
+  const unlockPricing = getPriceConfigForOccasion(occasion);
   // Viral reply pre-selects "partner" so the user can tap through quickly.
   const [relation, setRelation] = useState(isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""));
   const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
@@ -891,7 +893,7 @@ function SendInner() {
             photo_url: uploadedPhotoUrls[0] ?? null,
             photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
             voice_note_url: voiceNoteUrl ?? null,
-            price: getPriceArm(),
+            price: getOccasionPrice(occasion),
             fbp,
             fbc,
           }),
@@ -977,7 +979,7 @@ function SendInner() {
             photo_url: uploadedPhotoUrls[0] ?? null,
             photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
             voice_note_url: voiceNoteUrl ?? null,
-            price: getPriceArm(),
+            price: getOccasionPrice(occasion),
           }),
         });
         if (cardRes.ok) {
@@ -1883,8 +1885,8 @@ function SendInner() {
                     <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
                     <h1 className="text-xl font-bold text-white mb-1 leading-tight">Remove Watermark | Go Premium</h1>
                     <p className="text-white/55 text-sm flex items-center justify-center gap-1.5 flex-wrap">
-                      <span className="line-through text-white/25">₹99</span>
-                      <span className="text-yellow-300/80 font-bold">₹49</span>
+                      <span className="line-through text-white/25">₹{unlockPricing.anchor}</span>
+                      <span className="text-yellow-300/80 font-bold">₹{unlockPricing.price}</span>
                       — yours forever.
                     </p>
                   </div>
@@ -1899,8 +1901,8 @@ function SendInner() {
                   >
                     <div>
                       <div className="flex items-baseline gap-2 mb-0.5">
-                        <div className="text-white font-extrabold text-xl leading-tight">₹49</div>
-                        <span className="line-through text-white/30 text-sm font-normal">₹99</span>
+                        <div className="text-white font-extrabold text-xl leading-tight">₹{unlockPricing.price}</div>
+                        <span className="line-through text-white/30 text-sm font-normal">₹{unlockPricing.anchor}</span>
                         <span style={{ background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)", color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 99, letterSpacing: "0.04em" }}>⚡ Limited Time</span>
                       </div>
                       <div className="text-white/70 text-xs mt-1.5 flex flex-col gap-1">
@@ -1914,7 +1916,7 @@ function SendInner() {
                     {(() => {
                       const UPI_DISPLAY = "110193250";
                       const UPI_VPA = "8905158970@upi";
-                      const amount = 49;
+                      const amount = unlockPricing.price;
                       const upiParams = [
                         `pa=${encodeURIComponent(UPI_VPA)}`,
                         `pn=${encodeURIComponent("HeartSync AI")}`,
@@ -1943,7 +1945,7 @@ function SendInner() {
                         <>
                           <div className="flex gap-3 items-center mb-4">
                             <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
-                              <img src={qrSrc} alt="UPI QR Code ₹49" className="w-24 h-24 rounded-lg" />
+                              <img src={qrSrc} alt={`UPI QR Code ₹${unlockPricing.price}`} className="w-24 h-24 rounded-lg" />
                             </a>
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-[10px] text-white/45 mb-1 leading-tight">
@@ -1967,7 +1969,7 @@ function SendInner() {
                               </div>
                               <div className="flex items-center gap-1 mt-1">
                                 <Info className="w-3 h-3 text-white/25 shrink-0" />
-                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹49</span> — scan, tap, or copy</p>
+                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹{unlockPricing.price}</span> — scan, tap, or copy</p>
                               </div>
                             </div>
                           </div>
@@ -2185,8 +2187,8 @@ function SendInner() {
                     </div>
                     <div className="flex flex-col items-end gap-0.5 shrink-0 mt-0.5">
                       <div className="flex items-center gap-1">
-                        <span className="line-through text-white/25 text-xs">₹99</span>
-                        <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹49</span>
+                        <span className="line-through text-white/25 text-xs">₹{unlockPricing.anchor}</span>
+                        <span className="font-extrabold text-sm" style={{ color: "rgba(216,180,254,1)" }}>₹{unlockPricing.price}</span>
                         <ArrowRight size={15} className="text-purple-300/50" />
                       </div>
                       <span style={{ background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.4)", color: "#ff7d5c", fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 99, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>⚡ Limited Time</span>

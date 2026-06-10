@@ -35,7 +35,7 @@ const ANCHOR: Record<PriceArm, number> = { 49: 99, 99: 149 };
  * The `?arm=49` / `?arm=99` QA override still wins over this so either price can
  * be previewed on demand.
  */
-const FORCE_ARM: PriceArm | null = 49;
+const FORCE_ARM: PriceArm | null = null;
 
 /** Deterministic 0/1 bucket from a string (same hash family as makeFingerprint). */
 function bucket(seed: string): PriceArm {
@@ -79,5 +79,36 @@ export function getPriceArm(): PriceArm {
 /** Returns the price + discount anchor for this device's arm. */
 export function getPriceConfig(): PriceConfig {
   const price = getPriceArm();
+  return { price, anchor: ANCHOR[price] };
+}
+
+/**
+ * Per-occasion fixed pricing — the current live strategy. This (not the A/B
+ * arm) is the source of truth for what a card costs:
+ *
+ *   Birthday & Sorry                       → ₹99 (anchor ₹149)
+ *   Feel Good, Thank You, Congratulations  → ₹49 (anchor ₹99)
+ *   anything unmapped                      → ₹49
+ *
+ * Price is decided by the card's occasion, so it stays consistent between the
+ * builder (where the card is created) and the recipient paywall (where it is
+ * unlocked). To change the strategy, just edit this map.
+ */
+const PRICE_BY_OCCASION: Record<string, PriceArm> = {
+  birthday: 99,
+  sorry: 99,
+  feel_good: 49,
+  thank_you: 49,
+  congratulations: 49,
+};
+
+/** The fixed price (₹49 or ₹99) for a card of the given occasion. */
+export function getOccasionPrice(occasion: string): PriceArm {
+  return PRICE_BY_OCCASION[occasion] ?? 49;
+}
+
+/** The price + discount anchor for a card of the given occasion. */
+export function getPriceConfigForOccasion(occasion: string): PriceConfig {
+  const price = getOccasionPrice(occasion);
   return { price, anchor: ANCHOR[price] };
 }

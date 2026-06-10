@@ -7,6 +7,7 @@ import {
 } from "@/lib/card-templates";
 import { vinyl, music } from "@/lib/audio";
 import { trackEvent } from "@/lib/trackEvent";
+import { getOccasionPrice } from "@/lib/priceArm";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
@@ -938,7 +939,7 @@ export default function VinylCard() {
                       🔓 Unlock &amp; Share the card
                     </motion.button>
                     <p style={{ textAlign: "center", fontSize: 11, color: "rgba(100,80,60,0.55)", marginTop: 10 }}>
-                      ₹49 one-time · No sign-in required
+                      ₹{getOccasionPrice(occasion)} one-time · No sign-in required
                     </p>
                   </motion.div>
                 )
@@ -1017,6 +1018,7 @@ export default function VinylCard() {
             <WatermarkPaywallModal
               mode="photo"
               cardId={localCardId}
+              occasion={occasion}
               onClose={() => setShowDesktopPaywall(false)}
               onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
             />

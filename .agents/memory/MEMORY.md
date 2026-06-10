@@ -5,7 +5,8 @@
 - [Card image assets](card-image-assets.md) — export card scene art as small resized WebP + preload it (gated per occasion); source-res PNGs caused flower-by-flower pop-in & transition freeze.
 - [Owner test-payment exclusion](owner-test-payment-exclusion.md) — keep the owner's own UPI test payments out of analytics; match on field-anchored name/VPA only (never a bare surname — a real customer shares it); purge + filter in events.ts.
 - [Recipient share-lock gate](recipient-share-lock-gate.md) — recipient "locked for sharing" overlay keys off is_paid (a hs_received_payments row linked to card_id), NOT is_watermarked; unlock via upi-payment + pay-unlock.
-- [Price A/B arm sourcing](price-ab-arm.md) — ₹49/₹99 sticky arm; card POSTs send price, unlock routes trust STORED arm + amount fallback; panel `paid` reads hs_cards.price (card_paid event price is NULL).
+- [Per-occasion pricing](occasion-pricing.md) — LIVE strategy: price set by occasion (birthday/sorry ₹99, others ₹49) via PRICE_BY_OCCASION; thread `occasion` into every paywall incl. WatermarkPaywallModal's UPI deep link.
+- [Price A/B arm sourcing](price-ab-arm.md) — SUPERSEDED as price source by occasion-pricing (FORCE_ARM now null), but server-side ₹49/₹99 unlock-gate + amount-fallback rules still hold.
 - [Sorry template Screen 1](sorry-template.md) — envelope screen is isSorry-gated: blush textured-paper envelope, 3D float, corner+slider rose (from bouquet assets), seam/fold shadows, cursive-gold text; sorry slider track is overflow:visible to avoid clipping the rose.
 - [Bundle page card previews](bundle-previews.md) — preview grid iframes must load React routes (/card, /cosmic…), never static public/*.html (which don't boot React in dev → frozen splash).
 - [Capability-gated animation](capability-gated-animation.md) — scale anim by device tier; default HIGH, downgrade only on positive low-end signals (iOS Safari lacks deviceMemory, so unknown must stay high).

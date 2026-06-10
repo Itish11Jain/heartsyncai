@@ -14,7 +14,7 @@
  * to the campaign that brought the user.
  */
 
-import { getPriceArm } from "./priceArm";
+import { getPriceArm, getOccasionPrice } from "./priceArm";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const UTM_KEY = "hs_utm";
@@ -112,12 +112,12 @@ export function trackEvent(payload: CardEventPayload): void {
 
   const utm = readStoredUtm();
 
-  // Stored UTM + price arm attach to every event but the caller may override
-  // per-event. Attaching the arm to every event lets the analytics readout
-  // slice any funnel step (created → paid) by price arm.
+  // Stored UTM + price attach to every event but the caller may override
+  // per-event. Price now follows the card's occasion when known (the live
+  // pricing strategy); events without an occasion fall back to the device arm.
   const body = JSON.stringify({
     ...utm,
-    price: getPriceArm(),
+    price: payload.occasion ? getOccasionPrice(payload.occasion) : getPriceArm(),
     ...payload,
     fingerprint: payload.fingerprint ?? fp,
   });

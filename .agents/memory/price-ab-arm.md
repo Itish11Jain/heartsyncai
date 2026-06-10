@@ -5,6 +5,12 @@ description: How the ₹49/₹99 price experiment assigns, persists, and enforce
 
 # Price A/B arm (₹49 vs ₹99)
 
+> NOTE: The A/B experiment is finished — price is now decided by OCCASION, not
+> the device arm (`FORCE_ARM` is `null`). See occasion-pricing.md for the live
+> strategy. The server-side enforcement rules below (per-tier amount gate,
+> STORED-price-first unlock, hs_cards.price as the trustworthy source) STILL
+> APPLY because ₹49 and ₹99 are still the two live price tiers.
+
 The arm is a sticky per-device 50/50 split, bucketed deterministically from the
 existing device fingerprint `hs_fp` and cached in `localStorage` (`hs_price_arm`).
 Client reads it via `getPriceArm()` / `getPriceConfig()` (`lib/priceArm.ts`).

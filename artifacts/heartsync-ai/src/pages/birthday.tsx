@@ -1720,6 +1720,7 @@ export default function BirthdayCard() {
             <WatermarkPaywallModal
               mode="photo"
               cardId={cardId}
+              occasion={occasion}
               onClose={() => setShowDesktopPaywall(false)}
               onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
             />

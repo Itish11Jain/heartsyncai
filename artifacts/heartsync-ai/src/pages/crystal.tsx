@@ -17,6 +17,7 @@ import { Link, useSearch } from "wouter";
 import { music, crystal as crystalHaptics } from "../lib/audio";
 import { getCrystalTemplate, getCrystalFallback } from "../lib/card-templates";
 import { trackEvent } from "../lib/trackEvent";
+import { getOccasionPrice } from "../lib/priceArm";
 import ViralReplyCTA from "@/components/ViralReplyCTA";
 
 const UnlockModal = lazy(() => import("@/components/UnlockModal"));
@@ -983,7 +984,7 @@ export default function CrystalCard() {
                     🔓 Unlock &amp; Share the card
                   </motion.button>
                   <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>
-                    ₹49 one-time · No sign-in required
+                    ₹{getOccasionPrice(occasion)} one-time · No sign-in required
                   </p>
                 </motion.div>
               )
@@ -1041,6 +1042,7 @@ export default function CrystalCard() {
             <WatermarkPaywallModal
               mode="photo"
               cardId={localCardId}
+              occasion={occasion}
               onClose={() => setShowDesktopPaywall(false)}
               onSuccess={() => { setShowDesktopPaywall(false); setIsUnlocked(true); }}
             />

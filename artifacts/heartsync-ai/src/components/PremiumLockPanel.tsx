@@ -13,7 +13,7 @@ import { useAuth, useClerk } from "@clerk/react";
 import { Check, Copy, Info, Loader2 } from "lucide-react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
-import { getPriceConfig } from "@/lib/priceArm";
+import { getPriceConfigForOccasion } from "@/lib/priceArm";
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 const UPI_DISPLAY = "110193250";
@@ -93,8 +93,8 @@ export default function PremiumLockPanel({
   const clerk = useClerk();
   const { usage, loading: usageLoading, fingerprint, refetch: refetchUsage, userEmail } = useCardUsage();
 
-  /** Sticky ₹49/₹99 A/B price arm for this device + its discount anchor. */
-  const { price, anchor } = getPriceConfig();
+  /** Occasion-based price (₹99 birthday/sorry · ₹49 others) + discount anchor. */
+  const { price, anchor } = getPriceConfigForOccasion(occasion);
 
   const [phase, setPhase]       = useState<Phase>("checking");
   const [utr, setUtr]           = useState("");

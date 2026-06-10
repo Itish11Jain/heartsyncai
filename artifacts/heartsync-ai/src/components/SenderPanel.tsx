@@ -700,6 +700,7 @@ function SenderPanelInner({ senderShareUrl, recipientName, occasion, cardId, pha
           <WatermarkPaywallModal
             mode="photo"
             cardId={cardId}
+            occasion={occasion}
             onClose={handlePhotoPaywallDismiss}
             onSuccess={handleBundlePaywallSuccess}
           />

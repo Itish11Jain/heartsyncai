@@ -3,13 +3,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/trackEvent";
+import { getPriceConfigForOccasion } from "@/lib/priceArm";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-const UPI_DEEP_LINK = "upi://pay?pa=9706900714@pthdfc&pn=Itisha&am=49&cu=INR&tn=HeartSyncWebsitePayment";
+const UPI_VPA = "9706900714@pthdfc";
 
-function qrUrl(size = 240) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(UPI_DEEP_LINK)}`;
+/** Build the UPI deep link for a specific amount (₹49 or ₹99 by occasion). */
+function buildUpiLink(amount: number) {
+  return `upi://pay?pa=${UPI_VPA}&pn=Itisha&am=${amount}&cu=INR&tn=HeartSyncWebsitePayment`;
+}
+
+function qrUrl(deepLink: string, size = 240) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(deepLink)}`;
 }
 
 function isSequential(v: string): boolean {
@@ -30,12 +36,16 @@ type Stage = "paying" | "utr" | "done-bundle" | "done-watermark";
 
 interface Props {
   cardId: string;
+  occasion: string;
   onClose: () => void;
   onSuccess: () => void;
   mode?: "photo" | "watermark";
 }
 
-export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode = "watermark" }: Props) {
+export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuccess, mode = "watermark" }: Props) {
+  /** Occasion-based price (₹99 birthday/sorry · ₹49 others) + discount anchor. */
+  const { price, anchor } = getPriceConfigForOccasion(occasion);
+  const upiDeepLink = buildUpiLink(price);
   const [stage, setStage] = useState<Stage>("paying");
 
   const [bundleUtr, setBundleUtr] = useState("");
@@ -59,7 +69,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
   const handleBundleSubmit = useCallback(async () => {
     if (!isValidUtr(bundleUtr)) return;
     if (!cardId) { setBundleUtrError("No card ID — close and try again from the card page."); return; }
-    trackEvent({ event: "confirm_unlock_clicked", card_id: cardId });
+    trackEvent({ event: "confirm_unlock_clicked", occasion, card_id: cardId });
     setBundleUtrError("");
     setBundleLoading(true);
     const wmEventId = `hs_${cardId}_${Date.now()}`;
@@ -74,9 +84,9 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
         setBundleUtrError(data.message ?? "Submission failed. Please try again.");
         return;
       }
-      trackEvent({ event: "paywall_paid", card_id: cardId });
+      trackEvent({ event: "paywall_paid", occasion, card_id: cardId, price });
       if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 99.00, currency: "INR" }, { eventID: wmEventId });
+        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: price, currency: "INR" }, { eventID: wmEventId });
       }
       setStage("done-bundle");
     } catch {
@@ -136,8 +146,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                   }}>⚡ Limited Time</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
-                  <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹99</span>
-                  <span style={{ color: "rgba(255,215,0,0.85)", fontSize: 11, fontWeight: 700 }}>₹49</span>
+                  <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹{anchor}</span>
+                  <span style={{ color: "rgba(255,215,0,0.85)", fontSize: 11, fontWeight: 700 }}>₹{price}</span>
                   <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>· instant unlock</span>
                 </div>
               </div>
@@ -197,8 +207,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                     ))}
                     <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
                       All for{" "}
-                      <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹99</span>
-                      {" "}₹49 — pay once, yours forever
+                      <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹{anchor}</span>
+                      {" "}₹{price} — pay once, yours forever
                     </span>
                   </div>
 
@@ -208,7 +218,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       Scan with any UPI app
                     </p>
                     <a
-                      href={UPI_DEEP_LINK}
+                      href={upiDeepLink}
                       style={{
                         display: "inline-block",
                         background: "#fff", borderRadius: 16, padding: 10,
@@ -216,8 +226,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       }}
                     >
                       <img
-                        src={qrUrl(200)}
-                        alt="UPI QR ₹49"
+                        src={qrUrl(upiDeepLink, 200)}
+                        alt={`UPI QR ₹${price}`}
                         style={{ width: 200, height: 200, borderRadius: 8, display: "block" }}
                       />
                     </a>
@@ -228,8 +238,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
 
                   {/* Pay Now CTA */}
                   <a
-                    href={UPI_DEEP_LINK}
-                    onClick={() => { trackEvent({ event: "pay_now_clicked", card_id: cardId }); setTimeout(() => setStage("utr"), 600); }}
+                    href={upiDeepLink}
+                    onClick={() => { trackEvent({ event: "pay_now_clicked", occasion, card_id: cardId }); setTimeout(() => setStage("utr"), 600); }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", height: 52, borderRadius: 14,
@@ -238,8 +248,8 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                       textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
                     }}
                   >
-                    <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹99</span>
-                    {" "}Pay ₹49 Now <ArrowRight style={{ width: 18, height: 18 }} />
+                    <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹{anchor}</span>
+                    {" "}Pay ₹{price} Now <ArrowRight style={{ width: 18, height: 18 }} />
                   </a>
 
                   <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>
@@ -285,7 +295,7 @@ export default function WatermarkPaywallModal({ cardId, onClose, onSuccess, mode
                         );
                         if (v.length === 4 && !isSequential(v) && !utrFiredRef.current) {
                           utrFiredRef.current = true;
-                          trackEvent({ event: "utr_entered", card_id: cardId });
+                          trackEvent({ event: "utr_entered", occasion, card_id: cardId });
                         }
                       }}
                       className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
