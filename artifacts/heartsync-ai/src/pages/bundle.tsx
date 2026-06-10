@@ -6,6 +6,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
+import { payWithRazorpay, PaymentCancelled } from "@/lib/razorpay";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const SPEED = 2; // preview playback multiplier (2× = faster looping previews)
@@ -17,9 +18,6 @@ const DEVICE_W = 390;
 const DEVICE_H = 844;
 const GRID_GAP = 8;
 const GRID_COLS = 3;
-
-const UPI_ID = "9706900714@pthdfc";
-const UPI_PARAMS = `pa=${UPI_ID}&pn=Itisha&am=49&cu=INR&tn=HeartSyncBundlePayment`;
 
 type PreviewCard = {
   id: "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday" | "sorry";
@@ -75,42 +73,20 @@ const OCCASIONS = [
 ];
 
 
-function isSequential(v: string): boolean {
-  const d = v.trim().split("").map(Number);
-  if (d.length !== 4) return false;
-  if (d.every((x) => x === d[0])) return true;
-  if (d[1] === (d[0]! + 1) % 10 && d[2] === (d[1]! + 1) % 10 && d[3] === (d[2]! + 1) % 10) return true;
-  if (d[1] === (d[0]! + 9) % 10 && d[2] === (d[1]! + 9) % 10 && d[3] === (d[2]! + 9) % 10) return true;
-  return false;
-}
-function isValidUtr(v: string) {
-  return /^\d{4}$/.test(v.trim()) && !isSequential(v.trim());
-}
-
-type Phase = "info" | "paying" | "success";
+type Phase = "info" | "success";
 
 export default function BundlePage() {
   const [, navigate] = useLocation();
   const [phase, setPhase] = useState<Phase>("info");
   const [successToken, setSuccessToken] = useState<string | null>(null);
   const [dashLinkCopied, setDashLinkCopied] = useState(false);
-  const [upiCopied, setUpiCopied] = useState(false);
-  const [utrVisible, setUtrVisible] = useState(false);
-  const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
-  const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       (window as unknown as { __clearHsSplash?: () => void }).__clearHsSplash?.();
     }
-  }, []);
-
-  const copyUpiId = useCallback(() => {
-    navigator.clipboard.writeText(UPI_ID).catch(() => {});
-    setUpiCopied(true);
-    trackEvent({ event: "bundle_upi_copied" });
   }, []);
 
   // Each non-self-looping card schedules its own reload after one full play so
@@ -150,55 +126,29 @@ export default function BundlePage() {
     setPhase("success");
   }
 
-  async function handleConfirm() {
-    const trimmed = utr.trim();
-    if (!isValidUtr(trimmed) || utrLoading) return;
-    setUtrLoading(true);
+  const handleBundlePay = useCallback(async () => {
+    if (utrLoading) return;
     setUtrError(null);
-
-    const TIMEOUT_S = 60;
-    const POLL_MS   = 3000;
-    const deadline  = Date.now() + TIMEOUT_S * 1000;
-
-    setUtrCountdown(TIMEOUT_S);
-    const ticker = setInterval(() => {
-      setUtrCountdown(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
-    }, 1000);
-
-    const cleanup = () => {
-      clearInterval(ticker);
+    setUtrLoading(true);
+    trackEvent({ event: "bundle_buy_clicked" });
+    try {
+      const result = await payWithRazorpay({ kind: "bundle" });
+      if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
+        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 49, currency: "INR" });
+      }
+      if (result.token) {
+        activateBundle(result.token, true);
+      } else {
+        setUtrError("Payment confirmed but bundle setup failed. Please contact hello@heartsync.in");
+      }
+    } catch (err) {
+      if (!(err instanceof PaymentCancelled)) {
+        setUtrError(err instanceof Error ? err.message : "Payment failed. Please try again.");
+      }
+    } finally {
       setUtrLoading(false);
-      setUtrCountdown(null);
-    };
-
-    while (Date.now() < deadline) {
-      try {
-        const res = await fetch(`${BASE}/api/bundles/create`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ utr_last4: trimmed }),
-        });
-        if (res.ok) {
-          const data = await res.json() as { token: string };
-          cleanup();
-          activateBundle(data.token, true);
-          return;
-        }
-        if (res.status === 402) {
-          // keep polling — payment may arrive shortly
-        } else {
-          const d = await res.json().catch(() => ({})) as { message?: string };
-          cleanup();
-          setUtrError(d.message ?? "Verification failed. Please check your digits.");
-          return;
-        }
-      } catch { /* blip */ }
-      await new Promise<void>((r) => setTimeout(r, Math.min(POLL_MS, deadline - Date.now())));
     }
-
-    cleanup();
-    setUtrError("Payment not found yet. Wait a moment and try again.");
-  }
+  }, [utrLoading]);
 
   function copyDashLink() {
     if (!successToken) return;
@@ -323,16 +273,21 @@ export default function BundlePage() {
 
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => { trackEvent({ event: "bundle_buy_clicked" }); setPhase("paying"); }}
+                onClick={() => { void handleBundlePay(); }}
+                disabled={utrLoading}
                 style={{
                   width: "100%", height: 58, borderRadius: 18,
                   background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
                   border: "none", color: "#000", fontWeight: 900, fontSize: 19,
-                  cursor: "pointer", boxShadow: "0 8px 32px rgba(255,165,0,0.45)",
+                  cursor: utrLoading ? "wait" : "pointer", opacity: utrLoading ? 0.7 : 1,
+                  boxShadow: "0 8px 32px rgba(255,165,0,0.45)",
                 }}
               >
-                🔓 Get Bundle — ₹49
+                {utrLoading ? "Opening payment…" : "🔓 Get Bundle — ₹49"}
               </motion.button>
+              {utrError && (
+                <p style={{ textAlign: "center", fontSize: 12, color: "#f87171", fontWeight: 600, marginTop: 10 }}>{utrError}</p>
+              )}
 
               {/* Value summary — below the CTA */}
               <div style={{
@@ -355,105 +310,6 @@ export default function BundlePage() {
               <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 14 }}>
                 Pay via UPI · Instant unlock · No hidden charges
               </p>
-            </motion.div>
-          )}
-
-          {/* ── Paying phase ── */}
-          {phase === "paying" && (
-            <motion.div key="paying" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div style={{ textAlign: "center", padding: "28px 0 20px" }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
-                <div style={{ color: "#fff", fontWeight: 800, fontSize: 20, marginBottom: 6 }}>
-                  Pay <span style={{ color: "#FFD700" }}>₹49</span> via UPI
-                </div>
-                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
-                  Open any UPI app → Send to this ID
-                </div>
-              </div>
-
-              {/* UPI ID copy box */}
-              <div style={{
-                background: "rgba(255,215,0,0.05)", border: "1.5px solid rgba(255,215,0,0.18)",
-                borderRadius: 18, padding: "18px 20px 14px", marginBottom: 14,
-              }}>
-                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>UPI ID</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ flex: 1, color: "#fff", fontSize: 16, fontWeight: 700 }}>{UPI_ID}</div>
-                  <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    onClick={copyUpiId}
-                    style={{
-                      flexShrink: 0, height: 38, paddingInline: 14, borderRadius: 10,
-                      background: upiCopied ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg,#FFD700,#FFA500)",
-                      border: "none", color: upiCopied ? "#4ade80" : "#000",
-                      fontWeight: 800, fontSize: 13, cursor: "pointer",
-                    }}
-                  >
-                    {upiCopied ? "Copied ✓" : "Copy"}
-                  </motion.button>
-                </div>
-              </div>
-
-              {/* Payment done / UTR entry */}
-              <AnimatePresence mode="wait">
-                {!utrVisible ? (
-                  <motion.div key="done-btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setUtrVisible(true)}
-                      style={{
-                        width: "100%", height: 54, borderRadius: 16,
-                        background: "linear-gradient(135deg,#FFD700,#FFAA00)",
-                        border: "none", color: "#000", fontWeight: 800, fontSize: 17,
-                        cursor: "pointer", boxShadow: "0 6px 24px rgba(255,165,0,0.4)",
-                      }}
-                    >
-                      I've paid ₹49 ✓
-                    </motion.button>
-                  </motion.div>
-                ) : (
-                  <motion.div key="utr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, marginBottom: 8, fontWeight: 600 }}>
-                        Enter the last 4 digits of your UPI transaction ID
-                      </div>
-                      <div style={{ display: "flex", gap: 10 }}>
-                        <input
-                          type="tel"
-                          inputMode="numeric"
-                          maxLength={4}
-                          value={utr}
-                          onChange={(e) => { setUtr(e.target.value.replace(/\D/g, "").slice(0, 4)); setUtrError(null); }}
-                          placeholder="e.g. 4827"
-                          style={{
-                            flex: 1, height: 48, borderRadius: 12, border: "1.5px solid rgba(255,215,0,0.25)",
-                            background: "rgba(255,255,255,0.04)", color: "#fff",
-                            fontSize: 18, fontWeight: 700, textAlign: "center",
-                            outline: "none", letterSpacing: "0.15em",
-                          }}
-                        />
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          disabled={!isValidUtr(utr) || utrLoading}
-                          onClick={handleConfirm}
-                          style={{
-                            height: 48, paddingInline: 20, borderRadius: 12,
-                            background: isValidUtr(utr) ? "linear-gradient(135deg,#FFD700,#FFA500)" : "rgba(255,255,255,0.07)",
-                            border: "none", color: isValidUtr(utr) ? "#000" : "rgba(255,255,255,0.25)",
-                            fontWeight: 800, fontSize: 15, cursor: isValidUtr(utr) ? "pointer" : "default",
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          {utrLoading ? (utrCountdown !== null ? `${utrCountdown}s…` : "…") : "Verify"}
-                        </motion.button>
-                      </div>
-                      {utrError && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: "#f87171", fontWeight: 600 }}>{utrError}</div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.div>
           )}
 

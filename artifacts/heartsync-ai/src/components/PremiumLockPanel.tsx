@@ -10,21 +10,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, useClerk } from "@clerk/react";
-import { Check, Copy, Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
+import { payWithRazorpay, PaymentCancelled } from "@/lib/razorpay";
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
-const UPI_DISPLAY = "110193250";
-const UPI_VPA     = "8905158970@upi";
-
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
-
-function isValidUtr(v: string) {
-  const t = v.trim();
-  return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
-}
 
 /* ── Tiny canvas confetti burst ─────────────────────────────────────────── */
 function fireConfetti() {
@@ -97,10 +90,8 @@ export default function PremiumLockPanel({
   const { price, anchor } = getPriceConfigForOccasion(occasion);
 
   const [phase, setPhase]       = useState<Phase>("checking");
-  const [utr, setUtr]           = useState("");
   const [utrError, setUtrError] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
-  const [upiCopied, setUpiCopied]   = useState(false);
 
   /* Ref so we never double-fire onUnlocked */
   const unlockedFiredRef = useRef(false);
@@ -157,49 +148,17 @@ export default function PremiumLockPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, isLoaded, phase]);
 
-  /* ── UPI deep-link ─────────────────────────────────────────────────── */
-  const upiUri = `upi://pay?pa=${encodeURIComponent(UPI_VPA)}&pn=${encodeURIComponent("HeartSync AI")}&am=${price.toFixed(2)}&cu=INR&tn=${encodeURIComponent("HeartSync Premium")}`;
-  const qrSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
-
-  /* ── Copy UPI ID ────────────────────────────────────────────────────── */
-  async function copyUpi() {
-    try { await navigator.clipboard.writeText(UPI_DISPLAY); }
-    catch {
-      const ta = document.createElement("textarea");
-      ta.value = UPI_DISPLAY;
-      ta.style.cssText = "position:absolute;left:-9999px";
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); } catch { /* ignore */ }
-      document.body.removeChild(ta);
-    }
-    setUpiCopied(true);
-    setTimeout(() => setUpiCopied(false), 1800);
-  }
-
-  /* ── Submit UTR ─────────────────────────────────────────────────────── */
-  const handleUtrSubmit = useCallback(async () => {
-    const trimmed = utr.trim();
-    if (!isValidUtr(trimmed)) return;
+  /* ── Pay via Razorpay → unlock templates ─────────────────────────────── */
+  const handlePremiumPay = useCallback(async () => {
+    if (utrLoading) return;
     setUtrError("");
     setUtrLoading(true);
 
     try {
       const token = await getToken();
 
-      /* Step 1: unlock templates ₹49 bundle */
-      const unlockRes = await fetch(`${BASE}/api/usage/template-unlock-utr`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ utr: trimmed, plan: "bundle" }),
-      });
-      const unlockData = await unlockRes.json() as { ok?: boolean; message?: string };
-      if (!unlockRes.ok) {
-        setUtrError(unlockData.message ?? "Submission failed. Please try again.");
-        return;
-      }
+      /* Step 1: pay + unlock all 3 templates on the account (verified server-side) */
+      await payWithRazorpay({ kind: "template", authToken: token });
 
       trackEvent({
         event: "paywall_paid",
@@ -208,6 +167,9 @@ export default function PremiumLockPanel({
         occasion,
         template,
       });
+      if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
+        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: price, currency: "INR" });
+      }
 
       await refetchUsage();
 
@@ -249,12 +211,14 @@ export default function PremiumLockPanel({
           onUnlocked(cardId);
         }
       }, 250);
-    } catch {
-      setUtrError("Submission failed. Please try again.");
+    } catch (err) {
+      if (!(err instanceof PaymentCancelled)) {
+        setUtrError(err instanceof Error ? err.message : "Payment failed. Please try again.");
+      }
     } finally {
       setUtrLoading(false);
     }
-  }, [utr, getToken, fingerprint, userEmail, occasion, template, locationSearch, recipientName, refetchUsage, onUnlocked]);
+  }, [utrLoading, getToken, fingerprint, userEmail, occasion, template, price, locationSearch, recipientName, refetchUsage, onUnlocked]);
 
   /* ── Render ─────────────────────────────────────────────────────────── */
 
@@ -489,7 +453,7 @@ export default function PremiumLockPanel({
             </div>
           </div>
 
-          {/* UPI payment card */}
+          {/* Razorpay payment card */}
           <div style={{
             background: "rgba(255,255,255,0.04)",
             backdropFilter: "blur(12px)",
@@ -498,81 +462,30 @@ export default function PremiumLockPanel({
             padding: 16,
             marginBottom: 12,
           }}>
-            {/* QR + UPI ID */}
-            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
-              <a href={upiUri} style={{ background: "#fff", borderRadius: 12, padding: 6, display: "block", flexShrink: 0 }}>
-                <img src={qrSrc} alt={`UPI QR ₹${price}`} style={{ width: 96, height: 96, borderRadius: 8, display: "block" }} />
-              </a>
-              <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginBottom: 4, lineHeight: 1.4 }}>
-                  UPI of <strong style={{ color: "rgba(255,255,255,0.65)" }}>Itisha</strong> — Creator of HeartSync AI
-                </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <p style={{ fontFamily: "monospace", fontWeight: 700, color: "#fff", fontSize: 13, flex: 1, minWidth: 0, wordBreak: "break-all" }}>
-                    {UPI_DISPLAY}
-                  </p>
-                  <button
-                    onClick={copyUpi}
-                    style={{
-                      flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
-                      borderRadius: 8, padding: "4px 8px", fontSize: 11, fontWeight: 700,
-                      border: `1px solid ${upiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
-                      background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
-                      color: upiCopied ? "#4ade80" : "#FFD700",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {upiCopied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
-                  </button>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                  <Info size={11} style={{ color: "rgba(255,255,255,0.22)", flexShrink: 0 }} />
-                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.28)" }}>
-                    Pay <strong style={{ color: "rgba(255,255,255,0.55)" }}>exactly ₹{price}</strong> — scan, tap, or copy
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* UTR input */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <input
-                type="text"
-                placeholder="Paste UTR / Transaction ID"
-                value={utr}
-                onChange={(e) => { setUtr(e.target.value); setUtrError(""); }}
-                data-testid="premium-utr-input"
-                style={{
-                  width: "100%", boxSizing: "border-box",
-                  padding: "12px 14px", borderRadius: 12,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "#fff", fontSize: 13, textAlign: "center",
-                  outline: "none",
-                }}
-              />
-              {utrError && (
-                <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", margin: 0 }}>{utrError}</p>
-              )}
-              <button
-                onClick={handleUtrSubmit}
-                disabled={!isValidUtr(utr) || utrLoading}
-                data-testid="premium-utr-submit"
-                style={{
-                  width: "100%", padding: "13px", borderRadius: 12,
-                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                  border: "none", color: "#000",
-                  fontWeight: 700, fontSize: 14,
-                  cursor: isValidUtr(utr) && !utrLoading ? "pointer" : "not-allowed",
-                  opacity: isValidUtr(utr) && !utrLoading ? 1 : 0.5,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                }}
-              >
-                {utrLoading
-                  ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Verifying…</>
-                  : <>Submit &amp; Unlock ✨</>}
-              </button>
-            </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", marginBottom: 14, lineHeight: 1.5 }}>
+              Secure payment via UPI, cards, netbanking &amp; wallets — powered by Razorpay.
+            </p>
+            {utrError && (
+              <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", margin: "0 0 10px" }}>{utrError}</p>
+            )}
+            <button
+              onClick={() => { void handlePremiumPay(); }}
+              disabled={utrLoading}
+              data-testid="premium-pay"
+              style={{
+                width: "100%", padding: "14px", borderRadius: 12,
+                background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                border: "none", color: "#000",
+                fontWeight: 800, fontSize: 15,
+                cursor: utrLoading ? "wait" : "pointer",
+                opacity: utrLoading ? 0.6 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
+            >
+              {utrLoading
+                ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Opening payment…</>
+                : <>🔓 Pay ₹{price} &amp; Unlock ✨</>}
+            </button>
           </div>
 
           <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.28)", marginBottom: 16 }}>

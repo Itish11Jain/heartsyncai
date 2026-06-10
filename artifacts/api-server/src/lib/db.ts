@@ -181,6 +181,21 @@ export async function initDb(): Promise<void> {
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS bundle_id UUID;
     -- Price A/B test: the arm (49 or 99) this card was created/unlocked under.
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS price SMALLINT;
+
+    -- Razorpay order → intended action mapping. Created when a checkout order is
+    -- opened; flipped to 'paid' (with payment_id) once the payment is verified or
+    -- the webhook fires. Provides idempotent fulfillment for both paths.
+    CREATE TABLE IF NOT EXISTS hs_razorpay_orders (
+      order_id       TEXT PRIMARY KEY,
+      kind           TEXT NOT NULL,           -- 'card' | 'bundle' | 'template'
+      card_id        TEXT,
+      clerk_user_id  TEXT,
+      amount         INTEGER NOT NULL,        -- rupees
+      status         TEXT NOT NULL DEFAULT 'created',
+      payment_id     TEXT,
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_razorpay_orders_payment_idx ON hs_razorpay_orders(payment_id);
   `);
 
   /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal

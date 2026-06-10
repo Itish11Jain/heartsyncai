@@ -12,6 +12,7 @@ import cardsRouter from "./cards";
 import uploadRouter from "./upload";
 import internalRouter from "./internal";
 import bundlesRouter from "./bundles";
+import razorpayRouter from "./razorpay";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(cardsRouter);
 router.use(uploadRouter);
 router.use(internalRouter);
 router.use(bundlesRouter);
+router.use(razorpayRouter);
 
 export default router;

@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
+import { payWithRazorpay, PaymentCancelled } from "@/lib/razorpay";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -87,6 +88,8 @@ export default function UnlockModal({
   const [autoLoading, setAutoLoading] = useState(false);
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
   const [idCopied, setIdCopied] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
   const utrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearUtrTimer = useCallback(() => {
@@ -139,6 +142,31 @@ export default function UnlockModal({
     const t = setTimeout(() => { onSuccess(); }, 1800);
     return () => clearTimeout(t);
   }, [phase, onSuccess]);
+
+  async function startRazorpay() {
+    if (payLoading) return;
+    setPayError(null);
+    setPayLoading(true);
+    trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+    trackEvent({ event: "pay_popup_cta_clicked", occasion, card_id: cardId });
+    const eventId = `hs_${cardId}_${Date.now()}`;
+    const { fbp, fbc } = getMetaCookies();
+    try {
+      await payWithRazorpay({ kind: "card", cardId, occasion, verifyExtras: { eventId, fbp, fbc } });
+      trackEvent({ event: "card_paid", occasion, card_id: cardId, price });
+      const w = window as Window & { fbq?: (...a: unknown[]) => void };
+      if (typeof window !== "undefined" && w.fbq) {
+        w.fbq("track", "Purchase", { value: price, currency: "INR" }, { eventID: eventId });
+      }
+      setPhase("success");
+    } catch (err) {
+      if (!(err instanceof PaymentCancelled)) {
+        setPayError(err instanceof Error ? err.message : "Payment failed. Please try again.");
+      }
+    } finally {
+      setPayLoading(false);
+    }
+  }
 
   async function handlePaymentDone() {
     if (autoLoading) return;
@@ -398,25 +426,32 @@ export default function UnlockModal({
                 {/* Pay CTA */}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => {
-                    trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
-                    trackEvent({ event: "pay_popup_cta_clicked", occasion, card_id: cardId });
-                    setPhase("paying");
-                  }}
+                  disabled={payLoading}
+                  onClick={() => { void startRazorpay(); }}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     width: "100%", height: 56, borderRadius: 16,
                     background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
                     color: "#000", fontWeight: 800, fontSize: 17,
-                    border: "none", cursor: "pointer",
+                    border: "none", cursor: payLoading ? "wait" : "pointer",
+                    opacity: payLoading ? 0.7 : 1,
                     boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
                     marginBottom: 10,
                   }}
                 >
-                  🔓{" "}
-                  <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 14, marginRight: 2 }}>₹{anchor}</span>
-                  {" "}Pay ₹{price} &amp; Share
+                  {payLoading ? (
+                    "Opening payment…"
+                  ) : (
+                    <>
+                      🔓{" "}
+                      <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, fontSize: 14, marginRight: 2 }}>₹{anchor}</span>
+                      {" "}Pay ₹{price} &amp; Share
+                    </>
+                  )}
                 </motion.button>
+                {payError && (
+                  <p style={{ textAlign: "center", fontSize: 12, color: "#ff8a8a", marginBottom: 6 }}>{payError}</p>
+                )}
               </motion.div>
             )}
 

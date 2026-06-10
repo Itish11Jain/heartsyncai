@@ -43,7 +43,7 @@ function armFromPaidAmount(amount: unknown): 49 | 99 | null {
   return null;
 }
 
-async function fireMetaCapi(
+export async function fireMetaCapi(
   eventId: string,
   cardId: string,
   ip: string,
