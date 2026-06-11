@@ -541,6 +541,38 @@ export default function ReplyExperience() {
     return `${origin}${BASE}/reply?id=${cardId}&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`;
   }, [cardId, receivedOccasion, received]);
 
+  /* ── Preview iframe: mount it ONCE at the component root for the whole replier
+   * session so it loads during the intro/envelope/bloom screens and is already
+   * playing by the time the pay screen appears (avoids a slow blank load). It's
+   * kept off-screen until the pay screen, then anchored over a placeholder box —
+   * moving a fixed element via CSS never reloads it. */
+  const previewUrl = useMemo(
+    () => `${BASE}/reply?pv=1&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`,
+    [receivedOccasion, received],
+  );
+  const previewBoxRef = useRef<HTMLDivElement | null>(null);
+  const [previewPos, setPreviewPos] = useState<{ left: number; top: number } | null>(null);
+  const showPreviewIframe = !isRecipient && !paid && phase === "send" && !showPay;
+
+  useEffect(() => {
+    if (!showPreviewIframe) return;
+    let raf = 0;
+    function measure() {
+      const el = previewBoxRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setPreviewPos({ left: r.left, top: r.top });
+    }
+    raf = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [showPreviewIframe]);
+
   async function handleCopyUpi() {
     try {
       await navigator.clipboard.writeText(UPI_DISPLAY);
@@ -666,6 +698,29 @@ export default function ReplyExperience() {
           : "radial-gradient(ellipse at 50% 25%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
       }}
     >
+      {/* Preloaded reply-card preview — mounted once for the whole replier
+          session, kept off-screen until anchored over the pay-screen box. */}
+      {!isRecipient && (
+        <iframe
+          title="Your reply preview"
+          src={previewUrl}
+          scrolling="no"
+          aria-hidden={!showPreviewIframe}
+          style={{
+            position: "fixed",
+            left: showPreviewIframe && previewPos ? previewPos.left : -10000,
+            top: showPreviewIframe && previewPos ? previewPos.top : -10000,
+            width: 376, height: 560, border: "none",
+            borderRadius: 44,
+            transform: "scale(0.5)", transformOrigin: "top left",
+            pointerEvents: "none",
+            opacity: showPreviewIframe && previewPos ? 1 : 0,
+            transition: showPreviewIframe ? "opacity 0.3s ease" : "none",
+            zIndex: showPreviewIframe ? 50 : -1,
+          }}
+        />
+      )}
+
       <AnimatePresence mode="wait">
         {/* ════════ SCREEN 0 — "YOUR REPLY IS READY" GATE ════════ */}
         {phase === "intro" && (
@@ -987,26 +1042,18 @@ export default function ReplyExperience() {
                   Your reply is ready
                 </p>
 
-                {/* Live preview of the card they just saw */}
+                {/* Live preview of the card they just saw. The actual iframe is
+                    mounted once at the component root and anchored over this box. */}
                 <div
+                  ref={previewBoxRef}
                   style={{
                     position: "relative", width: 188, height: 280, borderRadius: 22,
                     overflow: "hidden", flex: "0 0 auto", marginBottom: 14,
                     border: "1px solid rgba(255,215,120,0.35)",
                     boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 0 6px rgba(255,215,120,0.06)",
+                    background: "radial-gradient(ellipse at 50% 35%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
                   }}
-                >
-                  <iframe
-                    title="Your reply preview"
-                    src={`${BASE}/reply?pv=1&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`}
-                    scrolling="no"
-                    style={{
-                      width: 376, height: 560, border: "none",
-                      transform: "scale(0.5)", transformOrigin: "top left",
-                      pointerEvents: "none",
-                    }}
-                  />
-                </div>
+                />
 
                 <p style={{ color: "rgba(255,255,255,0.74)", fontSize: 13.5, lineHeight: 1.65, margin: "0 0 16px", maxWidth: 322 }}>
                   They put a lot of effort into making you a custom card. You can do at

@@ -46,3 +46,11 @@ skewing analytics or recursively spawning more preview iframes.
 **How to apply:** any new reply phase or analytics event must respect the `isPreview` guard,
 and the preview iframe URL must never carry an `id` (keeps it non-recursive). The pay branch
 scrolls itself — don't rely on the shared `overflow:hidden` send container to size it.
+
+**Preload, don't lazy-mount:** the iframe is mounted ONCE at the component root for the whole
+replier session (not inside the pay-screen JSX), so it loads during intro/envelope/bloom and
+is already looping by the time the pay screen appears (lazy mount = long blank load). It's
+kept fixed-positioned off-screen, then anchored over a placeholder box via
+`getBoundingClientRect` (re-measured on resize/scroll) — moving a fixed element by CSS never
+reloads it. It must hide INSTANTLY (transition:none on hide) when the UPI modal opens, else it
+shows through during the modal's fade-in.
