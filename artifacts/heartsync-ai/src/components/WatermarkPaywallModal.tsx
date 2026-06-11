@@ -1,31 +1,38 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
-import { payWithRazorpay, PaymentCancelled } from "@/lib/razorpay";
 
-function getMetaCookies(): { fbp: string | null; fbc: string | null } {
-  try {
-    const cookieMap = Object.fromEntries(
-      document.cookie.split(";").map((c) => {
-        const eq = c.indexOf("=");
-        return eq === -1 ? [c.trim(), ""] : [c.slice(0, eq).trim(), c.slice(eq + 1).trim()];
-      }),
-    );
-    const fbp = cookieMap["_fbp"] ?? null;
-    let fbc = cookieMap["_fbc"] ?? null;
-    if (!fbc) {
-      const fbclid = new URLSearchParams(window.location.search).get("fbclid");
-      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
-    }
-    return { fbp: fbp || null, fbc: fbc || null };
-  } catch {
-    return { fbp: null, fbc: null };
-  }
+const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
+const UPI_VPA = "9706900714@pthdfc";
+
+/** Build the UPI deep link for a specific amount (₹49 or ₹99 by occasion). */
+function buildUpiLink(amount: number) {
+  return `upi://pay?pa=${UPI_VPA}&pn=Itisha&am=${amount}&cu=INR&tn=HeartSyncWebsitePayment`;
 }
 
-type Stage = "paying" | "done-bundle" | "done-watermark";
+function qrUrl(deepLink: string, size = 240) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(deepLink)}`;
+}
+
+function isSequential(v: string): boolean {
+  const d = v.trim().split("").map(Number);
+  if (d.length !== 4) return false;
+  if (d.every(x => x === d[0])) return true; // repeated: 0000, 1111
+  if (d[1] === (d[0] + 1) % 10 && d[2] === (d[1] + 1) % 10 && d[3] === (d[2] + 1) % 10) return true; // ascending
+  if (d[1] === (d[0] + 9) % 10 && d[2] === (d[1] + 9) % 10 && d[3] === (d[2] + 9) % 10) return true; // descending
+  return false;
+}
+
+function isValidUtr(v: string) {
+  const t = v.trim();
+  return /^\d{4}$/.test(t) && !isSequential(t);
+}
+
+type Stage = "paying" | "utr" | "done-bundle" | "done-watermark";
 
 interface Props {
   cardId: string;
@@ -38,9 +45,14 @@ interface Props {
 export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuccess, mode = "watermark" }: Props) {
   /** Occasion-based price (₹99 birthday/sorry · ₹49 others) + discount anchor. */
   const { price, anchor } = getPriceConfigForOccasion(occasion);
+  const upiDeepLink = buildUpiLink(price);
   const [stage, setStage] = useState<Stage>("paying");
-  const [payLoading, setPayLoading] = useState(false);
-  const [payError, setPayError] = useState("");
+
+  const [bundleUtr, setBundleUtr] = useState("");
+  const [bundleUtrError, setBundleUtrError] = useState("");
+  const [bundleLoading, setBundleLoading] = useState(false);
+
+  const utrFiredRef = useRef(false);
 
   useEffect(() => {
     if (stage !== "done-bundle" && stage !== "done-watermark") return;
@@ -54,30 +66,35 @@ export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuc
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const handlePay = useCallback(async () => {
-    if (payLoading) return;
-    if (!cardId) { setPayError("No card ID — close and try again from the card page."); return; }
-    setPayError("");
-    setPayLoading(true);
-    trackEvent({ event: "pay_now_clicked", occasion, card_id: cardId });
-    const eventId = `hs_${cardId}_${Date.now()}`;
-    const { fbp, fbc } = getMetaCookies();
+  const handleBundleSubmit = useCallback(async () => {
+    if (!isValidUtr(bundleUtr)) return;
+    if (!cardId) { setBundleUtrError("No card ID — close and try again from the card page."); return; }
+    trackEvent({ event: "confirm_unlock_clicked", occasion, card_id: cardId });
+    setBundleUtrError("");
+    setBundleLoading(true);
+    const wmEventId = `hs_${cardId}_${Date.now()}`;
     try {
-      await payWithRazorpay({ kind: "card", cardId, occasion, verifyExtras: { eventId, fbp, fbc } });
+      const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ utr: bundleUtr.trim(), eventId: wmEventId }),
+      });
+      const data = await res.json() as { ok?: boolean; message?: string };
+      if (!res.ok) {
+        setBundleUtrError(data.message ?? "Submission failed. Please try again.");
+        return;
+      }
       trackEvent({ event: "paywall_paid", occasion, card_id: cardId, price });
-      const w = window as Window & { fbq?: (...a: unknown[]) => void };
-      if (typeof window !== "undefined" && w.fbq) {
-        w.fbq("track", "Purchase", { value: price, currency: "INR" }, { eventID: eventId });
+      if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
+        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: price, currency: "INR" }, { eventID: wmEventId });
       }
       setStage("done-bundle");
-    } catch (err) {
-      if (!(err instanceof PaymentCancelled)) {
-        setPayError(err instanceof Error ? err.message : "Payment failed. Please try again.");
-      }
+    } catch {
+      setBundleUtrError("Submission failed. Please try again.");
     } finally {
-      setPayLoading(false);
+      setBundleLoading(false);
     }
-  }, [payLoading, cardId, occasion, price]);
+  }, [bundleUtr, cardId]);
 
   return (
     <div
@@ -108,7 +125,7 @@ export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuc
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <button
-                onClick={onClose}
+                onClick={stage === "utr" ? () => setStage("paying") : onClose}
                 style={{
                   width: 34, height: 34, borderRadius: "50%",
                   border: "1px solid rgba(255,255,255,0.12)",
@@ -195,38 +212,122 @@ export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuc
                     </span>
                   </div>
 
-                  {/* Trust line */}
-                  <p style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontSize: 12, marginBottom: 16, lineHeight: 1.5 }}>
-                    Secure payment via UPI, cards, netbanking & wallets — powered by Razorpay.
-                  </p>
+                  {/* QR code */}
+                  <div style={{ textAlign: "center", marginBottom: 20 }}>
+                    <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+                      Scan with any UPI app
+                    </p>
+                    <a
+                      href={upiDeepLink}
+                      style={{
+                        display: "inline-block",
+                        background: "#fff", borderRadius: 16, padding: 10,
+                        boxShadow: "0 4px 24px rgba(168,85,247,0.25)",
+                      }}
+                    >
+                      <img
+                        src={qrUrl(upiDeepLink, 200)}
+                        alt={`UPI QR ₹${price}`}
+                        style={{ width: 200, height: 200, borderRadius: 8, display: "block" }}
+                      />
+                    </a>
+                    <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 10, marginTop: 8 }}>
+                      UPI of <span style={{ color: "rgba(255,255,255,0.45)" }}>Itisha</span> — Creator of HeartSync AI
+                    </p>
+                  </div>
 
                   {/* Pay Now CTA */}
-                  <button
-                    onClick={() => { void handlePay(); }}
-                    disabled={payLoading}
+                  <a
+                    href={upiDeepLink}
+                    onClick={() => { trackEvent({ event: "pay_now_clicked", occasion, card_id: cardId }); setTimeout(() => setStage("utr"), 600); }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", height: 52, borderRadius: 14,
                       background: "linear-gradient(135deg, #FFD700, #FFA500)",
                       color: "#000", fontWeight: 800, fontSize: 16,
-                      border: "none", cursor: payLoading ? "wait" : "pointer",
-                      opacity: payLoading ? 0.7 : 1,
-                      boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
+                      textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
                     }}
                   >
-                    {payLoading ? (
-                      <><Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> Opening payment…</>
-                    ) : (
-                      <>
-                        <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹{anchor}</span>
-                        {" "}Pay ₹{price} Now <ArrowRight style={{ width: 18, height: 18 }} />
-                      </>
-                    )}
-                  </button>
+                    <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹{anchor}</span>
+                    {" "}Pay ₹{price} Now <ArrowRight style={{ width: 18, height: 18 }} />
+                  </a>
 
-                  {payError && (
-                    <p style={{ textAlign: "center", color: "#f87171", fontSize: 12, marginTop: 12 }}>{payError}</p>
-                  )}
+                  <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>
+                    Opens your UPI app automatically
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Step 2: Enter last 4 digits */}
+              {stage === "utr" && (
+                <motion.div key="utr"
+                  initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div style={{ textAlign: "center", marginBottom: 24 }}>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>💸</div>
+                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+                      Payment done? Almost there!
+                    </h2>
+                    <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.55 }}>
+                      Enter the <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>last 4 digits</span> of your payment reference number to confirm.
+                    </p>
+                  </div>
+
+                  <div style={{
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+                    borderRadius: 18, padding: "18px 16px",
+                    display: "flex", flexDirection: "column", gap: 10,
+                  }}>
+                    <Input
+                      placeholder="e.g. 4 2 8 7"
+                      value={bundleUtr}
+                      maxLength={4}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        setBundleUtr(v);
+                        setBundleUtrError(
+                          v.length === 4 && isSequential(v)
+                            ? "Don't use sequential (1234) or repeated (1111) codes — enter your actual last 4 digits."
+                            : ""
+                        );
+                        if (v.length === 4 && !isSequential(v) && !utrFiredRef.current) {
+                          utrFiredRef.current = true;
+                          trackEvent({ event: "utr_entered", occasion, card_id: cardId });
+                        }
+                      }}
+                      className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
+                    />
+
+                    {bundleUtrError && (
+                      <p style={{ color: "#f87171", fontSize: 12, textAlign: "center", margin: 0 }}>{bundleUtrError}</p>
+                    )}
+
+                    <button
+                      onClick={handleBundleSubmit}
+                      disabled={!isValidUtr(bundleUtr) || bundleLoading}
+                      style={{
+                        width: "100%", height: 48, borderRadius: 12,
+                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                        color: "#000", fontWeight: 700, fontSize: 15, border: "none",
+                        cursor: !isValidUtr(bundleUtr) || bundleLoading ? "default" : "pointer",
+                        opacity: !isValidUtr(bundleUtr) || bundleLoading ? 0.5 : 1,
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        transition: "opacity 0.2s",
+                      }}
+                    >
+                      {bundleLoading
+                        ? <><Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> Confirming…</>
+                        : <>Confirm & Unlock <ArrowRight style={{ width: 15, height: 15 }} /></>
+                      }
+                    </button>
+
+                    <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: 10, margin: 0 }}>
+                      Find it in your UPI app under transaction details
+                    </p>
+                  </div>
                 </motion.div>
               )}
 

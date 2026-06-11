@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useTransition, memo, useMemo, lazy, Suspense } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ArrowRight, Loader2, Check, Sparkles } from "lucide-react";
+import { ChevronLeft, Info, ArrowRight, Loader2, Check, Sparkles, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSendAuth, SendAuthCtx, defaultSendAuth } from "@/contexts/sendAuthContext";
 import { OCCASIONS, RELATIONS, getTemplate, getFallbackTemplate } from "@/lib/card-templates";
@@ -28,7 +28,6 @@ const LazyClerkBridge = lazy(async () => {
 });
 import { trackEvent } from "@/lib/trackEvent";
 import { getOccasionPrice, getPriceConfigForOccasion } from "@/lib/priceArm";
-import { payWithRazorpay, PaymentCancelled } from "@/lib/razorpay";
 import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
@@ -395,6 +394,7 @@ function SendInner() {
   // close, or jump out to a UPI app doesn't wipe the user's progress.
   const initialPaywall = loadPaywallSnapshot();
   const [showPaywall, setShowPaywall] = useState(initialPaywall?.open ?? false);
+  const [upiCopied, setUpiCopied] = useState(false);
   const [paywallStage, setPaywallStage] = useState<PaywallStage>(initialPaywall?.stage ?? "plan");
   const [paywallUtr, setPaywallUtr] = useState(initialPaywall?.utr ?? "");
   const [paywallUtrError, setPaywallUtrError] = useState("");
@@ -405,8 +405,10 @@ function SendInner() {
   // Watermark upsell modal (envelope path after auth)
   const [showWatermarkUpsell, setShowWatermarkUpsell] = useState(false);
   const [watermarkStage, setWatermarkStage] = useState<WatermarkStage>("choose");
+  const [watermarkUtr, setWatermarkUtr] = useState("");
   const [watermarkUtrError, setWatermarkUtrError] = useState("");
   const [watermarkUtrLoading, setWatermarkUtrLoading] = useState(false);
+  const [watermarkUpiCopied, setWatermarkUpiCopied] = useState(false);
 
   // Multi-photo upload state (up to 4 photos)
   // Each selected photo is an independent slot so uploads run in parallel and a
@@ -806,6 +808,11 @@ function SendInner() {
     return () => clearInterval(iv);
   }, [showGenerating]);
 
+  function isValidUtr(v: string) {
+    const t = v.trim();
+    return /^\d{12}$/.test(t) || /^[A-Za-z]{4}[A-Za-z0-9]{12,18}$/.test(t);
+  }
+
   /* ─── Core card-generation logic ───────────────────────────────────── */
   const doGenerateCard = useCallback(async () => {
     const fromCardRef = (() => { try { return localStorage.getItem("hs_from_card") === "1"; } catch { return false; } })();
@@ -928,22 +935,32 @@ function SendInner() {
     fingerprint, clerkUserId, userEmail, incrementUsage, getToken, uploadedPhotoUrls, voiceNoteUrl,
   ]);
 
-  /* ─── Paywall: pay ₹49 via Razorpay → unlock all premium templates ──── */
-  const handlePaywallPay = useCallback(async () => {
-    if (paywallLoading) return;
+  /* ─── Paywall: submit UTR for ₹49 bundle ───────────────────────────── */
+  const handlePaywallUtrSubmit = useCallback(async () => {
+    const trimmed = paywallUtr.trim();
+    if (!isValidUtr(trimmed)) return;
     setPaywallUtrError("");
     setPaywallLoading(true);
     try {
       const token = await getToken();
       const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-      // 1. Pay + unlock all 3 templates on the account (verified server-side)
-      await payWithRazorpay({ kind: "template", authToken: token });
+      // 1. Unlock all 3 templates on the account
+      const unlockRes = await fetch(`${base}/api/usage/template-unlock-utr`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ utr: trimmed, plan: "bundle" }),
+      });
+      const unlockData = await unlockRes.json() as { ok?: boolean; message?: string };
+      if (!unlockRes.ok) {
+        setPaywallUtrError(unlockData.message ?? "Submission failed. Please try again.");
+        return;
+      }
 
       trackEvent({ event: "paywall_paid", fingerprint, email: userEmail ?? undefined, occasion });
-      if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: unlockPricing.price, currency: "INR" });
-      }
       await refetchUsage();
 
       // 2. Create the card row + mark it premium + watermark-free
@@ -985,15 +1002,13 @@ function SendInner() {
 
       setPendingCardId(cardId);
       setPaywallStage("done");
-    } catch (err) {
-      if (!(err instanceof PaymentCancelled)) {
-        setPaywallUtrError(err instanceof Error ? err.message : "Payment failed. Please try again.");
-      }
+    } catch {
+      setPaywallUtrError("Submission failed. Please try again.");
     } finally {
       setPaywallLoading(false);
     }
-  }, [paywallLoading, getToken, fingerprint, userEmail, occasion, refetchUsage, unlockPricing.price,
-      selectedTemplate, customMsg, defaultMsg, recipientName, uploadedPhotoUrls, voiceNoteUrl]);
+  }, [paywallUtr, getToken, fingerprint, userEmail, occasion, refetchUsage,
+      selectedTemplate, customMsg, defaultMsg, recipientName]);
 
   /* ─── Open paywall in a clean state ────────────────────────────────── */
   function openPaywall() {
@@ -1039,27 +1054,36 @@ function SendInner() {
     setTimeout(() => { window.location.href = url; }, 1800);
   }
 
-  /* ─── Watermark upsell: pay ₹29 via Razorpay to remove watermark ────── */
-  const handleWatermarkPay = useCallback(async () => {
-    if (watermarkUtrLoading || !pendingCardId) return;
+  /* ─── Watermark upsell: user pays ₹29 to remove watermark ──────────── */
+  const handleWatermarkUtrSubmit = useCallback(async () => {
+    const trimmed = watermarkUtr.trim();
+    if (!isValidUtr(trimmed) || !pendingCardId) return;
     setWatermarkUtrError("");
     setWatermarkUtrLoading(true);
     try {
       const token = await getToken();
-      await payWithRazorpay({ kind: "watermark", cardId: pendingCardId, authToken: token });
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const res = await fetch(`${base}/api/cards/${pendingCardId}/remove-watermark`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ utr: trimmed }),
+      });
+      const data = await res.json() as { ok?: boolean; message?: string };
+      if (!res.ok) {
+        setWatermarkUtrError(data.message ?? "Verification failed. Try again.");
+        return;
+      }
       trackEvent({ event: "watermark_removed", fingerprint, email: userEmail ?? undefined, occasion });
-      if (typeof window !== "undefined" && (window as Window & { fbq?: (...a: unknown[]) => void }).fbq) {
-        (window as Window & { fbq?: (...a: unknown[]) => void }).fbq!("track", "Purchase", { value: 29, currency: "INR" });
-      }
       setWatermarkStage("done");
-    } catch (err) {
-      if (!(err instanceof PaymentCancelled)) {
-        setWatermarkUtrError(err instanceof Error ? err.message : "Payment failed. Please try again.");
-      }
+    } catch {
+      setWatermarkUtrError("Submission failed. Please try again.");
     } finally {
       setWatermarkUtrLoading(false);
     }
-  }, [watermarkUtrLoading, pendingCardId, getToken, fingerprint, userEmail, occasion]);
+  }, [watermarkUtr, pendingCardId, getToken, fingerprint, userEmail, occasion]);
 
   /* ─── Watermark upsell: after payment done — redirect clean ─────────── */
   function handleWatermarkComplete() {
@@ -1889,21 +1913,92 @@ function SendInner() {
                   </div>
 
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
-                    <p className="text-center text-xs text-white/45 mb-3 leading-relaxed">
-                      Secure payment via UPI, cards, netbanking &amp; wallets — powered by Razorpay.
-                    </p>
-                    <button
-                      onClick={() => { void handlePaywallPay(); }}
-                      disabled={paywallLoading}
-                      data-testid="paywall-pay"
-                      className="w-full h-12 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
-                      style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
-                    >
-                      {paywallLoading
-                        ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Opening payment…</>
-                        : <>🔓 Pay ₹{unlockPricing.price} &amp; unlock all <ArrowRight className="w-4 h-4" /></>}
-                    </button>
-                    {paywallUtrError && <p className="text-xs text-destructive text-center mt-2">{paywallUtrError}</p>}
+                    {(() => {
+                      const UPI_DISPLAY = "110193250";
+                      const UPI_VPA = "8905158970@upi";
+                      const amount = unlockPricing.price;
+                      const upiParams = [
+                        `pa=${encodeURIComponent(UPI_VPA)}`,
+                        `pn=${encodeURIComponent("HeartSync AI")}`,
+                        `am=${amount.toFixed(2)}`,
+                        `cu=INR`,
+                        `tn=${encodeURIComponent("HeartSync Premium")}`,
+                      ].join("&");
+                      const upiUri = `upi://pay?${upiParams}`;
+                      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
+                      const handleCopyUpi = async () => {
+                        try { await navigator.clipboard.writeText(UPI_DISPLAY); } catch {
+                          const ta = document.createElement("textarea");
+                          ta.value = UPI_DISPLAY;
+                          ta.setAttribute("readonly", "");
+                          ta.style.position = "absolute";
+                          ta.style.left = "-9999px";
+                          document.body.appendChild(ta);
+                          ta.select();
+                          try { document.execCommand("copy"); } catch { /* ignore */ }
+                          document.body.removeChild(ta);
+                        }
+                        setUpiCopied(true);
+                        window.setTimeout(() => setUpiCopied(false), 1800);
+                      };
+                      return (
+                        <>
+                          <div className="flex gap-3 items-center mb-4">
+                            <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
+                              <img src={qrSrc} alt={`UPI QR Code ₹${unlockPricing.price}`} className="w-24 h-24 rounded-lg" />
+                            </a>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-[10px] text-white/45 mb-1 leading-tight">
+                                UPI of <span className="text-white/70 font-semibold">Itisha</span> — Creator of HeartSync AI
+                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
+                                <button
+                                  type="button" onClick={handleCopyUpi}
+                                  data-testid="paywall-upi-copy"
+                                  aria-label={upiCopied ? "Copied" : "Copy UPI ID"}
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors"
+                                  style={{
+                                    background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
+                                    color: upiCopied ? "#4ade80" : "#FFD700",
+                                    border: `1px solid ${upiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
+                                  }}
+                                >
+                                  {upiCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Info className="w-3 h-3 text-white/25 shrink-0" />
+                                <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹{unlockPricing.price}</span> — scan, tap, or copy</p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Paste UTR / Transaction ID"
+                        value={paywallUtr}
+                        onChange={(e) => { setPaywallUtr(e.target.value); setPaywallUtrError(""); }}
+                        data-clarity-mask="true"
+                        data-testid="paywall-utr-input"
+                        className="bg-white/5 border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
+                      />
+                      {paywallUtrError && <p className="text-xs text-destructive text-center">{paywallUtrError}</p>}
+                      <button
+                        onClick={handlePaywallUtrSubmit}
+                        disabled={!isValidUtr(paywallUtr) || paywallLoading}
+                        data-testid="paywall-utr-submit"
+                        className="w-full h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                        style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
+                      >
+                        {paywallLoading
+                          ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
+                          : <>Submit & unlock all <ArrowRight className="w-4 h-4" /></>}
+                      </button>
+                    </div>
                   </div>
 
                   <p className="text-center text-[11px] text-white/35 mt-3">
@@ -1977,23 +2072,85 @@ function SendInner() {
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3">
-                    <p className="text-center text-[11px] text-white/40 mb-3 leading-relaxed">
-                      Secure payment via UPI, cards, netbanking & wallets — powered by Razorpay.
-                    </p>
-                    <button
-                      onClick={() => { void handleWatermarkPay(); }}
-                      disabled={watermarkUtrLoading}
-                      data-testid="watermark-pay"
-                      className="w-full h-11 rounded-xl text-black font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-                      style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)" }}
-                    >
-                      {watermarkUtrLoading
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Opening payment…</>
-                        : <>Pay ₹29 & remove watermark <ArrowRight className="w-4 h-4" /></>}
-                    </button>
-                    {watermarkUtrError && <p className="text-xs text-destructive text-center mt-2">{watermarkUtrError}</p>}
-                  </div>
+                  {(() => {
+                    const UPI_DISPLAY = "110193250";
+                    const UPI_VPA = "8905158970@upi";
+                    const amount = 29;
+                    const upiParams = [
+                      `pa=${encodeURIComponent(UPI_VPA)}`,
+                      `pn=${encodeURIComponent("HeartSync AI")}`,
+                      `am=${amount.toFixed(2)}`,
+                      `cu=INR`,
+                      `tn=${encodeURIComponent("HeartSync Watermark")}`,
+                    ].join("&");
+                    const upiUri = `upi://pay?${upiParams}`;
+                    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(upiUri)}`;
+                    const handleCopyWupi = async () => {
+                      try { await navigator.clipboard.writeText(UPI_DISPLAY); } catch {
+                        const ta = document.createElement("textarea");
+                        ta.value = UPI_DISPLAY; ta.setAttribute("readonly", "");
+                        ta.style.position = "absolute"; ta.style.left = "-9999px";
+                        document.body.appendChild(ta); ta.select();
+                        try { document.execCommand("copy"); } catch { /* ignore */ }
+                        document.body.removeChild(ta);
+                      }
+                      setWatermarkUpiCopied(true);
+                      window.setTimeout(() => setWatermarkUpiCopied(false), 1800);
+                    };
+                    return (
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3">
+                        <div className="flex gap-3 items-center mb-4">
+                          <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
+                            <img src={qrSrc} alt="UPI QR ₹29" className="w-20 h-20 rounded-lg" />
+                          </a>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-white/40 mb-1">UPI of <span className="text-white/65 font-semibold">Itisha</span> — creator</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
+                              <button
+                                type="button" onClick={handleCopyWupi}
+                                data-testid="watermark-upi-copy"
+                                className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+                                style={{
+                                  background: watermarkUpiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
+                                  color: watermarkUpiCopied ? "#4ade80" : "#FFD700",
+                                  border: `1px solid ${watermarkUpiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
+                                }}
+                              >
+                                {watermarkUpiCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1">
+                              <Info className="w-3 h-3 shrink-0" />
+                              Pay <span className="text-white/55 font-semibold ml-0.5">exactly ₹29</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Paste UTR / Transaction ID"
+                            value={watermarkUtr}
+                            onChange={(e) => { setWatermarkUtr(e.target.value); setWatermarkUtrError(""); }}
+                            data-testid="watermark-utr-input"
+                            data-clarity-mask="true"
+                            className="bg-white/5 border-white/10 h-10 text-sm rounded-xl placeholder:text-white/20 text-center text-white"
+                          />
+                          {watermarkUtrError && <p className="text-xs text-destructive text-center">{watermarkUtrError}</p>}
+                          <button
+                            onClick={handleWatermarkUtrSubmit}
+                            disabled={!isValidUtr(watermarkUtr) || watermarkUtrLoading}
+                            data-testid="watermark-utr-submit"
+                            className="w-full h-10 rounded-xl text-black font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                            style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)" }}
+                          >
+                            {watermarkUtrLoading
+                              ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</>
+                              : <>Verify & remove watermark <ArrowRight className="w-4 h-4" /></>}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <button
                     onClick={handleWatermarkFree}
