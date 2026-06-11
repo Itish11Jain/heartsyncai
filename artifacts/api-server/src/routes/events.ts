@@ -626,6 +626,8 @@ router.get("/events/analytics", async (req, res) => {
       mediaBreakdown,
       priceAb,
       priceAbOccasions,
+      replyFunnel,
+      replyFunnelByOccasion,
     ] = await Promise.all([
         /* ── overview metrics ── */
         pool.query(
@@ -916,6 +918,38 @@ router.get("/events/analytics", async (req, res) => {
            GROUP BY price, occasion ORDER BY price, created DESC`,
           params,
         ),
+        /* ── Reply-card (viral "Share Love Back") funnel ── 4 steps ──
+         *   1. Send Love tapped   → viral_cta_clicked   (on the received card)
+         *   2. Preview Now tapped → reply_preview_clicked
+         *   3. Pay ₹29 tapped     → reply_pay_clicked
+         *   4. Card unlocked      → reply_unlocked       (payment completed)
+         * Distinct fingerprints per step = unique users, not event repeats. */
+        pool.query(
+          `SELECT
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'viral_cta_clicked')     AS step1_send_love,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'reply_preview_clicked') AS step2_preview,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'reply_pay_clicked')     AS step3_pay_clicked,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'reply_unlocked')        AS step4_unlocked
+           FROM hs_card_events WHERE ${whereSql}`,
+          params,
+        ),
+        /* ── Reply funnel split by the occasion of the ORIGINAL card ──
+         * Every reply event carries `occasion` = the received card's occasion,
+         * so grouping here shows which original occasions drive replies. */
+        pool.query(
+          `SELECT occasion,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'viral_cta_clicked')     AS step1_send_love,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'reply_preview_clicked') AS step2_preview,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'reply_pay_clicked')     AS step3_pay_clicked,
+             COUNT(DISTINCT NULLIF(fingerprint,'')) FILTER (WHERE event = 'reply_unlocked')        AS step4_unlocked
+           FROM hs_card_events
+           WHERE occasion IS NOT NULL AND occasion <> ''
+             AND event IN ('viral_cta_clicked','reply_preview_clicked','reply_pay_clicked','reply_unlocked')
+             AND ${whereSql}
+           GROUP BY occasion
+           ORDER BY step1_send_love DESC, step3_pay_clicked DESC`,
+          params,
+        ),
       ]);
 
     /**
@@ -952,6 +986,8 @@ router.get("/events/analytics", async (req, res) => {
       media_breakdown: mediaBreakdown.rows[0] ?? null,
       price_ab: mergedPriceAb,
       price_ab_occasions: priceAbOccasions.rows,
+      reply_funnel: replyFunnel.rows[0] ?? null,
+      reply_funnel_by_occasion: replyFunnelByOccasion.rows,
       // Echo back the effective range so the UI can show what's selected.
       range: { from: from ?? null, to: to ?? null },
     });

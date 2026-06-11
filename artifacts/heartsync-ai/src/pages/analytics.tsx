@@ -74,6 +74,14 @@ type PaymentFunnelRow = {
 type PriceArmRow = { price: number; created: string; paid: string };
 type PriceArmOccasionRow = { price: number; occasion: string; created: string; paid: string };
 
+type ReplyFunnelRow = {
+  step1_send_love: string;
+  step2_preview: string;
+  step3_pay_clicked: string;
+  step4_unlocked: string;
+};
+type ReplyFunnelOccasionRow = ReplyFunnelRow & { occasion: string };
+
 type SalesDaily = { date: string; unlocks: string; amount: string };
 type SalesByOccasion = { date: string; occasion: string; unlocks: string };
 type SalesData = {
@@ -102,6 +110,8 @@ type AnalyticsData = {
   media_breakdown?: { cards_with_voice: string; cards_with_multi_photo: string } | null;
   price_ab?: PriceArmRow[];
   price_ab_occasions?: PriceArmOccasionRow[];
+  reply_funnel?: ReplyFunnelRow | null;
+  reply_funnel_by_occasion?: ReplyFunnelOccasionRow[];
   range?: { from: string | null; to: string | null };
 };
 
@@ -253,7 +263,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
 
   /** Which top-level tab is active. */
-  const [activeTab, setActiveTab] = useState<"overview" | "payment_funnel" | "sales">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payment_funnel" | "reply_funnel" | "sales">("overview");
 
   /** Sales tab data (fetched lazily, from the payments table). */
   const [sales, setSales] = useState<SalesData | null>(null);
@@ -424,13 +434,15 @@ export default function Analytics() {
 
         {/* ── Tab switcher ── */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {(["overview", "payment_funnel", "sales"] as const).map((tab) => {
+          {(["overview", "payment_funnel", "reply_funnel", "sales"] as const).map((tab) => {
             const label =
               tab === "overview"
                 ? "Overview"
                 : tab === "payment_funnel"
                   ? "💳 Payment Funnel"
-                  : "💰 Sales";
+                  : tab === "reply_funnel"
+                    ? "💌 Reply Funnel"
+                    : "💰 Sales";
             const isActive = activeTab === tab;
             return (
               <button
@@ -766,6 +778,125 @@ export default function Analytics() {
                       </span>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {activeTab === "reply_funnel" && (() => {
+          const rf = data.reply_funnel;
+          const byOcc = data.reply_funnel_by_occasion ?? [];
+          const steps: { label: string; key: keyof ReplyFunnelRow; color: string }[] = [
+            { label: "1 · 'Send Love' tapped",   key: "step1_send_love",  color: "#f472b6" },
+            { label: "2 · 'Preview Now' tapped",  key: "step2_preview",    color: "#c084fc" },
+            { label: "3 · 'Pay ₹29' tapped",      key: "step3_pay_clicked", color: "#fb923c" },
+            { label: "4 · Card Unlocked (paid)",  key: "step4_unlocked",   color: "#34d399" },
+          ];
+          const values = steps.map((s) => (rf ? Number(rf[s.key]) : 0));
+          const top = values[0] || 1;
+          return (
+            <div style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
+                Reply Funnel
+              </h2>
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginBottom: 16 }}>
+                Unique users (distinct fingerprints) per step · {describeRange(range)}
+              </p>
+              {!rf ? (
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>No data yet for this range.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {steps.map((step, i) => {
+                    const val = values[i];
+                    const prev = i > 0 ? values[i - 1] : null;
+                    const barPct = top > 0 ? Math.max(4, Math.round((val / top) * 100)) : 4;
+                    const dropPct = prev !== null && prev > 0 ? Math.round(((prev - val) / prev) * 100) : null;
+                    return (
+                      <div key={step.key} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)", padding: "14px 16px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: 500 }}>{step.label}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            {dropPct !== null && (
+                              <span style={{ fontSize: 11, color: dropPct > 50 ? "#ef4444" : dropPct > 25 ? "#f59e0b" : "#34d399", fontWeight: 600, background: "rgba(0,0,0,0.25)", padding: "2px 7px", borderRadius: 99 }}>
+                                {dropPct > 0 ? `−${dropPct}%` : "0% drop"}
+                              </span>
+                            )}
+                            <span style={{ color: step.color, fontWeight: 800, fontSize: 22, lineHeight: 1 }}>{val.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div style={{ height: 6, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${barPct}%`, background: step.color, borderRadius: 99, transition: "width 0.4s ease" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Summary conversion rate */}
+                  <div style={{ background: "rgba(255,215,0,0.08)", border: "1px solid rgba(255,215,0,0.25)", borderRadius: 12, padding: "14px 16px", marginTop: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "rgba(255,215,0,0.8)", fontSize: 13, fontWeight: 600 }}>Overall: Send Love → Unlocked</span>
+                      <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 20 }}>
+                        {top > 0 ? `${Math.round((values[3] / top) * 100)}%` : "—"}
+                        <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>
+                          ({values[3].toLocaleString()} / {values[0].toLocaleString()})
+                        </span>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                      <span style={{ color: "rgba(255,215,0,0.8)", fontSize: 13, fontWeight: 600 }}>Pay ₹29 → Unlocked</span>
+                      <span style={{ color: "#FFD700", fontWeight: 800, fontSize: 20 }}>
+                        {values[2] > 0 ? `${Math.round((values[3] / values[2]) * 100)}%` : "—"}
+                        <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>
+                          ({values[3].toLocaleString()} / {values[2].toLocaleString()})
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Reply funnel by original card occasion ── */}
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,215,0,0.7)", letterSpacing: "0.08em", textTransform: "uppercase", margin: "28px 0 4px" }}>
+                Reply Funnel · by original occasion
+              </h2>
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginBottom: 16 }}>
+                Unique users per step, grouped by the occasion of the card they received
+              </p>
+              {byOcc.length === 0 ? (
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>No data yet for this range.</p>
+              ) : (
+                <div style={{ overflowX: "auto", background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 520 }}>
+                    <thead>
+                      <tr style={{ color: "rgba(255,255,255,0.5)", textAlign: "right" }}>
+                        <th style={{ padding: "12px 14px", textAlign: "left", fontWeight: 600 }}>Occasion</th>
+                        <th style={{ padding: "12px 14px", fontWeight: 600 }}>Send Love</th>
+                        <th style={{ padding: "12px 14px", fontWeight: 600 }}>Preview</th>
+                        <th style={{ padding: "12px 14px", fontWeight: 600 }}>Pay ₹29</th>
+                        <th style={{ padding: "12px 14px", fontWeight: 600 }}>Unlocked</th>
+                        <th style={{ padding: "12px 14px", fontWeight: 600 }}>Conv.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {byOcc.map((r) => {
+                        const s1 = Number(r.step1_send_love);
+                        const s2 = Number(r.step2_preview);
+                        const s3 = Number(r.step3_pay_clicked);
+                        const s4 = Number(r.step4_unlocked);
+                        const conv = s1 > 0 ? Math.round((s4 / s1) * 100) : 0;
+                        return (
+                          <tr key={r.occasion} style={{ borderTop: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.8)", textAlign: "right" }}>
+                            <td style={{ padding: "12px 14px", textAlign: "left", textTransform: "capitalize", color: "#fff", fontWeight: 600 }}>{r.occasion.replace(/_/g, " ")}</td>
+                            <td style={{ padding: "12px 14px" }}>{s1.toLocaleString()}</td>
+                            <td style={{ padding: "12px 14px" }}>{s2.toLocaleString()}</td>
+                            <td style={{ padding: "12px 14px" }}>{s3.toLocaleString()}</td>
+                            <td style={{ padding: "12px 14px", color: "#34d399", fontWeight: 700 }}>{s4.toLocaleString()}</td>
+                            <td style={{ padding: "12px 14px", color: conv >= 20 ? "#34d399" : conv >= 8 ? "#f59e0b" : "rgba(255,255,255,0.5)", fontWeight: 700 }}>{conv}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

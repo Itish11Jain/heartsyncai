@@ -597,6 +597,10 @@ export default function ReplyExperience() {
 
   function handleIntroContinue() {
     setPhase("envelope");
+    // Dedicated funnel step — "Preview Now" tapped. (reply_flow_advanced fires at
+    // every stage with an `index` that the events table doesn't persist, so the
+    // funnel needs this distinct event to isolate the Preview-Now click.)
+    trackEvent({ event: "reply_preview_clicked", occasion: receivedOccasion, template: "reply", price });
     trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 0 });
   }
 
