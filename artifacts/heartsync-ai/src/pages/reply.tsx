@@ -218,18 +218,19 @@ function MendingHeart({ opening }: { opening: boolean }) {
 }
 
 /* ── Birthday reply, screen-1 decor: pink roses drifting at varied sizes ──── */
+// Kept to the top half and the side margins only — the slider is nearly
+// full-width and sits low, so no floater may stray into the bottom band or it
+// reads as an extra flower stuck on the slider.
 const FLOAT_FLOWERS = [
-  { left: "8%",  top: "12%", size: 46, dur: 7,   delay: 0,   rot: -12, op: 0.85 },
-  { left: "82%", top: "10%", size: 64, dur: 8.5, delay: 0.6, rot: 10,  op: 0.9 },
-  { left: "20%", top: "68%", size: 80, dur: 9,   delay: 0.3, rot: -8,  op: 0.88 },
-  { left: "73%", top: "73%", size: 54, dur: 7.5, delay: 1.1, rot: 14,  op: 0.85 },
-  { left: "49%", top: "5%",  size: 34, dur: 6.5, delay: 0.9, rot: 6,   op: 0.8  },
-  { left: "5%",  top: "44%", size: 38, dur: 8,   delay: 1.4, rot: -16, op: 0.8  },
-  { left: "88%", top: "46%", size: 42, dur: 7.2, delay: 0.2, rot: 12,  op: 0.82 },
-  { left: "33%", top: "85%", size: 30, dur: 6.8, delay: 1.7, rot: -6,  op: 0.78 },
-  { left: "61%", top: "87%", size: 50, dur: 8.8, delay: 0.5, rot: 9,   op: 0.82 },
-  { left: "14%", top: "26%", size: 28, dur: 6.2, delay: 2.0, rot: 4,   op: 0.72 },
-  { left: "90%", top: "27%", size: 32, dur: 7.6, delay: 1.2, rot: -10, op: 0.74 },
+  { left: "8%",  top: "10%", size: 46, dur: 7,   delay: 0,   rot: -12, op: 0.85 },
+  { left: "82%", top: "8%",  size: 64, dur: 8.5, delay: 0.6, rot: 10,  op: 0.9  },
+  { left: "49%", top: "4%",  size: 34, dur: 6.5, delay: 0.9, rot: 6,   op: 0.8  },
+  { left: "18%", top: "24%", size: 30, dur: 6.2, delay: 2.0, rot: 4,   op: 0.72 },
+  { left: "90%", top: "22%", size: 32, dur: 7.6, delay: 1.2, rot: -10, op: 0.74 },
+  { left: "5%",  top: "38%", size: 38, dur: 8,   delay: 1.4, rot: -16, op: 0.8  },
+  { left: "88%", top: "40%", size: 42, dur: 7.2, delay: 0.2, rot: 12,  op: 0.82 },
+  { left: "12%", top: "52%", size: 28, dur: 6.8, delay: 1.7, rot: -6,  op: 0.78 },
+  { left: "86%", top: "54%", size: 36, dur: 8.8, delay: 0.5, rot: 9,   op: 0.82 },
 ];
 
 function FloatingFlowers() {
