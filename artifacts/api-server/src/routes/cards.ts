@@ -11,7 +11,21 @@ const META_PIXEL_ID = "1510201040837057";
  * Price A/B arm normaliser. Returns 49, 99, or null (unknown) so we never
  * store anything other than the two valid arms on a card.
  */
-function normPrice(price: unknown): 49 | 99 | null {
+function normPrice(price: unknown): 29 | 49 | 99 | null {
+  if (price === 29 || price === "29") return 29;
+  if (price === 49 || price === "49") return 49;
+  if (price === 99 || price === "99") return 99;
+  return null;
+}
+
+/**
+ * Price taken from a CLIENT request body is advisory only and must NEVER be
+ * able to select the ₹29 reply tier. ₹29 is reachable solely when the server
+ * itself stored price=29 on a card it minted via POST /cards/reply. Without
+ * this, a tampered builder-create or unlock body could pay ₹29 for a ₹49/₹99
+ * premium card (whose row is created at unlock, so it has no stored price yet).
+ */
+function normClientBodyPrice(price: unknown): 49 | 99 | null {
   if (price === 49 || price === "49") return 49;
   if (price === 99 || price === "99") return 99;
   return null;
@@ -24,6 +38,7 @@ function normPrice(price: unknown): 49 | 99 | null {
  */
 function amountTier(price: unknown): number[] | null {
   const arm = normPrice(price);
+  if (arm === 29) return [29, 30];
   if (arm === 49) return [49, 50];
   if (arm === 99) return [99, 100];
   return null;
@@ -35,11 +50,12 @@ function amountTier(price: unknown): number[] | null {
  * fallback so the arm is always recorded on the card + card_paid event even when
  * the client/stored price is missing, which otherwise breaks the A/B paid readout.
  */
-function armFromPaidAmount(amount: unknown): 49 | 99 | null {
+function armFromPaidAmount(amount: unknown): 29 | 49 | 99 | null {
   const n = Math.round(Number(amount));
   if (!Number.isFinite(n)) return null;
   if (n >= 99) return 99;
   if (n >= 49) return 49;
+  if (n >= 29) return 29;
   return null;
 }
 
@@ -248,7 +264,9 @@ router.post("/cards", async (req, res) => {
   try {
     const { id: clientId, template, occasion, recipient_name, message_b64, photo_url, photo_urls, voice_note_url, fbp, fbc, price } =
       req.body as Record<string, unknown>;
-    const priceVal = normPrice(price);
+    // Builder-created cards are only ever ₹49/₹99. ₹29 is reserved for reply
+    // cards minted server-side via POST /cards/reply — never honored here.
+    const priceVal = normClientBodyPrice(price);
 
     // Allow callers to supply a pre-existing client-generated tracking ID
     // (e.g. after UTR payment when the card was created anonymously and never
@@ -325,6 +343,33 @@ router.post("/cards", async (req, res) => {
   } catch (err) {
     console.error("[cards] POST /cards error", err);
     res.status(500).json({ error: "internal_error" });
+  }
+});
+
+/**
+ * POST /api/cards/reply
+ * Public — no auth. Mints a new "Low-Effort Viral Reply" card row with a
+ * server-generated CSPRNG id and price=29. This is the ONLY way the ₹29 tier
+ * gets onto a card: the server fixes the price, the client cannot. The id is
+ * always freshly generated (never client-supplied) so this can never overwrite
+ * or downgrade an existing card. The row is created locked (is_watermarked) and
+ * is flipped to unlocked by pay-unlock once a real ₹29 payment is matched.
+ * Body: { occasion?: string }  (the RECEIVED occasion, stored for analytics)
+ * Returns: { id }
+ */
+router.post("/cards/reply", async (req, res) => {
+  try {
+    const { occasion } = (req.body ?? {}) as { occasion?: unknown };
+    const id = await uniqueId();
+    await pool.query(
+      `INSERT INTO hs_cards (id, template, occasion, is_watermarked, is_premium, price)
+       VALUES ($1, 'reply', $2, TRUE, TRUE, 29)`,
+      [id, typeof occasion === "string" ? occasion.slice(0, 40) : null],
+    );
+    res.json({ id });
+  } catch (err) {
+    console.error("[cards] POST /cards/reply error", err);
+    res.status(500).json({ error: "internal_error", message: "Could not start your reply. Please try again." });
   }
 });
 
@@ -537,7 +582,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
       `SELECT price FROM hs_cards WHERE id = $1`,
       [id],
     );
-    const priceVal = normPrice(stored.rows[0]?.price) ?? normPrice(price);
+    const priceVal = normPrice(stored.rows[0]?.price) ?? normClientBodyPrice(price);
     const tier = amountTier(priceVal);
 
     const { rows } = await pool.query<{ id: number; utr: string; amount: string }>(
@@ -628,7 +673,7 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
       `SELECT price FROM hs_cards WHERE id = $1`,
       [id],
     );
-    const priceVal = normPrice(stored.rows[0]?.price) ?? normPrice(price);
+    const priceVal = normPrice(stored.rows[0]?.price) ?? normClientBodyPrice(price);
     const tier = amountTier(priceVal);
 
     // Match against the last 4 digits of any unused received UTR

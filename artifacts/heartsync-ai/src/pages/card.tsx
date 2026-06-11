@@ -213,7 +213,7 @@ function createConfettiParticles(canvasW: number, colors: string[]): Particle[] 
 
 /* ─────────────────────────── SlideToUnlock ────────────────────── */
 
-function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; isSorry?: boolean }) {
+export function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; isSorry?: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [thumbX, setThumbX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -408,7 +408,7 @@ const GOLD_SPARKLES = [
 const SPARKLE_STAR =
   "polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%)";
 
-function GoldenEnvelope({
+export function GoldenEnvelope({
   recipientName,
   opening,
   isSorry = false,
@@ -1346,7 +1346,7 @@ function MemoryCollage({
 
 /* ─────────────────────── FlowerBurst ────────────────────────── */
 const BURST_FLOWERS = ["🌼","🌻","💛","🌸","✨","🌼","🌻","💛","🌸","✨","🌼","💛","🌸","🌟","🌼","✨"];
-function FlowerBurst() {
+export function FlowerBurst() {
   return (
     <div style={{ position: "fixed", top: "50%", left: "50%", zIndex: 45, pointerEvents: "none" }}>
       {BURST_FLOWERS.map((f, i) => {
@@ -1447,7 +1447,7 @@ const BLOOMS: Bloom[] = [
   { img: anemonePurpleImg, cx: 182, cy: 218, size: 50, rot: 12, z: 5, delay: 0.08, shadow: 0.45 },
 ];
 
-function FloatingBouquet() {
+export function FloatingBouquet() {
   /* The arrangement is authored in a fixed design box; we scale the whole box
    * uniformly so the absolute flower coordinates stay valid (and never clip)
    * on narrow screens. */
@@ -1618,7 +1618,7 @@ const BOUQUET_FLOWER_IMGS = [
 /* A continuous, gentle stream of flowers drifting down from above the screen —
  * each one fades in near the top, sways as it falls, and fades out near the
  * bottom, then repeats forever on its own offset so the flow never stops. */
-function PetalRain({ count = 10 }: { count?: number }) {
+export function PetalRain({ count = 10 }: { count?: number }) {
   const petals = useMemo(
     () =>
       Array.from({ length: count }).map((_, i) => ({
@@ -1792,7 +1792,7 @@ function FlowerExplosion({ count = 30 }: { count?: number }) {
   );
 }
 
-function BouquetScreen({ onContinue }: { onContinue: () => void }) {
+export function BouquetScreen({ onContinue }: { onContinue: () => void }) {
   const [exploding, setExploding] = useState(false);
 
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2565,7 +2565,7 @@ export default function Card() {
               finalMessage={finalMessage}
             />
 
-            {isRecipient && <ViralReplyCTA template="envelope" />}
+            {isRecipient && <ViralReplyCTA template="envelope" occasion={occasion} />}
           </motion.div>
         )}
       </AnimatePresence>

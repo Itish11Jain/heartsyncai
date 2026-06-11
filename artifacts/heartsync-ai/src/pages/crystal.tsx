@@ -993,7 +993,7 @@ export default function CrystalCard() {
             {/* Recipient CTA */}
             {isRecipient && (
               <div style={{ marginTop: 18 }}>
-                <ViralReplyCTA template="crystal" />
+                <ViralReplyCTA template="crystal" occasion={occasion} />
               </div>
             )}
           </motion.div>

@@ -967,7 +967,7 @@ export default function VinylCard() {
                   >
                     {recipCopied ? "✓ Link Saved!" : "🔗 Save this card"}
                   </motion.button>
-                  <ViralReplyCTA template="vinyl" />
+                  <ViralReplyCTA template="vinyl" occasion={occasion} />
                 </motion.div>
               )}
 

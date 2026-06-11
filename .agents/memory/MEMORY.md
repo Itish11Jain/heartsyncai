@@ -11,3 +11,4 @@
 - [Bundle page card previews](bundle-previews.md) — preview grid iframes must load React routes (/card, /cosmic…), never static public/*.html (which don't boot React in dev → frozen splash).
 - [Capability-gated animation](capability-gated-animation.md) — scale anim by device tier; default HIGH, downgrade only on positive low-end signals (iOS Safari lacks deviceMemory, so unknown must stay high).
 - [Payment flow canonical](payment-flow-canonical.md) — manual UPI "I've paid"+UTR is the chosen paywall everywhere; Razorpay was built then fully reverted — do NOT reintroduce without explicit owner request.
+- [₹29 reply price authority](reply-price-authority.md) — ₹29 viral-reply tier is server-only: client bodies accept 49/99 only; ₹29 minted solely via POST /api/cards/reply (CSPRNG id); never reintroduce 29 into client price norm.

@@ -1183,7 +1183,7 @@ export default function CosmicCard() {
                 {/* Recipient viral CTA */}
                 {isRecipient && (
                   <div style={{ marginTop: 16, width: "100%" }}>
-                    <ViralReplyCTA template="cosmic" />
+                    <ViralReplyCTA template="cosmic" occasion={occasion} />
                   </div>
                 )}
               </motion.div>

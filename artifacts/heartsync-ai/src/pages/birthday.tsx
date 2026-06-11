@@ -1435,7 +1435,7 @@ function Scene6({
         {isRecipient && (
           <motion.div style={{ width:"100%", maxWidth:320, marginTop:20 }}
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.6 }}>
-            <ViralReplyCTA template="birthday"/>
+            <ViralReplyCTA template="birthday" occasion="birthday"/>
           </motion.div>
         )}
 

@@ -112,3 +112,17 @@ export function getPriceConfigForOccasion(occasion: string): PriceConfig {
   const price = getOccasionPrice(occasion);
   return { price, anchor: ANCHOR[price] };
 }
+
+/**
+ * Viral reply ("Share Love Back") cards are a fixed, low-friction ₹29 — priced
+ * deliberately below the normal ₹49/₹99 cards to maximise circulation of the
+ * loop. Displayed struck through against a ₹49 anchor everywhere in that flow.
+ * Server-authoritative: the api-server resolves reply cards to ₹29 regardless
+ * of any client-supplied amount.
+ */
+export const REPLY_PRICE = 29;
+export const REPLY_ANCHOR = 49;
+
+export function getReplyPriceConfig(): { price: number; anchor: number } {
+  return { price: REPLY_PRICE, anchor: REPLY_ANCHOR };
+}

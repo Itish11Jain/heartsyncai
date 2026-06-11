@@ -4,20 +4,29 @@ import type { TemplateId } from "@/lib/usage";
 
 interface ViralReplyCTAProps {
   template: TemplateId;
+  /**
+   * The occasion of the card the recipient just RECEIVED. Drives which reply
+   * experience (A Gratitude Bloom / B Blooming Burst / C Playful Forgiveness)
+   * the replier lands on. Defaults to thank_you when unknown.
+   */
+  occasion?: string;
 }
 
-export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
+export default function ViralReplyCTA({ template, occasion = "thank_you" }: ViralReplyCTAProps) {
   useEffect(() => {
     const t = setTimeout(() => {
-      trackEvent({ event: "viral_cta_viewed", template });
+      trackEvent({ event: "viral_cta_viewed", template, occasion });
     }, 2500);
     return () => clearTimeout(t);
-  }, [template]);
+  }, [template, occasion]);
 
   function handleClick() {
-    trackEvent({ event: "viral_cta_clicked", template });
+    trackEvent({ event: "viral_cta_clicked", template, occasion });
     const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-    window.location.href = `${base}/?source=reply&received=${template}&utm_source=viral_reply`;
+    // Land on the dedicated low-effort reply experience (NOT the full builder).
+    // `ro` = received occasion → picks the reply experience; `received` = the
+    // visual template they got (kept for analytics / future theming).
+    window.location.href = `${base}/reply?ro=${encodeURIComponent(occasion)}&received=${encodeURIComponent(template)}&utm_source=viral_reply`;
   }
 
   return (
@@ -54,7 +63,7 @@ export default function ViralReplyCTA({ template }: ViralReplyCTAProps) {
         Feeling the love?
       </p>
       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginBottom: 14, lineHeight: 1.55 }}>
-        Create a card yourself to make someone feel special. ✨
+        Send a little love back — one tap, no writing needed. ✨
       </p>
 
       <button
