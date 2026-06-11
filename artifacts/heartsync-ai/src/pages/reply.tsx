@@ -65,6 +65,33 @@ function isValidPayCode(v: string): boolean {
   return /^\d{4}$/.test(v.trim()) && !isSequentialCode(v);
 }
 
+/* ── "Preview already seen" memory ──────────────────────────────────────────
+ * A replier URL carries no unique card id (only the received occasion +
+ * template), so we key this lightweight client-only flag on that reply context.
+ * It is set once an unpaid replier reaches the final pay screen having watched
+ * the whole preview; on their next visit to the same reply link we skip the
+ * intro/envelope/bloom and open straight on the pay screen. */
+const REPLY_SEEN_PREFIX = "hs_reply_seen_";
+function replyContextKey(receivedOccasion: string, received: string): string {
+  return `${REPLY_SEEN_PREFIX}${receivedOccasion}|${received}`;
+}
+function replyPreviewSeen(receivedOccasion: string, received: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(replyContextKey(receivedOccasion, received)) === "1";
+  } catch {
+    return false;
+  }
+}
+function markReplyPreviewSeen(receivedOccasion: string, received: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(replyContextKey(receivedOccasion, received), "1");
+  } catch {
+    /* storage unavailable (private mode / quota) — non-fatal, just no skip */
+  }
+}
+
 type Variant = "A" | "B" | "C";
 
 /** Pick the reply experience from the occasion the user just RECEIVED. */
@@ -513,7 +540,13 @@ export default function ReplyExperience() {
 
   // The replier (arriving from "Send Love") first sees a "Your reply is ready"
   // gate; the original sender opening the finished reply (id present) skips it.
-  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : isPreview ? "envelope" : devPaidPreview ? "send" : "intro");
+  // A returning UNPAID replier who already watched the whole preview once lands
+  // straight on the final pay screen — no intro/envelope/bloom replay.
+  const skipToPay =
+    !sharedId && !isPreview && !devPaidPreview && replyPreviewSeen(receivedOccasion, received);
+  const [phase, setPhase] = useState<Phase>(
+    sharedId ? "envelope" : isPreview ? "envelope" : devPaidPreview ? "send" : skipToPay ? "send" : "intro",
+  );
   const [opening, setOpening] = useState(false);
 
   // Replier payment + share state
@@ -614,6 +647,14 @@ export default function ReplyExperience() {
     setPhase("send");
     trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 2 });
   }
+
+  // Once a real (non-recipient) unpaid replier reaches the final pay screen,
+  // remember it so a return visit to this same reply link skips straight here.
+  useEffect(() => {
+    if (phase !== "send") return;
+    if (isRecipient || isPreview || devPaidPreview || paid) return;
+    markReplyPreviewSeen(receivedOccasion, received);
+  }, [phase, isRecipient, isPreview, devPaidPreview, paid, receivedOccasion, received]);
 
   // Receiver (original sender opening the finished reply) replays the card from
   // the very start — back to the sealed envelope, ready to be opened again.
