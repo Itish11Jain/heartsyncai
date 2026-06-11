@@ -15,3 +15,4 @@
 - [Reply flow screen-1 by variant](reply-screen1.md) — each /reply variant has its own open-me: A birthday=blush envelope (no "To:")+floating roses+twinkles; B others=tap-to-burst spinning flower; C sorry=MendingHeart.
 - [Reply ₹29 paywall mirrors UnlockModal](reply-paywall-modal.md) — /reply paywall replicates UnlockModal "Complete payment" (copy-gated I've-Paid + UTR poll), NOT the QR layout; mint up-front; copy gate sticky.
 - [OG/social link previews](og-share-previews.md) — crawlers don't run JS; per-route OG = build-time clone of built index.html → /<route>/index.html (prerender-share-pages.mjs); OG images are committed static assets, NOT build-generated.
+- [Reply flow chrome](reply-flow-chrome.md) — owner rule: BrandMark only on FIRST + each persona's LAST screen (nowhere between); Twinkles on EVERY reply screen.

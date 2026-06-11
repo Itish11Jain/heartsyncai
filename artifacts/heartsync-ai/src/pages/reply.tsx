@@ -338,6 +338,45 @@ function Twinkles() {
   );
 }
 
+/* ── Subtle HeartSync AI brand mark — used ONLY on the first (intro) and the
+ * last (recipient bloom / replier share) screens, nowhere in between. ────── */
+function BrandMark() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "relative",
+        zIndex: 2,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        marginTop: 6,
+        opacity: 0.5,
+        pointerEvents: "none",
+      }}
+    >
+      <Heart
+        className="w-3 h-3"
+        style={{ color: "rgba(255,215,0,0.85)" }}
+        fill="rgba(255,215,0,0.85)"
+      />
+      <span
+        style={{
+          fontFamily: "inherit",
+          color: "rgba(255,255,255,0.6)",
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+        }}
+      >
+        HeartSync AI
+      </span>
+    </div>
+  );
+}
+
 /* ── Non-sorry, non-birthday reply (variant B), screen 1 ──────────────────
  * One big bouquet bloom sits dead-center, slowly rotating. A tap shatters it
  * into its OWN petals (same pink rose, a few cosmos petals mixed in) that
@@ -961,6 +1000,9 @@ export default function ReplyExperience() {
                 </span>
               </motion.button>
             </motion.div>
+
+            {/* Brand mark — first screen */}
+            <BrandMark />
           </motion.div>
         )}
 
@@ -978,13 +1020,10 @@ export default function ReplyExperience() {
               gap: "min(30px, 6vw)", padding: "32px 22px",
             }}
           >
-            {/* Birthday reply: drifting pink roses + background twinkles */}
-            {variant === "A" && (
-              <>
-                <Twinkles />
-                <FloatingFlowers />
-              </>
-            )}
+            {/* Twinkling starlight behind every reply screen */}
+            <Twinkles />
+            {/* Birthday reply: drifting pink roses layered over the twinkles */}
+            {variant === "A" && <FloatingFlowers />}
 
             <motion.p
               initial={{ opacity: 0, y: -10 }}
@@ -1053,6 +1092,7 @@ export default function ReplyExperience() {
             }}
           >
             <PetalRain count={petalCount} />
+            <Twinkles />
 
             <motion.div
               style={{ position: "relative", zIndex: 1 }}
@@ -1093,6 +1133,9 @@ export default function ReplyExperience() {
                 {isRecipient ? "↻ Replay" : "Continue →"}
               </motion.button>
             )}
+
+            {/* Brand mark — the recipient's final (looping) screen */}
+            {isRecipient && <BrandMark />}
           </motion.div>
         )}
 
@@ -1113,7 +1156,7 @@ export default function ReplyExperience() {
           >
             <PetalRain count={Math.max(4, Math.round(petalCount / 2))} />
 
-            {!isRecipient && !paid && <Twinkles />}
+            <Twinkles />
 
             {(isRecipient || paid) && <FlowerBurst />}
 
@@ -1286,6 +1329,9 @@ export default function ReplyExperience() {
                     <span style={{ color: "rgba(255,215,0,0.6)", fontSize: 14 }}>→</span>
                   </div>
                 </a>
+
+                {/* Brand mark — replier's final (share) screen */}
+                <BrandMark />
               </div>
             ) : (
               /* ─── Replier preview → pay ₹29 to share ─── */
