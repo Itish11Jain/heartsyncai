@@ -428,6 +428,7 @@ export default function ReplyExperience() {
   const received = q.get("received") || "envelope";
   const sharedId = q.get("id"); // present only when the original sender opens the paid reply
   const isRecipient = !!sharedId; // the original sender viewing the finished reply
+  const isPreview = !sharedId && q.get("pv") === "1"; // small, non-interactive in-iframe card preview
 
   const variant = variantFor(receivedOccasion);
   const content = CONTENT[variant];
@@ -435,7 +436,7 @@ export default function ReplyExperience() {
 
   // The replier (arriving from "Send Love") first sees a "Your reply is ready"
   // gate; the original sender opening the finished reply (id present) skips it.
-  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : "intro");
+  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : isPreview ? "bloom" : "intro");
   const [opening, setOpening] = useState(false);
 
   // Replier payment + share state
@@ -455,6 +456,7 @@ export default function ReplyExperience() {
   useEffect(() => {
     if (openedRef.current) return;
     openedRef.current = true;
+    if (isPreview) return; // silent in-iframe preview — don't skew the funnel
     if (isRecipient) {
       trackEvent({
         event: "card_viewed",
@@ -853,23 +855,25 @@ export default function ReplyExperience() {
               {content.bloomMessage[1]}
             </motion.p>
 
-            <motion.button
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.1, duration: 0.5 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={handleBloomContinue}
-              style={{
-                position: "relative", zIndex: 1, marginTop: 4,
-                padding: "12px 44px", borderRadius: 999, border: "none", cursor: "pointer",
-                background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
-                color: "#5A3A05", fontSize: 20, fontWeight: 700,
-                fontFamily: "'Dancing Script', cursive",
-                boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
-              }}
-            >
-              Continue →
-            </motion.button>
+            {!isPreview && (
+              <motion.button
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.1, duration: 0.5 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={handleBloomContinue}
+                style={{
+                  position: "relative", zIndex: 1, marginTop: 4,
+                  padding: "12px 44px", borderRadius: 999, border: "none", cursor: "pointer",
+                  background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
+                  color: "#5A3A05", fontSize: 20, fontWeight: 700,
+                  fontFamily: "'Dancing Script', cursive",
+                  boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
+                }}
+              >
+                Continue →
+              </motion.button>
+            )}
           </motion.div>
         )}
 
@@ -889,6 +893,8 @@ export default function ReplyExperience() {
             }}
           >
             <PetalRain count={Math.max(4, Math.round(petalCount / 2))} />
+
+            {!isRecipient && !paid && <Twinkles />}
 
             {(isRecipient || paid) && <FlowerBurst />}
 
@@ -950,16 +956,57 @@ export default function ReplyExperience() {
               </div>
             ) : (
               /* ─── Replier preview → pay ₹29 to share ─── */
-              <div style={{ position: "relative", zIndex: 2, textAlign: "center", width: "min(360px, 90vw)" }}>
-                <Heart className="w-7 h-7 mx-auto mb-2" style={{ color: "#FFD700" }} />
-                <p style={{ ...goldText, fontSize: "min(27px, 6.8vw)", fontWeight: 700, margin: "0 0 6px" }}>
+              <div
+                style={{
+                  position: "relative", zIndex: 2, textAlign: "center",
+                  width: "min(360px, 92vw)", maxHeight: "92vh", overflowY: "auto",
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                }}
+              >
+                <p style={{ ...goldText, fontSize: "min(28px, 7vw)", fontWeight: 700, margin: "0 0 12px" }}>
                   Your reply is ready
                 </p>
-                <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
-                  Send it back for just{" "}
-                  <span style={{ textDecoration: "line-through", opacity: 0.45 }}>₹{anchor}</span>{" "}
-                  <span style={{ color: "#FFD700", fontWeight: 700 }}>₹{price}</span> — no sign-in needed.
+
+                {/* Live preview of the card they just saw */}
+                <div
+                  style={{
+                    position: "relative", width: 188, height: 280, borderRadius: 22,
+                    overflow: "hidden", flex: "0 0 auto", marginBottom: 14,
+                    border: "1px solid rgba(255,215,120,0.35)",
+                    boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 0 6px rgba(255,215,120,0.06)",
+                  }}
+                >
+                  <iframe
+                    title="Your reply preview"
+                    src={`${BASE}/reply?pv=1&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`}
+                    scrolling="no"
+                    style={{
+                      width: 376, height: 560, border: "none",
+                      transform: "scale(0.5)", transformOrigin: "top left",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
+
+                <p style={{ color: "rgba(255,255,255,0.74)", fontSize: 13.5, lineHeight: 1.65, margin: "0 0 16px", maxWidth: 322 }}>
+                  They put a lot of effort into making you a custom card. You can do at
+                  least this much — it&rsquo;ll surprise them and make them feel truly
+                  valued. 💛
                 </p>
+
+                {/* What you get */}
+                <div style={{ width: "100%", textAlign: "left", margin: "0 0 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[
+                    "Easy UPI payment",
+                    "Get a shareable link after payment",
+                    "Share on WhatsApp or Instagram",
+                  ].map((b) => (
+                    <div key={b} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Check className="w-4 h-4" style={{ color: "#FFD700", flex: "0 0 auto" }} />
+                      <span style={{ color: "rgba(255,255,255,0.84)", fontSize: 13.5 }}>{b}</span>
+                    </div>
+                  ))}
+                </div>
 
                 <button
                   onClick={openPay}
@@ -968,9 +1015,12 @@ export default function ReplyExperience() {
                     background: "linear-gradient(135deg, #FFD700, #FFA500)",
                     color: "#1a0800", fontWeight: 700, fontSize: 16,
                     boxShadow: "0 4px 18px rgba(255,180,0,0.35)",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7,
                   }}
                 >
-                  Pay ₹{price} &amp; share 💛
+                  Pay{" "}
+                  <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 600 }}>₹{anchor}</span>{" "}
+                  ₹{price} &amp; Share 💛
                 </button>
               </div>
             )}

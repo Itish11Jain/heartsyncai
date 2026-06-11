@@ -30,3 +30,17 @@ has an optional `label` prop (additive; default unchanged for the card page). Th
 `GoldenEnvelope` "To:" block is gated on a truthy `recipientName`, so passing "" hides it
 — don't pass an empty name on the card page if you want the label shown. Page background
 also flips: sorry uses a deeper crimson radial, A/B use the softer blush-dark radial.
+
+## Send/pay screen (phase "send") + in-iframe card preview
+
+The replier's final "send" pay screen embeds a **live self-preview of the reply card by
+loading `/reply` in an `<iframe>` with a `pv=1` preview flag** (no `id`). Preview mode must
+stay **silent and non-interactive**: it boots to the `bloom` reveal, hides the advance
+button so it can never reach `send`, and early-returns out of the analytics effect so the
+embed fires no funnel/`card_viewed` events.
+**Why:** owner wanted the user to see the card they're about to send, with value-
+justification copy + benefit bullets + a struck-through ₹49→₹29 CTA — without the embed
+skewing analytics or recursively spawning more preview iframes.
+**How to apply:** any new reply phase or analytics event must respect the `isPreview` guard,
+and the preview iframe URL must never carry an `id` (keeps it non-recursive). The pay branch
+scrolls itself — don't rely on the shared `overflow:hidden` send container to size it.
