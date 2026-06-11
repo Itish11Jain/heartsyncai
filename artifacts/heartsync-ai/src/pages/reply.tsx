@@ -1414,6 +1414,9 @@ export default function ReplyExperience() {
                   <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 600 }}>₹{anchor}</span>{" "}
                   ₹{price} &amp; Share 💛
                 </button>
+
+                {/* Brand mark — replier's last screen before paying */}
+                <BrandMark />
               </div>
             )}
           </motion.div>
