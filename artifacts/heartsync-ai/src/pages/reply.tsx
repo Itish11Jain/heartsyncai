@@ -656,13 +656,17 @@ export default function ReplyExperience() {
               position: "fixed", inset: 0, zIndex: 30,
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
-              gap: "min(26px, 5.5vw)", padding: "32px 24px", textAlign: "center",
+              gap: "min(22px, 4.8vw)", padding: "32px 24px", textAlign: "center",
             }}
           >
+            {/* twinkling, drifting starlight behind the intro — all templates */}
+            <Twinkles />
+
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", damping: 12, stiffness: 130, delay: 0.1 }}
+              style={{ position: "relative", zIndex: 2 }}
             >
               <Heart className="w-12 h-12 mx-auto" style={{ color: "#FFD700", filter: "drop-shadow(0 4px 14px rgba(255,180,0,0.45))" }} />
             </motion.div>
@@ -671,18 +675,32 @@ export default function ReplyExperience() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              style={{ ...goldText, fontSize: "min(34px, 8.4vw)", fontWeight: 700, margin: 0, maxWidth: 340 }}
+              style={{ ...goldText, position: "relative", zIndex: 2, fontSize: "min(34px, 8.4vw)", fontWeight: 700, margin: 0, maxWidth: 360, lineHeight: 1.15 }}
             >
-              Your reply is ready
+              A little something back, just for them 💛
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45, duration: 0.6 }}
+              style={{
+                position: "relative", zIndex: 2, margin: 0, maxWidth: 320,
+                color: "rgba(255,255,255,0.78)",
+                fontSize: "min(16px, 4.2vw)", lineHeight: 1.5,
+              }}
+            >
+              Your reply is ready — preview it, then send it to the heart who first thought of you.
             </motion.p>
 
             <motion.button
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55, duration: 0.5 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
               whileTap={{ scale: 0.96 }}
               onClick={handleIntroContinue}
               style={{
+                position: "relative", zIndex: 2,
                 padding: "14px 40px", borderRadius: 999, border: "none", cursor: "pointer",
                 background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
                 color: "#5A3A05", fontSize: 20, fontWeight: 700,
@@ -691,7 +709,7 @@ export default function ReplyExperience() {
                 display: "inline-flex", alignItems: "center", gap: 8,
               }}
             >
-              Click here to see <ArrowRight className="w-4 h-4" />
+              Preview Now! <ArrowRight className="w-4 h-4" />
             </motion.button>
           </motion.div>
         )}
