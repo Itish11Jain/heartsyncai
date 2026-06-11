@@ -675,9 +675,11 @@ export default function ReplyExperience() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              style={{ ...goldText, position: "relative", zIndex: 2, fontSize: "min(34px, 8.4vw)", fontWeight: 700, margin: 0, maxWidth: 360, lineHeight: 1.15 }}
+              style={{ ...goldText, position: "relative", zIndex: 2, fontSize: "min(34px, 8.4vw)", fontWeight: 700, margin: 0, maxWidth: 360, lineHeight: 1.18 }}
             >
-              A little something back, just for them 💛
+              A little something back,
+              <br />
+              just for them 💛
             </motion.p>
 
             <motion.p
@@ -685,32 +687,59 @@ export default function ReplyExperience() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45, duration: 0.6 }}
               style={{
-                position: "relative", zIndex: 2, margin: 0, maxWidth: 320,
-                color: "rgba(255,255,255,0.78)",
+                ...goldText,
+                fontFamily: "inherit",
+                fontWeight: 600,
+                position: "relative", zIndex: 2, margin: 0, maxWidth: 340,
                 fontSize: "min(16px, 4.2vw)", lineHeight: 1.5,
               }}
             >
               Your reply is ready — preview it, then send it to the heart who first thought of you.
             </motion.p>
 
-            <motion.button
+            <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.5 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={handleIntroContinue}
-              style={{
-                position: "relative", zIndex: 2,
-                padding: "14px 40px", borderRadius: 999, border: "none", cursor: "pointer",
-                background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
-                color: "#5A3A05", fontSize: 20, fontWeight: 700,
-                fontFamily: "'Dancing Script', cursive",
-                boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
-                display: "inline-flex", alignItems: "center", gap: 8,
-              }}
+              style={{ position: "relative", zIndex: 2 }}
             >
-              Preview Now! <ArrowRight className="w-4 h-4" />
-            </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                animate={{
+                  scale: [1, 1.045, 1],
+                  boxShadow: [
+                    "0 8px 26px rgba(224,165,46,0.5)",
+                    "0 12px 36px rgba(224,165,46,0.9)",
+                    "0 8px 26px rgba(224,165,46,0.5)",
+                  ],
+                }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                onClick={handleIntroContinue}
+                style={{
+                  position: "relative", overflow: "hidden",
+                  padding: "14px 40px", borderRadius: 999, border: "none", cursor: "pointer",
+                  background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
+                  color: "#5A3A05", fontSize: 20, fontWeight: 700,
+                  fontFamily: "'Dancing Script', cursive",
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                }}
+              >
+                {/* sweeping shine */}
+                <motion.span
+                  aria-hidden
+                  animate={{ x: ["-130%", "230%"] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
+                  style={{
+                    position: "absolute", top: 0, bottom: 0, left: 0, width: "45%",
+                    background: "linear-gradient(105deg, transparent, rgba(255,255,255,0.7), transparent)",
+                    transform: "skewX(-18deg)", pointerEvents: "none",
+                  }}
+                />
+                <span style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  Preview Now! <ArrowRight className="w-4 h-4" />
+                </span>
+              </motion.button>
+            </motion.div>
           </motion.div>
         )}
 
