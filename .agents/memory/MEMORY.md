@@ -14,3 +14,4 @@
 - [₹29 reply price authority](reply-price-authority.md) — ₹29 viral-reply tier is server-only: client bodies accept 49/99 only; ₹29 minted solely via POST /api/cards/reply (CSPRNG id); never reintroduce 29 into client price norm.
 - [Reply flow screen-1 by variant](reply-screen1.md) — each /reply variant has its own open-me: A birthday=blush envelope (no "To:")+floating roses+twinkles; B others=tap-to-burst spinning flower; C sorry=MendingHeart.
 - [Reply ₹29 paywall mirrors UnlockModal](reply-paywall-modal.md) — /reply paywall replicates UnlockModal "Complete payment" (copy-gated I've-Paid + UTR poll), NOT the QR layout; mint up-front; copy gate sticky.
+- [OG/social link previews](og-share-previews.md) — crawlers don't run JS; per-route OG = build-time clone of built index.html → /<route>/index.html (prerender-share-pages.mjs); OG images are committed static assets, NOT build-generated.
