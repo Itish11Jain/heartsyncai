@@ -6,21 +6,27 @@ description: Which "open me" visual the /reply first screen uses per received-oc
 # Reply flow (/reply) — screen 1 visual per variant
 
 The reply experience's first screen (the "open me" hero) is chosen by the RECEIVED
-occasion, and it is **not** the same mapping as the main card builder:
+occasion, and each of the three variants now has its OWN distinct screen 1 (this is
+deliberately not the same mapping as the main card builder):
 
-- **Non-sorry replies (variant A birthday, variant B feel_good/thank_you/congratulations/
-  anniversary/default):** use the **blush GoldenEnvelope** (`isSorry` styling) + the
-  blush rose slider ("Slide the rose to open").
-- **Sorry reply (variant C):** uses a bespoke **kintsugi "MendingHeart"** — a cracked
-  crimson heart whose two halves draw together and seal with a glowing gold seam on
-  unlock — with a plain slider labelled "Slide to forgive". Defined inline in reply.tsx.
+- **Variant A — birthday** (`ro=birthday`): blush **GoldenEnvelope** + blush rose
+  slider ("Slide the rose to open"), PLUS drifting pink-rose decor (`FloatingFlowers`,
+  varied sizes) and `Twinkles` background sparkles. The envelope shows **no "To:"
+  name** (the reply card has no named recipient).
+- **Variant B — every other non-sorry occasion** (thank_you / feel_good /
+  congratulations / anniversary / default): a single large bouquet bloom centered and
+  slowly rotating (`SpinningFlower`); **tap it** and it bursts into flying petals, then
+  advances. No envelope, no slider — just a "Tap the flower" hint.
+- **Variant C — sorry** (`ro=sorry`): bespoke kintsugi **MendingHeart** + plain slider
+  labelled "Slide to forgive".
 
-**Why:** the owner wanted the pretty blush envelope as the default for the happy
-replies, and asked for something *new and original* (not an envelope) specifically for
-the sorry reply. So the blush look was deliberately moved off sorry and onto everything
-else, and sorry got its own concept.
+**Why:** the owner wanted the blush envelope reserved for birthday (with floaty decor),
+something brand-new and tap-driven for the generic happy replies, and a distinct
+forgiveness concept for sorry. Each variant must feel different on open.
 
-**How to apply:** if you touch the reply screen-1 gating, keep this inversion. The page
-background also flips: non-sorry uses the soft blush-dark radial; sorry uses a deeper
-crimson radial to suit the heart. `SlideToUnlock` gained an optional `label` prop for the
-"Slide to forgive" copy — additive, default behaviour unchanged for the card page.
+**How to apply:** route screen-1 visuals on `variant` (A/B/C), not on `content.isSorry`.
+B's flower advances via the same `handleUnlock` (tap → `opening` → bloom). `SlideToUnlock`
+has an optional `label` prop (additive; default unchanged for the card page). The
+`GoldenEnvelope` "To:" block is gated on a truthy `recipientName`, so passing "" hides it
+— don't pass an empty name on the card page if you want the label shown. Page background
+also flips: sorry uses a deeper crimson radial, A/B use the softer blush-dark radial.

@@ -560,26 +560,30 @@ export function GoldenEnvelope({
           </>
         )}
 
-        {/* To label — centered at bottom, prominent */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontFamily: isSorry ? "'Dancing Script', cursive" : "Georgia, serif",
-            fontSize: isSorry ? "min(18px, 4.6vw)" : "min(15px, 3.8vw)",
-            color: pal.toLabel,
-            fontStyle: isSorry ? "normal" : "italic",
-            textAlign: "center",
-            whiteSpace: "nowrap",
-          }}
-        >
-          To:{" "}
-          <span style={{ fontWeight: 800, fontSize: isSorry ? "min(22px, 5.6vw)" : "min(18px, 4.6vw)", color: pal.toName }}>
-            {recipientName}
-          </span>
-        </div>
+        {/* To label — centered at bottom, prominent. Hidden when no recipient
+            name is supplied (e.g. the viral-reply flow, where the card has no
+            named recipient yet). */}
+        {recipientName && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "10%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontFamily: isSorry ? "'Dancing Script', cursive" : "Georgia, serif",
+              fontSize: isSorry ? "min(18px, 4.6vw)" : "min(15px, 3.8vw)",
+              color: pal.toLabel,
+              fontStyle: isSorry ? "normal" : "italic",
+              textAlign: "center",
+              whiteSpace: "nowrap",
+            }}
+          >
+            To:{" "}
+            <span style={{ fontWeight: 800, fontSize: isSorry ? "min(22px, 5.6vw)" : "min(18px, 4.6vw)", color: pal.toName }}>
+              {recipientName}
+            </span>
+          </div>
+        )}
 
         {/* Corner decoration */}
         <div

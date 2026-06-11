@@ -16,6 +16,14 @@ import {
   FlowerBurst,
 } from "@/pages/card";
 
+/* Reuse the exact flower sprites the bouquet/envelope use. rose_pink is the same
+ * bloom tucked into the sorry envelope; the others give the burst variety. */
+import rosePinkImg from "@assets/flowers/rose_pink.webp";
+import cosmosPinkImg from "@assets/flowers/cosmos_pink.webp";
+import anemonePurpleImg from "@assets/flowers/anemone_purple.webp";
+import daisyWhiteImg from "@assets/flowers/daisy_white.webp";
+import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.webp";
+
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 /* ── Manual UPI details (identical to the builder paywall) ─────────────── */
@@ -209,6 +217,203 @@ function MendingHeart({ opening }: { opening: boolean }) {
   );
 }
 
+/* ── Birthday reply, screen-1 decor: pink roses drifting at varied sizes ──── */
+const FLOAT_FLOWERS = [
+  { left: "8%",  top: "12%", size: 46, dur: 7,   delay: 0,   rot: -12, op: 0.85 },
+  { left: "82%", top: "10%", size: 64, dur: 8.5, delay: 0.6, rot: 10,  op: 0.9 },
+  { left: "20%", top: "68%", size: 80, dur: 9,   delay: 0.3, rot: -8,  op: 0.88 },
+  { left: "73%", top: "73%", size: 54, dur: 7.5, delay: 1.1, rot: 14,  op: 0.85 },
+  { left: "49%", top: "5%",  size: 34, dur: 6.5, delay: 0.9, rot: 6,   op: 0.8  },
+  { left: "5%",  top: "44%", size: 38, dur: 8,   delay: 1.4, rot: -16, op: 0.8  },
+  { left: "88%", top: "46%", size: 42, dur: 7.2, delay: 0.2, rot: 12,  op: 0.82 },
+  { left: "33%", top: "85%", size: 30, dur: 6.8, delay: 1.7, rot: -6,  op: 0.78 },
+  { left: "61%", top: "87%", size: 50, dur: 8.8, delay: 0.5, rot: 9,   op: 0.82 },
+  { left: "14%", top: "26%", size: 28, dur: 6.2, delay: 2.0, rot: 4,   op: 0.72 },
+  { left: "90%", top: "27%", size: 32, dur: 7.6, delay: 1.2, rot: -10, op: 0.74 },
+];
+
+function FloatingFlowers() {
+  const flowers = useMemo(() => FLOAT_FLOWERS.slice(0, scaleCount(FLOAT_FLOWERS.length)), []);
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      {flowers.map((f, i) => (
+        <motion.img
+          key={i}
+          src={rosePinkImg}
+          alt=""
+          aria-hidden
+          draggable={false}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: f.op, scale: 1, y: [0, -16, 0], rotate: [f.rot - 7, f.rot + 7, f.rot - 7] }}
+          transition={{
+            opacity: { duration: 1, delay: f.delay * 0.3 },
+            scale: { duration: 1, delay: f.delay * 0.3 },
+            y: { duration: f.dur, delay: f.delay, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: f.dur, delay: f.delay, repeat: Infinity, ease: "easeInOut" },
+          }}
+          style={{
+            position: "absolute",
+            left: f.left,
+            top: f.top,
+            width: f.size,
+            height: f.size,
+            objectFit: "contain",
+            filter: "drop-shadow(0 6px 12px rgba(120,40,70,0.4))",
+            willChange: "transform",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Twinkles() {
+  const stars = useMemo(
+    () =>
+      Array.from({ length: scaleCount(22) }).map(() => ({
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        size: 2 + Math.random() * 4,
+        dur: 1.6 + Math.random() * 2.2,
+        delay: Math.random() * 3,
+      })),
+    [],
+  );
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      {stars.map((s, i) => (
+        <motion.div
+          key={i}
+          animate={{ opacity: [0.1, 1, 0.1], scale: [0.6, 1.2, 0.6] }}
+          transition={{ duration: s.dur, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
+          style={{
+            position: "absolute",
+            left: `${s.left}%`,
+            top: `${s.top}%`,
+            width: s.size,
+            height: s.size,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,225,150,0.5) 50%, transparent 70%)",
+            boxShadow: "0 0 6px rgba(255,235,180,0.7)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── Non-sorry, non-birthday reply (variant B), screen 1 ──────────────────
+ * One big bouquet bloom sits dead-center, slowly rotating. A tap bursts it
+ * into a shower of petals (reusing the bouquet sprites) and advances to the
+ * bloom screen. */
+const BURST_PETALS = [rosePinkImg, cosmosPinkImg, anemonePurpleImg, daisyWhiteImg, ranunculusYellowImg];
+
+function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () => void }) {
+  const shards = useMemo(() => {
+    const n = scaleCount(16);
+    return Array.from({ length: n }).map((_, i) => {
+      const angle = (i / n) * 360 + (Math.random() - 0.5) * 18;
+      const rad = (angle * Math.PI) / 180;
+      const dist = 120 + Math.random() * 150;
+      return {
+        img: BURST_PETALS[i % BURST_PETALS.length],
+        x: Math.cos(rad) * dist,
+        y: Math.sin(rad) * dist,
+        size: 26 + Math.random() * 30,
+        rot: (Math.random() - 0.5) * 360,
+        delay: Math.random() * 0.08,
+      };
+    });
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "min(248px, 64vw)",
+        height: "min(248px, 64vw)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {/* soft glow */}
+      <motion.div
+        animate={{
+          opacity: exploding ? [0.6, 0.9, 0] : [0.3, 0.5, 0.3],
+          scale: exploding ? [1, 1.6, 2] : [1, 1.08, 1],
+        }}
+        transition={{ duration: exploding ? 0.7 : 5, repeat: exploding ? 0 : Infinity, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          inset: "8%",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255,150,190,0.5), transparent 70%)",
+          filter: "blur(10px)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* petals fly outward on explode */}
+      {exploding &&
+        shards.map((s, i) => (
+          <motion.img
+            key={i}
+            src={s.img}
+            alt=""
+            aria-hidden
+            draggable={false}
+            initial={{ x: 0, y: 0, scale: 0.4, opacity: 0, rotate: 0 }}
+            animate={{ x: s.x, y: s.y, scale: [0.6, 1, 0.7], opacity: [1, 1, 0], rotate: s.rot }}
+            transition={{ duration: 0.85, delay: s.delay, ease: "easeOut" }}
+            style={{
+              position: "absolute",
+              width: s.size,
+              height: s.size,
+              objectFit: "contain",
+              filter: "drop-shadow(0 4px 8px rgba(120,40,70,0.4))",
+              pointerEvents: "none",
+              zIndex: 3,
+            }}
+          />
+        ))}
+
+      {/* the hero bloom — rotates forever, tap to burst */}
+      <motion.img
+        src={rosePinkImg}
+        alt="Tap to open"
+        draggable={false}
+        onClick={() => {
+          if (!exploding) onTap();
+        }}
+        animate={
+          exploding
+            ? { scale: [1, 1.25, 0], opacity: [1, 1, 0], rotate: 90 }
+            : { rotate: 360, scale: [1, 1.05, 1] }
+        }
+        transition={
+          exploding
+            ? { duration: 0.7, ease: "easeIn" }
+            : {
+                rotate: { duration: 11, repeat: Infinity, ease: "linear" },
+                scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+              }
+        }
+        style={{
+          position: "relative",
+          zIndex: 2,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          cursor: exploding ? "default" : "pointer",
+          filter: "drop-shadow(0 12px 26px rgba(150,40,90,0.5))",
+          touchAction: "manipulation",
+        }}
+      />
+    </div>
+  );
+}
+
 export default function ReplyExperience() {
   const q = useQuery();
   const receivedOccasion = q.get("ro") || "thank_you";
@@ -266,9 +471,21 @@ export default function ReplyExperience() {
     trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 0 });
   }
 
+  // Idempotent: a slide and (variant B) a flower tap both call this, so guard
+  // against fast double-fires queueing duplicate timers / analytics.
+  const unlockingRef = useRef(false);
+  const unlockTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (unlockTimerRef.current) window.clearTimeout(unlockTimerRef.current);
+    },
+    [],
+  );
   function handleUnlock() {
+    if (unlockingRef.current) return;
+    unlockingRef.current = true;
     setOpening(true);
-    window.setTimeout(() => {
+    unlockTimerRef.current = window.setTimeout(() => {
       setPhase("bloom");
       trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 1 });
     }, 750);
@@ -468,7 +685,7 @@ export default function ReplyExperience() {
           </motion.div>
         )}
 
-        {/* ════════ SCREEN 1 — ENVELOPE ════════ */}
+        {/* ════════ SCREEN 1 — OPEN-ME (envelope / flower / mending heart) ════════ */}
         {phase === "envelope" && (
           <motion.div
             key="reply-envelope"
@@ -482,35 +699,62 @@ export default function ReplyExperience() {
               gap: "min(30px, 6vw)", padding: "32px 22px",
             }}
           >
+            {/* Birthday reply: drifting pink roses + background twinkles */}
+            {variant === "A" && (
+              <>
+                <Twinkles />
+                <FloatingFlowers />
+              </>
+            )}
+
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.6 }}
-              style={{ ...goldText, fontSize: "min(26px, 6.6vw)", fontWeight: 600, textAlign: "center", margin: 0, maxWidth: 340 }}
+              style={{ ...goldText, position: "relative", zIndex: 2, fontSize: "min(26px, 6.6vw)", fontWeight: 600, textAlign: "center", margin: 0, maxWidth: 340 }}
             >
               {content.envelopeHeadline}
             </motion.p>
 
-            {content.isSorry ? (
-              <MendingHeart opening={opening} />
-            ) : (
-              <GoldenEnvelope recipientName="" opening={opening} isSorry />
-            )}
+            <div style={{ position: "relative", zIndex: 2, display: "flex", justifyContent: "center", width: "100%" }}>
+              {variant === "C" ? (
+                <MendingHeart opening={opening} />
+              ) : variant === "B" ? (
+                <SpinningFlower exploding={opening} onTap={handleUnlock} />
+              ) : (
+                <GoldenEnvelope recipientName="" opening={opening} isSorry />
+              )}
+            </div>
 
-            {!opening && (
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                style={{ width: "min(320px, 86vw)" }}
-              >
-                <SlideToUnlock
-                  onUnlock={handleUnlock}
-                  isSorry={!content.isSorry}
-                  label={content.isSorry ? "Slide to forgive →" : undefined}
-                />
-              </motion.div>
-            )}
+            {!opening &&
+              (variant === "B" ? (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0.55, 1, 0.55] }}
+                  transition={{ delay: 0.6, duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                  style={{
+                    position: "relative", zIndex: 2, margin: 0,
+                    color: "rgba(255,255,255,0.72)",
+                    fontFamily: "'Dancing Script', cursive",
+                    fontSize: "min(22px, 5.6vw)", fontWeight: 600,
+                  }}
+                >
+                  Tap the flower 🌸
+                </motion.p>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.6 }}
+                  style={{ position: "relative", zIndex: 2, width: "min(320px, 86vw)" }}
+                >
+                  <SlideToUnlock
+                    onUnlock={handleUnlock}
+                    isSorry={variant === "A"}
+                    label={variant === "C" ? "Slide to forgive →" : undefined}
+                  />
+                </motion.div>
+              ))}
           </motion.div>
         )}
 
