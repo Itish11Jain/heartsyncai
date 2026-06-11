@@ -484,6 +484,7 @@ export default function ReplyExperience() {
   const [payError, setPayError] = useState("");
   const [upiCopied, setUpiCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [igCopied, setIgCopied] = useState(false);
   // Production-style "Complete payment" → "Checking payment… (Ns)" → UTR fallback.
   const [autoLoading, setAutoLoading] = useState(false);
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
@@ -656,6 +657,28 @@ export default function ReplyExperience() {
     trackEvent({ event: "reply_shared", occasion: receivedOccasion, template: "reply", channel: "whatsapp", card_id: cardId ?? undefined });
     const text = `${content.shareMessage} ${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  }
+
+  // Instagram has no web share target — mirror production (SenderPanel): copy the
+  // link so the user can paste it into their story/DM.
+  async function handleInstagram() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = shareUrl;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch { /* ignore */ }
+      document.body.removeChild(ta);
+    }
+    trackEvent({ event: "reply_shared", occasion: receivedOccasion, template: "reply", channel: "instagram", card_id: cardId ?? undefined });
+    setIgCopied(true);
+    window.setTimeout(() => setIgCopied(false), 2500);
   }
 
   // Mint the reply card server-side so the ₹29 tier is fixed by the server
