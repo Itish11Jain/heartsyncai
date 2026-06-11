@@ -35,9 +35,11 @@ also flips: sorry uses a deeper crimson radial, A/B use the softer blush-dark ra
 
 The replier's final "send" pay screen embeds a **live self-preview of the reply card by
 loading `/reply` in an `<iframe>` with a `pv=1` preview flag** (no `id`). Preview mode must
-stay **silent and non-interactive**: it boots to the `bloom` reveal, hides the advance
-button so it can never reach `send`, and early-returns out of the analytics effect so the
-embed fires no funnel/`card_viewed` events.
+stay **silent and non-interactive**: it boots to the `envelope` open-me hero, then a timed
+loop auto-drives `opening`→`bloom`→back to `envelope` forever (nothing is tappable in the
+iframe, so the slider/tap hint is hidden and the sequence is fired on timers). It hides the
+advance button so it can never reach `send`, and early-returns out of the analytics effect
+so the embed fires no funnel/`card_viewed` events.
 **Why:** owner wanted the user to see the card they're about to send, with value-
 justification copy + benefit bullets + a struck-through ₹49→₹29 CTA — without the embed
 skewing analytics or recursively spawning more preview iframes.

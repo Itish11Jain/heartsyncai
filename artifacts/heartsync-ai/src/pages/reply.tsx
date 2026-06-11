@@ -436,7 +436,7 @@ export default function ReplyExperience() {
 
   // The replier (arriving from "Send Love") first sees a "Your reply is ready"
   // gate; the original sender opening the finished reply (id present) skips it.
-  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : isPreview ? "bloom" : "intro");
+  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : isPreview ? "envelope" : "intro");
   const [opening, setOpening] = useState(false);
 
   // Replier payment + share state
@@ -480,6 +480,26 @@ export default function ReplyExperience() {
     setPhase("envelope");
     trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 0 });
   }
+
+  // In the embedded preview iframe nothing is tappable, so auto-drive the
+  // open-me hero → bouquet reveal sequence on a timer and loop it forever.
+  useEffect(() => {
+    if (!isPreview) return;
+    let cancelled = false;
+    const timers: number[] = [];
+    const at = (ms: number, fn: () => void) =>
+      timers.push(window.setTimeout(() => { if (!cancelled) fn(); }, ms));
+    function cycle() {
+      if (cancelled) return;
+      setPhase("envelope");
+      setOpening(false);
+      at(1700, () => setOpening(true));      // trigger the open / burst animation
+      at(2900, () => setPhase("bloom"));     // reveal the bouquet
+      at(6600, cycle);                       // hold, then loop back to the envelope
+    }
+    cycle();
+    return () => { cancelled = true; timers.forEach((t) => window.clearTimeout(t)); };
+  }, [isPreview]);
 
   // Idempotent: a slide and (variant B) a flower tap both call this, so guard
   // against fast double-fires queueing duplicate timers / analytics.
@@ -786,7 +806,7 @@ export default function ReplyExperience() {
               )}
             </div>
 
-            {!opening &&
+            {!opening && !isPreview &&
               (variant === "B" ? (
                 <motion.p
                   initial={{ opacity: 0 }}
