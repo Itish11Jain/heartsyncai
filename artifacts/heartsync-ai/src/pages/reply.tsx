@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Loader2, ArrowRight, Info, Sparkles, Heart, Smartphone, Link2, Share2 } from "lucide-react";
+import { Copy, Check, ArrowRight, Info, Sparkles, Heart, Smartphone, Link2, Share2 } from "lucide-react";
 import { trackEvent } from "@/lib/trackEvent";
 import { getReplyPriceConfig } from "@/lib/priceArm";
 import { scaleCount } from "@/lib/deviceCapability";
-import { Input } from "@/components/ui/input";
 
 /* Reuse the existing card scene art — no new 3D/bouquet logic is authored here.
  * These are the exact components the recipient card uses (envelope, slider,
@@ -26,6 +25,27 @@ import daisyWhiteImg from "@assets/flowers/daisy_white.webp";
 import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.webp";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
+/** Read Meta pixel cookies so auto/UTR unlocks can carry CAPI match quality. */
+function getMetaCookies(): { fbp: string | null; fbc: string | null } {
+  try {
+    const cookieMap = Object.fromEntries(
+      document.cookie.split(";").map((c) => {
+        const eq = c.indexOf("=");
+        return eq === -1 ? [c.trim(), ""] : [c.slice(0, eq).trim(), c.slice(eq + 1).trim()];
+      }),
+    );
+    const fbp = cookieMap["_fbp"] ?? null;
+    let fbc = cookieMap["_fbc"] ?? null;
+    if (!fbc) {
+      const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+    }
+    return { fbp: fbp || null, fbc: fbc || null };
+  } catch {
+    return { fbp: null, fbc: null };
+  }
+}
 
 /* ── Manual UPI details (same account as the production paywall) ────────── */
 const UPI_VPA = "9706900714@pthdfc";
@@ -458,12 +478,19 @@ export default function ReplyExperience() {
   const [paid, setPaid] = useState(false);
   const [cardId, setCardId] = useState<string | null>(sharedId);
   const [showPay, setShowPay] = useState(false);
-  const [payStage, setPayStage] = useState<"paying" | "utr" | "done">("paying");
+  const [payStage, setPayStage] = useState<"paying" | "done">("paying");
   const [utr, setUtr] = useState("");
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState("");
   const [upiCopied, setUpiCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  // Production-style "Complete payment" → "Checking payment… (Ns)" → UTR fallback.
+  const [autoLoading, setAutoLoading] = useState(false);
+  const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
+  const [utrVisible, setUtrVisible] = useState(false);
+  const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
+  const payTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => { if (payTimerRef.current) clearInterval(payTimerRef.current); }, []);
 
   const petalCount = useMemo(() => scaleCount(10), []);
 
@@ -546,10 +573,16 @@ export default function ReplyExperience() {
   }
 
   function openPay() {
+    if (payTimerRef.current) { clearInterval(payTimerRef.current); payTimerRef.current = null; }
     setShowPay(true);
     setPayStage("paying");
     setUtr("");
     setPayError("");
+    setUpiCopied(false);
+    setUtrVisible(false);
+    setAutoLoading(false);
+    setAutoCountdown(null);
+    setUtrCountdown(null);
     trackEvent({ event: "reply_pay_clicked", occasion: receivedOccasion, template: "reply", price });
   }
 
@@ -593,8 +626,10 @@ export default function ReplyExperience() {
       try { document.execCommand("copy"); } catch { /* ignore */ }
       document.body.removeChild(ta);
     }
+    // Sticky like production UnlockModal: once copied, the gate stays open so the
+    // "I've Paid" CTA remains enabled however long the user takes. Reset on
+    // open/back only.
     setUpiCopied(true);
-    window.setTimeout(() => setUpiCopied(false), 1800);
   }
 
   async function handleCopyLink() {
@@ -623,6 +658,89 @@ export default function ReplyExperience() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
   }
 
+  // Mint the reply card server-side so the ₹29 tier is fixed by the server
+  // (never the client). Idempotent — reuse the same id across retries.
+  async function mintReplyCard(): Promise<string | null> {
+    if (cardId) return cardId;
+    try {
+      const mint = await fetch(`${BASE}/api/cards/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occasion: receivedOccasion }),
+      });
+      if (!mint.ok) return null;
+      const minted = await mint.json();
+      const mintedId = typeof minted?.id === "string" ? (minted.id as string) : null;
+      if (mintedId) setCardId(mintedId);
+      return mintedId;
+    } catch {
+      return null;
+    }
+  }
+
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+  // "I've Paid ₹29 →" — mirrors the production UnlockModal: poll auto-unlock for
+  // 60s (the server matches the incoming UPI deposit), counting down in the CTA.
+  // On a miss we fall through to the manual "Payment done?" (last-4) screen.
+  async function handlePaymentDone() {
+    if (autoLoading) return;
+    setAutoLoading(true);
+    setPayError("");
+    trackEvent({ event: "reply_payment_done_clicked", occasion: receivedOccasion, template: "reply", price });
+
+    const id = await mintReplyCard();
+    if (!id) {
+      setAutoLoading(false);
+      setPayError("Something went wrong. Please try again.");
+      return;
+    }
+
+    const TIMEOUT_S = 60;
+    const POLL_MS = 3000;
+    const deadline = Date.now() + TIMEOUT_S * 1000;
+    setAutoCountdown(TIMEOUT_S);
+    if (payTimerRef.current) clearInterval(payTimerRef.current);
+    payTimerRef.current = setInterval(() => {
+      setAutoCountdown(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    }, 1000);
+    const cleanup = () => {
+      if (payTimerRef.current) { clearInterval(payTimerRef.current); payTimerRef.current = null; }
+      setAutoLoading(false);
+      setAutoCountdown(null);
+    };
+
+    const eventId = `hs_${id}_${Date.now()}`;
+    const { fbp, fbc } = getMetaCookies();
+
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(`${BASE}/api/cards/${id}/auto-unlock`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId, fbp, fbc, price }),
+        });
+        if (res.ok) {
+          cleanup();
+          setPayStage("done");
+          trackEvent({ event: "reply_unlocked", occasion: receivedOccasion, template: "reply", price, card_id: id });
+          return;
+        }
+        // 402 = not matched yet; keep polling. Other codes are hard failures.
+        if (res.status !== 402) break;
+      } catch { /* network blip — keep polling */ }
+      await sleep(Math.min(POLL_MS, Math.max(0, deadline - Date.now())));
+    }
+
+    // Timed out / hard failure → manual last-4 confirmation.
+    cleanup();
+    setUtr("");
+    setPayError("");
+    setUtrVisible(true);
+  }
+
+  // "Confirm & Unlock 🔓" — last-4 fallback. Polls pay-unlock for 60s so a deposit
+  // that lands a moment later still confirms, matching the production flow.
   async function handlePayUtrSubmit() {
     const last4 = utr.trim();
     if (!/^\d{4}$/.test(last4)) {
@@ -633,58 +751,59 @@ export default function ReplyExperience() {
       setPayError("Please enter the real last 4 digits from your payment app.");
       return;
     }
+    if (payLoading) return;
     setPayLoading(true);
     setPayError("");
     trackEvent({ event: "reply_utr_submitted", occasion: receivedOccasion, template: "reply", price });
 
-    try {
-      // Mint the reply card server-side so the ₹29 tier is fixed by the server
-      // (never the client). Reuse the same id across retries.
-      let newId = cardId;
-      if (!newId) {
-        const mint = await fetch(`${BASE}/api/cards/reply`, {
+    const id = await mintReplyCard();
+    if (!id) {
+      setPayLoading(false);
+      setPayError("Something went wrong. Please try again.");
+      return;
+    }
+
+    const TIMEOUT_S = 60;
+    const POLL_MS = 3000;
+    const deadline = Date.now() + TIMEOUT_S * 1000;
+    setUtrCountdown(TIMEOUT_S);
+    if (payTimerRef.current) clearInterval(payTimerRef.current);
+    payTimerRef.current = setInterval(() => {
+      setUtrCountdown(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+    }, 1000);
+    const cleanup = () => {
+      if (payTimerRef.current) { clearInterval(payTimerRef.current); payTimerRef.current = null; }
+      setPayLoading(false);
+      setUtrCountdown(null);
+    };
+
+    const eventId = `hs_${id}_${Date.now()}`;
+    const { fbp, fbc } = getMetaCookies();
+    let lastMsg = "Payment not verified. Please check your last 4 digits and try again.";
+
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(`${BASE}/api/cards/${id}/pay-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ occasion: receivedOccasion }),
+          body: JSON.stringify({ utr: last4, eventId, fbp, fbc, price }),
         });
-        if (!mint.ok) {
-          setPayError("Something went wrong. Please try again.");
-          setPayLoading(false);
+        if (res.ok) {
+          cleanup();
+          setPayStage("done");
+          trackEvent({ event: "reply_unlocked", occasion: receivedOccasion, template: "reply", price, card_id: id });
           return;
         }
-        const minted = await mint.json();
-        const mintedId = typeof minted?.id === "string" ? (minted.id as string) : null;
-        if (!mintedId) {
-          setPayError("Something went wrong. Please try again.");
-          setPayLoading(false);
-          return;
+        if (res.status !== 402) {
+          try { const data = await res.json(); if (data?.message) lastMsg = data.message; } catch { /* ignore */ }
+          break;
         }
-        newId = mintedId;
-        setCardId(newId);
-      }
-      const res = await fetch(`${BASE}/api/cards/${newId}/pay-unlock`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ utr: last4, price }),
-      });
-      if (!res.ok) {
-        let msg = "Payment not verified. Please check your last 4 digits and try again.";
-        try {
-          const data = await res.json();
-          if (data?.message) msg = data.message;
-        } catch { /* ignore */ }
-        setPayError(msg);
-        setPayLoading(false);
-        return;
-      }
-      setCardId(newId);
-      setPayLoading(false);
-      setPayStage("done");
-      trackEvent({ event: "reply_unlocked", occasion: receivedOccasion, template: "reply", price, card_id: newId });
-    } catch {
-      setPayError("Something went wrong. Please try again.");
-      setPayLoading(false);
+      } catch { /* network blip — keep polling */ }
+      await sleep(Math.min(POLL_MS, Math.max(0, deadline - Date.now())));
     }
+
+    cleanup();
+    setPayError(lastMsg);
   }
 
   const goldText = {
@@ -1102,12 +1221,9 @@ export default function ReplyExperience() {
         )}
       </AnimatePresence>
 
-      {/* ════ ₹29 PAYWALL — identical UI/UX to the production WatermarkPaywallModal ════ */}
+      {/* ════ ₹29 REPLY PAYWALL — replicates the production UnlockModal "Complete payment" flow ════ */}
       <AnimatePresence>
-        {showPay && (() => {
-          const upiDeepLink = `upi://pay?pa=${UPI_VPA}&pn=${UPI_PAYEE}&am=${price}&cu=INR&tn=HeartSyncReplyPayment`;
-          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(upiDeepLink)}`;
-          return (
+        {showPay && (
           <motion.div
             key="reply-pay"
             initial={{ opacity: 0 }}
@@ -1115,221 +1231,283 @@ export default function ReplyExperience() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             style={{
-              position: "fixed", inset: 0, zIndex: 10000,
-              background: "rgba(0,0,0,0.72)",
-              display: "flex", alignItems: "flex-start", justifyContent: "center",
-              overflowY: "auto", padding: "0 16px 40px",
+              position: "fixed", inset: 0, zIndex: 10010,
+              background: "rgba(0,0,0,0.88)",
+              display: "flex", alignItems: "flex-end", justifyContent: "center",
+              fontFamily: "'Segoe UI', system-ui, sans-serif",
             }}
             onClick={(e) => { if (e.target === e.currentTarget && payStage !== "done") setShowPay(false); }}
           >
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.3 }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 35 }}
               style={{
-                width: "100%", maxWidth: 400, marginTop: 48,
-                background: "radial-gradient(ellipse at 50% 0%, #2a0050 0%, #0e0018 60%, #04000c 100%)",
-                border: "1px solid rgba(168,85,247,0.25)",
-                borderRadius: 24,
-                padding: "24px 20px 28px",
-                fontFamily: "'Segoe UI', system-ui, sans-serif",
+                width: "100%", maxWidth: 480,
+                background: "radial-gradient(ellipse at 50% 0%, #1a003a 0%, #0a0014 55%, #04000c 100%)",
+                border: "1px solid rgba(255,215,0,0.12)",
+                borderBottom: "none",
+                borderRadius: "28px 28px 0 0",
+                paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))",
+                overflow: "hidden",
+                maxHeight: "92vh",
+                display: "flex", flexDirection: "column",
               }}
             >
-              {/* Header */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <button
-                  onClick={payStage === "utr" ? () => setPayStage("paying") : () => setShowPay(false)}
-                  style={{
-                    width: 34, height: 34, borderRadius: "50%",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: "rgba(255,255,255,0.06)", cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "rgba(255,255,255,0.6)", fontSize: 18, flexShrink: 0,
-                  }}
-                >←</button>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
-                      Send your reply
-                    </div>
-                    <span style={{
-                      background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.45)",
-                      color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 7px",
-                      borderRadius: 99, letterSpacing: "0.05em", whiteSpace: "nowrap", flexShrink: 0,
-                    }}>⚡ Limited Time</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
-                    <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹{anchor}</span>
-                    <span style={{ color: "rgba(255,215,0,0.85)", fontSize: 11, fontWeight: 700 }}>₹{price}</span>
-                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>· sent instantly</span>
-                  </div>
-                </div>
+              {/* Drag handle */}
+              <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 6px" }}>
+                <div style={{ width: 40, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.12)" }} />
               </div>
 
-              <AnimatePresence mode="wait">
+              <div style={{ flex: 1, overflowY: "auto", padding: "0 22px 10px" }}>
+                <AnimatePresence mode="wait">
 
-                {/* Done */}
-                {payStage === "done" && (
-                  <motion.div key="reply-done"
-                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                    style={{ textAlign: "center", paddingTop: 24 }}
-                  >
-                    <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
-                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 22, marginBottom: 8 }}>Reply unlocked!</h2>
-                    <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.55 }}>
-                      Your shareable link is ready. Taking you there…
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* Step 1: Pay */}
-                {payStage === "paying" && (
-                  <motion.div key="reply-paying"
-                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -24 }}
-                  >
-                    {/* Benefits strip */}
-                    <div style={{
-                      display: "flex", flexWrap: "wrap", gap: "6px 10px",
-                      marginBottom: 20, padding: "10px 14px",
-                      background: "rgba(168,85,247,0.08)",
-                      border: "1px solid rgba(168,85,247,0.2)",
-                      borderRadius: 12,
-                    }}>
-                      {["💌 Sent back instantly", "🔗 Shareable link", "📱 WhatsApp & Instagram"].map((item) => (
-                        <span key={item} style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap" }}>
-                          {item}
-                        </span>
-                      ))}
-                      <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
-                        All for{" "}
-                        <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹{anchor}</span>
-                        {" "}₹{price} — one tap, sent instantly
-                      </span>
-                    </div>
-
-                    {/* QR code */}
-                    <div style={{ textAlign: "center", marginBottom: 20 }}>
-                      <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
-                        Scan with any UPI app
-                      </p>
-                      <a
-                        href={upiDeepLink}
-                        style={{
-                          display: "inline-block",
-                          background: "#fff", borderRadius: 16, padding: 10,
-                          boxShadow: "0 4px 24px rgba(168,85,247,0.25)",
-                        }}
-                      >
-                        <img
-                          src={qrSrc}
-                          alt={`UPI QR ₹${price}`}
-                          style={{ width: 200, height: 200, borderRadius: 8, display: "block" }}
-                        />
-                      </a>
-                      <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 10, marginTop: 8 }}>
-                        UPI of <span style={{ color: "rgba(255,255,255,0.45)" }}>{UPI_PAYEE}</span> — Creator of HeartSync AI
-                      </p>
-                    </div>
-
-                    {/* Pay Now CTA */}
-                    <a
-                      href={upiDeepLink}
-                      onClick={() => { setTimeout(() => { setPayStage("utr"); setPayError(""); }, 600); }}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                        width: "100%", height: 52, borderRadius: 14,
-                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                        color: "#000", fontWeight: 800, fontSize: 16,
-                        textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
-                      }}
+                  {/* ── Success ── */}
+                  {payStage === "done" && (
+                    <motion.div key="reply-success"
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                      style={{ textAlign: "center", padding: "48px 20px" }}
                     >
-                      <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹{anchor}</span>
-                      {" "}Pay ₹{price} Now <ArrowRight style={{ width: 18, height: 18 }} />
-                    </a>
+                      <motion.div
+                        animate={{ rotate: [0, -10, 10, -8, 8, 0], scale: [1, 1.18, 1] }}
+                        transition={{ duration: 0.7, ease: "easeOut" }}
+                        style={{ fontSize: 72, marginBottom: 20 }}
+                      >🎉</motion.div>
+                      <div style={{ color: "#FFD700", fontWeight: 800, fontSize: 22, marginBottom: 8 }}>
+                        Reply unlocked!
+                      </div>
+                      <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>
+                        Your shareable link is ready ✨
+                      </div>
+                    </motion.div>
+                  )}
 
-                    <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>
-                      Opens your UPI app automatically
-                    </p>
-                  </motion.div>
-                )}
+                  {/* ── Complete payment ── */}
+                  {payStage !== "done" && (
+                    <motion.div key="reply-paying"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      {/* Back header */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+                        <button
+                          onClick={() => {
+                            if (payTimerRef.current) { clearInterval(payTimerRef.current); payTimerRef.current = null; }
+                            if (utrVisible) {
+                              setUtrVisible(false); setUtr(""); setPayError("");
+                              setUtrCountdown(null); setPayLoading(false);
+                            } else {
+                              setShowPay(false);
+                            }
+                          }}
+                          style={{
+                            width: 32, height: 32, borderRadius: "50%",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            background: "rgba(255,255,255,0.06)", cursor: "pointer",
+                            color: "rgba(255,255,255,0.6)", fontSize: 16,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}
+                        >←</button>
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Complete payment</div>
+                      </div>
 
-                {/* Step 2: Enter last 4 digits */}
-                {payStage === "utr" && (
-                  <motion.div key="reply-utr"
-                    initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <div style={{ textAlign: "center", marginBottom: 24 }}>
-                      <div style={{ fontSize: 40, marginBottom: 10 }}>💸</div>
-                      <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-                        Payment done? Almost there!
-                      </h2>
-                      <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.55 }}>
-                        Enter the <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>last 4 digits</span> of your payment reference number to confirm.
-                      </p>
-                    </div>
+                      {/* Status card */}
+                      <div style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.07)",
+                        borderRadius: 20, padding: "32px 20px 28px",
+                        textAlign: "center", marginBottom: 16,
+                      }}>
+                        <AnimatePresence mode="wait">
+                          {!utrVisible ? (
+                            /* UPI ID copy — only step before UTR entry */
+                            <motion.div key="waiting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                              <div style={{ fontSize: 36, marginBottom: 10 }}>📲</div>
+                              <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
+                                Pay{" "}
+                                <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 15, fontWeight: 500 }}>₹{anchor}</span>
+                                {" "}
+                                <span style={{ color: "#FFD700", fontSize: 21, fontWeight: 900 }}>₹{price}</span>
+                                {" "}via any UPI App
+                              </div>
+                              <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, marginBottom: 22, lineHeight: 1.6 }}>
+                                Open PhonePe / GPay / Paytm → Send to this UPI ID
+                              </div>
 
-                    <div style={{
-                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
-                      borderRadius: 18, padding: "18px 16px",
-                      display: "flex", flexDirection: "column", gap: 10,
-                    }}>
-                      <Input
-                        placeholder="e.g. 4 2 8 7"
-                        value={utr}
-                        maxLength={4}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        data-clarity-mask="true"
-                        onChange={(e) => {
-                          const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          setUtr(v);
-                          setPayError(
-                            v.length === 4 && isSequentialCode(v)
-                              ? "Don't use sequential (1234) or repeated (1111) codes — enter your actual last 4 digits."
-                              : ""
-                          );
-                        }}
-                        className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
-                      />
+                              {/* UPI ID copy box */}
+                              <div style={{
+                                background: "rgba(255,215,0,0.05)",
+                                border: "1.5px solid rgba(255,215,0,0.18)",
+                                borderRadius: 16, padding: "18px 22px 14px",
+                                marginBottom: 10, marginInline: -8,
+                              }}>
+                                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+                                  UPI ID
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <div style={{ flex: 1, color: "#fff", fontSize: 16, fontWeight: 700, letterSpacing: "0.03em", wordBreak: "break-all", textAlign: "left" }}>
+                                    {UPI_DISPLAY}
+                                  </div>
+                                  <motion.button
+                                    whileTap={{ scale: 0.92 }}
+                                    onClick={handleCopyUpi}
+                                    style={{
+                                      flexShrink: 0, height: 38, paddingInline: 12, borderRadius: 10,
+                                      background: upiCopied ? "rgba(34,197,94,0.2)" : "linear-gradient(135deg,#FFD700,#FFA500)",
+                                      border: "none",
+                                      color: upiCopied ? "#4ade80" : "#000",
+                                      fontWeight: 800, fontSize: 13, cursor: "pointer",
+                                      transition: "all 0.25s",
+                                    }}
+                                  >
+                                    {upiCopied ? "Copied ✓" : "Copy"}
+                                  </motion.button>
+                                </div>
 
-                      {payError && (
-                        <p style={{ color: "#f87171", fontSize: 12, textAlign: "center", margin: 0 }}>{payError}</p>
-                      )}
+                                {/* Trust line */}
+                                <div style={{
+                                  marginTop: 12, paddingTop: 10,
+                                  borderTop: "1px solid rgba(255,255,255,0.07)",
+                                  display: "flex", alignItems: "center", gap: 6,
+                                }}>
+                                  <span style={{ fontSize: 14 }}>🔐</span>
+                                  <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, lineHeight: 1.5, textAlign: "left" }}>
+                                    This belongs to <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>{UPI_PAYEE}</span> — Creator of HeartSync AI
+                                  </span>
+                                </div>
+                              </div>
 
-                      <button
-                        onClick={handlePayUtrSubmit}
-                        disabled={!isValidPayCode(utr) || payLoading}
-                        style={{
-                          width: "100%", height: 48, borderRadius: 12,
-                          background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                          color: "#000", fontWeight: 700, fontSize: 15, border: "none",
-                          cursor: !isValidPayCode(utr) || payLoading ? "default" : "pointer",
-                          opacity: !isValidPayCode(utr) || payLoading ? 0.5 : 1,
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                          transition: "opacity 0.2s",
-                        }}
-                      >
-                        {payLoading
-                          ? <><Loader2 style={{ width: 16, height: 16 }} className="animate-spin" /> Confirming…</>
-                          : <>Confirm &amp; Unlock <ArrowRight style={{ width: 15, height: 15 }} /></>
-                        }
-                      </button>
+                              {/* Subtext above CTA — only once UPI ID is copied */}
+                              {upiCopied && (
+                                <p style={{ fontSize: 11, color: "#FFD700", textAlign: "center", margin: "6px 0 2px", whiteSpace: "nowrap", fontWeight: 600 }}>
+                                  {autoLoading
+                                    ? `Please pay Rs. ${price} now if you have not paid yet.`
+                                    : "Only click this if you have made the payment successfully"}
+                                </p>
+                              )}
 
-                      <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: 10, margin: 0 }}>
-                        Find it in your UPI app under transaction details
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
+                              {payError && !autoLoading && (
+                                <p style={{ color: "#f87171", fontSize: 12, textAlign: "center", margin: "6px 0 0" }}>{payError}</p>
+                              )}
 
-              </AnimatePresence>
+                              {/* Payment Done CTA — disabled until UPI ID is copied */}
+                              <motion.button
+                                whileTap={autoLoading || !upiCopied ? {} : { scale: 0.97 }}
+                                onClick={() => { if (upiCopied && !autoLoading) void handlePaymentDone(); }}
+                                disabled={autoLoading || !upiCopied}
+                                style={{
+                                  width: "100%", height: 54, borderRadius: 16, marginTop: upiCopied ? 6 : 18,
+                                  background: autoLoading
+                                    ? "rgba(255,215,0,0.15)"
+                                    : upiCopied
+                                      ? "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)"
+                                      : "rgba(255,255,255,0.06)",
+                                  color: autoLoading
+                                    ? "rgba(255,215,0,0.7)"
+                                    : upiCopied ? "#000" : "rgba(255,255,255,0.2)",
+                                  fontWeight: 800, fontSize: 16,
+                                  border: upiCopied && !autoLoading ? "none" : "1px solid rgba(255,255,255,0.08)",
+                                  cursor: upiCopied && !autoLoading ? "pointer" : "default",
+                                  boxShadow: upiCopied && !autoLoading ? "0 6px 24px rgba(255,165,0,0.35)" : "none",
+                                  transition: "all 0.3s",
+                                }}
+                              >
+                                {autoLoading
+                                  ? `Checking payment… ${autoCountdown !== null ? `(${autoCountdown}s)` : ""}`
+                                  : `I've Paid ₹${price} →`}
+                              </motion.button>
+                            </motion.div>
+                          ) : (
+                            /* UTR entry */
+                            <motion.div key="utr" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                              <div style={{ fontSize: 38, marginBottom: 12 }}>💸</div>
+                              <div style={{ color: "#fff", fontWeight: 700, fontSize: 17, marginBottom: 6 }}>
+                                Payment done?
+                              </div>
+                              <div style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, marginBottom: 22, lineHeight: 1.6 }}>
+                                Enter the{" "}
+                                <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>last 4 digits</span>{" "}
+                                of your<br />UPI transaction reference
+                              </div>
+
+                              <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 240, margin: "0 auto" }}>
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  inputMode="numeric"
+                                  maxLength={4}
+                                  placeholder="e.g. 9619"
+                                  value={utr}
+                                  data-clarity-mask="true"
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                    setUtr(v);
+                                    setPayError(
+                                      v.length === 4 && isSequentialCode(v)
+                                        ? "Don't use sequential (1234) or repeated (1111) codes — enter your actual last 4 digits."
+                                        : ""
+                                    );
+                                  }}
+                                  onKeyDown={(e) => { if (e.key === "Enter") void handlePayUtrSubmit(); }}
+                                  style={{
+                                    width: "100%", height: 56, borderRadius: 14,
+                                    border: `1.5px solid ${payError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.14)"}`,
+                                    background: "rgba(255,255,255,0.07)", color: "#fff",
+                                    fontSize: 28, fontWeight: 700, textAlign: "center",
+                                    letterSpacing: "0.3em", outline: "none", padding: "0 12px",
+                                    boxSizing: "border-box", transition: "border-color 0.2s",
+                                  }}
+                                />
+                                <motion.button
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => void handlePayUtrSubmit()}
+                                  disabled={!isValidPayCode(utr) || payLoading}
+                                  style={{
+                                    width: "100%", height: 50, borderRadius: 14,
+                                    background: isValidPayCode(utr) && !payLoading
+                                      ? "linear-gradient(135deg, #FFD700, #FFA500)"
+                                      : "rgba(255,255,255,0.07)",
+                                    color: isValidPayCode(utr) && !payLoading ? "#000" : "rgba(255,255,255,0.2)",
+                                    fontWeight: 800, fontSize: 15, border: "none",
+                                    cursor: isValidPayCode(utr) && !payLoading ? "pointer" : "default",
+                                    transition: "background 0.2s, color 0.2s",
+                                  }}
+                                >
+                                  {payLoading
+                                    ? `Checking payment… ${utrCountdown !== null ? `(${utrCountdown}s)` : ""}`
+                                    : "Confirm & Unlock 🔓"}
+                                </motion.button>
+                              </div>
+
+                              <AnimatePresence>
+                                {payError && (
+                                  <motion.p
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    style={{ marginTop: 12, fontSize: 12, color: "#f87171", textAlign: "center" }}
+                                  >
+                                    {payError}
+                                  </motion.p>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </motion.div>
+                  )}
+
+                </AnimatePresence>
+              </div>
             </motion.div>
           </motion.div>
-          );
-        })()}
+        )}
       </AnimatePresence>
     </div>
   );

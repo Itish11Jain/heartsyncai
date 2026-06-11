@@ -13,3 +13,4 @@
 - [Payment flow canonical](payment-flow-canonical.md) — manual UPI "I've paid"+UTR is the chosen paywall everywhere; Razorpay was built then fully reverted — do NOT reintroduce without explicit owner request.
 - [₹29 reply price authority](reply-price-authority.md) — ₹29 viral-reply tier is server-only: client bodies accept 49/99 only; ₹29 minted solely via POST /api/cards/reply (CSPRNG id); never reintroduce 29 into client price norm.
 - [Reply flow screen-1 by variant](reply-screen1.md) — each /reply variant has its own open-me: A birthday=blush envelope (no "To:")+floating roses+twinkles; B others=tap-to-burst spinning flower; C sorry=MendingHeart.
+- [Reply ₹29 paywall mirrors UnlockModal](reply-paywall-modal.md) — /reply paywall replicates UnlockModal "Complete payment" (copy-gated I've-Paid + UTR poll), NOT the QR layout; mint up-front; copy gate sticky.
