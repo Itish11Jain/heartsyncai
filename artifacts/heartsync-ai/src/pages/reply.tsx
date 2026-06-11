@@ -88,7 +88,7 @@ function useQuery() {
   }, []);
 }
 
-type Phase = "envelope" | "bloom" | "send";
+type Phase = "intro" | "envelope" | "bloom" | "send";
 
 export default function ReplyExperience() {
   const q = useQuery();
@@ -101,7 +101,9 @@ export default function ReplyExperience() {
   const content = CONTENT[variant];
   const { price, anchor } = getReplyPriceConfig();
 
-  const [phase, setPhase] = useState<Phase>("envelope");
+  // The replier (arriving from "Send Love") first sees a "Your reply is ready"
+  // gate; the original sender opening the finished reply (id present) skips it.
+  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : "intro");
   const [opening, setOpening] = useState(false);
 
   // Replier payment + share state
@@ -139,6 +141,11 @@ export default function ReplyExperience() {
       });
     }
   }, [isRecipient, receivedOccasion, received, sharedId, price]);
+
+  function handleIntroContinue() {
+    setPhase("envelope");
+    trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 0 });
+  }
 
   function handleUnlock() {
     setOpening(true);
@@ -291,6 +298,57 @@ export default function ReplyExperience() {
       }}
     >
       <AnimatePresence mode="wait">
+        {/* ════════ SCREEN 0 — "YOUR REPLY IS READY" GATE ════════ */}
+        {phase === "intro" && (
+          <motion.div
+            key="reply-intro"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 30,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: "min(26px, 5.5vw)", padding: "32px 24px", textAlign: "center",
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", damping: 12, stiffness: 130, delay: 0.1 }}
+            >
+              <Heart className="w-12 h-12 mx-auto" style={{ color: "#FFD700", filter: "drop-shadow(0 4px 14px rgba(255,180,0,0.45))" }} />
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              style={{ ...goldText, fontSize: "min(34px, 8.4vw)", fontWeight: 700, margin: 0, maxWidth: 340 }}
+            >
+              Your reply is ready
+            </motion.p>
+
+            <motion.button
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55, duration: 0.5 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleIntroContinue}
+              style={{
+                padding: "14px 40px", borderRadius: 999, border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 50%, #E0A52E 100%)",
+                color: "#5A3A05", fontSize: 20, fontWeight: 700,
+                fontFamily: "'Dancing Script', cursive",
+                boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
+                display: "inline-flex", alignItems: "center", gap: 8,
+              }}
+            >
+              Click here to see <ArrowRight className="w-4 h-4" />
+            </motion.button>
+          </motion.div>
+        )}
+
         {/* ════════ SCREEN 1 — ENVELOPE ════════ */}
         {phase === "envelope" && (
           <motion.div
