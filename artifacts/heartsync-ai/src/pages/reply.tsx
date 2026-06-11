@@ -699,8 +699,8 @@ export default function ReplyExperience() {
       }}
     >
       {/* Preloaded reply-card preview — mounted once for the whole replier
-          session, kept off-screen until anchored over the pay-screen box. */}
-      {!isRecipient && (
+          session and kept transparent/behind until anchored over the pay box. */}
+      {!isRecipient && !isPreview && (
         <iframe
           title="Your reply preview"
           src={previewUrl}
@@ -708,15 +708,18 @@ export default function ReplyExperience() {
           aria-hidden={!showPreviewIframe}
           style={{
             position: "fixed",
-            left: showPreviewIframe && previewPos ? previewPos.left : -10000,
-            top: showPreviewIframe && previewPos ? previewPos.top : -10000,
+            // Kept ON-SCREEN (just transparent + behind everything) while hidden so
+            // it actually loads in the background — iOS Safari never loads an iframe
+            // parked far off-screen, which made the preview blank until reveal.
+            left: showPreviewIframe && previewPos ? previewPos.left : 0,
+            top: showPreviewIframe && previewPos ? previewPos.top : 0,
             width: 376, height: 560, border: "none",
-            borderRadius: 44,
-            transform: "scale(0.5)", transformOrigin: "top left",
+            borderRadius: 48,
+            transform: "scale(0.457)", transformOrigin: "top left",
             pointerEvents: "none",
             opacity: showPreviewIframe && previewPos ? 1 : 0,
             transition: showPreviewIframe ? "opacity 0.3s ease" : "none",
-            zIndex: showPreviewIframe ? 50 : -1,
+            zIndex: showPreviewIframe && previewPos ? 50 : -1,
           }}
         />
       )}
@@ -964,7 +967,7 @@ export default function ReplyExperience() {
               position: "fixed", inset: 0, zIndex: 35,
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
-              gap: 22, padding: "32px 24px", overflow: "hidden",
+              gap: 22, padding: "18px 22px", overflow: "hidden",
             }}
           >
             <PetalRain count={Math.max(4, Math.round(petalCount / 2))} />
@@ -1034,11 +1037,11 @@ export default function ReplyExperience() {
               <div
                 style={{
                   position: "relative", zIndex: 2, textAlign: "center",
-                  width: "min(360px, 92vw)", maxHeight: "92vh", overflowY: "auto",
+                  width: "min(360px, 92vw)", maxHeight: "100%", overflowY: "auto",
                   display: "flex", flexDirection: "column", alignItems: "center",
                 }}
               >
-                <p style={{ ...goldText, fontSize: "min(28px, 7vw)", fontWeight: 700, margin: "0 0 12px" }}>
+                <p style={{ ...goldText, fontSize: "min(26px, 6.6vw)", fontWeight: 700, margin: "0 0 8px" }}>
                   Your reply is ready
                 </p>
 
@@ -1047,21 +1050,21 @@ export default function ReplyExperience() {
                 <div
                   ref={previewBoxRef}
                   style={{
-                    position: "relative", width: 188, height: 280, borderRadius: 22,
-                    overflow: "hidden", flex: "0 0 auto", marginBottom: 14,
+                    position: "relative", width: 172, height: 256, borderRadius: 22,
+                    overflow: "hidden", flex: "0 0 auto", marginBottom: 12,
                     border: "1px solid rgba(255,215,120,0.35)",
                     boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 0 6px rgba(255,215,120,0.06)",
                     background: "radial-gradient(ellipse at 50% 35%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
                   }}
                 />
 
-                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13.5, lineHeight: 1.65, margin: "0 0 16px", maxWidth: 322 }}>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.55, margin: "0 0 12px", maxWidth: 322 }}>
                   They made you a one-of-a-kind card. Sending a little something back is a
                   sweet way to keep the moment going.
                 </p>
 
                 {/* What you get */}
-                <div style={{ width: "100%", textAlign: "left", margin: "0 0 18px", display: "flex", flexDirection: "column", gap: 11 }}>
+                <div style={{ width: "100%", textAlign: "left", margin: "0 0 14px", display: "flex", flexDirection: "column", gap: 9 }}>
                   {[
                     { Icon: Smartphone, text: "Easy UPI payment" },
                     { Icon: Link2, text: "Get a shareable link after payment" },
@@ -1085,7 +1088,7 @@ export default function ReplyExperience() {
                 <button
                   onClick={openPay}
                   style={{
-                    width: "100%", padding: "15px", borderRadius: 14, border: "none", cursor: "pointer",
+                    width: "100%", padding: "13px", borderRadius: 14, border: "none", cursor: "pointer",
                     background: "linear-gradient(135deg, #FFD700, #FFA500)",
                     color: "#1a0800", fontWeight: 700, fontSize: 16,
                     boxShadow: "0 4px 18px rgba(255,180,0,0.35)",

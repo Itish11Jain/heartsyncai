@@ -50,7 +50,12 @@ scrolls itself — don't rely on the shared `overflow:hidden` send container to 
 **Preload, don't lazy-mount:** the iframe is mounted ONCE at the component root for the whole
 replier session (not inside the pay-screen JSX), so it loads during intro/envelope/bloom and
 is already looping by the time the pay screen appears (lazy mount = long blank load). It's
-kept fixed-positioned off-screen, then anchored over a placeholder box via
-`getBoundingClientRect` (re-measured on resize/scroll) — moving a fixed element by CSS never
-reloads it. It must hide INSTANTLY (transition:none on hide) when the UPI modal opens, else it
-shows through during the modal's fade-in.
+anchored over a placeholder box via `getBoundingClientRect` (re-measured on resize/scroll) —
+moving a fixed element by CSS never reloads it. It must hide INSTANTLY (transition:none on
+hide) when the UPI modal opens, else it shows through during the modal's fade-in.
+**Hide it ON-SCREEN, never at -10000:** iOS Safari does NOT load an iframe parked far
+off-screen, so the preload silently fails (blank until reveal). Keep it within the viewport
+(left/top 0) and hide via opacity 0 + zIndex -1 + pointerEvents none instead.
+**Gate the persistent iframe with `!isPreview`** as well as `!isRecipient` — otherwise the
+preview instance (pv=1, also non-recipient) recursively mounts its own preview iframe.
+Box/iframe sizing must stay in sync: box 172x256 ⇒ iframe 376x560 at scale 0.457.
