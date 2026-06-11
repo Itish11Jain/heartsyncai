@@ -16,10 +16,12 @@ the owner reverted ALL of it ("revert the razorpay work — we are not sure abou
 and asked for the old "I've paid" flow back everywhere. The owner is undecided on
 Razorpay, so do NOT reintroduce it without an explicit, fresh request.
 
-**UPI account identity:** The live UPI VPA `9706900714@pthdfc` is owned by **Saurabh**.
-Production paywalls (WatermarkPaywallModal, UnlockModal, bundle) currently mislabel the
-payee text as "Itisha" — that label is WRONG. The reply paywall uses the correct name
-"Saurabh". Use "Saurabh" for any new/corrected payee label; the VPA itself is unchanged.
+**UPI payee-name label is wrong in production paywalls:** The payee NAME shown in the
+production paywall UI (WatermarkPaywallModal, UnlockModal, bundle) is hardcoded to a name
+that is NOT the real account holder. The reply paywall was corrected to the real owner's
+name — when adding or fixing any payee label, copy the name from `UPI_PAYEE` in
+`reply.tsx`, not from the production paywalls. The VPA is the same across all surfaces and
+is unchanged; only the displayed name differs.
 
 **How to apply:**
 - Do not add Razorpay (SDK, `checkout.js`, `payWithRazorpay`, create-order/verify/webhook

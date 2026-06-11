@@ -4,6 +4,7 @@ import { Copy, Check, Loader2, ArrowRight, Info, Sparkles, Heart, Smartphone, Li
 import { trackEvent } from "@/lib/trackEvent";
 import { getReplyPriceConfig } from "@/lib/priceArm";
 import { scaleCount } from "@/lib/deviceCapability";
+import { Input } from "@/components/ui/input";
 
 /* Reuse the existing card scene art — no new 3D/bouquet logic is authored here.
  * These are the exact components the recipient card uses (envelope, slider,
@@ -457,7 +458,7 @@ export default function ReplyExperience() {
   const [paid, setPaid] = useState(false);
   const [cardId, setCardId] = useState<string | null>(sharedId);
   const [showPay, setShowPay] = useState(false);
-  const [payStage, setPayStage] = useState<"paying" | "utr">("paying");
+  const [payStage, setPayStage] = useState<"paying" | "utr" | "done">("paying");
   const [utr, setUtr] = useState("");
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState("");
@@ -552,6 +553,17 @@ export default function ReplyExperience() {
     trackEvent({ event: "reply_pay_clicked", occasion: receivedOccasion, template: "reply", price });
   }
 
+  // After the success ("done") screen plays, reveal the share screen — mirrors
+  // the production paywall, which shows a celebratory beat then continues.
+  useEffect(() => {
+    if (payStage !== "done") return;
+    const t = window.setTimeout(() => {
+      setPaid(true);
+      setShowPay(false);
+    }, 2000);
+    return () => window.clearTimeout(t);
+  }, [payStage]);
+
   const shareUrl = useMemo(() => {
     if (!cardId) return "";
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -567,29 +579,6 @@ export default function ReplyExperience() {
     () => `${BASE}/reply?pv=1&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`,
     [receivedOccasion, received],
   );
-  const previewBoxRef = useRef<HTMLDivElement | null>(null);
-  const [previewPos, setPreviewPos] = useState<{ left: number; top: number } | null>(null);
-  const showPreviewIframe = !isRecipient && !paid && phase === "send" && !showPay;
-
-  useEffect(() => {
-    if (!showPreviewIframe) return;
-    let raf = 0;
-    function measure() {
-      const el = previewBoxRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setPreviewPos({ left: r.left, top: r.top });
-    }
-    raf = requestAnimationFrame(measure);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
-    };
-  }, [showPreviewIframe]);
-
   async function handleCopyUpi() {
     try {
       await navigator.clipboard.writeText(UPI_DISPLAY);
@@ -689,9 +678,8 @@ export default function ReplyExperience() {
         return;
       }
       setCardId(newId);
-      setPaid(true);
-      setShowPay(false);
       setPayLoading(false);
+      setPayStage("done");
       trackEvent({ event: "reply_unlocked", occasion: receivedOccasion, template: "reply", price, card_id: newId });
     } catch {
       setPayError("Something went wrong. Please try again.");
@@ -719,32 +707,6 @@ export default function ReplyExperience() {
           : "radial-gradient(ellipse at 50% 25%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
       }}
     >
-      {/* Preloaded reply-card preview — mounted once for the whole replier
-          session and kept transparent/behind until anchored over the pay box. */}
-      {!isRecipient && !isPreview && (
-        <iframe
-          title="Your reply preview"
-          src={previewUrl}
-          scrolling="no"
-          aria-hidden={!showPreviewIframe}
-          style={{
-            position: "fixed",
-            // Kept ON-SCREEN (just transparent + behind everything) while hidden so
-            // it actually loads in the background — iOS Safari never loads an iframe
-            // parked far off-screen, which made the preview blank until reveal.
-            left: showPreviewIframe && previewPos ? previewPos.left : 0,
-            top: showPreviewIframe && previewPos ? previewPos.top : 0,
-            width: 376, height: 560, border: "none",
-            borderRadius: 48,
-            transform: "scale(0.457)", transformOrigin: "top left",
-            pointerEvents: "none",
-            opacity: showPreviewIframe && previewPos ? 1 : 0,
-            transition: showPreviewIframe ? "opacity 0.3s ease" : "none",
-            zIndex: showPreviewIframe && previewPos ? 50 : -1,
-          }}
-        />
-      )}
-
       <AnimatePresence mode="wait">
         {/* ════════ SCREEN 0 — "YOUR REPLY IS READY" GATE ════════ */}
         {phase === "intro" && (
@@ -1066,10 +1028,10 @@ export default function ReplyExperience() {
                   Your reply is ready
                 </p>
 
-                {/* Live preview of the card they just saw. The actual iframe is
-                    mounted once at the component root and anchored over this box. */}
+                {/* Live preview of the card they just saw — the iframe is rendered
+                    directly inside this box so it loads reliably on mobile (the old
+                    off-screen "preload" trick stayed blank on iOS/Android). */}
                 <div
-                  ref={previewBoxRef}
                   style={{
                     position: "relative", width: 172, height: 256, borderRadius: 22,
                     overflow: "hidden", flex: "0 0 auto", marginBottom: 12,
@@ -1077,7 +1039,21 @@ export default function ReplyExperience() {
                     boxShadow: "0 12px 36px rgba(0,0,0,0.5), 0 0 0 6px rgba(255,215,120,0.06)",
                     background: "radial-gradient(ellipse at 50% 35%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
                   }}
-                />
+                >
+                  {!isPreview && (
+                    <iframe
+                      title="Your reply preview"
+                      src={previewUrl}
+                      scrolling="no"
+                      style={{
+                        position: "absolute", top: 0, left: 0,
+                        width: 376, height: 560, border: "none",
+                        transform: "scale(0.457)", transformOrigin: "top left",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
+                </div>
 
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.55, margin: "0 0 12px", maxWidth: 322 }}>
                   They made you a one-of-a-kind card. Sending a little something back is a
@@ -1126,139 +1102,234 @@ export default function ReplyExperience() {
         )}
       </AnimatePresence>
 
-      {/* ════ ₹29 MANUAL UPI / UTR MODAL (mirrors the builder paywall) ════ */}
+      {/* ════ ₹29 PAYWALL — identical UI/UX to the production WatermarkPaywallModal ════ */}
       <AnimatePresence>
-        {showPay && (
+        {showPay && (() => {
+          const upiDeepLink = `upi://pay?pa=${UPI_VPA}&pn=${UPI_PAYEE}&am=${price}&cu=INR&tn=HeartSyncReplyPayment`;
+          const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(upiDeepLink)}`;
+          return (
           <motion.div
             key="reply-pay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[90] backdrop-blur-sm flex flex-col items-center justify-start px-4 py-6 overflow-y-auto"
-            style={{ background: "radial-gradient(ellipse at 50% 30%, #1a0030 0%, #080112 55%, #020008 100%)" }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 10000,
+              background: "rgba(0,0,0,0.72)",
+              display: "flex", alignItems: "flex-start", justifyContent: "center",
+              overflowY: "auto", padding: "0 16px 40px",
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget && payStage !== "done") setShowPay(false); }}
           >
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 32 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="w-full max-w-sm my-auto"
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                width: "100%", maxWidth: 400, marginTop: 48,
+                background: "radial-gradient(ellipse at 50% 0%, #2a0050 0%, #0e0018 60%, #04000c 100%)",
+                border: "1px solid rgba(168,85,247,0.25)",
+                borderRadius: 24,
+                padding: "24px 20px 28px",
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+              }}
             >
-              <div className="text-center mb-5">
-                <Sparkles className="w-7 h-7 text-yellow-400 mx-auto mb-2" />
-                <h1 className="text-xl font-bold text-white mb-1 leading-tight">Send your reply</h1>
-                <p className="text-white/55 text-sm flex items-center justify-center gap-1.5 flex-wrap">
-                  <span className="line-through text-white/25">₹{anchor}</span>
-                  <span className="text-yellow-300/80 font-bold">₹{price}</span>
-                  — one tap, sent back instantly.
-                </p>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                <button
+                  onClick={payStage === "utr" ? () => setPayStage("paying") : () => setShowPay(false)}
+                  style={{
+                    width: 34, height: 34, borderRadius: "50%",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.06)", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "rgba(255,255,255,0.6)", fontSize: 18, flexShrink: 0,
+                  }}
+                >←</button>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
+                      Send your reply
+                    </div>
+                    <span style={{
+                      background: "rgba(255,80,50,0.18)", border: "1px solid rgba(255,80,50,0.45)",
+                      color: "#ff7d5c", fontSize: 9, fontWeight: 800, padding: "2px 7px",
+                      borderRadius: 99, letterSpacing: "0.05em", whiteSpace: "nowrap", flexShrink: 0,
+                    }}>⚡ Limited Time</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
+                    <span style={{ color: "rgba(255,255,255,0.35)", textDecoration: "line-through", fontSize: 11, fontWeight: 500 }}>₹{anchor}</span>
+                    <span style={{ color: "rgba(255,215,0,0.85)", fontSize: 11, fontWeight: 700 }}>₹{price}</span>
+                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11 }}>· sent instantly</span>
+                  </div>
+                </div>
               </div>
 
-              {(() => {
-                const upiParams = [
-                  `pa=${encodeURIComponent(UPI_VPA)}`,
-                  `pn=${encodeURIComponent(UPI_PAYEE)}`,
-                  `am=${price.toFixed(2)}`,
-                  `cu=INR`,
-                  `tn=${encodeURIComponent("HeartSync Reply")}`,
-                ].join("&");
-                const upiUri = `upi://pay?${upiParams}`;
-                const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
-                return (
-                  <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
-                    <div className="flex gap-3 items-center mb-4">
-                      <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
-                        <img src={qrSrc} alt={`UPI QR Code ₹${price}`} className="w-24 h-24 rounded-lg" />
-                      </a>
-                      <div className="text-left flex-1 min-w-0">
-                        <p className="text-[10px] text-white/45 mb-1 leading-tight">
-                          UPI of <span className="text-white/70 font-semibold">{UPI_PAYEE}</span> — Creator of HeartSync AI
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
-                          <button
-                            type="button" onClick={handleCopyUpi}
-                            aria-label={upiCopied ? "Copied" : "Copy UPI ID"}
-                            className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors"
-                            style={{
-                              background: upiCopied ? "rgba(34,197,94,0.15)" : "rgba(255,215,0,0.15)",
-                              color: upiCopied ? "#4ade80" : "#FFD700",
-                              border: `1px solid ${upiCopied ? "rgba(34,197,94,0.4)" : "rgba(255,215,0,0.35)"}`,
-                            }}
-                          >
-                            {upiCopied ? <><Check className="w-3 h-3" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Info className="w-3 h-3 text-white/25 shrink-0" />
-                          <p className="text-[10px] text-white/30">Pay <span className="text-white/60 font-semibold">exactly ₹{price}</span> — scan, tap, or copy</p>
-                        </div>
-                      </div>
+              <AnimatePresence mode="wait">
+
+                {/* Done */}
+                {payStage === "done" && (
+                  <motion.div key="reply-done"
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    style={{ textAlign: "center", paddingTop: 24 }}
+                  >
+                    <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
+                    <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 22, marginBottom: 8 }}>Reply unlocked!</h2>
+                    <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.55 }}>
+                      Your shareable link is ready. Taking you there…
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Step 1: Pay */}
+                {payStage === "paying" && (
+                  <motion.div key="reply-paying"
+                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                  >
+                    {/* Benefits strip */}
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: "6px 10px",
+                      marginBottom: 20, padding: "10px 14px",
+                      background: "rgba(168,85,247,0.08)",
+                      border: "1px solid rgba(168,85,247,0.2)",
+                      borderRadius: 12,
+                    }}>
+                      {["💌 Sent back instantly", "🔗 Shareable link", "📱 WhatsApp & Instagram"].map((item) => (
+                        <span key={item} style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap" }}>
+                          {item}
+                        </span>
+                      ))}
+                      <span style={{ width: "100%", fontSize: 11, color: "rgba(255,215,0,0.65)", fontWeight: 700, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                        All for{" "}
+                        <span style={{ color: "rgba(255,255,255,0.3)", textDecoration: "line-through", fontWeight: 400 }}>₹{anchor}</span>
+                        {" "}₹{price} — one tap, sent instantly
+                      </span>
                     </div>
 
-                    {payStage === "paying" ? (
-                      <div className="space-y-2">
-                        <a
-                          href={upiUri}
-                          onClick={() => { setPayStage("utr"); setPayError(""); }}
-                          className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
-                          style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
-                        >
-                          Pay ₹{price} Now <ArrowRight className="w-4 h-4" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => { setPayStage("utr"); setPayError(""); }}
-                          className="w-full text-center text-white/45 text-xs py-1.5 hover:text-white/70 transition-colors"
-                        >
-                          I've already paid →
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <input
-                          placeholder="Last 4 digits of UPI transaction"
-                          value={utr}
-                          inputMode="numeric"
-                          maxLength={4}
-                          autoFocus
-                          onChange={(e) => { setUtr(e.target.value.replace(/\D/g, "").slice(0, 4)); setPayError(""); }}
-                          data-clarity-mask="true"
-                          className="w-full bg-white/5 border border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white outline-none focus:border-yellow-400/50"
+                    {/* QR code */}
+                    <div style={{ textAlign: "center", marginBottom: 20 }}>
+                      <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+                        Scan with any UPI app
+                      </p>
+                      <a
+                        href={upiDeepLink}
+                        style={{
+                          display: "inline-block",
+                          background: "#fff", borderRadius: 16, padding: 10,
+                          boxShadow: "0 4px 24px rgba(168,85,247,0.25)",
+                        }}
+                      >
+                        <img
+                          src={qrSrc}
+                          alt={`UPI QR ₹${price}`}
+                          style={{ width: 200, height: 200, borderRadius: 8, display: "block" }}
                         />
-                        {payError && <p className="text-xs text-red-400 text-center">{payError}</p>}
-                        <button
-                          onClick={handlePayUtrSubmit}
-                          disabled={!isValidPayCode(utr) || payLoading}
-                          className="w-full h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
-                          style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
-                        >
-                          {payLoading
-                            ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
-                            : <>Confirm &amp; share <ArrowRight className="w-4 h-4" /></>}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setPayStage("paying"); setPayError(""); }}
-                          className="w-full text-center text-white/40 text-xs py-1.5 hover:text-white/60 transition-colors"
-                        >
-                          ← Back to payment
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                      </a>
+                      <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 10, marginTop: 8 }}>
+                        UPI of <span style={{ color: "rgba(255,255,255,0.45)" }}>{UPI_PAYEE}</span> — Creator of HeartSync AI
+                      </p>
+                    </div>
 
-              <button
-                onClick={() => setShowPay(false)}
-                className="w-full text-center text-white/40 text-sm mt-4 py-2"
-              >
-                Maybe later
-              </button>
+                    {/* Pay Now CTA */}
+                    <a
+                      href={upiDeepLink}
+                      onClick={() => { setTimeout(() => { setPayStage("utr"); setPayError(""); }, 600); }}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        width: "100%", height: 52, borderRadius: 14,
+                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                        color: "#000", fontWeight: 800, fontSize: 16,
+                        textDecoration: "none", boxShadow: "0 4px 20px rgba(255,165,0,0.4)",
+                      }}
+                    >
+                      <span style={{ textDecoration: "line-through", opacity: 0.5, fontWeight: 500, fontSize: 13, marginRight: 2 }}>₹{anchor}</span>
+                      {" "}Pay ₹{price} Now <ArrowRight style={{ width: 18, height: 18 }} />
+                    </a>
+
+                    <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 11, marginTop: 12 }}>
+                      Opens your UPI app automatically
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Step 2: Enter last 4 digits */}
+                {payStage === "utr" && (
+                  <motion.div key="reply-utr"
+                    initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <div style={{ textAlign: "center", marginBottom: 24 }}>
+                      <div style={{ fontSize: 40, marginBottom: 10 }}>💸</div>
+                      <h2 style={{ color: "#fff", fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+                        Payment done? Almost there!
+                      </h2>
+                      <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.55 }}>
+                        Enter the <span style={{ color: "rgba(255,215,0,0.85)", fontWeight: 700 }}>last 4 digits</span> of your payment reference number to confirm.
+                      </p>
+                    </div>
+
+                    <div style={{
+                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+                      borderRadius: 18, padding: "18px 16px",
+                      display: "flex", flexDirection: "column", gap: 10,
+                    }}>
+                      <Input
+                        placeholder="e.g. 4 2 8 7"
+                        value={utr}
+                        maxLength={4}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        data-clarity-mask="true"
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          setUtr(v);
+                          setPayError(
+                            v.length === 4 && isSequentialCode(v)
+                              ? "Don't use sequential (1234) or repeated (1111) codes — enter your actual last 4 digits."
+                              : ""
+                          );
+                        }}
+                        className="bg-white/5 border-white/10 h-14 text-xl rounded-xl placeholder:text-white/20 text-center text-white tracking-[0.35em] font-bold"
+                      />
+
+                      {payError && (
+                        <p style={{ color: "#f87171", fontSize: 12, textAlign: "center", margin: 0 }}>{payError}</p>
+                      )}
+
+                      <button
+                        onClick={handlePayUtrSubmit}
+                        disabled={!isValidPayCode(utr) || payLoading}
+                        style={{
+                          width: "100%", height: 48, borderRadius: 12,
+                          background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                          color: "#000", fontWeight: 700, fontSize: 15, border: "none",
+                          cursor: !isValidPayCode(utr) || payLoading ? "default" : "pointer",
+                          opacity: !isValidPayCode(utr) || payLoading ? 0.5 : 1,
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          transition: "opacity 0.2s",
+                        }}
+                      >
+                        {payLoading
+                          ? <><Loader2 style={{ width: 16, height: 16 }} className="animate-spin" /> Confirming…</>
+                          : <>Confirm &amp; Unlock <ArrowRight style={{ width: 15, height: 15 }} /></>
+                        }
+                      </button>
+
+                      <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: 10, margin: 0 }}>
+                        Find it in your UPI app under transaction details
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
             </motion.div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
