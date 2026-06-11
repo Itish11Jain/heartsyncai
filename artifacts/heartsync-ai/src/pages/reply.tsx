@@ -576,6 +576,16 @@ export default function ReplyExperience() {
     trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 2 });
   }
 
+  // Receiver (original sender opening the finished reply) replays the card from
+  // the very start — back to the sealed envelope, ready to be opened again.
+  function handleReplay() {
+    unlockingRef.current = false;
+    if (unlockTimerRef.current) { window.clearTimeout(unlockTimerRef.current); unlockTimerRef.current = null; }
+    setOpening(false);
+    setPhase("envelope");
+    trackEvent({ event: "reply_replayed", occasion: receivedOccasion, template: "reply" });
+  }
+
   function openPay() {
     if (payTimerRef.current) { clearInterval(payTimerRef.current); payTimerRef.current = null; }
     setShowPay(true);
@@ -1070,7 +1080,7 @@ export default function ReplyExperience() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1.1, duration: 0.5 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={handleBloomContinue}
+                onClick={isRecipient ? handleReplay : handleBloomContinue}
                 style={{
                   position: "relative", zIndex: 1, marginTop: 4,
                   padding: "12px 44px", borderRadius: 999, border: "none", cursor: "pointer",
@@ -1080,7 +1090,7 @@ export default function ReplyExperience() {
                   boxShadow: "0 8px 26px rgba(224,165,46,0.5)",
                 }}
               >
-                Continue →
+                {isRecipient ? "↻ Replay" : "Continue →"}
               </motion.button>
             )}
           </motion.div>
