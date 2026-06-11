@@ -1,8 +1,9 @@
 /**
  * HeartSync AI — Gmail UTR Auto-Forwarder (final version)
  *
- * Finds HDFC ₹49 credit emails, extracts the UPI Reference No.,
- * and POSTs it to the HeartSync API so customers can unlock instantly.
+ * Finds HDFC UPI credit emails for HeartSync prices (₹29 reply cards, ₹49/₹99
+ * card unlocks), extracts the UPI Reference No., and POSTs it to the HeartSync
+ * API so customers can unlock instantly.
  *
  * Uses PropertiesService to track processed message IDs so new payments
  * in the same Gmail thread are never skipped.
@@ -13,12 +14,11 @@
  * 2. Fill in HEARTSYNC_API_SECRET below
  * 3. Run → setupTrigger (approve Gmail permission)
  * 4. Run → reprocessPast  (catches any missed past emails)
- * Done — every new ₹49 credit is forwarded within 1 minute automatically.
+ * Done — every new HeartSync credit (₹29/₹49/₹99) is forwarded within 1 minute.
  */
 
 var HEARTSYNC_API_URL    = "https://heartsync.in/api/internal/upi-payment";
 var HEARTSYNC_API_SECRET = "PASTE_YOUR_ADMIN_SECRET_HERE";  // ← fill this in
-var AMOUNT_FILTER        = "49";
 
 // ─── Main — runs every 1 minute ─────────────────────────────────────────────
 
@@ -73,12 +73,15 @@ function processMessage(msg) {
 
   var amount = amountMatch[1].replace(/,/g, "");
   var amountNum = parseFloat(amount);
-  // Price A/B test: accept both arms (₹49 / ₹99) plus the +₹1 some users round
-  // up to. Anything outside this allowlist is a non-HeartSync payment.
-  var ALLOWED_AMOUNTS = [49, 50, 99, 100];
+  // Accepted HeartSync prices, each plus the +₹1 some users round up to:
+  //   ₹29 / ₹30  → viral "Share Love Back" reply cards
+  //   ₹49 / ₹50  → bundle + ₹49 A/B arm
+  //   ₹99 / ₹100 → ₹99 A/B arm
+  // Anything outside this allowlist is a non-HeartSync payment.
+  var ALLOWED_AMOUNTS = [29, 30, 49, 50, 99, 100];
   var amountAllowed = ALLOWED_AMOUNTS.some(function (a) { return Math.abs(amountNum - a) < 0.5; });
   if (!amountAllowed) {
-    Logger.log("Skipping payment outside allowed amounts (49/50/99/100): Rs." + amount + " | UTR " + utr);
+    Logger.log("Skipping payment outside allowed amounts (29/30/49/50/99/100): Rs." + amount + " | UTR " + utr);
     markProcessed(msg.getId());  // mark so we don't check again
     return;
   }

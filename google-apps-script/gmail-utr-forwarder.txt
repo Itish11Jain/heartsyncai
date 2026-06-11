@@ -1,9 +1,10 @@
 /**
  * HeartSync AI — Gmail UTR Auto-Forwarder
  *
- * Watches your Gmail inbox for HDFC payment alert emails (₹49 credits),
- * extracts the 12-digit UPI Reference No., and POSTs it to the HeartSync
- * API so customers can unlock their cards instantly — fully automatic.
+ * Watches your Gmail inbox for HDFC payment alert emails for HeartSync prices
+ * (₹29 reply cards, ₹49/₹99 card unlocks), extracts the 12-digit UPI Reference
+ * No., and POSTs it to the HeartSync API so customers can unlock their cards
+ * instantly — fully automatic.
  *
  * SETUP (one-time)
  * ────────────────
@@ -11,7 +12,7 @@
  * 2. Paste this entire file, replacing whatever is there. Save (Ctrl+S).
  * 3. Fill in HEARTSYNC_API_SECRET below (copy from Replit secrets → ADMIN_SECRET)
  * 4. Click Run → setupTrigger  (approve the Gmail permission popup)
- * 5. Done — fully automatic from here. Every new ₹49 credit is forwarded in ≤1 min.
+ * 5. Done — fully automatic. Every new HeartSync credit (₹29/₹49/₹99) is forwarded in ≤1 min.
  *
  * To retroactively process emails that were missed before this fix, run:
  *   reprocessPast()
@@ -21,7 +22,11 @@
 var HEARTSYNC_API_URL    = "https://heartsync.in/api/internal/upi-payment";
 var HEARTSYNC_API_SECRET = "PASTE_YOUR_ADMIN_SECRET_HERE";  // ← fill this in
 var PROCESSED_LABEL      = "heartsync-processed";
-var AMOUNT_FILTER        = "49";
+// Accepted HeartSync prices, each plus the +₹1 some users round up to:
+//   ₹29 / ₹30  → viral "Share Love Back" reply cards
+//   ₹49 / ₹50  → bundle + ₹49 A/B arm
+//   ₹99 / ₹100 → ₹99 A/B arm
+var ALLOWED_AMOUNTS      = [29, 30, 49, 50, 99, 100];
 
 // ─── Main function — runs every 1 minute via trigger ────────────────────────
 
@@ -84,8 +89,10 @@ function processMessage(msg, processedLabel) {
   if (!amountMatch) return;
 
   var amount = amountMatch[1].replace(/,/g, "");
-  if (parseFloat(amount) !== parseFloat(AMOUNT_FILTER)) {
-    Logger.log("Skipping non-₹49 payment: Rs." + amount + " | UTR " + utr);
+  var amountNum = parseFloat(amount);
+  var amountAllowed = ALLOWED_AMOUNTS.some(function (a) { return Math.abs(amountNum - a) < 0.5; });
+  if (!amountAllowed) {
+    Logger.log("Skipping payment outside allowed amounts (29/30/49/50/99/100): Rs." + amount + " | UTR " + utr);
     return;
   }
 

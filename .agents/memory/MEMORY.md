@@ -16,3 +16,4 @@
 - [Reply ₹29 paywall mirrors UnlockModal](reply-paywall-modal.md) — /reply paywall replicates UnlockModal "Complete payment" (copy-gated I've-Paid + UTR poll), NOT the QR layout; mint up-front; copy gate sticky.
 - [OG/social link previews](og-share-previews.md) — crawlers don't run JS; per-route OG = build-time clone of built index.html → /<route>/index.html (prerender-share-pages.mjs); OG images are committed static assets, NOT build-generated.
 - [Reply flow chrome](reply-flow-chrome.md) — owner rule: BrandMark only on FIRST + each persona's LAST screen (nowhere between); Twinkles on EVERY reply screen.
+- [Payment amount allowlist](payment-amount-allowlist.md) — new price must be in BOTH server amount-tier AND Gmail Apps Script ALLOWED_AMOUNTS, else prod unlock silently fails.
