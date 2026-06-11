@@ -213,7 +213,7 @@ function createConfettiParticles(canvasW: number, colors: string[]): Particle[] 
 
 /* ─────────────────────────── SlideToUnlock ────────────────────── */
 
-export function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => void; isSorry?: boolean }) {
+export function SlideToUnlock({ onUnlock, isSorry = false, label }: { onUnlock: () => void; isSorry?: boolean; label?: string }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [thumbX, setThumbX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -301,7 +301,7 @@ export function SlideToUnlock({ onUnlock, isSorry = false }: { onUnlock: () => v
             textShadow: isSorry ? "0 1px 8px rgba(245,196,78,0.35)" : undefined,
           }}
         >
-          {unlocked ? "✓" : isSorry ? "Slide the rose to open →" : "Slide to unlock →"}
+          {unlocked ? "✓" : label ?? (isSorry ? "Slide the rose to open →" : "Slide to unlock →")}
         </div>
         <motion.div
           onPointerDown={handlePointerDown}

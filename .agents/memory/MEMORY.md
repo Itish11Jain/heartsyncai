@@ -12,3 +12,4 @@
 - [Capability-gated animation](capability-gated-animation.md) — scale anim by device tier; default HIGH, downgrade only on positive low-end signals (iOS Safari lacks deviceMemory, so unknown must stay high).
 - [Payment flow canonical](payment-flow-canonical.md) — manual UPI "I've paid"+UTR is the chosen paywall everywhere; Razorpay was built then fully reverted — do NOT reintroduce without explicit owner request.
 - [₹29 reply price authority](reply-price-authority.md) — ₹29 viral-reply tier is server-only: client bodies accept 49/99 only; ₹29 minted solely via POST /api/cards/reply (CSPRNG id); never reintroduce 29 into client price norm.
+- [Reply flow screen-1 by variant](reply-screen1.md) — /reply hero is inverted vs builder: blush envelope for non-sorry; bespoke kintsugi MendingHeart for sorry ("Slide to forgive"); keep the inversion.

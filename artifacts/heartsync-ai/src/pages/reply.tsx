@@ -70,7 +70,7 @@ const CONTENT: Record<Variant, VariantContent> = {
   C: {
     name: "Playful Forgiveness",
     isSorry: true,
-    envelopeHeadline: "Okay, okay… let's see what you've got 🌹",
+    envelopeHeadline: "Okay, okay… let's mend this 🌹",
     bloomMessage: [
       "Apology accepted — this time. 😌",
       "Now go make it up to me. 🌹",
@@ -89,6 +89,125 @@ function useQuery() {
 }
 
 type Phase = "intro" | "envelope" | "bloom" | "send";
+
+/* ── Sorry reply, screen 1 — a NEW "kintsugi" mending heart ───────────────
+ * A cracked crimson heart floats gently; the two halves sit slightly apart
+ * with a faint gold fault line. When the user slides to forgive, the halves
+ * draw together and the seam seals with a glowing gold kintsugi vein. This
+ * is intentionally distinct from the envelope used by every other variant. */
+function MendingHeart({ opening }: { opening: boolean }) {
+  const heartPath =
+    "M50 84 C 16 58, 6 36, 22 21 C 33 11, 46 16, 50 27 C 54 16, 67 11, 78 21 C 94 36, 84 58, 50 84 Z";
+  const seam = "M50 19 L44 32 L55 44 L43 57 L54 70 L49 83";
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "min(232px, 60vw)",
+        height: "min(232px, 60vw)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {/* soft glow behind the heart — crimson while broken, warm gold as it seals */}
+      <motion.div
+        animate={{
+          opacity: opening ? [0.5, 0.95, 0.6] : [0.3, 0.5, 0.3],
+          scale: opening ? [1, 1.18, 1.05] : [1, 1.06, 1],
+        }}
+        transition={{ duration: opening ? 1 : 4.5, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          inset: "6%",
+          borderRadius: "50%",
+          background: opening
+            ? "radial-gradient(circle, rgba(255,205,110,0.6), transparent 68%)"
+            : "radial-gradient(circle, rgba(224,64,95,0.5), transparent 70%)",
+          filter: "blur(10px)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* gentle lifelike float for the whole heart */}
+      <motion.div
+        animate={opening ? { y: 0, rotate: 0, scale: [1, 1.07, 1] } : { y: [-6, 6, -6], rotate: [-2.5, 2.5, -2.5] }}
+        transition={opening ? { duration: 0.9, ease: "easeOut" } : { duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+        style={{ position: "relative", width: "100%", height: "100%" }}
+      >
+        <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ overflow: "visible" }}>
+          <defs>
+            <linearGradient id="mh-grad" x1="0" y1="0" x2="0.3" y2="1">
+              <stop offset="0%" stopColor="#FF7D98" />
+              <stop offset="52%" stopColor="#E0405F" />
+              <stop offset="100%" stopColor="#A01F3A" />
+            </linearGradient>
+            <linearGradient id="mh-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FFEDB0" />
+              <stop offset="50%" stopColor="#F5C44E" />
+              <stop offset="100%" stopColor="#E0A52E" />
+            </linearGradient>
+            <clipPath id="mh-left">
+              <rect x="-6" y="-6" width="56" height="112" />
+            </clipPath>
+            <clipPath id="mh-right">
+              <rect x="50" y="-6" width="56" height="112" />
+            </clipPath>
+            <filter id="mh-soft" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2.4" floodColor="#6E0A1C" floodOpacity="0.55" />
+            </filter>
+          </defs>
+
+          {/* left half — drifts left while broken, closes on forgive */}
+          <motion.g
+            clipPath="url(#mh-left)"
+            initial={false}
+            animate={{ x: opening ? 0 : -3.6, rotate: opening ? 0 : -2 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            style={{ transformOrigin: "50px 52px" }}
+          >
+            <path d={heartPath} fill="url(#mh-grad)" filter="url(#mh-soft)" />
+            {/* top sheen */}
+            <path d={heartPath} fill="url(#mh-grad)" opacity="0" />
+            <ellipse cx="34" cy="32" rx="13" ry="9" fill="rgba(255,255,255,0.28)" />
+          </motion.g>
+
+          {/* right half */}
+          <motion.g
+            clipPath="url(#mh-right)"
+            initial={false}
+            animate={{ x: opening ? 0 : 3.6, rotate: opening ? 0 : 2 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            style={{ transformOrigin: "50px 52px" }}
+          >
+            <path d={heartPath} fill="url(#mh-grad)" filter="url(#mh-soft)" />
+            <ellipse cx="63" cy="30" rx="9" ry="6" fill="rgba(255,255,255,0.16)" />
+          </motion.g>
+
+          {/* golden kintsugi seam — faint fault line that flares bright on forgive */}
+          <motion.path
+            d={seam}
+            fill="none"
+            stroke="url(#mh-gold)"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={false}
+            animate={{
+              opacity: opening ? 1 : 0.3,
+              strokeWidth: opening ? 3.4 : 1.4,
+            }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            style={{
+              filter: opening
+                ? "drop-shadow(0 0 5px rgba(245,196,78,0.95))"
+                : "drop-shadow(0 0 2px rgba(245,196,78,0.4))",
+            }}
+          />
+        </svg>
+      </motion.div>
+    </div>
+  );
+}
 
 export default function ReplyExperience() {
   const q = useQuery();
@@ -293,8 +412,8 @@ export default function ReplyExperience() {
         inset: 0,
         overflow: "hidden",
         background: content.isSorry
-          ? "radial-gradient(ellipse at 50% 25%, #2a1418 0%, #160a0e 55%, #0a0507 100%)"
-          : "radial-gradient(ellipse at 50% 25%, #1a1206 0%, #0f0a04 55%, #060402 100%)",
+          ? "radial-gradient(ellipse at 50% 30%, #3a0f1c 0%, #190711 55%, #070205 100%)"
+          : "radial-gradient(ellipse at 50% 25%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
       }}
     >
       <AnimatePresence mode="wait">
@@ -372,7 +491,11 @@ export default function ReplyExperience() {
               {content.envelopeHeadline}
             </motion.p>
 
-            <GoldenEnvelope recipientName="" opening={opening} isSorry={content.isSorry} />
+            {content.isSorry ? (
+              <MendingHeart opening={opening} />
+            ) : (
+              <GoldenEnvelope recipientName="" opening={opening} isSorry />
+            )}
 
             {!opening && (
               <motion.div
@@ -381,7 +504,11 @@ export default function ReplyExperience() {
                 transition={{ delay: 0.5, duration: 0.6 }}
                 style={{ width: "min(320px, 86vw)" }}
               >
-                <SlideToUnlock onUnlock={handleUnlock} isSorry={content.isSorry} />
+                <SlideToUnlock
+                  onUnlock={handleUnlock}
+                  isSorry={!content.isSorry}
+                  label={content.isSorry ? "Slide to forgive →" : undefined}
+                />
               </motion.div>
             )}
           </motion.div>
