@@ -303,27 +303,28 @@ function Twinkles() {
 }
 
 /* ── Non-sorry, non-birthday reply (variant B), screen 1 ──────────────────
- * One big bouquet bloom sits dead-center, slowly rotating. A tap bursts it
- * into a shower of petals (reusing the bouquet sprites) and advances to the
- * bloom screen. */
-const BURST_PETALS = [rosePinkImg, cosmosPinkImg, anemonePurpleImg, daisyWhiteImg, ranunculusYellowImg];
+ * One big bouquet bloom sits dead-center, slowly rotating. A tap shatters it
+ * into its OWN petals (same pink rose, a few cosmos petals mixed in) that
+ * emanate from the screen centre and scatter to fill the whole viewport before
+ * the bouquet fades in on the next screen. */
+const BURST_PETALS = [rosePinkImg, rosePinkImg, rosePinkImg, cosmosPinkImg];
 
 function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () => void }) {
+  // Full-screen scatter targets, computed once from the viewport so the petals
+  // spread edge-to-edge rather than staying inside the flower box.
   const shards = useMemo(() => {
-    const n = scaleCount(16);
-    return Array.from({ length: n }).map((_, i) => {
-      const angle = (i / n) * 360 + (Math.random() - 0.5) * 18;
-      const rad = (angle * Math.PI) / 180;
-      const dist = 120 + Math.random() * 150;
-      return {
-        img: BURST_PETALS[i % BURST_PETALS.length],
-        x: Math.cos(rad) * dist,
-        y: Math.sin(rad) * dist,
-        size: 26 + Math.random() * 30,
-        rot: (Math.random() - 0.5) * 360,
-        delay: Math.random() * 0.08,
-      };
-    });
+    const n = scaleCount(34);
+    const vw = typeof window !== "undefined" ? window.innerWidth : 400;
+    const vh = typeof window !== "undefined" ? window.innerHeight : 720;
+    return Array.from({ length: n }).map((_, i) => ({
+      img: BURST_PETALS[i % BURST_PETALS.length],
+      x: (Math.random() - 0.5) * vw * 1.15,
+      y: (Math.random() - 0.5) * vh * 1.15,
+      size: 30 + Math.random() * 50,
+      rot: (Math.random() - 0.5) * 560,
+      delay: Math.random() * 0.12,
+      dur: 0.85 + Math.random() * 0.55,
+    }));
   }, []);
 
   return (
@@ -337,48 +338,54 @@ function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () =>
         justifyContent: "center",
       }}
     >
-      {/* soft glow */}
+      {/* soft glow — flares on burst */}
       <motion.div
         animate={{
-          opacity: exploding ? [0.6, 0.9, 0] : [0.3, 0.5, 0.3],
-          scale: exploding ? [1, 1.6, 2] : [1, 1.08, 1],
+          opacity: exploding ? [0.6, 1, 0] : [0.3, 0.5, 0.3],
+          scale: exploding ? [1, 2.2, 3] : [1, 1.08, 1],
         }}
-        transition={{ duration: exploding ? 0.7 : 5, repeat: exploding ? 0 : Infinity, ease: "easeInOut" }}
+        transition={{ duration: exploding ? 0.6 : 5, repeat: exploding ? 0 : Infinity, ease: "easeInOut" }}
         style={{
           position: "absolute",
           inset: "8%",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(255,150,190,0.5), transparent 70%)",
+          background: "radial-gradient(circle, rgba(255,150,190,0.55), transparent 70%)",
           filter: "blur(10px)",
           pointerEvents: "none",
         }}
       />
 
-      {/* petals fly outward on explode */}
-      {exploding &&
-        shards.map((s, i) => (
-          <motion.img
-            key={i}
-            src={s.img}
-            alt=""
-            aria-hidden
-            draggable={false}
-            initial={{ x: 0, y: 0, scale: 0.4, opacity: 0, rotate: 0 }}
-            animate={{ x: s.x, y: s.y, scale: [0.6, 1, 0.7], opacity: [1, 1, 0], rotate: s.rot }}
-            transition={{ duration: 0.85, delay: s.delay, ease: "easeOut" }}
-            style={{
-              position: "absolute",
-              width: s.size,
-              height: s.size,
-              objectFit: "contain",
-              filter: "drop-shadow(0 4px 8px rgba(120,40,70,0.4))",
-              pointerEvents: "none",
-              zIndex: 3,
-            }}
-          />
-        ))}
+      {/* full-screen petal scatter — overlay anchored at viewport centre */}
+      {exploding && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: "none", overflow: "hidden" }}>
+          {shards.map((s, i) => (
+            <motion.img
+              key={i}
+              src={s.img}
+              alt=""
+              aria-hidden
+              draggable={false}
+              initial={{ x: 0, y: 0, scale: 0.3, opacity: 0, rotate: 0 }}
+              animate={{ x: s.x, y: s.y, scale: [0.5, 1.15, 0.95], opacity: [1, 1, 0], rotate: s.rot }}
+              transition={{ duration: s.dur, delay: s.delay, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: s.size,
+                height: s.size,
+                marginLeft: -s.size / 2,
+                marginTop: -s.size / 2,
+                objectFit: "contain",
+                filter: "drop-shadow(0 4px 8px rgba(120,40,70,0.4))",
+                willChange: "transform",
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* the hero bloom — rotates forever, tap to burst */}
+      {/* the hero bloom — rotates forever, tap to shatter into petals */}
       <motion.img
         src={rosePinkImg}
         alt="Tap to open"
@@ -388,12 +395,12 @@ function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () =>
         }}
         animate={
           exploding
-            ? { scale: [1, 1.25, 0], opacity: [1, 1, 0], rotate: 90 }
+            ? { scale: [1, 1.3, 0], opacity: [1, 1, 0], rotate: 60 }
             : { rotate: 360, scale: [1, 1.05, 1] }
         }
         transition={
           exploding
-            ? { duration: 0.7, ease: "easeIn" }
+            ? { duration: 0.45, ease: "easeIn" }
             : {
                 rotate: { duration: 11, repeat: Infinity, ease: "linear" },
                 scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
@@ -481,14 +488,17 @@ export default function ReplyExperience() {
     },
     [],
   );
-  function handleUnlock() {
+  function handleUnlock(delay?: number) {
     if (unlockingRef.current) return;
     unlockingRef.current = true;
     setOpening(true);
+    // Variant B passes a longer delay so the full-screen petal scatter plays out
+    // before the bouquet screen takes over; the slider uses the default.
+    const d = typeof delay === "number" ? delay : 750;
     unlockTimerRef.current = window.setTimeout(() => {
       setPhase("bloom");
       trackEvent({ event: "reply_flow_advanced", occasion: receivedOccasion, template: "reply", index: 1 });
-    }, 750);
+    }, d);
   }
 
   function handleBloomContinue() {
@@ -720,7 +730,7 @@ export default function ReplyExperience() {
               {variant === "C" ? (
                 <MendingHeart opening={opening} />
               ) : variant === "B" ? (
-                <SpinningFlower exploding={opening} onTap={handleUnlock} />
+                <SpinningFlower exploding={opening} onTap={() => handleUnlock(1050)} />
               ) : (
                 <GoldenEnvelope recipientName="" opening={opening} isSorry />
               )}
