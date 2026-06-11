@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, Loader2, ArrowRight, Info, Sparkles, Heart } from "lucide-react";
+import { Copy, Check, Loader2, ArrowRight, Info, Sparkles, Heart, Smartphone, Link2, Share2 } from "lucide-react";
 import { trackEvent } from "@/lib/trackEvent";
 import { getReplyPriceConfig } from "@/lib/priceArm";
 import { scaleCount } from "@/lib/deviceCapability";
@@ -54,7 +54,7 @@ const CONTENT: Record<Variant, VariantContent> = {
   A: {
     name: "Gratitude Bloom",
     isSorry: false,
-    envelopeHeadline: "A little thank-you, just for you 💛",
+    envelopeHeadline: "A little thank-you, just for you",
     bloomMessage: [
       "Thank you for thinking of me —",
       "your wishes truly made my day. 🌻",
@@ -323,8 +323,8 @@ function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () =>
       y: (Math.random() - 0.5) * vh * 1.15,
       size: 30 + Math.random() * 50,
       rot: (Math.random() - 0.5) * 560,
-      delay: Math.random() * 0.12,
-      dur: 0.85 + Math.random() * 0.55,
+      delay: Math.random() * 0.16,
+      dur: 1.4 + Math.random() * 0.7,
     }));
   }, []);
 
@@ -345,7 +345,7 @@ function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () =>
           opacity: exploding ? [0.6, 1, 0] : [0.3, 0.5, 0.3],
           scale: exploding ? [1, 2.2, 3] : [1, 1.08, 1],
         }}
-        transition={{ duration: exploding ? 0.6 : 5, repeat: exploding ? 0 : Infinity, ease: "easeInOut" }}
+        transition={{ duration: exploding ? 0.95 : 5, repeat: exploding ? 0 : Infinity, ease: "easeInOut" }}
         style={{
           position: "absolute",
           inset: "8%",
@@ -401,7 +401,7 @@ function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () =>
         }
         transition={
           exploding
-            ? { duration: 0.45, ease: "easeIn" }
+            ? { duration: 0.8, ease: "easeIn" }
             : {
                 rotate: { duration: 11, repeat: Infinity, ease: "linear" },
                 scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
@@ -764,11 +764,11 @@ export default function ReplyExperience() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45, duration: 0.6 }}
               style={{
-                ...goldText,
                 fontFamily: "inherit",
-                fontWeight: 600,
-                position: "relative", zIndex: 2, margin: 0, maxWidth: 340,
-                fontSize: "min(16px, 4.2vw)", lineHeight: 1.5,
+                color: "rgba(255,255,255,0.55)",
+                fontWeight: 400,
+                position: "relative", zIndex: 2, margin: 0, maxWidth: 330,
+                fontSize: "min(14px, 3.9vw)", lineHeight: 1.55,
               }}
             >
               Your reply is ready — preview it, then send it to the heart who first thought of you.
@@ -855,7 +855,7 @@ export default function ReplyExperience() {
               {variant === "C" ? (
                 <MendingHeart opening={opening} />
               ) : variant === "B" ? (
-                <SpinningFlower exploding={opening} onTap={() => handleUnlock(1050)} />
+                <SpinningFlower exploding={opening} onTap={() => handleUnlock(1500)} />
               ) : (
                 <GoldenEnvelope recipientName="" opening={opening} isSorry />
               )}
@@ -1055,22 +1055,29 @@ export default function ReplyExperience() {
                   }}
                 />
 
-                <p style={{ color: "rgba(255,255,255,0.74)", fontSize: 13.5, lineHeight: 1.65, margin: "0 0 16px", maxWidth: 322 }}>
-                  They put a lot of effort into making you a custom card. You can do at
-                  least this much — it&rsquo;ll surprise them and make them feel truly
-                  valued. 💛
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13.5, lineHeight: 1.65, margin: "0 0 16px", maxWidth: 322 }}>
+                  They made you a one-of-a-kind card. Sending a little something back is a
+                  sweet way to keep the moment going.
                 </p>
 
                 {/* What you get */}
-                <div style={{ width: "100%", textAlign: "left", margin: "0 0 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ width: "100%", textAlign: "left", margin: "0 0 18px", display: "flex", flexDirection: "column", gap: 11 }}>
                   {[
-                    "Easy UPI payment",
-                    "Get a shareable link after payment",
-                    "Share on WhatsApp or Instagram",
-                  ].map((b) => (
-                    <div key={b} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Check className="w-4 h-4" style={{ color: "#FFD700", flex: "0 0 auto" }} />
-                      <span style={{ color: "rgba(255,255,255,0.84)", fontSize: 13.5 }}>{b}</span>
+                    { Icon: Smartphone, text: "Easy UPI payment" },
+                    { Icon: Link2, text: "Get a shareable link after payment" },
+                    { Icon: Share2, text: "Share on WhatsApp or Instagram" },
+                  ].map(({ Icon, text }) => (
+                    <div key={text} style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                      <span
+                        style={{
+                          flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 28, height: 28, borderRadius: 9,
+                          background: "rgba(255,215,0,0.12)", border: "1px solid rgba(255,215,0,0.22)",
+                        }}
+                      >
+                        <Icon className="w-3.5 h-3.5" style={{ color: "#FFD700" }} />
+                      </span>
+                      <span style={{ color: "rgba(255,255,255,0.92)", fontSize: 13.5, fontWeight: 600 }}>{text}</span>
                     </div>
                   ))}
                 </div>
