@@ -26,9 +26,23 @@ import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.webp";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-/* ── Manual UPI details (identical to the builder paywall) ─────────────── */
-const UPI_DISPLAY = "110193250";
-const UPI_VPA = "8905158970@upi";
+/* ── Manual UPI details (same account as the production paywall) ────────── */
+const UPI_VPA = "9706900714@pthdfc";
+const UPI_DISPLAY = UPI_VPA;
+const UPI_PAYEE = "Saurabh";
+
+/** Reject obviously fake last-4 codes (1234, 4321, 1111) — mirrors prod paywall. */
+function isSequentialCode(v: string): boolean {
+  const d = v.trim().split("").map(Number);
+  if (d.length !== 4 || d.some(Number.isNaN)) return false;
+  if (d.every((x) => x === d[0])) return true;
+  if (d[1] === (d[0] + 1) % 10 && d[2] === (d[1] + 1) % 10 && d[3] === (d[2] + 1) % 10) return true;
+  if (d[1] === (d[0] + 9) % 10 && d[2] === (d[1] + 9) % 10 && d[3] === (d[2] + 9) % 10) return true;
+  return false;
+}
+function isValidPayCode(v: string): boolean {
+  return /^\d{4}$/.test(v.trim()) && !isSequentialCode(v);
+}
 
 type Variant = "A" | "B" | "C";
 
@@ -443,6 +457,7 @@ export default function ReplyExperience() {
   const [paid, setPaid] = useState(false);
   const [cardId, setCardId] = useState<string | null>(sharedId);
   const [showPay, setShowPay] = useState(false);
+  const [payStage, setPayStage] = useState<"paying" | "utr">("paying");
   const [utr, setUtr] = useState("");
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState("");
@@ -531,6 +546,8 @@ export default function ReplyExperience() {
 
   function openPay() {
     setShowPay(true);
+    setPayStage("paying");
+    setUtr("");
     setPayError("");
     trackEvent({ event: "reply_pay_clicked", occasion: receivedOccasion, template: "reply", price });
   }
@@ -621,6 +638,10 @@ export default function ReplyExperience() {
     const last4 = utr.trim();
     if (!/^\d{4}$/.test(last4)) {
       setPayError("Enter the last 4 digits of your UPI transaction.");
+      return;
+    }
+    if (isSequentialCode(last4)) {
+      setPayError("Please enter the real last 4 digits from your payment app.");
       return;
     }
     setPayLoading(true);
@@ -1133,25 +1154,25 @@ export default function ReplyExperience() {
                 </p>
               </div>
 
-              <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
-                {(() => {
-                  const upiParams = [
-                    `pa=${encodeURIComponent(UPI_VPA)}`,
-                    `pn=${encodeURIComponent("HeartSync AI")}`,
-                    `am=${price.toFixed(2)}`,
-                    `cu=INR`,
-                    `tn=${encodeURIComponent("HeartSync Reply")}`,
-                  ].join("&");
-                  const upiUri = `upi://pay?${upiParams}`;
-                  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
-                  return (
+              {(() => {
+                const upiParams = [
+                  `pa=${encodeURIComponent(UPI_VPA)}`,
+                  `pn=${encodeURIComponent(UPI_PAYEE)}`,
+                  `am=${price.toFixed(2)}`,
+                  `cu=INR`,
+                  `tn=${encodeURIComponent("HeartSync Reply")}`,
+                ].join("&");
+                const upiUri = `upi://pay?${upiParams}`;
+                const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
+                return (
+                  <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
                     <div className="flex gap-3 items-center mb-4">
                       <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
                         <img src={qrSrc} alt={`UPI QR Code ₹${price}`} className="w-24 h-24 rounded-lg" />
                       </a>
                       <div className="text-left flex-1 min-w-0">
                         <p className="text-[10px] text-white/45 mb-1 leading-tight">
-                          UPI of <span className="text-white/70 font-semibold">Itisha</span> — Creator of HeartSync AI
+                          UPI of <span className="text-white/70 font-semibold">{UPI_PAYEE}</span> — Creator of HeartSync AI
                         </p>
                         <div className="flex items-center gap-1.5">
                           <p className="font-mono font-bold text-white text-sm break-all flex-1 min-w-0">{UPI_DISPLAY}</p>
@@ -1174,32 +1195,60 @@ export default function ReplyExperience() {
                         </div>
                       </div>
                     </div>
-                  );
-                })()}
 
-                <div className="space-y-2">
-                  <input
-                    placeholder="Last 4 digits of UPI transaction"
-                    value={utr}
-                    inputMode="numeric"
-                    maxLength={4}
-                    onChange={(e) => { setUtr(e.target.value.replace(/\D/g, "").slice(0, 4)); setPayError(""); }}
-                    data-clarity-mask="true"
-                    className="w-full bg-white/5 border border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white outline-none focus:border-yellow-400/50"
-                  />
-                  {payError && <p className="text-xs text-red-400 text-center">{payError}</p>}
-                  <button
-                    onClick={handlePayUtrSubmit}
-                    disabled={!/^\d{4}$/.test(utr) || payLoading}
-                    className="w-full h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
-                    style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
-                  >
-                    {payLoading
-                      ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
-                      : <>Verify &amp; share <ArrowRight className="w-4 h-4" /></>}
-                  </button>
-                </div>
-              </div>
+                    {payStage === "paying" ? (
+                      <div className="space-y-2">
+                        <a
+                          href={upiUri}
+                          onClick={() => { setPayStage("utr"); setPayError(""); }}
+                          className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                          style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
+                        >
+                          Pay ₹{price} Now <ArrowRight className="w-4 h-4" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => { setPayStage("utr"); setPayError(""); }}
+                          className="w-full text-center text-white/45 text-xs py-1.5 hover:text-white/70 transition-colors"
+                        >
+                          I've already paid →
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <input
+                          placeholder="Last 4 digits of UPI transaction"
+                          value={utr}
+                          inputMode="numeric"
+                          maxLength={4}
+                          autoFocus
+                          onChange={(e) => { setUtr(e.target.value.replace(/\D/g, "").slice(0, 4)); setPayError(""); }}
+                          data-clarity-mask="true"
+                          className="w-full bg-white/5 border border-white/10 h-11 text-sm rounded-xl placeholder:text-white/20 text-center text-white outline-none focus:border-yellow-400/50"
+                        />
+                        {payError && <p className="text-xs text-red-400 text-center">{payError}</p>}
+                        <button
+                          onClick={handlePayUtrSubmit}
+                          disabled={!isValidPayCode(utr) || payLoading}
+                          className="w-full h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                          style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000" }}
+                        >
+                          {payLoading
+                            ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Verifying…</>
+                            : <>Confirm &amp; share <ArrowRight className="w-4 h-4" /></>}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setPayStage("paying"); setPayError(""); }}
+                          className="w-full text-center text-white/40 text-xs py-1.5 hover:text-white/60 transition-colors"
+                        >
+                          ← Back to payment
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <button
                 onClick={() => setShowPay(false)}
