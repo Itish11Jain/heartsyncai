@@ -464,6 +464,9 @@ export default function ReplyExperience() {
   const sharedId = q.get("id"); // present only when the original sender opens the paid reply
   const isRecipient = !!sharedId; // the original sender viewing the finished reply
   const isPreview = !sharedId && q.get("pv") === "1"; // small, non-interactive in-iframe card preview
+  // Dev-only: jump straight to the post-payment ("paid") share screen for visual
+  // review. Inert in production (gated on import.meta.env.DEV).
+  const devPaidPreview = import.meta.env.DEV && !sharedId && q.get("paid_preview") === "1";
 
   const variant = variantFor(receivedOccasion);
   const content = CONTENT[variant];
@@ -471,12 +474,12 @@ export default function ReplyExperience() {
 
   // The replier (arriving from "Send Love") first sees a "Your reply is ready"
   // gate; the original sender opening the finished reply (id present) skips it.
-  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : isPreview ? "envelope" : "intro");
+  const [phase, setPhase] = useState<Phase>(sharedId ? "envelope" : isPreview ? "envelope" : devPaidPreview ? "send" : "intro");
   const [opening, setOpening] = useState(false);
 
   // Replier payment + share state
-  const [paid, setPaid] = useState(false);
-  const [cardId, setCardId] = useState<string | null>(sharedId);
+  const [paid, setPaid] = useState(devPaidPreview);
+  const [cardId, setCardId] = useState<string | null>(sharedId ?? (devPaidPreview ? "preview" : null));
   const [showPay, setShowPay] = useState(false);
   const [payStage, setPayStage] = useState<"paying" | "done">("paying");
   const [utr, setUtr] = useState("");
