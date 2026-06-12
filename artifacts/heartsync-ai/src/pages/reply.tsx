@@ -365,6 +365,139 @@ function Twinkles() {
   );
 }
 
+/* ── Instant preview poster ──────────────────────────────────────────────
+ * A static, zero-animation still of the card's "bloom" (the exact flower
+ * sprites the live card uses) painted as the bottom layer of the preview box.
+ * It paints immediately so the preview is NEVER blank while the live animated
+ * iframe boots on top — and stays visible if the iframe is ever throttled or
+ * blocked (e.g. iOS off-screen throttling). */
+const POSTER_BLOOMS: { img: string; size: number; left: number; top: number; rot: number; z: number }[] = [
+  { img: ranunculusYellowImg, size: 46, left: 16, top: 4,  rot: -14, z: 2 },
+  { img: anemonePurpleImg,    size: 44, left: 54, top: 2,  rot: 12,  z: 2 },
+  { img: rosePinkImg,         size: 64, left: 28, top: 26, rot: -6,  z: 4 },
+  { img: daisyWhiteImg,       size: 46, left: 4,  top: 38, rot: -10, z: 3 },
+  { img: cosmosPinkImg,       size: 52, left: 58, top: 40, rot: 10,  z: 3 },
+];
+
+const POSTER_STARS: { left: number; top: number; size: number }[] = [
+  { left: 14, top: 16, size: 3 },   { left: 80, top: 12, size: 4 },
+  { left: 88, top: 44, size: 2.5 }, { left: 10, top: 58, size: 3 },
+  { left: 74, top: 70, size: 3.5 }, { left: 30, top: 82, size: 2.5 },
+  { left: 50, top: 9,  size: 2 },   { left: 92, top: 78, size: 3 },
+];
+
+function BloomPoster() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute", inset: 0, overflow: "hidden",
+        background: "radial-gradient(ellipse at 50% 38%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
+      }}
+    >
+      {POSTER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute", left: `${s.left}%`, top: `${s.top}%`,
+            width: s.size, height: s.size, borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,225,150,0.5) 50%, transparent 70%)",
+            boxShadow: "0 0 6px rgba(255,235,180,0.7)",
+          }}
+        />
+      ))}
+      {/* soft glow behind the bouquet */}
+      <div
+        style={{
+          position: "absolute", left: "50%", top: "44%", width: 152, height: 132,
+          transform: "translate(-50%,-50%)", borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(210,180,235,0.42), rgba(255,170,200,0.16) 55%, transparent 76%)",
+          filter: "blur(14px)",
+        }}
+      />
+      {/* bouquet cluster */}
+      <div style={{ position: "absolute", left: "50%", top: "42%", width: 120, height: 112, transform: "translate(-50%,-50%)" }}>
+        {POSTER_BLOOMS.map((b, i) => (
+          <img
+            key={i}
+            src={b.img}
+            alt=""
+            aria-hidden
+            draggable={false}
+            loading="eager"
+            decoding="async"
+            style={{
+              position: "absolute", left: `${b.left}%`, top: `${b.top}%`,
+              width: b.size, height: "auto", zIndex: b.z,
+              transform: `rotate(${b.rot}deg)`,
+              filter: "drop-shadow(0 6px 10px rgba(50,20,40,0.5))",
+            }}
+          />
+        ))}
+      </div>
+      {/* caption */}
+      <div
+        style={{
+          position: "absolute", left: 0, right: 0, bottom: 16, textAlign: "center",
+          fontFamily: "'Dancing Script', cursive", fontWeight: 600, fontSize: 18,
+          color: "rgba(255,225,165,0.92)", textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+        }}
+      >
+        A little something 💛
+      </div>
+    </div>
+  );
+}
+
+/* ── Live preview: instant poster + the real animated card iframe layered on
+ * top, revealed only once the in-iframe card has actually rendered (a
+ * postMessage handshake from the pv=1 page, with an onLoad+delay fallback).
+ * Until then the poster shows, so the box is never blank. */
+function LivePreview({ src }: { src: string }) {
+  const [ready, setReady] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const fallbackRef = useRef<number | null>(null);
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      // Only trust the ready signal from our own preview iframe.
+      if (iframeRef.current && e.source !== iframeRef.current.contentWindow) return;
+      const d = e?.data as { type?: string } | null;
+      if (d && d.type === "heartsync-reply-preview-ready") setReady(true);
+    }
+    window.addEventListener("message", onMsg);
+    return () => {
+      window.removeEventListener("message", onMsg);
+      if (fallbackRef.current) window.clearTimeout(fallbackRef.current);
+    };
+  }, []);
+  return (
+    <>
+      <BloomPoster />
+      <iframe
+        ref={iframeRef}
+        title="Your reply preview"
+        src={src}
+        scrolling="no"
+        loading="eager"
+        onLoad={() => {
+          // The document loaded; give React a beat to mount + paint before we
+          // reveal it. The handshake usually fires first and wins the race.
+          if (fallbackRef.current) window.clearTimeout(fallbackRef.current);
+          fallbackRef.current = window.setTimeout(() => setReady(true), 1200);
+        }}
+        style={{
+          position: "absolute", top: 0, left: 0,
+          width: 376, height: 560, border: "none",
+          transform: "scale(0.457)", transformOrigin: "top left",
+          pointerEvents: "none",
+          opacity: ready ? 1 : 0,
+          transition: "opacity 0.7s ease",
+        }}
+      />
+    </>
+  );
+}
+
 /* ── Subtle HeartSync AI brand mark — used ONLY on the first (intro) and the
  * last (recipient bloom / replier share) screens, nowhere in between. ────── */
 function BrandMark() {
@@ -624,6 +757,28 @@ export default function ReplyExperience() {
     return () => { cancelled = true; timers.forEach((t) => window.clearTimeout(t)); };
   }, [isPreview]);
 
+  // In the embedded preview, tell the parent window once the card has actually
+  // painted so it can fade the live iframe in over the instant poster (avoids
+  // ever revealing a half-booted blank iframe).
+  useEffect(() => {
+    if (!isPreview) return;
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try {
+          window.parent?.postMessage({ type: "heartsync-reply-preview-ready" }, "*");
+        } catch {
+          /* ignore */
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [isPreview]);
+
   // Idempotent: a slide and (variant B) a flower tap both call this, so guard
   // against fast double-fires queueing duplicate timers / analytics.
   const unlockingRef = useRef(false);
@@ -701,11 +856,10 @@ export default function ReplyExperience() {
     return `${origin}${BASE}/reply?id=${cardId}&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`;
   }, [cardId, receivedOccasion, received]);
 
-  /* ── Preview iframe: mount it ONCE at the component root for the whole replier
-   * session so it loads during the intro/envelope/bloom screens and is already
-   * playing by the time the pay screen appears (avoids a slow blank load). It's
-   * kept off-screen until the pay screen, then anchored over a placeholder box —
-   * moving a fixed element via CSS never reloads it. */
+  /* ── Preview URL for the live card iframe rendered by <LivePreview> on the
+   * final screen. The iframe boots the auto-driven pv=1 route; a static
+   * BloomPoster paints instantly behind it so the box is never blank, and the
+   * iframe only fades in once its card has actually rendered. */
   const previewUrl = useMemo(
     () => `${BASE}/reply?pv=1&ro=${encodeURIComponent(receivedOccasion)}&received=${encodeURIComponent(received)}`,
     [receivedOccasion, received],
@@ -1253,19 +1407,7 @@ export default function ReplyExperience() {
                     background: "radial-gradient(ellipse at 50% 35%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
                   }}
                 >
-                  {!isPreview && (
-                    <iframe
-                      title="Your reply preview"
-                      src={previewUrl}
-                      scrolling="no"
-                      style={{
-                        position: "absolute", top: 0, left: 0,
-                        width: 376, height: 560, border: "none",
-                        transform: "scale(0.457)", transformOrigin: "top left",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  )}
+                  {!isPreview && <LivePreview src={previewUrl} />}
                 </div>
 
                 {/* Share via — WhatsApp / Instagram / Copy link */}
@@ -1391,9 +1533,9 @@ export default function ReplyExperience() {
                   Your reply is ready
                 </p>
 
-                {/* Live preview of the card they just saw — the iframe is rendered
-                    directly inside this box so it loads reliably on mobile (the old
-                    off-screen "preload" trick stayed blank on iOS/Android). */}
+                {/* Live preview of the card they just saw. <LivePreview> paints an
+                    instant static poster behind the iframe so this box is never
+                    blank, then fades the live card in once it has rendered. */}
                 <div
                   style={{
                     position: "relative", width: 172, height: 256, borderRadius: 22,
@@ -1403,19 +1545,7 @@ export default function ReplyExperience() {
                     background: "radial-gradient(ellipse at 50% 35%, #2a1418 0%, #160a0e 55%, #0a0507 100%)",
                   }}
                 >
-                  {!isPreview && (
-                    <iframe
-                      title="Your reply preview"
-                      src={previewUrl}
-                      scrolling="no"
-                      style={{
-                        position: "absolute", top: 0, left: 0,
-                        width: 376, height: 560, border: "none",
-                        transform: "scale(0.457)", transformOrigin: "top left",
-                        pointerEvents: "none",
-                      }}
-                    />
-                  )}
+                  {!isPreview && <LivePreview src={previewUrl} />}
                 </div>
 
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, lineHeight: 1.55, margin: "0 0 12px", maxWidth: 322 }}>

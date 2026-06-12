@@ -17,3 +17,4 @@
 - [OG/social link previews](og-share-previews.md) — crawlers don't run JS; per-route OG = build-time clone of built index.html → /<route>/index.html (prerender-share-pages.mjs); OG images are committed static assets, NOT build-generated.
 - [Reply flow chrome](reply-flow-chrome.md) — owner rule: BrandMark only on FIRST + each persona's LAST screen (nowhere between); Twinkles on EVERY reply screen.
 - [Payment amount allowlist](payment-amount-allowlist.md) — new price must be in BOTH server amount-tier AND Gmail Apps Script ALLOWED_AMOUNTS, else prod unlock silently fails.
+- [Reply preview never blank](reply-preview-never-blank.md) — final-screen card preview = instant static poster behind a live iframe revealed only via a postMessage ready handshake; bare/off-screen iframes go blank on iOS.
