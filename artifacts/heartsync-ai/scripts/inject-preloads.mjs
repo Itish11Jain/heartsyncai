@@ -166,7 +166,7 @@ const assetsBlock = assetParts.join('\n');
 const DEV_ENTRY = '    <script type="module" src="/src/main.tsx"></script>';
 const PROD_ENTRY = entryJsTag ? '    ' + entryJsTag : '';
 
-const satelliteFiles = ['envelope.html', 'crystal.html', 'cosmic.html', 'vinyl.html', 'birthday.html'];
+const satelliteFiles = ['envelope.html', 'crystal.html', 'cosmic.html', 'vinyl.html', 'birthday.html', 'fathers-day.html'];
 
 console.log('patching satellite HTML files:');
 for (const filename of satelliteFiles) {

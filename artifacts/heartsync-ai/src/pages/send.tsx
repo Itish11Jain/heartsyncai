@@ -28,6 +28,7 @@ const LazyClerkBridge = lazy(async () => {
 });
 import { trackEvent } from "@/lib/trackEvent";
 import { getOccasionPrice, getPriceConfigForOccasion } from "@/lib/priceArm";
+import { getCampaignBySlug } from "@/lib/occasion-campaigns";
 import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
@@ -333,6 +334,10 @@ function SendInner() {
   const isViralReply = searchParams.get("source") === "reply";
   const receivedTemplate = (searchParams.get("received") ?? "envelope") as TemplateId;
 
+  // Occasion campaign flow: /send?c=fathers-day → prefilled builder that skips
+  // the occasion + relation pickers and forces the reusable "occasion" template.
+  const campaign = isViralReply ? null : getCampaignBySlug(searchParams.get("c"));
+
   const { isSignedIn, isLoaded, getToken, clerkUserId, userEmail, openSignIn } = useSendAuth();
 
   const { usage, loading: usageLoading, incrementUsage, fingerprint, refetch: refetchUsage } = useCardUsageWithAuth({ isLoaded, isSignedIn, getToken, userEmail });
@@ -357,15 +362,25 @@ function SendInner() {
   const initialDraft = isViralReply ? null : loadDraft();
 
   // Viral reply skips step 1 (occasion) — pre-filled as feel_good.
-  const [step, setStep] = useState<number>(isViralReply ? 2 : Math.min(initialDraft?.step ?? 1, 3));
+  // Campaign starts directly on step 3 (name + message) — occasion + relation
+  // are pre-decided by the campaign, so the first two pickers are skipped.
+  const [step, setStep] = useState<number>(
+    campaign ? 3 : isViralReply ? 2 : Math.min(initialDraft?.step ?? 1, 3),
+  );
   const [dir, setDir] = useState(1);
   // Viral reply always uses thank_you regardless of URL params or draft state.
-  const [occasion, setOccasion] = useState(isViralReply ? "thank_you" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"));
+  const [occasion, setOccasion] = useState(
+    campaign ? campaign.occasion : isViralReply ? "thank_you" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"),
+  );
   // Occasion-based unlock pricing (₹99 birthday/sorry · ₹49 others) + anchor.
   const unlockPricing = getPriceConfigForOccasion(occasion);
   // Viral reply pre-selects "partner" so the user can tap through quickly.
-  const [relation, setRelation] = useState(isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""));
-  const [recipientName, setRecipientName] = useState(initialDraft?.recipientName ?? initialRecipientName);
+  const [relation, setRelation] = useState(
+    campaign ? campaign.relation : isViralReply ? "partner" : (initialDraft?.relation ?? searchParams.get("relation") ?? ""),
+  );
+  const [recipientName, setRecipientName] = useState(
+    initialRecipientName || (campaign ? campaign.prefillName : (initialDraft?.recipientName ?? "")),
+  );
   // SEO message-guide deep link: /send?occasion=…&text=… pre-fills the message
   // box. An explicit `text` param expresses fresh intent, so it wins over any
   // saved draft. The re-seed effect below only replaces an EMPTY message, so a
@@ -377,7 +392,9 @@ function SendInner() {
   const [customMsg, setCustomMsg] = useState(
     isViralReply
       ? "Thank you for this cute gesture!"
-      : (prefillText || initialDraft?.customMsg || ""),
+      : campaign
+        ? (prefillText || campaign.defaultMessage)
+        : (prefillText || initialDraft?.customMsg || ""),
   );
   // Template selection is intentionally NOT restored from draft — Envelope is always
   // the predictable default on a fresh load. Selections survive the in-page lifecycle
@@ -540,13 +557,17 @@ function SendInner() {
   }, [usage, usageLoading]);
 
   const defaultMsg = useMemo(() => {
+    // Campaign builders seed their own default message; treat it as the baseline
+    // so an unedited campaign message isn't flagged as "custom".
+    if (campaign) return campaign.defaultMessage;
     if (!occasion || !relation) return "";
     const t = getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
     return t.final_message;
-  }, [occasion, relation]);
+  }, [occasion, relation, campaign]);
 
   // Re-seed message when occasion/relation change (but only if user hasn't customised it).
   useEffect(() => {
+    if (campaign) return; // campaign message is seeded at init — never re-seed.
     if (occasion && relation) {
       const t = getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
       setCustomMsg((current) => {
@@ -598,6 +619,9 @@ function SendInner() {
     if (template === "cosmic")   return `${base}/cosmic.html?${p.toString()}`;
     if (template === "vinyl")    return `${base}/vinyl.html?${p.toString()}`;
     if (template === "birthday") return `${base}/birthday.html?${p.toString()}`;
+    // The reusable occasion template ships per-campaign satellite HTML (its own
+    // OG tags). fathers_day is the only live campaign today.
+    if (template === "occasion") return `${base}/fathers-day.html?${p.toString()}`;
     return `${base}/envelope.html?${p.toString()}`;
   }
 
@@ -819,11 +843,13 @@ function SendInner() {
 
     // Viral reply: force the next template in the progression regardless of user selection.
     // Birthday occasion always uses the birthday template.
-    const effectiveTemplate: TemplateId = isViralReply
-      ? (VIRAL_NEXT[receivedTemplate] ?? selectedTemplate)
-      : occasion === "birthday"
-        ? "birthday"
-        : selectedTemplate;
+    const effectiveTemplate: TemplateId = campaign
+      ? campaign.template
+      : isViralReply
+        ? (VIRAL_NEXT[receivedTemplate] ?? selectedTemplate)
+        : occasion === "birthday"
+          ? "birthday"
+          : selectedTemplate;
 
     /* ── Premium templates: redirect immediately for preview + pay-wall ─ */
     /* The card page (crystal/cosmic/vinyl) handles sign-in + paywall.     */
@@ -1205,8 +1231,10 @@ function SendInner() {
           (home). This is the only Back affordance — inline backs were
           removed to keep the form fully on one screen fold. */}
       <div className="w-full flex items-center justify-between px-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1, paddingTop: "max(16px, env(safe-area-inset-top, 16px))" }}>
-        {/* In viral reply mode step 2 is the first visible step — Back goes home, not to the hidden occasion step. */}
-        {step > 1 && !(isViralReply && step === 2) ? (
+        {/* In viral reply mode step 2 is the first visible step, and in campaign
+            mode step 3 is the first visible step — Back goes home, not to the
+            hidden occasion/relation steps. */}
+        {step > 1 && !(isViralReply && step === 2) && !(campaign && step === 3) ? (
           <button
             onClick={() => goTo(step - 1, -1)}
             className="flex items-center gap-1 text-sm"
@@ -1222,7 +1250,7 @@ function SendInner() {
           </Link>
         )}
         <span className="text-sm font-semibold" style={{ color: "rgba(255,215,0,0.7)", letterSpacing: "0.04em" }}>
-          {isViralReply ? "✨ Unlock Your Secret Reply" : "✨ Create 3D Card"}
+          {isViralReply ? "✨ Unlock Your Secret Reply" : campaign ? `${campaign.campaignEmoji} ${campaign.finalHeader}` : "✨ Create 3D Card"}
         </span>
         <div className="flex gap-1">
           {[1, 2, 3].map(i => (
@@ -1326,9 +1354,11 @@ function SendInner() {
             <motion.div key="step3" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
               {/* Inline Back removed — header Back covers it. Heading +
                   subtitle margins tightened so the form fits in one fold. */}
-              <h1 className="text-2xl font-bold text-white text-center mb-1">Who's it for?</h1>
+              <h1 className="text-2xl font-bold text-white text-center mb-1">
+                {campaign ? campaign.campaignTitle : "Who's it for?"}
+              </h1>
               <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
-                We'll make it feel personal to them ✨
+                {campaign ? campaign.campaignSubtitle : "We'll make it feel personal to them ✨"}
               </p>
               <div className="flex flex-col gap-3">
                 <div>

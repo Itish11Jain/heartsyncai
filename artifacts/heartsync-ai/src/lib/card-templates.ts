@@ -1,4 +1,4 @@
-export type Occasion = "thank_you" | "birthday" | "sorry" | "anniversary" | "feel_good" | "congratulations";
+export type Occasion = "thank_you" | "birthday" | "sorry" | "anniversary" | "feel_good" | "congratulations" | "fathers_day";
 export type Relation = "friend" | "partner" | "spouse" | "date";
 
 export interface OrbData {

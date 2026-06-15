@@ -14,7 +14,7 @@
  * only animate transform/opacity so the browser keeps them on the GPU.
  */
 
-type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday";
+type TemplateId = "envelope" | "cosmic" | "crystal" | "vinyl" | "birthday" | "occasion";
 
 interface Props {
   id: TemplateId;
@@ -29,6 +29,9 @@ export function TemplatePreview({ id, size = 64 }: Props) {
     case "crystal":  return <CrystalPreview   size={size} />;
     case "vinyl":    return <VinylPreview     size={size} />;
     case "birthday": return <BirthdayPreview  size={size} />;
+    // "occasion" is a campaign-only template — never offered in the picker grid,
+    // so it has no mini preview. Fall back to the envelope hint if ever shown.
+    case "occasion": return <EnvelopePreview  size={size} />;
   }
 }
 

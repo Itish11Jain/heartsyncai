@@ -97,6 +97,7 @@ export function getPriceConfig(): PriceConfig {
 const PRICE_BY_OCCASION: Record<string, PriceArm> = {
   birthday: 99,
   sorry: 99,
+  fathers_day: 99,
   feel_good: 49,
   thank_you: 49,
   congratulations: 49,

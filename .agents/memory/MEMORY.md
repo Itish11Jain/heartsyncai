@@ -18,3 +18,4 @@
 - [Reply flow chrome](reply-flow-chrome.md) — owner rule: BrandMark only on FIRST + each persona's LAST screen (nowhere between); Twinkles on EVERY reply screen.
 - [Payment amount allowlist](payment-amount-allowlist.md) — new price must be in BOTH server amount-tier AND Gmail Apps Script ALLOWED_AMOUNTS, else prod unlock silently fails.
 - [Reply preview never blank](reply-preview-never-blank.md) — final-screen card preview = instant static poster behind a live iframe revealed only via a postMessage ready handshake; bare/off-screen iframes go blank on iOS.
+- [Occasion campaign system](occasion-campaign-system.md) — reusable /send?c=slug landing + one shared /occasion 5-screen template; new occasion must register in 5 places incl. template-preview's own TemplateId union.

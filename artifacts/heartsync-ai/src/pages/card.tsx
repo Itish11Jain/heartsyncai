@@ -1084,16 +1084,18 @@ function FinalCard({
 const PHOTO_ROTATIONS = [-2.5, 2, -1.5, 1.8];
 const PHOTO_STICKERS  = ["💛", "🌸", "✨", "💫"];
 
-function MemoryCollage({
+export function MemoryCollage({
   photoUrls,
   voiceNoteUrl,
   onContinue,
   isSorry = false,
+  headline,
 }: {
   photoUrls: string[];
   voiceNoteUrl: string | null;
   onContinue: () => void;
   isSorry?: boolean;
+  headline?: string;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -1166,7 +1168,7 @@ function MemoryCollage({
               }),
         }}
       >
-        {isSorry ? "All I want is for you to smile!" : "Every moment with you is incredible ✨"}
+        {headline ?? (isSorry ? "All I want is for you to smile!" : "Every moment with you is incredible ✨")}
       </motion.p>
 
       {/* Photos */}
