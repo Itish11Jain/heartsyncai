@@ -1263,7 +1263,7 @@ function SendInner() {
           </Link>
         )}
         <span className="text-sm font-semibold" style={{ color: "rgba(255,215,0,0.7)", letterSpacing: "0.04em" }}>
-          {isViralReply ? "✨ Unlock Your Secret Reply" : campaign ? `${campaign.campaignEmoji} ${campaign.finalHeader}` : "✨ Create 3D Card"}
+          {isViralReply ? "✨ Unlock Your Secret Reply" : campaign ? `${campaign.campaignEmoji} ${campaign.campaignDate}` : "✨ Create 3D Card"}
         </span>
         <div className="flex gap-1">
           {[1, 2, 3].map(i => (
@@ -1405,18 +1405,7 @@ function SendInner() {
                       {campaign.campaignTitle}
                     </h1>
                   </div>
-                  <p
-                    className="text-center text-sm"
-                    style={{
-                      color: "#FFD700",
-                      fontWeight: 600,
-                      textShadow: "0 0 16px rgba(255,215,0,0.35)",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {campaign.campaignDate}
-                  </p>
-                  <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <p className="text-center text-sm mb-4 mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
                     {campaign.campaignSubtitle}
                   </p>
                 </>

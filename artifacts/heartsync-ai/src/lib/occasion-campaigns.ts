@@ -61,7 +61,7 @@ const CAMPAIGNS: Record<string, OccasionCampaign> = {
     defaultMessage:
       "Happy Father's Day, Papa. Thank you for every quiet sacrifice, every word of advice, and for always being my safe place. Everything good in me started with you. I love you more than I ever say. ❤️",
     campaignTitle: "Father's Day Surprise",
-    campaignDate: "21st June: Father's Day",
+    campaignDate: "Father's Day: 21st June",
     campaignSubtitle: "Write him a little note — we'll turn it into magic ✨",
     campaignEmoji: "🌸",
     tapPrompt: "Tap the flower for Papa 🌸",
