@@ -62,7 +62,7 @@ const CAMPAIGNS: Record<string, OccasionCampaign> = {
     campaignSubtitle: "Write him a little note — we'll turn it into magic ✨",
     campaignEmoji: "🌸",
     tapPrompt: "Tap the flower for Papa 🌸",
-    bouquetMessage: "Thank you for everything!",
+    bouquetMessage: "Thank you for everything {name}!",
     polaroidNote: "Grateful for you, everyday!",
     finalHeader: "Happy Father's Day",
     accent: "#D4AF37",
