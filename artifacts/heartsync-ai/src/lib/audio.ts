@@ -47,7 +47,7 @@ const N = {
   A3: 220.00,
   C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00,
   Bb4: 466.16, B4: 493.88,
-  C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00,
+  C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00,
   B5: 987.77,
   C6: 1046.50, D6: 1174.66, E6: 1318.51,
 };
@@ -237,30 +237,35 @@ const CRYSTAL_SEQ: MStep[] = [
   { freq: N.A3, dur: Hk, gain: 0.06 },
 ];
 
-/* SUNBEAM — sparkling, bright major melody (132 BPM, ~5.0 s loop)
-   Light, fast, rising — pure morning-sunshine cheer. Triangle wave for a
-   bright, twinkly timbre. Bass: C–C–F–G→C (I–I–IV–V–I).
-   Phrase A: C5·E5·G5·E5 | Phrase B: C5·D5·E5·· | Phrase C: F5·E5·D5·C5 | Phrase D: G4·C5··  */
-const Qs = 0.455, Es = 0.227, Hs = 0.909;
-const SUNBEAM_SEQ: MStep[] = [
-  // Bar 1 — rising arpeggio (C major)
-  { freq: N.C5, dur: Es, gain: 0.09, wave: "triangle", bass: N.C3, bassDur: Hs * 0.9 },
-  { freq: N.E5, dur: Es, gain: 0.09, wave: "triangle" },
-  { freq: N.G5, dur: Qs, gain: 0.09, wave: "triangle" },
-  { freq: N.E5, dur: Qs, gain: 0.085, wave: "triangle" },
-  // Bar 2 — gentle step up then breathe (C major)
-  { freq: N.C5, dur: Es, gain: 0.09, wave: "triangle", bass: N.C3, bassDur: Hs * 0.9 },
-  { freq: N.D5, dur: Es, gain: 0.09, wave: "triangle" },
-  { freq: N.E5, dur: Qs, gain: 0.09, wave: "triangle" },
-  { freq: 0,     dur: Qs },                                       // rest
-  // Bar 3 — sparkling descent (F major)
-  { freq: N.F5, dur: Es, gain: 0.09, wave: "triangle", bass: N.F2, bassDur: Hs * 0.9 },
-  { freq: N.E5, dur: Es, gain: 0.09, wave: "triangle" },
-  { freq: N.D5, dur: Es, gain: 0.085, wave: "triangle" },
-  { freq: N.C5, dur: Es, gain: 0.085, wave: "triangle" },
-  // Bar 4 — lift and resolve home (G → C)
-  { freq: N.G4, dur: Qs, gain: 0.085, wave: "triangle", bass: N.G2, bassDur: Hs * 0.9 },
-  { freq: N.C5, dur: Hs, gain: 0.09, wave: "triangle" },
+/* GOLDEN — warm, lyrical, grown-up happy melody (100 BPM, ~9.6 s loop)
+   A mellow singing line in the mid register over a timeless C–Am–F–G
+   progression. Sine wave for a soft, rounded, sophisticated tone — uplifting
+   without being twinkly or childish.
+   Bar1 C · Bar2 Am · Bar3 F · Bar4 G (loops home to C).                      */
+const Qg = 0.60, Eg = 0.30, Hg = 1.20;
+const GOLDEN_SEQ: MStep[] = [
+  // Bar 1 — C major
+  { freq: N.G4, dur: Qg, gain: 0.10, bass: N.C3, bassDur: 2.2 },
+  { freq: N.A4, dur: Eg, gain: 0.10 },
+  { freq: N.G4, dur: Eg, gain: 0.095 },
+  { freq: N.E4, dur: Qg, gain: 0.10 },
+  { freq: N.D4, dur: Qg, gain: 0.09 },
+  // Bar 2 — A minor (warm rise)
+  { freq: N.E4, dur: Qg, gain: 0.10, bass: N.A2, bassDur: 2.2 },
+  { freq: N.G4, dur: Eg, gain: 0.10 },
+  { freq: N.A4, dur: Eg, gain: 0.10 },
+  { freq: N.C5, dur: Hg, gain: 0.095 },
+  // Bar 3 — F major (lyrical turn)
+  { freq: N.A4, dur: Qg, gain: 0.10, bass: N.F2, bassDur: 2.2 },
+  { freq: N.C5, dur: Eg, gain: 0.10 },
+  { freq: N.B4, dur: Eg, gain: 0.095 },
+  { freq: N.A4, dur: Qg, gain: 0.10 },
+  { freq: N.G4, dur: Qg, gain: 0.09 },
+  // Bar 4 — G major (gentle lift, leads home)
+  { freq: N.G4, dur: Qg, gain: 0.10, bass: N.G2, bassDur: 2.2 },
+  { freq: N.A4, dur: Eg, gain: 0.10 },
+  { freq: N.B4, dur: Eg, gain: 0.10 },
+  { freq: N.D5, dur: Hg, gain: 0.095 },
 ];
 
 /* ── Happy Birthday melodies (3 variations, randomly selected) ───
@@ -399,7 +404,7 @@ const HOME_SEQ: MStep[] = [
 ];
 
 export const music = {
-  start(template: "vinyl" | "cosmic" | "envelope" | "crystal" | "home" | "sunbeam", occasion?: string): void {
+  start(template: "vinyl" | "cosmic" | "envelope" | "crystal" | "home" | "golden", occasion?: string): void {
     music.stop();
     try {
       const ac = getCtx();
@@ -416,7 +421,7 @@ export const music = {
           template === "vinyl"   ? VINYL_SEQ   :
           template === "cosmic"  ? COSMIC_SEQ  :
           template === "crystal" ? CRYSTAL_SEQ :
-          template === "sunbeam" ? SUNBEAM_SEQ :
+          template === "golden"  ? GOLDEN_SEQ  :
                                    ENVELOPE_SEQ;
 
       _music = {
