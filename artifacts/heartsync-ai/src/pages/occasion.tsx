@@ -15,6 +15,7 @@ import {
   FloatingBouquet,
   PetalRain,
   MemoryCollage,
+  GoldenShineButton,
 } from "@/pages/card";
 
 /* The same flower sprites the bouquet/envelope use, for the opening bloom. */
@@ -113,7 +114,7 @@ function SpinningFlower({ exploding, onTap }: { exploding: boolean; onTap: () =>
   );
 }
 
-function Scene1({ tapPrompt, onNext, autoplay }: { tapPrompt: string; onNext: () => void; autoplay: boolean }) {
+function Scene1({ heading, onNext, autoplay }: { heading: string; onNext: () => void; autoplay: boolean }) {
   const [exploding, setExploding] = useState(false);
   function handleTap() {
     if (exploding) return;
@@ -129,17 +130,20 @@ function Scene1({ tapPrompt, onNext, autoplay }: { tapPrompt: string; onNext: ()
   }, [autoplay]);
 
   return (
-    <motion.div key="s1" style={{ position: "absolute", inset: 0, zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 28 }}
+    <motion.div key="s1" style={{ position: "absolute", inset: 0, zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 30, padding: "40px 24px" }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}>
       <TwinkleBackground />
-      <SpinningFlower exploding={exploding} onTap={handleTap} />
       {!exploding && (
-        <motion.p
-          animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-          style={{ position: "relative", zIndex: 2, fontSize: 16, fontWeight: 600, color: "rgba(212,175,55,0.9)", textShadow: "0 0 18px rgba(212,175,55,0.35)", textAlign: "center", padding: "0 24px" }}
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
+          style={{ position: "relative", zIndex: 2, margin: 0, fontFamily: "'Dancing Script', cursive", fontSize: "min(34px, 8.4vw)", fontWeight: 700, color: "#F5C44E", textAlign: "center", textShadow: "0 2px 14px rgba(245,196,78,0.4)", lineHeight: 1.25 }}
         >
-          {tapPrompt}
-        </motion.p>
+          {heading}
+        </motion.h1>
+      )}
+      <SpinningFlower exploding={exploding} onTap={handleTap} />
+      {!exploding && !autoplay && (
+        <GoldenShineButton label="Click here" onClick={handleTap} delay={0.4} />
       )}
     </motion.div>
   );
@@ -162,13 +166,9 @@ function Scene2({ message, onNext, autoplay }: { message: string; onNext: () => 
         {message}
       </motion.p>
       {!autoplay && (
-        <motion.button
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }}
-          whileTap={{ scale: 0.96 }} onClick={onNext}
-          style={{ position: "relative", zIndex: 2, marginTop: 30, padding: "12px 30px", borderRadius: 999, background: "linear-gradient(135deg, rgba(212,175,55,0.18), rgba(255,165,0,0.1))", border: "1.5px solid rgba(212,175,55,0.5)", color: "#F5C44E", fontWeight: 700, fontSize: 15, cursor: "pointer" }}
-        >
-          Continue →
-        </motion.button>
+        <div style={{ position: "relative", zIndex: 2, marginTop: 30 }}>
+          <GoldenShineButton label="Continue" onClick={onNext} delay={1.6} />
+        </div>
       )}
     </motion.div>
   );
@@ -192,12 +192,20 @@ function Scene4({ name, onNext, autoplay }: { name: string; onNext: () => void; 
     <motion.div key="s4" style={{ position: "absolute", inset: 0, zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 40, padding: "40px 24px" }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}>
       <TwinkleBackground />
+      {!opening && (
+        <motion.h2
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+          style={{ position: "relative", zIndex: 2, margin: 0, fontFamily: "'Dancing Script', cursive", fontSize: "min(28px, 7vw)", fontWeight: 700, color: "#F5C44E", textAlign: "center", textShadow: "0 2px 14px rgba(245,196,78,0.4)", lineHeight: 1.3 }}
+        >
+          Open this to read more...
+        </motion.h2>
+      )}
       <div style={{ position: "relative", zIndex: 2 }}>
-        <GoldenEnvelope recipientName={name} opening={opening} />
+        <GoldenEnvelope recipientName={name} opening={opening} isSorry />
       </div>
       {!opening && !autoplay && (
         <div style={{ position: "relative", zIndex: 2, width: "min(320px, 86vw)" }}>
-          <SlideToUnlock onUnlock={handleUnlock} label="Slide to open" />
+          <SlideToUnlock onUnlock={handleUnlock} isSorry />
         </div>
       )}
     </motion.div>
@@ -205,7 +213,7 @@ function Scene4({ name, onNext, autoplay }: { name: string; onNext: () => void; 
 }
 
 /* ─── Scene 5: typewriter final message + share / paywall ─────────────────── */
-function useTypewriter(text: string, speed = 26, startDelay = 500) {
+function useTypewriter(text: string, speed = 42, startDelay = 500) {
   const [out, setOut] = useState("");
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -483,13 +491,13 @@ export default function OccasionCard() {
   return (
     <div style={{ position: "fixed", inset: 0, overflow: "hidden", overscrollBehavior: "none", background: "linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)", fontFamily: "Georgia,'Times New Roman',serif", userSelect: "none" }}>
       <AnimatePresence mode="wait">
-        {scene === 1 && <Scene1 key="s1" tapPrompt={campaign.tapPrompt} autoplay={isAutoplay} onNext={() => setScene(2)} />}
-        {scene === 2 && <Scene2 key="s2" message={campaign.bouquetMessage} autoplay={isAutoplay} onNext={() => setScene(3)} />}
+        {scene === 1 && <Scene1 key="s1" heading={`${campaign.finalHeader}, ${name}`} autoplay={isAutoplay} onNext={() => setScene(2)} />}
+        {scene === 2 && <Scene2 key="s2" message={campaign.bouquetMessage.replace(/\{name\}/g, name)} autoplay={isAutoplay} onNext={() => setScene(3)} />}
         {scene === 3 && (
           <motion.div key="s3" style={{ position: "absolute", inset: 0, zIndex: 11 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}>
             <TwinkleBackground />
-            <MemoryCollage photoUrls={collagePhotos} voiceNoteUrl={voiceUrl || null} headline={campaign.polaroidNote} onContinue={() => setScene(4)} />
+            <MemoryCollage photoUrls={collagePhotos} voiceNoteUrl={voiceUrl || null} headline={campaign.polaroidNote.replace(/\{name\}/g, name)} goldenCta ctaLabel="Next" onContinue={() => setScene(4)} />
           </motion.div>
         )}
         {scene === 4 && <Scene4 key="s4" name={name} autoplay={isAutoplay} onNext={() => setScene(5)} />}

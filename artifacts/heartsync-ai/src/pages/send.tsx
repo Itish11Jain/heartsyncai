@@ -337,6 +337,8 @@ function SendInner() {
   // Occasion campaign flow: /send?c=fathers-day → prefilled builder that skips
   // the occasion + relation pickers and forces the reusable "occasion" template.
   const campaign = isViralReply ? null : getCampaignBySlug(searchParams.get("c"));
+  // Campaign cards keep the photo set tight (max 2); the standard flow allows 3.
+  const maxPhotos = campaign ? 2 : 3;
 
   const { isSignedIn, isLoaded, getToken, clerkUserId, userEmail, openSignIn } = useSendAuth();
 
@@ -1442,10 +1444,10 @@ function SendInner() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,215,0,0.75)" }}>
-                      📸 Add photos <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.3)", fontSize: 11 }}>(Upto 3)</span>
+                      📸 Add photos <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.3)", fontSize: 11 }}>(Upto {maxPhotos})</span>
                     </label>
                     <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
-                      {uploadedPhotoUrls.length}/3
+                      {uploadedPhotoUrls.length}/{maxPhotos}
                       {uploadedPhotoUrls.length === 0 && " · Optional"}
                     </span>
                   </div>
@@ -1487,7 +1489,7 @@ function SendInner() {
                     ))}
 
                     {/* Add photo button — stays available while other photos upload */}
-                    {photoSlots.length < 3 && (
+                    {photoSlots.length < maxPhotos && (
                       <label style={{ cursor: "pointer" }}>
                         <div style={{
                           width: 58, height: 58, borderRadius: 10, flexShrink: 0,
@@ -1505,7 +1507,7 @@ function SendInner() {
                           style={{ display: "none" }}
                           onChange={e => {
                             const files = Array.from(e.target.files ?? []);
-                            const slotsLeft = Math.max(0, 3 - photoSlots.length);
+                            const slotsLeft = Math.max(0, maxPhotos - photoSlots.length);
                             const toProcess = files.slice(0, slotsLeft);
                             e.target.value = "";
                             const startedEmpty = photoSlots.length === 0;
@@ -1524,7 +1526,7 @@ function SendInner() {
                   )}
                   {photoPreviewSrcs.length === 0 && !photoUploading && (
                     <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
-                      Up to 3 photos · JPEG · PNG · WebP · max 5 MB each
+                      Up to {maxPhotos} photos · JPEG · PNG · WebP · max 5 MB each
                     </p>
                   )}
                 </div>

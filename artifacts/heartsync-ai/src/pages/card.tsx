@@ -1090,12 +1090,18 @@ export function MemoryCollage({
   onContinue,
   isSorry = false,
   headline,
+  goldenCta = false,
+  ctaLabel = "Next →",
 }: {
   photoUrls: string[];
   voiceNoteUrl: string | null;
   onContinue: () => void;
   isSorry?: boolean;
   headline?: string;
+  /** When true, the continue button is rendered as a golden, shining, cursive
+   *  pill at the BOTTOM of the screen (not inline beside the voice note). */
+  goldenCta?: boolean;
+  ctaLabel?: string;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -1324,29 +1330,106 @@ export function MemoryCollage({
           </div>
         )}
 
-        {/* Next — subtle text button */}
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: mediaDelay + 0.5, duration: 0.4 }}
-          onClick={onContinue}
-          style={{
-            background: "none",
-            border: "1px solid rgba(255,255,255,0.15)",
-            borderRadius: 99,
-            padding: "8px 18px",
-            cursor: "pointer",
-            color: "rgba(255,255,255,0.45)",
-            fontSize: 13,
-            fontWeight: 500,
-            letterSpacing: "0.04em",
-            flexShrink: 0,
-          }}
-        >
-          Next →
-        </motion.button>
+        {/* Next — subtle text button (default). Hidden when a golden bottom CTA
+            is requested, which renders separately below. */}
+        {!goldenCta && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: mediaDelay + 0.5, duration: 0.4 }}
+            onClick={onContinue}
+            style={{
+              background: "none",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 99,
+              padding: "8px 18px",
+              cursor: "pointer",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: 13,
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              flexShrink: 0,
+            }}
+          >
+            Next →
+          </motion.button>
+        )}
       </motion.div>
+
+      {/* Golden, shining, cursive bottom CTA (campaign / occasion cards) */}
+      {goldenCta && (
+        <GoldenShineButton label={ctaLabel} onClick={onContinue} delay={mediaDelay + 0.4} />
+      )}
     </motion.div>
+  );
+}
+
+/* Golden filled, shimmering, cursive call-to-action pill. Shared look across
+ * occasion-card screens (tap, continue, next). */
+export function GoldenShineButton({
+  label,
+  onClick,
+  delay = 0,
+}: {
+  label: string;
+  onClick: () => void;
+  delay?: number;
+}) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileTap={{ scale: 0.95 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        boxShadow: [
+          "0 4px 18px rgba(245,196,78,0.45)",
+          "0 6px 32px rgba(245,196,78,0.9)",
+          "0 4px 18px rgba(245,196,78,0.45)",
+        ],
+      }}
+      transition={{
+        opacity: { duration: 0.5, delay },
+        y: { duration: 0.5, delay },
+        boxShadow: { duration: 1.9, repeat: Infinity, ease: "easeInOut" },
+      }}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        padding: "13px 44px",
+        borderRadius: 999,
+        border: "1.5px solid rgba(255,233,168,0.95)",
+        background: "linear-gradient(135deg, #FFE9A8 0%, #F5C44E 45%, #E0A52E 100%)",
+        color: "#4A2E00",
+        fontFamily: "'Dancing Script', cursive",
+        fontWeight: 700,
+        fontSize: 23,
+        lineHeight: 1.1,
+        letterSpacing: "0.02em",
+        cursor: "pointer",
+        WebkitTapHighlightColor: "transparent",
+        flexShrink: 0,
+      }}
+    >
+      {/* Shimmer sweep */}
+      <motion.span
+        aria-hidden
+        animate={{ x: ["-130%", "230%"] }}
+        transition={{ duration: 2.1, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.7 }}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: "45%",
+          background: "linear-gradient(105deg, transparent, rgba(255,255,255,0.7), transparent)",
+          transform: "skewX(-18deg)",
+          pointerEvents: "none",
+        }}
+      />
+      <span style={{ position: "relative", zIndex: 1 }}>{label}</span>
+    </motion.button>
   );
 }
 
