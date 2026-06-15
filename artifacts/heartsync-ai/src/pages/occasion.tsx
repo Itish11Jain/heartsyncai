@@ -372,11 +372,11 @@ export default function OccasionCard() {
   const [musicMuted, setMusicMuted] = useState(false);
   useEffect(() => {
     if (isPreview) return;
-    music.start("envelope", occasion);
+    music.start("sunbeam", occasion);
     function onFirstGesture() {
       const wasSuspended = isAudioSuspended();
       resumeAudio();
-      if (wasSuspended) { music.stop(); music.start("envelope", occasion); }
+      if (wasSuspended) { music.stop(); music.start("sunbeam", occasion); }
     }
     document.addEventListener("touchstart", onFirstGesture, { once: true });
     document.addEventListener("click", onFirstGesture, { once: true });
