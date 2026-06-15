@@ -1155,10 +1155,10 @@ export function MemoryCollage({
           letterSpacing: "0.01em",
           lineHeight: 1.4,
           padding: "0 20px",
-          ...(isSorry
+          ...(isSorry || goldenCta
             ? {
                 fontSize: "min(25px, 6.2vw)",
-                whiteSpace: "nowrap",
+                whiteSpace: isSorry ? "nowrap" : "normal",
                 fontFamily: "'Dancing Script', cursive",
                 backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
                 WebkitBackgroundClip: "text",
