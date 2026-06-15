@@ -33,6 +33,17 @@ import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
 
+// Twinkling sparkles scattered around the campaign headline (golden cursive).
+const CAMPAIGN_SPARKLES = [
+  { id: 0, left: 2, top: 10, size: 12, delay: 0, duration: 2.4 },
+  { id: 1, left: 14, top: 62, size: 9, delay: 0.7, duration: 2.8 },
+  { id: 2, left: 30, top: 0, size: 11, delay: 1.3, duration: 2.2 },
+  { id: 3, left: 52, top: 70, size: 8, delay: 0.4, duration: 3.1 },
+  { id: 4, left: 70, top: 4, size: 10, delay: 1.0, duration: 2.6 },
+  { id: 5, left: 86, top: 58, size: 12, delay: 0.2, duration: 2.9 },
+  { id: 6, left: 95, top: 14, size: 9, delay: 1.6, duration: 2.3 },
+];
+
 const VIRAL_NEXT: Record<string, TemplateId> = {
   envelope: "cosmic",
   cosmic: "vinyl",
@@ -1356,12 +1367,69 @@ function SendInner() {
             <motion.div key="step3" variants={stepVariants} initial="initial" animate="animate" exit="exit" className="w-full">
               {/* Inline Back removed — header Back covers it. Heading +
                   subtitle margins tightened so the form fits in one fold. */}
-              <h1 className="text-2xl font-bold text-white text-center mb-1">
-                {campaign ? campaign.campaignTitle : "Who's it for?"}
-              </h1>
-              <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
-                {campaign ? campaign.campaignSubtitle : "We'll make it feel personal to them ✨"}
-              </p>
+              {campaign ? (
+                <>
+                  <div style={{ position: "relative", display: "flex", justifyContent: "center", marginBottom: 2 }}>
+                    {/* Sparkles scattered around the golden cursive headline */}
+                    <div style={{ position: "absolute", inset: "-8px -4px", pointerEvents: "none" }}>
+                      {CAMPAIGN_SPARKLES.map((s) => (
+                        <span
+                          key={s.id}
+                          style={{
+                            position: "absolute",
+                            left: `${s.left}%`,
+                            top: `${s.top}%`,
+                            fontSize: s.size,
+                            animation: `hs-star-twinkle ${s.duration}s ease-in-out ${s.delay}s infinite`,
+                          }}
+                        >
+                          ✨
+                        </span>
+                      ))}
+                    </div>
+                    <h1
+                      className="text-center"
+                      style={{
+                        fontFamily: "'Dancing Script', cursive",
+                        fontWeight: 700,
+                        fontSize: "min(38px, 9vw)",
+                        lineHeight: 1.2,
+                        backgroundImage: "linear-gradient(135deg, #FFE9A8, #F5C44E 45%, #E0A52E)",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                        WebkitTextFillColor: "transparent",
+                        filter: "drop-shadow(0 2px 12px rgba(245,196,78,0.4))",
+                      }}
+                    >
+                      {campaign.campaignTitle}
+                    </h1>
+                  </div>
+                  <p
+                    className="text-center text-sm"
+                    style={{
+                      color: "#FFD700",
+                      fontWeight: 600,
+                      textShadow: "0 0 16px rgba(255,215,0,0.35)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {campaign.campaignDate}
+                  </p>
+                  <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {campaign.campaignSubtitle}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-2xl font-bold text-white text-center mb-1">
+                    Who's it for?
+                  </h1>
+                  <p className="text-center text-sm mb-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    We'll make it feel personal to them ✨
+                  </p>
+                </>
+              )}
               <div className="flex flex-col gap-3">
                 <div>
                   {/* When the name is empty we brighten the label and pulse a

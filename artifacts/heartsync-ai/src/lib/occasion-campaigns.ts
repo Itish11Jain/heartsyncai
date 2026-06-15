@@ -29,6 +29,8 @@ export interface OccasionCampaign {
 
   /* ── Campaign builder hero copy ── */
   campaignTitle: string;
+  /** Date line shown under the headline (golden, straight). */
+  campaignDate: string;
   campaignSubtitle: string;
   campaignEmoji: string;
 
@@ -58,7 +60,8 @@ const CAMPAIGNS: Record<string, OccasionCampaign> = {
     relation: "father",
     defaultMessage:
       "Happy Father's Day, Papa. Thank you for every quiet sacrifice, every word of advice, and for always being my safe place. Everything good in me started with you. I love you more than I ever say. ❤️",
-    campaignTitle: "A Father's Day card he'll never forget",
+    campaignTitle: "Father's Day Surprise",
+    campaignDate: "21st June: Father's Day",
     campaignSubtitle: "Write him a little note — we'll turn it into magic ✨",
     campaignEmoji: "🌸",
     tapPrompt: "Tap the flower for Papa 🌸",
