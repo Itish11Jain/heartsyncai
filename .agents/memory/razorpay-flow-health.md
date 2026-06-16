@@ -1,30 +1,48 @@
 ---
 name: Razorpay flow health
-description: Razorpay online-checkout flow is verified functional end-to-end; how a "click did nothing" report was diagnosed and why it's not a code bug.
+description: How a "Pay & Share click did nothing" was diagnosed to a silent client-side hang after a successful create-order, and the hardening that fixed it.
 ---
 
-# Razorpay checkout is verified working — "click did nothing" was not a code bug
+# "Pay & Share did nothing" = silent client-side hang AFTER create-order
 
-The runtime-toggled Razorpay online-checkout flow (payMode flag) is functional end-to-end.
-Reproduced in dev with the **live** key: create-order → checkout.js loads → `new Razorpay().open()`
-creates the `api.razorpay.com/v1/checkout/public` iframe. No errors, no CSP, no z-index conflict
-(UnlockModal zIndex 10010 « Razorpay's max-int container).
+Owner made a real card on production with Razorpay mode on, clicked Pay, and
+nothing happened. Production logs showed the canonical signature:
+`/api/razorpay/create-order` returned **200**, then **no** `/api/razorpay/verify`
+ever followed and the owner gave up ~18s later. So the server did its job; the
+break was 100% browser-side, after order creation.
 
-**Why a production "Pay & Share click did nothing" is NOT a server/code defect:**
-- create-order returning 200 proves: the click registered, the live key is valid, the account is
-  live-activated, and the client razorpay lib ran. Everything after that is browser-side.
-- Production has no CSP (server: Google Frontend / Replit edge), so checkout.js isn't edge-blocked.
-- Analytics confirm the symptom shape: `pay_popup_cta_clicked` fires, `card_paid` never does.
+**Root cause / design defect (not a server bug):** in `payWithRazorpay`, after a
+successful create-order, the flow loaded `checkout.js` then `rzp.open()`. If the
+overlay never rendered (popup/iframe blocked, in-app webview quirk, slow/blocked
+CDN) the returned Promise **never settled** — so `UnlockModal.handlePrimaryCta`
+hung with `rzpLoading` stuck and `setRzpError`/`setPhase` never firing. Result:
+the button shows absolutely nothing. Worse, the original catch did a *silent*
+`setPhase("paying")` with no message, so even the caught-error path was
+invisible.
 
-**The real diagnosability gap:** when checkout.js can't load/open on a *specific user's*
-browser/network, `handlePrimaryCta`'s catch does `setPhase("paying")` and **silently** drops the
-user onto the manual UPI screen with no message — so a blocked checkout.js looks like "the razorpay
-click did nothing / it went to UPI instead." If this recurs, the fix is to surface a visible
-message on the non-cancel fallback, not to touch the (working) server/order path.
+**Important caution:** a standalone HTML test page that calls `rzp.open()`
+directly does NOT prove the real flow works — it bypasses the React
+`handlePrimaryCta` logic, the modal's body-scroll-lock, and the async gap
+between user gesture and open(). Don't conclude "it works" from that.
 
-**Why:** spent a full debug cycle proving the flow works; the live key means you can't test a
-successful payment without real money (no test-card path unless test keys are configured).
+**Hardening applied (keep these invariants):**
+- `loadCheckoutScript` has a timeout (~12s) so a blocked CDN rejects instead of
+  hanging.
+- After `rzp.open()`, a ~6s watchdog checks the DOM for the Razorpay overlay
+  (`.razorpay-container`/`.razorpay-checkout-frame`); if absent it rejects with a
+  real error — the Promise can no longer hang forever.
+- Non-cancel failures in the modal show a **visible** message AND fall back to
+  the manual UPI screen (never silent). `PaymentCancelled` (user dismissed) is
+  still a no-op.
+- `[razorpay]` console breadcrumbs trace start → order created → script loaded →
+  opening → failure, so a future "it didn't work" is self-diagnosing.
 
-**How to apply:** before re-investigating a "razorpay CTA broken" report, check whether
-create-order returned 200 (→ server fine, look browser-side) and whether `card_paid` fired. Don't
-assume the modal failed to open — confirm it.
+**Why:** the live key means you can't test a successful payment without real
+money, and Playwright e2e is unavailable here (no X server). Visible errors +
+breadcrumbs are the only way to diagnose remote device-specific failures.
+
+**How to apply:** before re-investigating a "razorpay CTA broken" report, check
+whether create-order returned 200 (→ server fine, look browser-side) and whether
+`card_paid`/verify fired. Have the owner read the console `[razorpay]` lines.
+Never let the open() path resolve only via Razorpay callbacks — keep the
+watchdog.

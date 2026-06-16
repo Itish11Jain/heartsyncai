@@ -81,6 +81,7 @@ export default function UnlockModal({
   const { price, anchor } = getPriceConfigForOccasion(occasion);
   const [phase, setPhase] = useState<ModalPhase>("preview");
   const [rzpLoading, setRzpLoading] = useState(false);
+  const [rzpError, setRzpError] = useState<string | null>(null);
   const [utrVisible, setUtrVisible] = useState(false);
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
@@ -149,6 +150,7 @@ export default function UnlockModal({
    */
   async function handlePrimaryCta() {
     if (rzpLoading) return;
+    setRzpError(null);
     trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
     trackEvent({ event: "pay_popup_cta_clicked", occasion, card_id: cardId });
 
@@ -158,19 +160,37 @@ export default function UnlockModal({
     if (mode === "razorpay") {
       setRzpLoading(true);
       const eventId = `hs_${cardId}_${Date.now()}`;
-      const { fbp, fbc } = getMetaCookies();
-      try {
-        await payWithRazorpay({ kind: "card", cardId, occasion, verifyExtras: { eventId, fbp, fbc } });
+      const markPaid = () => {
         trackEvent({ event: "card_paid", occasion, card_id: cardId, price });
         const w = window as Window & { fbq?: (...a: unknown[]) => void };
         if (typeof window !== "undefined" && w.fbq) {
           w.fbq("track", "Purchase", { value: price, currency: "INR" }, { eventID: eventId });
         }
+      };
+      try {
+        const { fbp, fbc } = getMetaCookies();
+        await payWithRazorpay({
+          kind: "card",
+          cardId,
+          occasion,
+          verifyExtras: { eventId, fbp, fbc },
+          // If the watchdog fired but the user actually completed payment,
+          // recover to success instead of leaving them on the UPI fallback.
+          onLateSuccess: () => { setRzpError(null); markPaid(); setPhase("success"); },
+        });
+        markPaid();
         setPhase("success");
       } catch (err) {
-        // User dismissing the modal is not an error; anything else falls back
-        // to the manual UPI screen so they can still complete payment.
-        if (!(err instanceof PaymentCancelled)) setPhase("paying");
+        // User dismissing the modal is not an error. Any other failure (checkout
+        // script blocked, modal never opened, verify error) must NOT fail
+        // silently — surface a visible message and drop to the manual UPI screen
+        // so the payment can still be completed.
+        if (!(err instanceof PaymentCancelled)) {
+          const msg = err instanceof Error && err.message ? err.message : "Online payment couldn't open.";
+          trackEvent({ event: "razorpay_fallback", occasion, card_id: cardId });
+          setRzpError(`${msg} Switched to UPI — you can still pay below.`);
+          setPhase("paying");
+        }
       } finally {
         setRzpLoading(false);
       }
@@ -482,6 +502,22 @@ export default function UnlockModal({
                   </button>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Complete payment</div>
                 </div>
+
+                {rzpError && (
+                  <div style={{
+                    background: "rgba(255,170,0,0.10)",
+                    border: "1px solid rgba(255,170,0,0.35)",
+                    color: "#ffce6b",
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    marginBottom: 16,
+                    textAlign: "center",
+                  }}>
+                    {rzpError}
+                  </div>
+                )}
 
                 {/* Status card */}
                 <div

@@ -19,4 +19,4 @@
 - [Payment amount allowlist](payment-amount-allowlist.md) — new price must be in BOTH server amount-tier AND Gmail Apps Script ALLOWED_AMOUNTS, else prod unlock silently fails.
 - [Reply preview never blank](reply-preview-never-blank.md) — final-screen card preview = instant static poster behind a live iframe revealed only via a postMessage ready handshake; bare/off-screen iframes go blank on iOS.
 - [Occasion campaign system](occasion-campaign-system.md) — reusable /send?c=slug landing + one shared /occasion 5-screen template; new occasion must register in 5 places incl. template-preview's own TemplateId union.
-- [Razorpay flow health](razorpay-flow-health.md) — checkout verified working end-to-end with live key; "click did nothing" ≠ code bug (create-order 200 = look browser-side); silent fallback to manual UPI hides checkout.js blocks.
+- [Razorpay flow health](razorpay-flow-health.md) — "Pay did nothing" = silent client hang after create-order 200; fixed via script timeout + open() watchdog + visible UPI fallback + onLateSuccess recovery.

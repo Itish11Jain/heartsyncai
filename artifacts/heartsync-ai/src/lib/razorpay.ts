@@ -53,6 +53,14 @@ export interface PayOptions {
   prefill?: { name?: string; email?: string; contact?: string };
   /** Clerk bearer token — required for the `template` kind. */
   authToken?: string | null;
+  /**
+   * Called when a payment is verified AFTER the returned promise already
+   * settled — e.g. the open() watchdog rejected (false positive on a slow
+   * render) but the modal was actually up and the user paid. Lets the caller
+   * recover to a success state instead of leaving the user on a fallback
+   * screen and risking a second payment.
+   */
+  onLateSuccess?: (result: PayResult) => void;
 }
 
 export interface PayResult {
@@ -109,27 +117,47 @@ declare global {
 }
 
 let scriptPromise: Promise<void> | null = null;
+const SCRIPT_TIMEOUT_MS = 12_000;
 
-/** Inject checkout.js once; subsequent calls reuse the same promise. */
+/**
+ * Inject checkout.js once; subsequent calls reuse the same promise. Rejects on
+ * error OR after a timeout so a blocked/slow CDN can never leave the caller
+ * waiting forever with no feedback.
+ */
 function loadCheckoutScript(): Promise<void> {
   if (typeof window !== "undefined" && window.Razorpay) return Promise.resolve();
   if (scriptPromise) return scriptPromise;
   scriptPromise = new Promise<void>((resolve, reject) => {
+    let done = false;
+    const fail = (reason: string) => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      scriptPromise = null;
+      console.error(`[razorpay] checkout.js failed to load: ${reason}`);
+      reject(new PaymentFailed("Could not load the payment library."));
+    };
+    const ok = () => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      console.info("[razorpay] checkout.js loaded");
+      resolve();
+    };
+    const timer = window.setTimeout(() => fail("timeout"), SCRIPT_TIMEOUT_MS);
+
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SRC}"]`);
     if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new PaymentFailed("Could not load the payment library.")));
-      if (window.Razorpay) resolve();
+      if (window.Razorpay) { ok(); return; }
+      existing.addEventListener("load", ok);
+      existing.addEventListener("error", () => fail("script error"));
       return;
     }
     const s = document.createElement("script");
     s.src = CHECKOUT_SRC;
     s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => {
-      scriptPromise = null;
-      reject(new PaymentFailed("Could not load the payment library."));
-    };
+    s.onload = ok;
+    s.onerror = () => fail("script error");
     document.body.appendChild(s);
   });
   return scriptPromise;
@@ -152,6 +180,7 @@ const DESCRIPTIONS: Record<PaymentKind, string> = {
  * @throws PaymentFailed on order/verify/network/payment errors.
  */
 export async function payWithRazorpay(opts: PayOptions): Promise<PayResult> {
+  console.info("[razorpay] starting checkout", { kind: opts.kind, cardId: opts.cardId });
   // 1) Create the order (amount is decided by the server).
   const orderRes = await fetch(`${BASE}/api/razorpay/create-order`, {
     method: "POST",
@@ -166,8 +195,10 @@ export async function payWithRazorpay(opts: PayOptions): Promise<PayResult> {
     message?: string;
   };
   if (!orderRes.ok || !orderData.orderId || !orderData.keyId) {
+    console.error("[razorpay] create-order failed", orderRes.status, orderData);
     throw new PaymentFailed(orderData.message ?? "Could not start the payment. Please try again.");
   }
+  console.info("[razorpay] order created", orderData.orderId);
 
   // 2) Make sure checkout.js is available.
   await loadCheckoutScript();
@@ -215,6 +246,13 @@ export async function payWithRazorpay(opts: PayOptions): Promise<PayResult> {
             if (!settled) {
               settled = true;
               resolve(data);
+            } else {
+              // The promise was already settled (almost always the open()
+              // watchdog firing on a slow render). The payment genuinely went
+              // through and is verified server-side, so recover the UI instead
+              // of leaving the user on a fallback / asking them to pay again.
+              console.warn("[razorpay] payment verified after promise settled — recovering via onLateSuccess");
+              opts.onLateSuccess?.(data);
             }
           } catch {
             settleReject(new PaymentFailed("We couldn't confirm your payment. Please contact hello@heartsync.in"));
@@ -225,9 +263,26 @@ export async function payWithRazorpay(opts: PayOptions): Promise<PayResult> {
 
     rzp.on("payment.failed", (resp: unknown) => {
       const msg = (resp as { error?: { description?: string } })?.error?.description;
+      console.error("[razorpay] payment.failed", msg);
       settleReject(new PaymentFailed(msg ?? "Payment failed. Please try again."));
     });
 
+    console.info("[razorpay] opening modal");
     rzp.open();
+
+    // Watchdog: if the overlay never renders (popup blocked, in-app webview
+    // quirk, slow network) the promise would otherwise hang forever and the
+    // caller would show nothing at all. Detect a missing overlay shortly after
+    // open() and surface a real error so the caller can fall back to UPI.
+    window.setTimeout(() => {
+      if (settled) return;
+      const appeared = document.querySelector(
+        ".razorpay-container, .razorpay-checkout-frame, iframe.razorpay-checkout-frame, iframe[src*='razorpay']",
+      );
+      if (!appeared) {
+        console.error("[razorpay] modal did not appear within 8s of open()");
+        settleReject(new PaymentFailed("The payment window couldn't open. Please try again or pay via UPI."));
+      }
+    }, 8000);
   });
 }
