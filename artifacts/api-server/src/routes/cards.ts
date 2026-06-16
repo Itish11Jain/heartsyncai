@@ -64,6 +64,7 @@ export async function fireMetaCapi(
   cardId: string,
   ip: string,
   userAgent: string,
+  valueRupees?: number | null,
 ): Promise<void> {
   const token = process.env["META_PIXEL_ACCESS_TOKEN"];
   if (!token) return;
@@ -102,7 +103,7 @@ export async function fireMetaCapi(
               action_source: "website",
               user_data: userData,
               custom_data: {
-                value: 99.0,
+                value: valueRupees ?? 49,
                 currency: "INR",
               },
             },
@@ -110,7 +111,7 @@ export async function fireMetaCapi(
         }),
       },
     );
-    console.log(`[capi] Purchase fired event_id=${eventId} card=${cardId} fbp=${!!fbp} fbc=${!!fbc}`);
+    console.log(`[capi] Purchase fired event_id=${eventId} card=${cardId} value=${valueRupees ?? 49} fbp=${!!fbp} fbc=${!!fbc}`);
   } catch (err) {
     console.warn("[capi] Non-blocking CAPI call failed", err);
   }
@@ -640,7 +641,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
     const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
     const clientIp = ((req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
-    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""));
+    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""), eventPrice);
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/auto-unlock error", err);
@@ -739,7 +740,7 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);
     const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
     const clientIp = ((req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
-    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""));
+    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""), eventPrice);
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/pay-unlock error", err);

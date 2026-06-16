@@ -20,3 +20,4 @@
 - [Reply preview never blank](reply-preview-never-blank.md) — final-screen card preview = instant static poster behind a live iframe revealed only via a postMessage ready handshake; bare/off-screen iframes go blank on iOS.
 - [Occasion campaign system](occasion-campaign-system.md) — reusable /send?c=slug landing + one shared /occasion 5-screen template; new occasion must register in 5 places incl. template-preview's own TemplateId union.
 - [Razorpay flow health](razorpay-flow-health.md) — "Pay did nothing" = silent client hang after create-order 200; fixed via script timeout + open() watchdog + visible UPI fallback + onLateSuccess recovery.
+- [Meta Pixel/CAPI firing](meta-capi-firing.md) — browser Pixel + server CAPI Purchase; NEVER hardcode CAPI value (thread real amount); dedup only on client /verify path, webhook uses synthetic eventId.

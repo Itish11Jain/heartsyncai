@@ -134,7 +134,7 @@ async function fulfillCardUnlock(
       [cardId, cardRow.rows[0]?.occasion ?? null, `srv_${cardId}`, amountRupees],
     );
     const capiEventId = opts.eventId ?? `hs_${cardId}_${Date.now()}`;
-    void fireMetaCapi(capiEventId, cardId, opts.clientIp ?? "", opts.userAgent ?? "");
+    void fireMetaCapi(capiEventId, cardId, opts.clientIp ?? "", opts.userAgent ?? "", amountRupees);
     console.log(`[razorpay] card unlocked card=${cardId} payment=${paymentId}`);
   }
 }
