@@ -31,5 +31,11 @@ Every server Purchase (Razorpay verify/webhook AND UPI auto_unlock/manual_utr) g
 **Why:** blind logging hid a total Meta-delivery failure behind healthy-looking "fired" lines.
 **How to apply:** never revert to ignoring the Graph API response; `events_received` / `error` is the only in-app signal that Meta actually accepted the event. Also omit empty `client_ip_address`/`client_user_agent` (webhook path) rather than sending empty strings.
 
+## Backfilling missed server Purchases (CAPI recovery)
+When the token outage drops events, recover them by re-sending Purchase via CAPI — NOT Meta's offline-CSV upload. The offline CSV does NOT accept `fbp`/`fbc`, and HeartSync stores no email/phone on guest purchases, so the CSV would have almost nothing to match on; `fbp`/`fbc` (present on ~all cards via `hs_cards`) are the only strong match keys we hold, and only CAPI can use them.
+Window: Meta accepts `event_time` up to **7 days** old — fine for a same-day outage. Use original `created_at`/`used_at` as `event_time`, real `value`, currency INR, `action_source:"website"`.
+**Avoid double-counting** (no dedup help — original auto-fired `event_id`s aren't persisted, so a backfill mints new ids): manually exclude events OUTSIDE the broken window. Lower bound = the outage start (Meta chart drop); upper bound = when the new token went live in prod (the republish — confirm via a post-publish `[capi]` log showing a *business* rejection like "no customer information parameters" rather than an auth error). Drop any card with no `fbp` AND no `fbc` (unmatchable).
+**Why:** re-inflating ROAS is the exact harm we fixed; a boundary event that already landed would be counted twice.
+
 ## Verifying past payments
 Deployment-log verification is unreliable after a republish: a new deployment starts a fresh log stream, so `/verify` + `[capi]` lines from payments on the PRIOR deployment are gone. Definitive check = Meta Events Manager (owner-controlled): confirm Purchase events arriving on both "Browser" and "Server" with deduplication, and value split by ₹49/₹99.
