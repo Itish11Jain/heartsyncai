@@ -91,18 +91,23 @@ export default function ViralReplyCTA({ template, occasion = "thank_you" }: Vira
       <button
         onClick={handleInstagramClick}
         style={{
-          width: "100%", padding: "12px",
-          marginTop: 10,
+          width: "100%", padding: "14px",
+          marginTop: 12,
           borderRadius: 14,
-          background: "transparent",
-          border: "1px solid rgba(255,255,255,0.25)",
-          color: "rgba(255,255,255,0.9)",
-          fontWeight: 600, fontSize: 14,
+          background: "linear-gradient(95deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%)",
+          border: "none",
+          color: "#fff",
+          fontWeight: 700, fontSize: 15,
           cursor: "pointer", letterSpacing: "0.02em",
-          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
+          boxShadow: "0 4px 18px rgba(214,41,118,0.4)",
         }}
       >
-        <span aria-hidden style={{ fontSize: 16 }}>📸</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden style={{ flexShrink: 0 }}>
+          <rect x="2" y="2" width="20" height="20" rx="6" stroke="#fff" strokeWidth="2" />
+          <circle cx="12" cy="12" r="4.5" stroke="#fff" strokeWidth="2" />
+          <circle cx="17.5" cy="6.5" r="1.4" fill="#fff" />
+        </svg>
         Follow us on Instagram
       </button>
     </div>
