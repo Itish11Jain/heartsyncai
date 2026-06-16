@@ -20,5 +20,5 @@ WatermarkPaywallModal's QR layout and was rejected.
   the CTA mid-flow); reset only on modal open/back, exactly like UnlockModal's `idCopied`.
 - Keep reply-funnel analytics (reply_pay_clicked / reply_payment_done_clicked /
   reply_utr_submitted / reply_unlocked / reply_shared) and recipient `card_viewed`.
-- Payee/trust name on /reply is intentionally "Saurabh" (UnlockModal shows "Itisha") — do
-  not "fix" this divergence.
+- The payee/trust name shown on /reply intentionally differs from the one UnlockModal
+  shows; both come from code constants — do not "fix" this divergence.
