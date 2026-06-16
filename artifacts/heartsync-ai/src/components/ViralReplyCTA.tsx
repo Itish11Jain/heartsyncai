@@ -29,6 +29,15 @@ export default function ViralReplyCTA({ template, occasion = "thank_you" }: Vira
     window.location.href = `${base}/reply?ro=${encodeURIComponent(occasion)}&received=${encodeURIComponent(template)}&utm_source=viral_reply`;
   }
 
+  function handleInstagramClick() {
+    trackEvent({ event: "viral_instagram_clicked", template, occasion });
+    window.open(
+      "https://www.instagram.com/heart.syncai?igsh=ZzZubWJubnIxaTVq&utm_source=qr",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
   return (
     <div style={{
       opacity: 0,
@@ -59,11 +68,8 @@ export default function ViralReplyCTA({ template, occasion = "thank_you" }: Vira
         </span>
       </div>
 
-      <p style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 4, lineHeight: 1.3 }}>
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 14, lineHeight: 1.3 }}>
         Feeling the love?
-      </p>
-      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginBottom: 14, lineHeight: 1.55 }}>
-        Send a little love back — one tap, no writing needed. ✨
       </p>
 
       <button
@@ -79,7 +85,25 @@ export default function ViralReplyCTA({ template, occasion = "thank_you" }: Vira
           boxShadow: "0 4px 18px rgba(255,180,0,0.35)",
         }}
       >
-        Send Love ❤️
+        Send Love Back ❤️
+      </button>
+
+      <button
+        onClick={handleInstagramClick}
+        style={{
+          width: "100%", padding: "12px",
+          marginTop: 10,
+          borderRadius: 14,
+          background: "transparent",
+          border: "1px solid rgba(255,255,255,0.25)",
+          color: "rgba(255,255,255,0.9)",
+          fontWeight: 600, fontSize: 14,
+          cursor: "pointer", letterSpacing: "0.02em",
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+        }}
+      >
+        <span aria-hidden style={{ fontSize: 16 }}>📸</span>
+        Follow us on Instagram
       </button>
     </div>
   );
