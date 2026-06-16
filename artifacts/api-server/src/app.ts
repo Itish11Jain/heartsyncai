@@ -46,6 +46,10 @@ app.use(compression({ filter: (req, res) => {
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ credentials: true, origin: true }));
+// Razorpay webhook needs the raw body to verify the HMAC signature, so capture
+// it as a Buffer BEFORE express.json() consumes the stream. express.json then
+// skips it (req._body is already set).
+app.use("/api/razorpay/webhook", express.raw({ type: "*/*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

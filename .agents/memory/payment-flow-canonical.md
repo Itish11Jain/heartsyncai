@@ -1,36 +1,53 @@
 ---
-name: Payment flow — manual UPI/UTR is canonical
-description: Razorpay was tried then fully reverted; the manual "I've paid" + UTR flow is the chosen payment UX everywhere.
+name: Payment flow — manual UPI/UTR default, Razorpay behind a runtime toggle
+description: Manual "I've paid"+UTR is the default UX; a restored Razorpay flow sits dormant behind a DB-backed payment_mode flag, flippable by admin with no redeploy.
 ---
 
-# Payment flow: manual UPI/UTR "I've paid", not Razorpay
+# Payment flow: manual UPI/UTR default, Razorpay dormant behind a flag
 
-The canonical payment UX across HeartSync is the **manual UPI flow**: show the UPI ID
+The **default** payment UX across HeartSync is the **manual UPI flow**: show the UPI ID
 (copy) + QR (`upi://pay`), an **"I've paid"** CTA, then a **UTR / transaction-ID entry**
 field that the server verifies. This applies to every paywall surface — the card
 unlock/share modal, the watermark paywall, the builder (send) paywall, the bundle page,
-the premium template lock, the remove-watermark page, and the Reports top-up.
+the premium template lock, the remove-watermark page, the reply paywall, and Reports top-up.
 
-**Why:** A full Razorpay Standard Web Checkout migration was built and briefly live, then
-the owner reverted ALL of it ("revert the razorpay work — we are not sure about it yet")
-and asked for the old "I've paid" flow back everywhere. The owner is undecided on
-Razorpay, so do NOT reintroduce it without an explicit, fresh request.
+**Razorpay is restored but DORMANT, gated by a runtime flag.** A full Razorpay Standard
+Web Checkout flow exists again, but it only activates when the server-side payment mode is
+flipped to `razorpay`. The default is `upi`, so production behaves exactly like the manual
+flow until the owner flips the switch.
 
-**UPI payee-name label is wrong in production paywalls:** The payee NAME shown in the
-production paywall UI (WatermarkPaywallModal, UnlockModal, bundle) is hardcoded to a name
-that is NOT the real account holder. The reply paywall was corrected to the real owner's
-name — when adding or fixing any payee label, copy the name from `UPI_PAYEE` in
-`reply.tsx`, not from the production paywalls. The VPA is the same across all surfaces and
-is unchanged; only the displayed name differs.
+**Why:** Razorpay was first built, briefly live, then fully reverted (owner was unsure).
+Later the owner asked to restore it but keep it **off by default and flippable instantly
+without a redeploy** — so it was reintroduced behind a DB-backed toggle rather than ripped
+back in wholesale. Do NOT make Razorpay the default or remove the flag without an explicit
+owner request.
 
-**How to apply:**
-- Do not add Razorpay (SDK, `checkout.js`, `payWithRazorpay`, create-order/verify/webhook
-  endpoints, `VITE_RAZORPAY_*`) to any surface unless the owner explicitly asks again.
-- Manual UTR submission endpoints live in api-server (`/api/usage/utr-submit`,
-  `/api/usage/template-unlock-utr`, `/api/cards/:id/remove-watermark`); UTRs are
-  deduped via advisory locks across the hs_*_payments / hs_*_utr tables. Reuse these.
-- Razorpay's auto-unlock wrote to `hs_received_payments`; the manual flow records into
-  its per-context UTR tables and PATCHes the card. Keep that separation.
-- The revert restored the payment files to the pre-Razorpay commit and deleted the new
-  razorpay modules; if reintroducing later, expect to re-touch send/bundle/UnlockModal/
-  WatermarkPaywallModal/PremiumLockPanel + api-server app/db/routes.
+**The toggle (source of truth = server):**
+- `hs_app_config(key,value,updated_at)` row `payment_mode` ∈ {`upi`,`razorpay`}, default `upi`.
+- `appConfig.ts`: `getPaymentMode()` / `setPaymentMode()` with a short in-memory TTL cache.
+- Public `GET /api/payment-mode` returns `razorpay` ONLY when mode=razorpay AND keys present,
+  else `upi` — so a mis-flip can never strand users on a checkout that can't create orders.
+- Admin flip (key-gated by `ADMIN_SECRET`): `GET /api/admin/payment-mode` (read) and
+  `GET /api/admin/payment-mode/set?key=...&mode=razorpay|upi` (write). Flip takes effect in seconds.
+
+**Server is authoritative for PRICE too** (client never sends amounts): card unlock price
+comes from the card row (₹49/₹99; ₹29 only for server-minted reply cards), bundle ₹49,
+template ₹49, watermark ₹29. `razorpay/create-order` derives the amount server-side.
+
+**Gating rules (important):**
+- `create-order` is gated: 409 when mode≠razorpay, 503 when keys missing.
+- `verify` + `webhook` are intentionally NOT mode-gated — an in-flight payment made just
+  before a flip back to UPI must still be fulfillable. `fulfillOrder` is idempotent.
+- Razorpay `kind:"template"` only unlocks the 3 templates account-wide; it does NOT create
+  a card. The client must still create the card row + PATCH is_premium/is_watermarked=false
+  afterward (the same finish-steps the manual flow runs).
+
+**Client fallback contract on every razorpay-capable surface:** prefetch mode (or check at
+CTA time), render the online button when active; on `PaymentCancelled` (user dismissed) stay
+put; on any other failure fall back to the manual UPI flow (flip local `payMode` to `upi`
+or `setPhase("paying")`) so the user can still pay.
+
+**UPI payee-name label is wrong in some production paywalls:** the displayed payee NAME in
+WatermarkPaywallModal/UnlockModal/bundle is hardcoded to a name that is NOT the real account
+holder; the reply paywall uses the correct one. When fixing a payee label, copy the name
+from `UPI_PAYEE` in `reply.tsx`. The VPA is identical across surfaces; only the name differs.

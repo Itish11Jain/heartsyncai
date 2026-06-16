@@ -4,6 +4,7 @@ import { Copy, Check, ArrowRight, Info, Sparkles, Heart, Smartphone, Link2, Shar
 import { trackEvent } from "@/lib/trackEvent";
 import { getReplyPriceConfig } from "@/lib/priceArm";
 import { scaleCount } from "@/lib/deviceCapability";
+import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
 
 /* Reuse the existing card scene art — no new 3D/bouquet logic is authored here.
  * These are the exact components the recipient card uses (envelope, slider,
@@ -698,8 +699,15 @@ export default function ReplyExperience() {
   const [autoCountdown, setAutoCountdown] = useState<number | null>(null);
   const [utrVisible, setUtrVisible] = useState(false);
   const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
+  const [payMode, setPayMode] = useState<"upi" | "razorpay">("upi");
   const payTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => () => { if (payTimerRef.current) clearInterval(payTimerRef.current); }, []);
+
+  useEffect(() => {
+    let alive = true;
+    getPaymentMode().then((m) => { if (alive) setPayMode(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const petalCount = useMemo(() => scaleCount(10), []);
 
@@ -825,6 +833,23 @@ export default function ReplyExperience() {
     trackEvent({ event: "reply_replayed", occasion: receivedOccasion, template: "reply" });
   }
 
+  // Razorpay online checkout for the ₹29 reply (when payMode === 'razorpay').
+  // The manual paying screen is shown underneath as the fallback if the user
+  // cancels or checkout fails.
+  async function runReplyRazorpay() {
+    const id = await mintReplyCard();
+    if (!id) return;
+    const eventId = `hs_${id}_${Date.now()}`;
+    const { fbp, fbc } = getMetaCookies();
+    try {
+      await payWithRazorpay({ kind: "card", cardId: id, occasion: receivedOccasion, verifyExtras: { eventId, fbp, fbc } });
+      setPayStage("done");
+      trackEvent({ event: "reply_unlocked", occasion: receivedOccasion, template: "reply", price, card_id: id });
+    } catch (err) {
+      if (!(err instanceof PaymentCancelled)) setPayError("Payment couldn't be completed. Try the UPI option below.");
+    }
+  }
+
   function openPay() {
     if (payTimerRef.current) { clearInterval(payTimerRef.current); payTimerRef.current = null; }
     setShowPay(true);
@@ -837,6 +862,7 @@ export default function ReplyExperience() {
     setAutoCountdown(null);
     setUtrCountdown(null);
     trackEvent({ event: "reply_pay_clicked", occasion: receivedOccasion, template: "reply", price });
+    if (payMode === "razorpay") { void runReplyRazorpay(); }
   }
 
   // After the success ("done") screen plays, reveal the share screen — mirrors

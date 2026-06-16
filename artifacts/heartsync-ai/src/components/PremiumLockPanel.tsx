@@ -14,6 +14,7 @@ import { Check, Copy, Info, Loader2 } from "lucide-react";
 import { useCardUsage } from "@/lib/usage";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
+import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 const UPI_DISPLAY = "110193250";
@@ -101,6 +102,8 @@ export default function PremiumLockPanel({
   const [utrError, setUtrError] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
   const [upiCopied, setUpiCopied]   = useState(false);
+  /** Live payment mode (online Razorpay vs manual UPI), fetched on mount. */
+  const [payMode, setPayMode] = useState<"upi" | "razorpay">("upi");
 
   /* Ref so we never double-fire onUnlocked */
   const unlockedFiredRef = useRef(false);
@@ -157,6 +160,13 @@ export default function PremiumLockPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, isLoaded, phase]);
 
+  /* ── Prefetch live payment mode (online vs manual) ─────────────────── */
+  useEffect(() => {
+    let alive = true;
+    getPaymentMode().then((m) => { if (alive) setPayMode(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   /* ── UPI deep-link ─────────────────────────────────────────────────── */
   const upiUri = `upi://pay?pa=${encodeURIComponent(UPI_VPA)}&pn=${encodeURIComponent("HeartSync AI")}&am=${price.toFixed(2)}&cu=INR&tn=${encodeURIComponent("HeartSync Premium")}`;
   const qrSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(upiUri)}`;
@@ -176,7 +186,59 @@ export default function PremiumLockPanel({
     setTimeout(() => setUpiCopied(false), 1800);
   }
 
-  /* ── Submit UTR ─────────────────────────────────────────────────────── */
+  /* ── Shared post-payment steps (manual UTR + Razorpay both call this) ─ */
+  const finishTemplateUnlock = useCallback(async (token: string | null) => {
+    trackEvent({
+      event: "paywall_paid",
+      fingerprint,
+      email: userEmail ?? undefined,
+      occasion,
+      template,
+    });
+
+    await refetchUsage();
+
+    /* Create a card row in DB (marks premium + no watermark) */
+    let newCardId: string | undefined;
+    if (token) {
+      const p = new URLSearchParams(locationSearch);
+      const msgParam = p.get("msg");
+      const cardRes = await fetch(`${BASE}/api/cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          template,
+          occasion,
+          recipient_name: recipientName || undefined,
+          ...(msgParam ? { message_b64: msgParam } : {}),
+          price,
+        }),
+      });
+      if (cardRes.ok) {
+        const cd = await cardRes.json() as { id?: string };
+        newCardId = cd.id;
+        if (newCardId) {
+          await fetch(`${BASE}/api/cards/${newCardId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ is_watermarked: false, is_premium: true }),
+          });
+        }
+      }
+    }
+
+    /* Celebrate + unlock share buttons */
+    setPhase("done");
+    setTimeout(() => {
+      fireConfetti();
+      if (!unlockedFiredRef.current) {
+        unlockedFiredRef.current = true;
+        onUnlocked(newCardId);
+      }
+    }, 250);
+  }, [fingerprint, userEmail, occasion, template, locationSearch, recipientName, price, refetchUsage, onUnlocked]);
+
+  /* ── Submit UTR (manual UPI flow) ───────────────────────────────────── */
   const handleUtrSubmit = useCallback(async () => {
     const trimmed = utr.trim();
     if (!isValidUtr(trimmed)) return;
@@ -186,7 +248,7 @@ export default function PremiumLockPanel({
     try {
       const token = await getToken();
 
-      /* Step 1: unlock templates ₹49 bundle */
+      /* Unlock templates ₹49 bundle */
       const unlockRes = await fetch(`${BASE}/api/usage/template-unlock-utr`, {
         method: "POST",
         headers: {
@@ -201,60 +263,34 @@ export default function PremiumLockPanel({
         return;
       }
 
-      trackEvent({
-        event: "paywall_paid",
-        fingerprint,
-        email: userEmail ?? undefined,
-        occasion,
-        template,
-      });
-
-      await refetchUsage();
-
-      /* Step 2: create a card row in DB (marks premium + no watermark) */
-      let cardId: string | undefined;
-      if (token) {
-        const p = new URLSearchParams(locationSearch);
-        const msgParam = p.get("msg");
-        const cardRes = await fetch(`${BASE}/api/cards`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            template,
-            occasion,
-            recipient_name: recipientName || undefined,
-            ...(msgParam ? { message_b64: msgParam } : {}),
-            price,
-          }),
-        });
-        if (cardRes.ok) {
-          const cd = await cardRes.json() as { id?: string };
-          cardId = cd.id;
-          if (cardId) {
-            await fetch(`${BASE}/api/cards/${cardId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ is_watermarked: false, is_premium: true }),
-            });
-          }
-        }
-      }
-
-      /* Step 3: celebrate + unlock share buttons */
-      setPhase("done");
-      setTimeout(() => {
-        fireConfetti();
-        if (!unlockedFiredRef.current) {
-          unlockedFiredRef.current = true;
-          onUnlocked(cardId);
-        }
-      }, 250);
+      await finishTemplateUnlock(token);
     } catch {
       setUtrError("Submission failed. Please try again.");
     } finally {
       setUtrLoading(false);
     }
-  }, [utr, getToken, fingerprint, userEmail, occasion, template, locationSearch, recipientName, refetchUsage, onUnlocked]);
+  }, [utr, getToken, finishTemplateUnlock]);
+
+  /* ── Razorpay online checkout (when payMode === 'razorpay') ─────────── */
+  const runRazorpay = useCallback(async () => {
+    if (utrLoading) return;
+    setUtrError("");
+    setUtrLoading(true);
+    try {
+      const token = await getToken();
+      await payWithRazorpay({ kind: "template", occasion, authToken: token });
+      await finishTemplateUnlock(token);
+    } catch (err) {
+      // User dismissing the modal = stay put. Any real failure falls back to the
+      // manual UPI flow (revealed by flipping payMode) so they can still pay.
+      if (!(err instanceof PaymentCancelled)) {
+        setPayMode("upi");
+        setUtrError("Online payment failed — pay via UPI below instead.");
+      }
+    } finally {
+      setUtrLoading(false);
+    }
+  }, [utrLoading, getToken, occasion, finishTemplateUnlock]);
 
   /* ── Render ─────────────────────────────────────────────────────────── */
 
@@ -498,6 +534,25 @@ export default function PremiumLockPanel({
             padding: 16,
             marginBottom: 12,
           }}>
+            {payMode === "razorpay" ? (
+              <button
+                onClick={() => { void runRazorpay(); }}
+                disabled={utrLoading}
+                data-testid="premium-razorpay-pay"
+                style={{
+                  width: "100%", padding: "14px", borderRadius: 12,
+                  background: "linear-gradient(135deg, #FFD700, #FFA500)",
+                  border: "none", color: "#000", fontWeight: 800, fontSize: 15,
+                  cursor: utrLoading ? "wait" : "pointer", opacity: utrLoading ? 0.6 : 1,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}
+              >
+                {utrLoading
+                  ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Opening…</>
+                  : <>Pay ₹{price} &amp; Unlock ✨</>}
+              </button>
+            ) : (
+            <>
             {/* QR + UPI ID */}
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
               <a href={upiUri} style={{ background: "#fff", borderRadius: 12, padding: 6, display: "block", flexShrink: 0 }}>
@@ -573,6 +628,8 @@ export default function PremiumLockPanel({
                   : <>Submit &amp; Unlock ✨</>}
               </button>
             </div>
+            </>
+            )}
           </div>
 
           <p style={{ textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.28)", marginBottom: 16 }}>

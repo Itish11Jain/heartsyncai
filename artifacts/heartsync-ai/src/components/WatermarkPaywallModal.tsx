@@ -4,6 +4,7 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
+import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -47,6 +48,10 @@ export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuc
   const { price, anchor } = getPriceConfigForOccasion(occasion);
   const upiDeepLink = buildUpiLink(price);
   const [stage, setStage] = useState<Stage>("paying");
+  // Live payment mode, fetched once on open so the CTA can branch synchronously
+  // (it's an <a> deep link — we must decide before the default navigation).
+  const [payMode, setPayMode] = useState<"upi" | "razorpay">("upi");
+  const [rzpLoading, setRzpLoading] = useState(false);
 
   const [bundleUtr, setBundleUtr] = useState("");
   const [bundleUtrError, setBundleUtrError] = useState("");
@@ -65,6 +70,37 @@ export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuc
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    getPaymentMode().then((m) => { if (alive) setPayMode(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  /**
+   * Razorpay path for the "Pay Now" CTA (only when payMode === 'razorpay').
+   * On a non-cancel failure it falls back to the manual UTR-entry step so the
+   * user can still complete payment.
+   */
+  async function runRazorpay() {
+    if (rzpLoading) return;
+    if (!cardId) { setBundleUtrError("No card ID — close and try again from the card page."); return; }
+    setRzpLoading(true);
+    const wmEventId = `hs_${cardId}_${Date.now()}`;
+    try {
+      await payWithRazorpay({ kind: "card", cardId, occasion, verifyExtras: { eventId: wmEventId } });
+      trackEvent({ event: "paywall_paid", occasion, card_id: cardId, price });
+      const w = window as Window & { fbq?: (...a: unknown[]) => void };
+      if (typeof window !== "undefined" && w.fbq) {
+        w.fbq("track", "Purchase", { value: price, currency: "INR" }, { eventID: wmEventId });
+      }
+      setStage("done-bundle");
+    } catch (err) {
+      if (!(err instanceof PaymentCancelled)) setStage("utr");
+    } finally {
+      setRzpLoading(false);
+    }
+  }
 
   const handleBundleSubmit = useCallback(async () => {
     if (!isValidUtr(bundleUtr)) return;
@@ -239,7 +275,11 @@ export default function WatermarkPaywallModal({ cardId, occasion, onClose, onSuc
                   {/* Pay Now CTA */}
                   <a
                     href={upiDeepLink}
-                    onClick={() => { trackEvent({ event: "pay_now_clicked", occasion, card_id: cardId }); setTimeout(() => setStage("utr"), 600); }}
+                    onClick={(e) => {
+                      trackEvent({ event: "pay_now_clicked", occasion, card_id: cardId });
+                      if (payMode === "razorpay") { e.preventDefault(); void runRazorpay(); }
+                      else { setTimeout(() => setStage("utr"), 600); }
+                    }}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                       width: "100%", height: 52, borderRadius: 14,

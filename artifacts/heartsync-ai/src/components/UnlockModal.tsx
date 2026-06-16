@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
+import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -79,6 +80,7 @@ export default function UnlockModal({
   /** Occasion-based price (₹99 birthday/sorry · ₹49 others) + discount anchor. */
   const { price, anchor } = getPriceConfigForOccasion(occasion);
   const [phase, setPhase] = useState<ModalPhase>("preview");
+  const [rzpLoading, setRzpLoading] = useState(false);
   const [utrVisible, setUtrVisible] = useState(false);
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
@@ -139,6 +141,44 @@ export default function UnlockModal({
     const t = setTimeout(() => { onSuccess(); }, 1800);
     return () => clearTimeout(t);
   }, [phase, onSuccess]);
+
+  /**
+   * Primary "Pay & Share" CTA. Checks the live payment mode: when Razorpay is
+   * active it opens online checkout (falling back to the manual UPI screen on a
+   * non-cancel failure); otherwise it shows the existing manual UPI flow.
+   */
+  async function handlePrimaryCta() {
+    if (rzpLoading) return;
+    trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
+    trackEvent({ event: "pay_popup_cta_clicked", occasion, card_id: cardId });
+
+    let mode: "upi" | "razorpay" = "upi";
+    try { mode = await getPaymentMode(); } catch { /* default to manual */ }
+
+    if (mode === "razorpay") {
+      setRzpLoading(true);
+      const eventId = `hs_${cardId}_${Date.now()}`;
+      const { fbp, fbc } = getMetaCookies();
+      try {
+        await payWithRazorpay({ kind: "card", cardId, occasion, verifyExtras: { eventId, fbp, fbc } });
+        trackEvent({ event: "card_paid", occasion, card_id: cardId, price });
+        const w = window as Window & { fbq?: (...a: unknown[]) => void };
+        if (typeof window !== "undefined" && w.fbq) {
+          w.fbq("track", "Purchase", { value: price, currency: "INR" }, { eventID: eventId });
+        }
+        setPhase("success");
+      } catch (err) {
+        // User dismissing the modal is not an error; anything else falls back
+        // to the manual UPI screen so they can still complete payment.
+        if (!(err instanceof PaymentCancelled)) setPhase("paying");
+      } finally {
+        setRzpLoading(false);
+      }
+      return;
+    }
+
+    setPhase("paying");
+  }
 
   async function handlePaymentDone() {
     if (autoLoading) return;
@@ -398,19 +438,17 @@ export default function UnlockModal({
                 {/* Pay CTA */}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => {
-                    trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
-                    trackEvent({ event: "pay_popup_cta_clicked", occasion, card_id: cardId });
-                    setPhase("paying");
-                  }}
+                  disabled={rzpLoading}
+                  onClick={() => { void handlePrimaryCta(); }}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     width: "100%", height: 56, borderRadius: 16,
                     background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
                     color: "#000", fontWeight: 800, fontSize: 17,
-                    border: "none", cursor: "pointer",
+                    border: "none", cursor: rzpLoading ? "wait" : "pointer",
                     boxShadow: "0 6px 28px rgba(255,165,0,0.45)",
                     marginBottom: 10,
+                    opacity: rzpLoading ? 0.7 : 1,
                   }}
                 >
                   🔓{" "}

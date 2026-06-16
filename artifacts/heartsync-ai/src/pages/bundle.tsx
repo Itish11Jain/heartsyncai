@@ -6,6 +6,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/lib/trackEvent";
+import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 const SPEED = 2; // preview playback multiplier (2× = faster looping previews)
@@ -98,6 +99,8 @@ export default function BundlePage() {
   const [utrVisible, setUtrVisible] = useState(false);
   const [utr, setUtr] = useState("");
   const [utrLoading, setUtrLoading] = useState(false);
+  const [payMode, setPayMode] = useState<"upi" | "razorpay">("upi");
+  const [rzpLoading, setRzpLoading] = useState(false);
   const [utrError, setUtrError] = useState<string | null>(null);
   const [utrCountdown, setUtrCountdown] = useState<number | null>(null);
 
@@ -148,6 +151,28 @@ export default function BundlePage() {
     trackEvent({ event: fromUtr ? "bundle_created_utr" : "bundle_created" });
     setSuccessToken(token);
     setPhase("success");
+  }
+
+  useEffect(() => {
+    let alive = true;
+    getPaymentMode().then((m) => { if (alive) setPayMode(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // Razorpay online checkout for the ₹49 bundle (when payMode === 'razorpay').
+  // Falls back to the manual UPI screen on a non-cancel failure.
+  async function runBundleRazorpay() {
+    if (rzpLoading) return;
+    setRzpLoading(true);
+    try {
+      const r = await payWithRazorpay({ kind: "bundle" });
+      if (r.token) activateBundle(r.token, false);
+      else setPhase("paying");
+    } catch (err) {
+      if (!(err instanceof PaymentCancelled)) setPhase("paying");
+    } finally {
+      setRzpLoading(false);
+    }
   }
 
   async function handleConfirm() {
@@ -323,12 +348,18 @@ export default function BundlePage() {
 
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => { trackEvent({ event: "bundle_buy_clicked" }); setPhase("paying"); }}
+                disabled={rzpLoading}
+                onClick={() => {
+                  trackEvent({ event: "bundle_buy_clicked" });
+                  if (payMode === "razorpay") { void runBundleRazorpay(); }
+                  else { setPhase("paying"); }
+                }}
                 style={{
                   width: "100%", height: 58, borderRadius: 18,
                   background: "linear-gradient(135deg, #FFD700 0%, #FFAA00 100%)",
                   border: "none", color: "#000", fontWeight: 900, fontSize: 19,
-                  cursor: "pointer", boxShadow: "0 8px 32px rgba(255,165,0,0.45)",
+                  cursor: rzpLoading ? "wait" : "pointer", boxShadow: "0 8px 32px rgba(255,165,0,0.45)",
+                  opacity: rzpLoading ? 0.7 : 1,
                 }}
               >
                 🔓 Get Bundle — ₹49

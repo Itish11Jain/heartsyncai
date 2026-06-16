@@ -181,6 +181,30 @@ export async function initDb(): Promise<void> {
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS bundle_id UUID;
     -- Price A/B test: the arm (49 or 99) this card was created/unlocked under.
     ALTER TABLE hs_cards ADD COLUMN IF NOT EXISTS price SMALLINT;
+
+    -- Razorpay online-checkout orders (used only when payment_mode = 'razorpay').
+    -- Amount is in rupees; status flips created -> paid on a verified payment.
+    CREATE TABLE IF NOT EXISTS hs_razorpay_orders (
+      order_id       TEXT PRIMARY KEY,
+      kind           TEXT NOT NULL,           -- 'card' | 'bundle' | 'template' | 'watermark'
+      card_id        TEXT,
+      clerk_user_id  TEXT,
+      amount         INTEGER NOT NULL,        -- rupees
+      status         TEXT NOT NULL DEFAULT 'created',
+      payment_id     TEXT,
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS hs_razorpay_orders_payment_idx ON hs_razorpay_orders(payment_id);
+
+    -- Runtime app config (key/value). Holds the active payment-mode flag so it
+    -- can be flipped instantly (no redeploy). Default mode = manual UPI.
+    CREATE TABLE IF NOT EXISTS hs_app_config (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    INSERT INTO hs_app_config (key, value) VALUES ('payment_mode', 'upi')
+      ON CONFLICT (key) DO NOTHING;
   `);
 
   /* ── One-time data cleanup: remove AYUSHI JAIN & ITISHA JAIN test/internal

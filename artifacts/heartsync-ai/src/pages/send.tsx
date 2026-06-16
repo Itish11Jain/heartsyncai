@@ -28,6 +28,7 @@ const LazyClerkBridge = lazy(async () => {
 });
 import { trackEvent } from "@/lib/trackEvent";
 import { getOccasionPrice, getPriceConfigForOccasion } from "@/lib/priceArm";
+import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
 import { getCampaignBySlug } from "@/lib/occasion-campaigns";
 import { TemplatePreview } from "@/components/template-preview";
 
@@ -439,6 +440,13 @@ function SendInner() {
   const [watermarkUtrError, setWatermarkUtrError] = useState("");
   const [watermarkUtrLoading, setWatermarkUtrLoading] = useState(false);
   const [watermarkUpiCopied, setWatermarkUpiCopied] = useState(false);
+  const [payMode, setPayMode] = useState<"upi" | "razorpay">("upi");
+
+  useEffect(() => {
+    let alive = true;
+    getPaymentMode().then((m) => { if (alive) setPayMode(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // Multi-photo upload state (up to 4 photos)
   // Each selected photo is an independent slot so uploads run in parallel and a
@@ -975,6 +983,56 @@ function SendInner() {
   ]);
 
   /* ─── Paywall: submit UTR for ₹49 bundle ───────────────────────────── */
+  // Shared post-payment steps for the premium template unlock — used by both the
+  // manual UTR flow and the Razorpay flow. Creates the card row + marks it
+  // premium/watermark-free, then advances to the "done" screen. Returns an error
+  // message on a card-finalize failure, or null on success.
+  const finishPremiumUnlock = useCallback(async (token: string | null): Promise<string | null> => {
+    trackEvent({ event: "paywall_paid", fingerprint, email: userEmail ?? undefined, occasion });
+    await refetchUsage();
+
+    let cardId: string | undefined;
+    if (token) {
+      const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+      const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
+        ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
+        : null;
+      const cardRes = await fetch(`${base}/api/cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          template: selectedTemplate, occasion,
+          recipient_name: recipientName.trim() || undefined,
+          message_b64,
+          photo_url: uploadedPhotoUrls[0] ?? null,
+          photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+          voice_note_url: voiceNoteUrl ?? null,
+          price: getOccasionPrice(occasion),
+        }),
+      });
+      if (cardRes.ok) {
+        const cd = await cardRes.json() as { id?: string };
+        cardId = cd.id;
+        if (cardId) {
+          const patchRes = await fetch(`${base}/api/cards/${cardId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ is_watermarked: false, is_premium: true }),
+          });
+          if (!patchRes.ok) {
+            const patchData = await patchRes.json().catch(() => ({})) as { message?: string };
+            return patchData.message ?? "Failed to finalize card. Please try again.";
+          }
+        }
+      }
+    }
+
+    setPendingCardId(cardId);
+    setPaywallStage("done");
+    return null;
+  }, [fingerprint, userEmail, occasion, refetchUsage,
+      selectedTemplate, customMsg, defaultMsg, recipientName, uploadedPhotoUrls, voiceNoteUrl]);
+
   const handlePaywallUtrSubmit = useCallback(async () => {
     const trimmed = paywallUtr.trim();
     if (!isValidUtr(trimmed)) return;
@@ -999,55 +1057,36 @@ function SendInner() {
         return;
       }
 
-      trackEvent({ event: "paywall_paid", fingerprint, email: userEmail ?? undefined, occasion });
-      await refetchUsage();
-
-      // 2. Create the card row + mark it premium + watermark-free
-      let cardId: string | undefined;
-      if (token) {
-        const message_b64 = customMsg.trim() && customMsg.trim() !== defaultMsg
-          ? (() => { try { return btoa(unescape(encodeURIComponent(customMsg.trim()))); } catch { return null; } })()
-          : null;
-        const cardRes = await fetch(`${base}/api/cards`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            template: selectedTemplate, occasion,
-            recipient_name: recipientName.trim() || undefined,
-            message_b64,
-            photo_url: uploadedPhotoUrls[0] ?? null,
-            photo_urls: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
-            voice_note_url: voiceNoteUrl ?? null,
-            price: getOccasionPrice(occasion),
-          }),
-        });
-        if (cardRes.ok) {
-          const cd = await cardRes.json() as { id?: string };
-          cardId = cd.id;
-          if (cardId) {
-            const patchRes = await fetch(`${base}/api/cards/${cardId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ is_watermarked: false, is_premium: true }),
-            });
-            if (!patchRes.ok) {
-              const patchData = await patchRes.json().catch(() => ({})) as { message?: string };
-              setPaywallUtrError(patchData.message ?? "Failed to finalize card. Please try again.");
-              return;
-            }
-          }
-        }
-      }
-
-      setPendingCardId(cardId);
-      setPaywallStage("done");
+      // 2. Create the card + advance (shared with the Razorpay flow)
+      const err = await finishPremiumUnlock(token);
+      if (err) { setPaywallUtrError(err); return; }
     } catch {
       setPaywallUtrError("Submission failed. Please try again.");
     } finally {
       setPaywallLoading(false);
     }
-  }, [paywallUtr, getToken, fingerprint, userEmail, occasion, refetchUsage,
-      selectedTemplate, customMsg, defaultMsg, recipientName]);
+  }, [paywallUtr, getToken, finishPremiumUnlock]);
+
+  // Razorpay online checkout for the premium template unlock (payMode === 'razorpay').
+  const runPaywallRazorpay = useCallback(async () => {
+    if (paywallLoading) return;
+    setPaywallUtrError("");
+    setPaywallLoading(true);
+    try {
+      const token = await getToken();
+      await payWithRazorpay({ kind: "template", occasion, authToken: token });
+      const err = await finishPremiumUnlock(token);
+      if (err) setPaywallUtrError(err);
+    } catch (e) {
+      // Cancel = stay; any real failure reveals the manual UPI flow as fallback.
+      if (!(e instanceof PaymentCancelled)) {
+        setPayMode("upi");
+        setPaywallUtrError("Online payment failed — pay via UPI below instead.");
+      }
+    } finally {
+      setPaywallLoading(false);
+    }
+  }, [paywallLoading, getToken, occasion, finishPremiumUnlock]);
 
   /* ─── Open paywall in a clean state ────────────────────────────────── */
   function openPaywall() {
@@ -1094,6 +1133,12 @@ function SendInner() {
   }
 
   /* ─── Watermark upsell: user pays ₹29 to remove watermark ──────────── */
+  // Shared celebrate step for watermark removal (manual UTR + Razorpay).
+  const finishWatermark = useCallback(() => {
+    trackEvent({ event: "watermark_removed", fingerprint, email: userEmail ?? undefined, occasion });
+    setWatermarkStage("done");
+  }, [fingerprint, userEmail, occasion]);
+
   const handleWatermarkUtrSubmit = useCallback(async () => {
     const trimmed = watermarkUtr.trim();
     if (!isValidUtr(trimmed) || !pendingCardId) return;
@@ -1115,14 +1160,33 @@ function SendInner() {
         setWatermarkUtrError(data.message ?? "Verification failed. Try again.");
         return;
       }
-      trackEvent({ event: "watermark_removed", fingerprint, email: userEmail ?? undefined, occasion });
-      setWatermarkStage("done");
+      finishWatermark();
     } catch {
       setWatermarkUtrError("Submission failed. Please try again.");
     } finally {
       setWatermarkUtrLoading(false);
     }
-  }, [watermarkUtr, pendingCardId, getToken, fingerprint, userEmail, occasion]);
+  }, [watermarkUtr, pendingCardId, getToken, finishWatermark]);
+
+  // Razorpay online checkout for ₹29 watermark removal (payMode === 'razorpay').
+  const runWatermarkRazorpay = useCallback(async () => {
+    if (!pendingCardId || watermarkUtrLoading) return;
+    setWatermarkUtrError("");
+    setWatermarkUtrLoading(true);
+    try {
+      const token = await getToken();
+      await payWithRazorpay({ kind: "watermark", cardId: pendingCardId, authToken: token });
+      finishWatermark();
+    } catch (e) {
+      // Cancel = stay; any real failure reveals the manual UPI flow as fallback.
+      if (!(e instanceof PaymentCancelled)) {
+        setPayMode("upi");
+        setWatermarkUtrError("Online payment failed — pay via UPI below instead.");
+      }
+    } finally {
+      setWatermarkUtrLoading(false);
+    }
+  }, [pendingCardId, watermarkUtrLoading, getToken, finishWatermark]);
 
   /* ─── Watermark upsell: after payment done — redirect clean ─────────── */
   function handleWatermarkComplete() {
@@ -2002,6 +2066,20 @@ function SendInner() {
                   </div>
 
                   <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl">
+                    {payMode === "razorpay" ? (
+                      <button
+                        onClick={() => { void runPaywallRazorpay(); }}
+                        disabled={paywallLoading}
+                        data-testid="paywall-razorpay-pay"
+                        className="w-full h-11 rounded-xl text-black font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                        style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)" }}
+                      >
+                        {paywallLoading
+                          ? <><Loader2 className="w-4 h-4 animate-spin text-black" /> Opening…</>
+                          : <>Pay ₹{unlockPricing.price} &amp; unlock all <ArrowRight className="w-4 h-4" /></>}
+                      </button>
+                    ) : (
+                    <>
                     {(() => {
                       const UPI_DISPLAY = "110193250";
                       const UPI_VPA = "8905158970@upi";
@@ -2088,6 +2166,8 @@ function SendInner() {
                           : <>Submit & unlock all <ArrowRight className="w-4 h-4" /></>}
                       </button>
                     </div>
+                    </>
+                    )}
                   </div>
 
                   <p className="text-center text-[11px] text-white/35 mt-3">
@@ -2188,6 +2268,20 @@ function SendInner() {
                     };
                     return (
                       <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3">
+                        {payMode === "razorpay" ? (
+                          <button
+                            onClick={() => { void runWatermarkRazorpay(); }}
+                            disabled={watermarkUtrLoading}
+                            data-testid="watermark-razorpay-pay"
+                            className="w-full h-10 rounded-xl text-black font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                            style={{ background: "linear-gradient(135deg, #FFD700, #FFA500)" }}
+                          >
+                            {watermarkUtrLoading
+                              ? <><Loader2 className="w-4 h-4 animate-spin" /> Opening…</>
+                              : <>Pay ₹29 &amp; remove watermark <ArrowRight className="w-4 h-4" /></>}
+                          </button>
+                        ) : (
+                        <>
                         <div className="flex gap-3 items-center mb-4">
                           <a href={upiUri} className="bg-white rounded-xl p-1.5 shadow-lg shrink-0 block" title="Tap to open in your UPI app">
                             <img src={qrSrc} alt="UPI QR ₹29" className="w-20 h-20 rounded-lg" />
@@ -2237,6 +2331,8 @@ function SendInner() {
                               : <>Verify & remove watermark <ArrowRight className="w-4 h-4" /></>}
                           </button>
                         </div>
+                        </>
+                        )}
                       </div>
                     );
                   })()}

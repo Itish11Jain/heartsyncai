@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../../lib/db.js";
+import { getPaymentMode, setPaymentMode, type PaymentMode } from "../../lib/appConfig.js";
 
 const router = Router();
 
@@ -18,6 +19,34 @@ function checkKey(req: { query: Record<string, unknown>; body?: Record<string, u
   }
   return true;
 }
+
+/**
+ * GET /api/admin/payment-mode?key=...
+ * Read the live payment mode ('upi' | 'razorpay').
+ */
+router.get("/admin/payment-mode", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const mode = await getPaymentMode();
+  res.json({ ok: true, mode });
+});
+
+/**
+ * GET /api/admin/payment-mode/set?key=...&mode=razorpay|upi
+ * Flip the live payment mode instantly (no redeploy). GET so the owner can
+ * trigger it from a plain browser link:
+ *   …/set?key=…&mode=razorpay  → turn Razorpay ON
+ *   …/set?key=…&mode=upi       → back to manual UPI
+ */
+router.get("/admin/payment-mode/set", async (req, res) => {
+  if (!checkKey(req as never, res as never)) return;
+  const requested = String((req.query as Record<string, unknown>)["mode"] ?? "");
+  if (requested !== "upi" && requested !== "razorpay") {
+    res.status(400).json({ error: "bad_request", message: "mode must be 'upi' or 'razorpay'." });
+    return;
+  }
+  const mode = await setPaymentMode(requested as PaymentMode);
+  res.json({ ok: true, mode, message: `Payment mode is now '${mode}'.` });
+});
 
 router.get("/admin/revoke", async (req, res) => {
   if (!checkKey(req as never, res as never)) return;
