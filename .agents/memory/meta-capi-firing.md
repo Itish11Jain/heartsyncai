@@ -21,5 +21,15 @@ Browser Pixel + server CAPI dedup ONLY when they share the same `eventID`. That 
 The **Razorpay webhook backstop** has no client eventId, so `capiEventId = hs_<cardId>_<ts>` (synthetic). `fireOnce` stops a second SERVER CAPI, but it does NOT make the synthetic id match the browser Pixel id — so if the webhook fires CAPI AND the browser Pixel later fires, Meta can double-count. In practice the webhook usually only "wins" when the buyer closed the tab (browser Pixel never fired), so the collision is rare but real.
 **Fix if it ever matters:** persist a deterministic per-order eventId at create-order time and reuse it in browser Purchase + verify CAPI + webhook CAPI.
 
+## Server CAPI shares ONE access token across ALL paths
+Every server Purchase (Razorpay verify/webhook AND UPI auto_unlock/manual_utr) goes through the same `fireMetaCapi`, which uses the single `META_PIXEL_ACCESS_TOKEN`. So if "server events received" drops to ~0 across ALL unlock methods at once (not just one payment mode), suspect the **token** (expired/invalid → OAuthException 190), NOT the payment path. Diagnostic tell: UPI auto_unlock CAPI stopping at the same instant as Razorpay CAPI rules out a Razorpay-specific bug.
+**Why:** on 16 Jun 2026 ~5PM IST server events flatlined right when Razorpay went live; DB proved 24 razorpay + 3 auto_unlock paid unlocks still happened after the cutoff, so fulfillment worked — only Meta delivery failed, and the common factor is the token.
+**How to apply:** when CAPI "stops," first confirm fulfillment in the prod DB (`hs_razorpay_orders` paid / `hs_card_events` card_paid), then check token validity — don't chase the payment code.
+
+## CAPI must NOT be fire-and-forget
+`fireMetaCapi` now reads the fetch response: logs `[capi] Meta REJECTED status=.. body=..` on `!resp.ok`, else success with a response snippet. Previously it `await`ed the POST but ignored the result, so a token-rejected event logged `Purchase fired` identically to an accepted one — the outage was invisible for hours.
+**Why:** blind logging hid a total Meta-delivery failure behind healthy-looking "fired" lines.
+**How to apply:** never revert to ignoring the Graph API response; `events_received` / `error` is the only in-app signal that Meta actually accepted the event. Also omit empty `client_ip_address`/`client_user_agent` (webhook path) rather than sending empty strings.
+
 ## Verifying past payments
 Deployment-log verification is unreliable after a republish: a new deployment starts a fresh log stream, so `/verify` + `[capi]` lines from payments on the PRIOR deployment are gone. Definitive check = Meta Events Manager (owner-controlled): confirm Purchase events arriving on both "Browser" and "Server" with deduplication, and value split by ₹49/₹99.

@@ -82,14 +82,15 @@ export async function fireMetaCapi(
       fbc = row.rows[0]?.fbc ?? null;
     } catch { /* non-blocking — proceed without fbp/fbc */ }
 
-    const userData: Record<string, string> = {
-      client_ip_address: ip,
-      client_user_agent: userAgent,
-    };
+    // Only include ip/ua when present. Empty strings (e.g. webhook-fulfilled
+    // payments) hurt match quality and can be rejected; fbp/fbc still anchor it.
+    const userData: Record<string, string> = {};
+    if (ip) userData["client_ip_address"] = ip;
+    if (userAgent) userData["client_user_agent"] = userAgent;
     if (fbp) userData["fbp"] = fbp;
     if (fbc) userData["fbc"] = fbc;
 
-    await fetch(
+    const resp = await fetch(
       `https://graph.facebook.com/v19.0/${META_PIXEL_ID}/events?access_token=${token}`,
       {
         method: "POST",
@@ -111,7 +112,20 @@ export async function fireMetaCapi(
         }),
       },
     );
-    console.log(`[capi] Purchase fired event_id=${eventId} card=${cardId} value=${valueRupees ?? 49} fbp=${!!fbp} fbc=${!!fbc}`);
+    // Meta returns 200 with {events_received} on success, or 400 with an
+    // {error} (e.g. OAuthException 190 for an expired/invalid token). Previously
+    // this call was fire-and-forget, so rejected events looked identical to
+    // accepted ones in the logs — surface the real outcome.
+    const respText = await resp.text();
+    if (!resp.ok) {
+      console.error(
+        `[capi] Meta REJECTED event_id=${eventId} card=${cardId} status=${resp.status} body=${respText.slice(0, 500)}`,
+      );
+    } else {
+      console.log(
+        `[capi] Purchase fired event_id=${eventId} card=${cardId} value=${valueRupees ?? 49} fbp=${!!fbp} fbc=${!!fbc} resp=${respText.slice(0, 200)}`,
+      );
+    }
   } catch (err) {
     console.warn("[capi] Non-blocking CAPI call failed", err);
   }
