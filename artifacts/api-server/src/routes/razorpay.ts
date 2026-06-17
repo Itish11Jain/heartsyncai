@@ -271,7 +271,35 @@ router.post("/razorpay/create-order", async (req, res) => {
     return;
   }
 
-  const { kind, cardId, occasion } = (req.body ?? {}) as { kind?: unknown; cardId?: unknown; occasion?: unknown };
+  const { kind, cardId, occasion, fbp: bodyFbp, fbc: bodyFbc } = (req.body ?? {}) as {
+    kind?: unknown;
+    cardId?: unknown;
+    occasion?: unknown;
+    fbp?: unknown;
+    fbc?: unknown;
+  };
+
+  // Meta CAPI match cookies. The webhook backstop is server-to-server (no
+  // browser cookies) and often wins the fireOnce race, so it would fire the
+  // Purchase event before the client's /verify call writes fbp/fbc — yielding
+  // empty user_data that Meta rejects (subcode 2804050). Persisting these onto
+  // the card NOW (the browser has them at order-creation) guarantees the event
+  // is well-matched whichever path fulfils it. Prefer the explicit body values,
+  // falling back to the first-party _fbp/_fbc cookies (covers stale clients).
+  const cookieHeader = String(req.headers["cookie"] ?? "");
+  const readCookie = (name: string): string | null => {
+    const m = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+    if (!m?.[1]) return null;
+    // Malformed percent-encoding in an attacker-controlled header must never
+    // throw and fail the request — fall back to the raw value.
+    try {
+      return decodeURIComponent(m[1]);
+    } catch {
+      return m[1];
+    }
+  };
+  const fbp = typeof bodyFbp === "string" && bodyFbp ? bodyFbp : readCookie("_fbp");
+  const fbc = typeof bodyFbc === "string" && bodyFbc ? bodyFbc : readCookie("_fbc");
 
   let amountRupees: number;
   let resolvedCardId: string | null = null;
@@ -291,6 +319,14 @@ router.post("/razorpay/create-order", async (req, res) => {
       const storedPrice = normPrice(stored.rows[0]?.price);
       const occ = stored.rows[0]?.occasion ?? (typeof occasion === "string" ? occasion : null);
       amountRupees = storedPrice ?? occasionPrice(occ);
+      // Stamp the CAPI cookies onto the card up-front (COALESCE keeps any
+      // existing values) so the webhook backstop can match the Purchase event.
+      if (fbp || fbc) {
+        await pool.query(
+          `UPDATE hs_cards SET fbp = COALESCE($2, fbp), fbc = COALESCE($3, fbc) WHERE id = $1`,
+          [cardId, fbp, fbc],
+        );
+      }
     } else if (kind === "watermark") {
       if (typeof cardId !== "string" || !/^[a-z0-9]{4,20}$/.test(cardId)) {
         res.status(400).json({ error: "validation_error", message: "Missing card reference." });

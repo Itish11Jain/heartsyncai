@@ -39,3 +39,8 @@ Window: Meta accepts `event_time` up to **7 days** old — fine for a same-day o
 
 ## Verifying past payments
 Deployment-log verification is unreliable after a republish: a new deployment starts a fresh log stream, so `/verify` + `[capi]` lines from payments on the PRIOR deployment are gone. Definitive check = Meta Events Manager (owner-controlled): confirm Purchase events arriving on both "Browser" and "Server" with deduplication, and value split by ₹49/₹99.
+
+## 2804050 ("no customer information") ≠ token problem — it's the Razorpay webhook race
+Subcode **2804050** (code 100) means empty/insufficient `user_data` — auth is FINE (a bad token gives OAuthException **190**). Root cause seen 17 Jun 2026: Razorpay `fulfillOrder` fireOnce race — the server-to-server webhook backstop (no browser cookies) usually beats the client `/verify`, so it fired Purchase before `/verify` wrote `fbp/fbc` onto `hs_cards` → `fireMetaCapi`'s `SELECT fbp,fbc` returned null → empty user_data → 400. Cards look populated *after the fact* because `/verify` writes the cookies a few seconds later.
+**Fix:** capture `fbp/fbc` at **create-order** (browser has them) and stamp onto `hs_cards` immediately (UPDATE … COALESCE), so whichever path wins fireOnce already has match keys. Client sends fbp/fbc to create-order; server also falls back to first-party `_fbp/_fbc` cookies for stale clients. UPI paths were never affected (same-handler upsert-before-fire).
+**Why:** distinguishes a data/race outage from a token outage so you don't chase the wrong fix; dev DB ≠ prod DB here, so reproduce against prod data (executeSql production) + token, not the dev pool.

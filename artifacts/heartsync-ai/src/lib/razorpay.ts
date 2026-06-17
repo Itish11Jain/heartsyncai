@@ -185,7 +185,15 @@ export async function payWithRazorpay(opts: PayOptions): Promise<PayResult> {
   const orderRes = await fetch(`${BASE}/api/razorpay/create-order`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(opts.authToken) },
-    body: JSON.stringify({ kind: opts.kind, cardId: opts.cardId, occasion: opts.occasion }),
+    body: JSON.stringify({
+      kind: opts.kind,
+      cardId: opts.cardId,
+      occasion: opts.occasion,
+      // Persist Meta CAPI cookies on the card NOW so the webhook backstop can
+      // match the Purchase event even if it fulfils before /verify runs.
+      fbp: opts.verifyExtras?.fbp ?? null,
+      fbc: opts.verifyExtras?.fbc ?? null,
+    }),
   });
   const orderData = (await orderRes.json().catch(() => ({}))) as {
     orderId?: string;
