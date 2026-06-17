@@ -515,7 +515,7 @@ router.post("/razorpay/webhook", async (req, res) => {
 
     if (paymentId && orderId && isCaptured) {
       const orderRow = await pool.query<OrderRow>(
-        `SELECT order_id, kind, card_id, clerk_user_id, amount, status
+        `SELECT order_id, kind, card_id, clerk_user_id, amount, status, event_id
          FROM hs_razorpay_orders WHERE order_id = $1`,
         [orderId],
       );
