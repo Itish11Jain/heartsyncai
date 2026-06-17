@@ -1140,15 +1140,6 @@ function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
   const displaySrc = cutoutSrc ?? (useFallback ? (fallbackPicUrl || personalPicUrl) : null);
 
   const hasAudio = voiceUrl.length > 0;
-  /* voiceDone starts true when there's no audio — arrow appears after 2s via timer */
-  const [voiceDone, setVoiceDone] = useState(!hasAudio);
-
-  /* When no audio, auto-reveal Continue arrow after 2s */
-  useEffect(() => {
-    if (hasAudio) return;
-    const t = setTimeout(() => setVoiceDone(true), 2000);
-    return () => clearTimeout(t);
-  }, [hasAudio]);
 
   return (
     <motion.div key="s5" style={{ position:"absolute", inset:0, zIndex:12, overflow:"hidden" }}
@@ -1203,7 +1194,7 @@ function Scene5({ onNext, personalPicUrl, fallbackPicUrl, voiceUrl }: {
         transition={{ delay:0.65 }}>
         {hasAudio && (
           <div style={{ flex:1 }}>
-            <VoiceNote voiceUrl={voiceUrl} onDone={() => setVoiceDone(true)}/>
+            <VoiceNote voiceUrl={voiceUrl} onDone={() => {}}/>
           </div>
         )}
         <motion.button onClick={onNext}
@@ -1575,6 +1566,9 @@ export default function BirthdayCard() {
   const [senderCopied, setSenderCopied] = useState(false);
   const [senderIgCopied, setSenderIgCopied] = useState(false);
   const autoOpenFiredRef = useRef(false);
+  /* Per-scene view tracking — each birthday scene fires once per session so we
+     can build a created → scene → paywall funnel and pinpoint the drop-off. */
+  const scenesSeenRef = useRef<Set<number>>(new Set());
 
   /* Build the recipient URL */
   /* Share URL — /api/share generates a personalised og:image for WhatsApp,
@@ -1609,6 +1603,31 @@ export default function BirthdayCard() {
     }, 3000);
     return () => clearTimeout(t);
   }, [scene, isSender, isUnlocked]);
+
+  /* Fire a per-scene "viewed" event the first time each scene becomes visible
+     (real user sessions only — never autoplay/preview iframes). The scene number
+     is encoded in the event name and the sender/recipient role in `channel`. */
+  useEffect(() => {
+    if (isAutoplay || isPreview) return;
+    // For sender sessions the card id is generated asynchronously on mount, so
+    // wait until it exists before logging — otherwise Scene 1 fires without a
+    // card_id and can't be joined to card_created in the funnel.
+    const id = cardId || params.get("id") || "";
+    if (isSender && !id) return;
+    if (scenesSeenRef.current.has(scene)) return;
+    scenesSeenRef.current.add(scene);
+    trackEvent({
+      event: `birthday_scene${scene}_viewed`,
+      occasion,
+      template: "birthday",
+      channel: isSender ? "sender" : "recipient",
+      card_id: id || undefined,
+      recipient_name: name,
+      has_voice_note: voiceUrl.length > 0,
+      photo_count: photoUrls.length,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene, cardId]);
 
   function handleOpenPaywall() {
     const isMobile = window.innerWidth < 768;

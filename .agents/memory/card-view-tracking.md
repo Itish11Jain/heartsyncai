@@ -32,3 +32,19 @@ id, so the recipient's `card_viewed` id never matched → Views stuck at 0.
 **Why:** premium templates create no DB card row at send time (only on unlock), so
 the only link between create and view is this client tracking id. Free/envelope
 branch already did this correctly; premium branch did not.
+
+## Per-scene funnel tracking (interactive multi-scene cards)
+
+For multi-scene interactive cards (birthday), per-scene view events are encoded in
+the EVENT NAME (`birthday_scene{N}_viewed`) because `hs_card_events` has no scene
+column; role (sender/recipient) goes in `channel`. Fire once-per-session per scene
+via a `useRef<Set>` guard so React re-renders and replay don't double-count, and
+skip `isAutoplay || isPreview` (iframe preview/UnlockModal autoplay).
+
+**Why:** there was no instrumentation between `card_created` and the Scene-6
+`bundle_paywall_shown`, so the upstream drop-off was invisible and unattributable.
+
+**How to apply:** for sender sessions the tracking id (`cardId`) is generated
+ASYNC on mount, so a `[scene]`-only effect logs Scene 1 with no card_id and breaks
+the created→scene join. Gate sender emission on the id existing and add `cardId`
+to the effect deps so Scene 1 re-fires once the id lands.
