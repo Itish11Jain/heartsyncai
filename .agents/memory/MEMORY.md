@@ -21,3 +21,4 @@
 - [Occasion campaign system](occasion-campaign-system.md) — reusable /send?c=slug landing + one shared /occasion 5-screen template; new occasion must register in 5 places incl. template-preview's own TemplateId union.
 - [Razorpay flow health](razorpay-flow-health.md) — "Pay did nothing" = silent client hang after create-order 200; fixed via script timeout + open() watchdog + visible UPI fallback + onLateSuccess recovery.
 - [Meta Pixel/CAPI firing](meta-capi-firing.md) — browser Pixel + server CAPI Purchase; NEVER hardcode CAPI value (thread real amount); dedup only on client /verify path, webhook uses synthetic eventId.
+- [Manual CAPI backfill](capi-backfill-mechanics.md) — replay missed Purchases: token only in bash env (not sandbox), prod data via sandbox executeSql→temp file→bash node; re-use order event_id for idempotency; need fbp/fbc or it 2804050s.
