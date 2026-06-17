@@ -21,6 +21,7 @@ interface OrderRow {
   clerk_user_id: string | null;
   amount: number;
   status: string;
+  event_id: string | null;
 }
 
 /** Razorpay client, or null when keys aren't configured yet. */
@@ -230,7 +231,16 @@ async function fulfillOrder(
   const fireOnce = (claim.rowCount ?? 0) > 0;
 
   if (order.kind === "card" && order.card_id) {
-    await fulfillCardUnlock(order.card_id, order.amount, paymentId, opts, fireOnce);
+    // Prefer the client-supplied eventId (verify path); fall back to the id
+    // persisted at create-order (webhook path) so the server CAPI event shares
+    // the browser Pixel's event id and Meta deduplicates instead of doubling.
+    await fulfillCardUnlock(
+      order.card_id,
+      order.amount,
+      paymentId,
+      { ...opts, eventId: opts.eventId ?? order.event_id ?? undefined },
+      fireOnce,
+    );
     return { kind: "card", cardId: order.card_id };
   }
   if (order.kind === "bundle") {
@@ -271,12 +281,13 @@ router.post("/razorpay/create-order", async (req, res) => {
     return;
   }
 
-  const { kind, cardId, occasion, fbp: bodyFbp, fbc: bodyFbc } = (req.body ?? {}) as {
+  const { kind, cardId, occasion, fbp: bodyFbp, fbc: bodyFbc, eventId: bodyEventId } = (req.body ?? {}) as {
     kind?: unknown;
     cardId?: unknown;
     occasion?: unknown;
     fbp?: unknown;
     fbc?: unknown;
+    eventId?: unknown;
   };
 
   // Meta CAPI match cookies. The webhook backstop is server-to-server (no
@@ -300,6 +311,13 @@ router.post("/razorpay/create-order", async (req, res) => {
   };
   const fbp = typeof bodyFbp === "string" && bodyFbp ? bodyFbp : readCookie("_fbp");
   const fbc = typeof bodyFbc === "string" && bodyFbc ? bodyFbc : readCookie("_fbc");
+
+  // The browser generates the Pixel event id BEFORE create-order and fires its
+  // Purchase Pixel with it. Persisting it on the order lets the server CAPI
+  // (webhook OR verify) reuse the SAME id, so Meta deduplicates browser+server
+  // instead of double-counting when the webhook wins the fulfillment race.
+  const orderEventId =
+    typeof bodyEventId === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(bodyEventId) ? bodyEventId : null;
 
   let amountRupees: number;
   let resolvedCardId: string | null = null;
@@ -363,10 +381,10 @@ router.post("/razorpay/create-order", async (req, res) => {
     });
 
     await pool.query(
-      `INSERT INTO hs_razorpay_orders (order_id, kind, card_id, clerk_user_id, amount, status)
-       VALUES ($1, $2, $3, $4, $5, 'created')
+      `INSERT INTO hs_razorpay_orders (order_id, kind, card_id, clerk_user_id, amount, status, event_id)
+       VALUES ($1, $2, $3, $4, $5, 'created', $6)
        ON CONFLICT (order_id) DO NOTHING`,
-      [order.id, kind, resolvedCardId, clerkUserId, amountRupees],
+      [order.id, kind, resolvedCardId, clerkUserId, amountRupees, orderEventId],
     );
 
     res.json({ orderId: order.id, amount: amountRupees * 100, currency: "INR", keyId: KEY_ID });
@@ -409,7 +427,7 @@ router.post("/razorpay/verify", async (req, res) => {
 
   try {
     const orderRow = await pool.query<OrderRow>(
-      `SELECT order_id, kind, card_id, clerk_user_id, amount, status
+      `SELECT order_id, kind, card_id, clerk_user_id, amount, status, event_id
        FROM hs_razorpay_orders WHERE order_id = $1`,
       [razorpay_order_id],
     );

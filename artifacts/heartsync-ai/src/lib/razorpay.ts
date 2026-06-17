@@ -193,6 +193,10 @@ export async function payWithRazorpay(opts: PayOptions): Promise<PayResult> {
       // match the Purchase event even if it fulfils before /verify runs.
       fbp: opts.verifyExtras?.fbp ?? null,
       fbc: opts.verifyExtras?.fbc ?? null,
+      // Persist the browser Pixel event id on the order so the server CAPI
+      // (webhook OR verify) reuses it and Meta dedupes browser+server instead
+      // of double-counting when the webhook wins the fulfillment race.
+      eventId: opts.verifyExtras?.eventId ?? null,
     }),
   });
   const orderData = (await orderRes.json().catch(() => ({}))) as {

@@ -16,10 +16,13 @@ Pixel ID `1510201040837057` is used in BOTH the client (index.html `fbq('init',.
 **Why:** it was previously hardcoded to `99.0`, so every ₹49 sale was reported to Meta as ₹99 — inflated revenue/ROAS for the cheaper occasions.
 **How to apply:** any NEW price tier or NEW unlock path must pass the real rupee amount into `fireMetaCapi`. Don't reintroduce a constant.
 
-## Dedup: only the /verify (and UPI client) path is safe
-Browser Pixel + server CAPI dedup ONLY when they share the same `eventID`. That happens when the **client** triggers the unlock (client generates eventId, sends it as `verifyExtras.eventId`, server reuses it).
-The **Razorpay webhook backstop** has no client eventId, so `capiEventId = hs_<cardId>_<ts>` (synthetic). `fireOnce` stops a second SERVER CAPI, but it does NOT make the synthetic id match the browser Pixel id — so if the webhook fires CAPI AND the browser Pixel later fires, Meta can double-count. In practice the webhook usually only "wins" when the buyer closed the tab (browser Pixel never fired), so the collision is rare but real.
-**Fix if it ever matters:** persist a deterministic per-order eventId at create-order time and reuse it in browser Purchase + verify CAPI + webhook CAPI.
+## Dedup: persisted per-order eventId (verify AND webhook share the browser id)
+Browser Pixel + server CAPI dedup ONLY when they share the same `eventID`. CANONICAL DESIGN: the client generates the Pixel eventId once, fires its browser Purchase with it, AND sends it to `create-order`, which persists it on `hs_razorpay_orders.event_id`. `fulfillOrder` then resolves `eventId = opts.eventId ?? order.event_id ?? undefined`, so BOTH unlock paths reuse the same id:
+- `/verify` path → client-supplied `opts.eventId`
+- `/webhook` backstop → persisted `order.event_id` (the webhook has no client cookies/eventId of its own)
+Only when neither is present does `fulfillCardUnlock` fall back to a synthetic `hs_<cardId>_<ts>` (stale clients or pre-fix in-flight orders) — those can still double-count, but that window is bounded.
+**Why this was needed:** publishing made the webhook CAPI succeed; before the persisted eventId, the webhook fired a synthetic id that never matched the browser Pixel, so every webhook-won sale double-counted (seen as 17 Meta purchases vs 14 real sales, 17 Jun 2026). Meta CAPI has no delete — historical dupes are unfixable and age out of attribution (~7d).
+**How to apply:** any NEW card paywall must thread its browser eventId through `verifyExtras.eventId` (it already flows to create-order). Never reintroduce a webhook-only synthetic id as the primary CAPI id. `event_id` is validated server-side with `^[A-Za-z0-9_-]{1,80}$`; the column is added idempotently via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
 
 ## Server CAPI shares ONE access token across ALL paths
 Every server Purchase (Razorpay verify/webhook AND UPI auto_unlock/manual_utr) goes through the same `fireMetaCapi`, which uses the single `META_PIXEL_ACCESS_TOKEN`. So if "server events received" drops to ~0 across ALL unlock methods at once (not just one payment mode), suspect the **token** (expired/invalid → OAuthException 190), NOT the payment path. Diagnostic tell: UPI auto_unlock CAPI stopping at the same instant as Razorpay CAPI rules out a Razorpay-specific bug.

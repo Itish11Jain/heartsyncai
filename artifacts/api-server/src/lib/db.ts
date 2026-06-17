@@ -192,8 +192,10 @@ export async function initDb(): Promise<void> {
       amount         INTEGER NOT NULL,        -- rupees
       status         TEXT NOT NULL DEFAULT 'created',
       payment_id     TEXT,
+      event_id       TEXT,                    -- browser Pixel event id, reused by server CAPI for Meta dedup
       created_at     TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE hs_razorpay_orders ADD COLUMN IF NOT EXISTS event_id TEXT;
     CREATE INDEX IF NOT EXISTS hs_razorpay_orders_payment_idx ON hs_razorpay_orders(payment_id);
 
     -- Runtime app config (key/value). Holds the active payment-mode flag so it
