@@ -124,7 +124,20 @@ async function fulfillCardUnlock(
     [cardId, paymentId.slice(-4), paymentId],
   );
 
+  // Fire the CAPI Purchase on EVERY fulfillment path (webhook AND verify), not
+  // only the first to claim the order. Meta deduplicates on the shared event_id,
+  // so this is safe — and it fixes the race where Razorpay's webhook wins first
+  // but carries NO fbp/fbc/ip/ua (it has none of the buyer's cookies), firing an
+  // empty event that Meta rejects (2804050). That empty event is rejected (never
+  // enters Meta's dedup pool), while the slightly-later /verify call DOES carry
+  // fbp/fbc/ip/ua and now fires its own event with the same id — so the
+  // data-rich event lands instead of being suppressed by the one-shot gate.
+  const capiEventId = opts.eventId ?? `hs_${cardId}_${Date.now()}`;
+  void fireMetaCapi(capiEventId, cardId, opts.clientIp ?? "", opts.userAgent ?? "", amountRupees);
+
   if (fireOnce) {
+    // card_paid analytics is NOT event_id-deduped, so it stays one-shot to avoid
+    // double-counting a single sale across the webhook + verify paths.
     const cardRow = await pool.query<{ occasion: string | null }>(
       `SELECT occasion FROM hs_cards WHERE id = $1`,
       [cardId],
@@ -134,8 +147,6 @@ async function fulfillCardUnlock(
        VALUES ('card_paid', $1, $2, $3, 'razorpay', $4)`,
       [cardId, cardRow.rows[0]?.occasion ?? null, `srv_${cardId}`, amountRupees],
     );
-    const capiEventId = opts.eventId ?? `hs_${cardId}_${Date.now()}`;
-    void fireMetaCapi(capiEventId, cardId, opts.clientIp ?? "", opts.userAgent ?? "", amountRupees);
     console.log(`[razorpay] card unlocked card=${cardId} payment=${paymentId}`);
   }
 }
