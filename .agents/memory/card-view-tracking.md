@@ -48,3 +48,25 @@ skip `isAutoplay || isPreview` (iframe preview/UnlockModal autoplay).
 ASYNC on mount, so a `[scene]`-only effect logs Scene 1 with no card_id and breaks
 the created→scene join. Gate sender emission on the id existing and add `cardId`
 to the effect deps so Scene 1 re-fires once the id lands.
+
+## "bundle_paywall_shown" means DIFFERENT things per template (open vs Pay-click)
+
+`bundle_paywall_shown` is the analytics dashboard's "Saw payment paywall" metric,
+but WHERE it fires differs by template, so it does not measure the same step everywhere:
+- SenderPanel-based templates (envelope/default → sorry, feel_good, thank_you) fire it
+  the MOMENT the sheet auto-opens (next to setShowUnlockModal). So for them it = sheet OPENED.
+- The premium templates (birthday/cosmic/crystal/vinyl/occasion) each have their OWN
+  inline auto-open copy and historically did NOT fire it on open — their only emission
+  came from UnlockModal.handlePrimaryCta (same line as `pay_popup_cta_clicked`), so it = Pay CLICKED.
+- UnlockModal (shared by all) also fires it on Pay-click, so for SenderPanel templates the
+  distinct-fingerprint count still resolves to "opened" (openers ⊇ clickers).
+
+**Why:** this asymmetry made birthday look like a paywall cliff vs sorry when comparing
+"paywall_shown" — they were never the same step. Birthday now ALSO fires it on open
+(mirroring SenderPanel) so its open rate is finally measurable and comparable.
+
+**How to apply:** to measure a premium template's OPEN rate, add
+`trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId })` inside that
+template's auto-open setTimeout (cosmic/crystal/vinyl/occasion still lack it). For an
+apples-to-apples Pay-CLICK comparison across all templates, use `pay_popup_cta_clicked`
+(only ever fired in UnlockModal), not `bundle_paywall_shown`.

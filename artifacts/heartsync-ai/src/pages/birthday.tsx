@@ -1598,6 +1598,10 @@ export default function BirthdayCard() {
     autoOpenFiredRef.current = true;
     const t = setTimeout(() => {
       const isMobile = window.innerWidth < 768;
+      // Fire the "sheet opened" event here (mirrors SenderPanel) so birthday's
+      // open rate is finally measurable — bundle_paywall_shown == sheet opened,
+      // consistent with the SenderPanel-based templates (sorry / feel_good).
+      trackEvent({ event: "bundle_paywall_shown", occasion, card_id: cardId });
       if (isMobile) setShowUnlockModal(true);
       else setShowDesktopPaywall(true);
     }, 3000);
