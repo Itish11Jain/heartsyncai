@@ -5,7 +5,7 @@ description: How HeartSync's browser Pixel + server Conversions API fire on paid
 
 # Meta Pixel + Conversions API (CAPI) on card unlocks
 
-Pixel ID `1510201040837057` is used in BOTH the client (index.html `fbq('init',...)`) and the server (`META_PIXEL_ID` in api-server `cards.ts`). They must stay equal.
+The Meta Pixel ID is used in BOTH the client (index.html `fbq('init',...)`) and the server (`META_PIXEL_ID` in api-server `cards.ts`) — read the literal from those files; the two must stay equal.
 
 ## Two firing channels for a Purchase
 1. **Browser Pixel** — `fbq('track','Purchase',{value:price,currency:'INR'},{eventID})` fires in the buyer's browser after the unlock resolves (UnlockModal / razorpay verify success). Uses the REAL per-occasion price.
