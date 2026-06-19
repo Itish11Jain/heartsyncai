@@ -289,12 +289,13 @@ export function getFallbackTemplate(occasion: string): CardTemplate {
   };
 }
 
-export const OCCASIONS: { id: Occasion; label: string; emoji: string; description: string }[] = [
+export const OCCASIONS: { id: Occasion; label: string; emoji: string; description: string; date?: string }[] = [
   { id: "feel_good", label: "Feel Good", emoji: "🌟", description: "No occasion needed — just because" },
   { id: "sorry", label: "Sorry", emoji: "💔", description: "Skip the awkward text. Send a moment" },
   { id: "birthday", label: "Birthday", emoji: "🎂", description: "Make their whole day stop and smile" },
   { id: "congratulations", label: "Congrats!", emoji: "🏆", description: "Their big win deserves a moment" },
   { id: "thank_you", label: "Thank You", emoji: "🙏", description: "Real gratitude, not just 'tysm'" },
+  { id: "fathers_day", label: "Father's Day Surprise", emoji: "👔", description: "Make Papa's day unforgettable", date: "21st June" },
 ];
 
 export const RELATIONS: { id: Relation; label: string; sub: string; emoji: string }[] = [

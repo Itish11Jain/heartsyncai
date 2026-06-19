@@ -870,7 +870,9 @@ function SendInner() {
         ? (VIRAL_NEXT[receivedTemplate] ?? selectedTemplate)
         : occasion === "birthday"
           ? "birthday"
-          : selectedTemplate;
+          : occasion === "fathers_day"
+            ? "occasion"
+            : selectedTemplate;
 
     /* ── Premium templates: redirect immediately for preview + pay-wall ─ */
     /* The card page (crystal/cosmic/vinyl) handles sign-in + paywall.     */
@@ -1313,7 +1315,7 @@ function SendInner() {
             hidden occasion/relation steps. */}
         {step > 1 && !(isViralReply && step === 2) && !(campaign && step === 3) ? (
           <button
-            onClick={() => goTo(step - 1, -1)}
+            onClick={() => goTo(occasion === "fathers_day" && step === 3 ? 1 : step - 1, -1)}
             className="flex items-center gap-1 text-sm"
             style={{ color: "rgba(255,255,255,0.4)" }}
           >
@@ -1368,7 +1370,11 @@ function SendInner() {
                   <motion.button
                     key={occ.id}
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => { setOccasion(occ.id); goTo(2, 1); }}
+                    onClick={() => {
+                      setOccasion(occ.id);
+                      if (occ.id === "fathers_day") { setRelation("father"); goTo(3, 1); }
+                      else { goTo(2, 1); }
+                    }}
                     style={{
                       padding: "11px 16px",
                       borderRadius: 16,
@@ -1385,6 +1391,23 @@ function SendInner() {
                       <div className="text-sm font-semibold text-white">{occ.label}</div>
                       <div className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{occ.description}</div>
                     </div>
+                    {occ.date && (
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          background: "linear-gradient(135deg, #FFE680, #FFB300)",
+                          WebkitBackgroundClip: "text",
+                          backgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          color: "#FFC107",
+                        }}
+                      >
+                        {occ.date}
+                      </span>
+                    )}
                   </motion.button>
                 ))}
               </div>
