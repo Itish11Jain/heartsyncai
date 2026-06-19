@@ -213,23 +213,9 @@ function Scene4({ name, onNext, autoplay }: { name: string; onNext: () => void; 
 }
 
 /* ─── Scene 5: typewriter final message + share / paywall ─────────────────── */
-function useTypewriter(text: string, speed = 42, startDelay = 500) {
-  const [out, setOut] = useState("");
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    setOut(""); setDone(false);
-    let i = 0;
-    let interval: ReturnType<typeof setInterval>;
-    const start = setTimeout(() => {
-      interval = setInterval(() => {
-        i += 1;
-        setOut(text.slice(0, i));
-        if (i >= text.length) { clearInterval(interval); setDone(true); }
-      }, speed);
-    }, startDelay);
-    return () => { clearTimeout(start); clearInterval(interval); };
-  }, [text, speed, startDelay]);
-  return { out, done };
+function useTypewriter(text: string) {
+  // Typing animation removed — render the full message instantly.
+  return { out: text, done: true };
 }
 
 function Scene5({
