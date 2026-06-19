@@ -34,6 +34,11 @@ import { TemplatePreview } from "@/components/template-preview";
 
 const GEN_EMOJIS = ["✨", "💌", "🎀", "💛", "🎁", "🌟", "🥰", "💫", "🎊"];
 
+/* Delay between showing the "creating your card" screen and navigating to the
+ * card. Kept brief so the card's first frame appears fast — the destination
+ * page renders its own full-screen splash on load, so there is no blank gap. */
+const CREATE_REDIRECT_DELAY_MS = 600;
+
 // Twinkling sparkles scattered around the campaign headline (golden cursive).
 const CAMPAIGN_SPARKLES = [
   { id: 0, left: 2, top: 10, size: 12, delay: 0, duration: 2.4 },
@@ -938,7 +943,7 @@ function SendInner() {
       // cutout URL; we fall back to the first photo only if no sticker was started.
       const stickerUrl = autoStickerUrlRef.current ?? uploadedPhotoUrls[0] ?? undefined;
       const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, trackingId, false, stickerUrl, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
-      setTimeout(() => { window.location.href = url; }, 1800);
+      setTimeout(() => { window.location.href = url; }, CREATE_REDIRECT_DELAY_MS);
       return;
     }
 
@@ -1007,7 +1012,7 @@ function SendInner() {
     clearDraft();
     const url = buildCardUrl(recipientName.trim(), customMsg, true, effectiveTemplate, effectiveCardId, false, autoStickerUrl ?? undefined, uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : undefined, voiceNoteUrl ?? undefined);
     setShowGenerating(true);
-    setTimeout(() => { window.location.href = url; }, 1800);
+    setTimeout(() => { window.location.href = url; }, CREATE_REDIRECT_DELAY_MS);
   }, [
     isViralReply, receivedTemplate, selectedTemplate, customMsg, defaultMsg, occasion, recipientName,
     fingerprint, clerkUserId, userEmail, incrementUsage, getToken, uploadedPhotoUrls, voiceNoteUrl,

@@ -1,11 +1,23 @@
 ---
-name: Payment flow — manual UPI/UTR default, Razorpay behind a runtime toggle
-description: Manual "I've paid"+UTR is the default UX; a restored Razorpay flow sits dormant behind a DB-backed payment_mode flag, flippable by admin with no redeploy.
+name: Payment flow — payment_mode is a live GLOBAL DB flag (Razorpay currently ON)
+description: payment_mode is a single global hs_app_config flag; it has been razorpay (live) since 2026-06-16. Manual UPI is the fallback, NOT the current prod default. Never infer the live mode from all-time event data.
 ---
 
-# Payment flow: manual UPI/UTR default, Razorpay dormant behind a flag
+# Payment flow: payment_mode is a live GLOBAL flag (currently razorpay)
 
-The **default** payment UX across HeartSync is the **manual UPI flow**: show the UPI ID
+**CURRENT LIVE STATE (as of 2026-06-19):** `payment_mode` = `razorpay`, set on **2026-06-16**.
+It is a **single GLOBAL** flag (`hs_app_config` key `payment_mode`) — there is **no
+per-occasion / per-template mode**; enabling Razorpay for one occasion only would require a
+code change. Since the 2026-06-16 flip, manual UPI/UTR events drop to ~0 in production.
+
+**Do NOT infer the live mode from all-time event data** — most historical rows predate the
+flip and are manual UPI. Read `payment_mode` (or `GET /api/payment-mode`) for the truth.
+
+The sections below describe the **mechanics** (still accurate); just note that the framing
+of "manual UPI = default, Razorpay = dormant" reflects the *original* design intent, NOT the
+current production state where Razorpay is the active mode and manual UPI is the fallback.
+
+The **original default** payment UX across HeartSync is the **manual UPI flow**: show the UPI ID
 (copy) + QR (`upi://pay`), an **"I've paid"** CTA, then a **UTR / transaction-ID entry**
 field that the server verifies. This applies to every paywall surface — the card
 unlock/share modal, the watermark paywall, the builder (send) paywall, the bundle page,
