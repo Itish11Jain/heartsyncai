@@ -870,9 +870,7 @@ function SendInner() {
         ? (VIRAL_NEXT[receivedTemplate] ?? selectedTemplate)
         : occasion === "birthday"
           ? "birthday"
-          : occasion === "fathers_day"
-            ? "occasion"
-            : selectedTemplate;
+          : selectedTemplate;
 
     /* ── Premium templates: redirect immediately for preview + pay-wall ─ */
     /* The card page (crystal/cosmic/vinyl) handles sign-in + paywall.     */
@@ -1315,7 +1313,7 @@ function SendInner() {
             hidden occasion/relation steps. */}
         {step > 1 && !(isViralReply && step === 2) && !(campaign && step === 3) ? (
           <button
-            onClick={() => goTo(occasion === "fathers_day" && step === 3 ? 1 : step - 1, -1)}
+            onClick={() => goTo(step - 1, -1)}
             className="flex items-center gap-1 text-sm"
             style={{ color: "rgba(255,255,255,0.4)" }}
           >
@@ -1371,9 +1369,13 @@ function SendInner() {
                     key={occ.id}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
+                      if (occ.id === "fathers_day") {
+                        const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+                        window.location.href = `${base}/send?c=fathers-day`;
+                        return;
+                      }
                       setOccasion(occ.id);
-                      if (occ.id === "fathers_day") { setRelation("father"); goTo(3, 1); }
-                      else { goTo(2, 1); }
+                      goTo(2, 1);
                     }}
                     style={{
                       padding: "11px 16px",
