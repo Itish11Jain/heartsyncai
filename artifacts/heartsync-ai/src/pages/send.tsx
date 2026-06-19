@@ -384,7 +384,14 @@ function SendInner() {
   const [dir, setDir] = useState(1);
   // Viral reply always uses thank_you regardless of URL params or draft state.
   const [occasion, setOccasion] = useState(
-    campaign ? campaign.occasion : isViralReply ? "thank_you" : (initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good"),
+    campaign ? campaign.occasion : isViralReply ? "thank_you" : (() => {
+      // Father's Day is only reachable via the dedicated campaign redirect, so
+      // it must never appear pre-selected in the generic picker. Coerce any
+      // restored draft / ?occasion= value back to the default. This also clears
+      // a stale "fathers_day" draft already saved on existing users' devices.
+      const o = initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good";
+      return o === "fathers_day" ? "feel_good" : o;
+    })(),
   );
   // Occasion-based unlock pricing (₹99 birthday/sorry · ₹49 others) + anchor.
   const unlockPricing = getPriceConfigForOccasion(occasion);
@@ -508,6 +515,10 @@ function SendInner() {
 
   /* ─── Persist draft on every change ─────────────────────────────────── */
   useEffect(() => {
+    // Campaign mode re-derives all state from the URL on mount and never reads
+    // this draft, so persisting it would only pollute the generic picker
+    // (e.g. saving occasion="fathers_day" → tile pre-selected on next visit).
+    if (campaign) return;
     const meaningful = step > 1 || recipientName.trim().length > 0 || relation.length > 0;
     if (!meaningful) return;
     try {
