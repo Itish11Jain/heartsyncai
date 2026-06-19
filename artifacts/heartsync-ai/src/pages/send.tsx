@@ -1339,10 +1339,27 @@ function SendInner() {
           (home). This is the only Back affordance — inline backs were
           removed to keep the form fully on one screen fold. */}
       <div className="w-full flex items-center justify-between px-4 pb-2" style={{ maxWidth: 520, position: "relative", zIndex: 1, paddingTop: "max(16px, env(safe-area-inset-top, 16px))" }}>
-        {/* In viral reply mode step 2 is the first visible step, and in campaign
-            mode step 3 is the first visible step — Back goes home, not to the
-            hidden occasion/relation steps. */}
-        {step > 1 && !(isViralReply && step === 2) && !(campaign && step === 3) ? (
+        {/* Back navigation has three cases:
+            - Campaign builder (step 3 is the first visible step): Back goes to the
+              occasions list. We do a FULL navigation to /send (dropping the ?c=
+              campaign param) — useSearchParams isn't reactive and the wizard state
+              is initialised at mount, so a client-side Link wouldn't reset it; a
+              remount gives a clean occasion picker with no leftover campaign state.
+            - Normal multi-step builder (and not the viral-reply first screen):
+              Back steps to the previous wizard screen.
+            - Otherwise (first step, or viral-reply first screen): Back goes home. */}
+        {campaign && step === 3 ? (
+          <button
+            onClick={() => {
+              const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+              window.location.href = `${base}/send`;
+            }}
+            className="flex items-center gap-1 text-sm"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+          >
+            <ChevronLeft size={16} /> Back
+          </button>
+        ) : step > 1 && !(isViralReply && step === 2) ? (
           <button
             onClick={() => goTo(step - 1, -1)}
             className="flex items-center gap-1 text-sm"
