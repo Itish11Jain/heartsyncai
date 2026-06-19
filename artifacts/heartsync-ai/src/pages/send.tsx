@@ -597,14 +597,34 @@ function SendInner() {
     return t.final_message;
   }, [occasion, relation, campaign]);
 
+  // Remembers the last message we AUTO-SEEDED, so switching occasion/relation can
+  // swap in the new template default — but ONLY while the user hasn't typed their
+  // own. Initialised to the current message only when it equals the initial
+  // template default; an explicit ?text= prefill or a restored/edited draft is
+  // therefore treated as user content and never overwritten.
+  const seededMsgRef = useRef<string>(
+    (() => {
+      if (campaign) return campaign.defaultMessage;
+      if (!occasion || !relation) return "";
+      const t = getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
+      return customMsg === t.final_message ? customMsg : "";
+    })(),
+  );
+
   // Re-seed message when occasion/relation change (but only if user hasn't customised it).
   useEffect(() => {
     if (campaign) return; // campaign message is seeded at init — never re-seed.
     if (occasion && relation) {
       const t = getTemplate(occasion, relation) ?? getFallbackTemplate(occasion);
       setCustomMsg((current) => {
-        // If empty or matches the previous template's default, replace.
-        return !current.trim() ? t.final_message : current;
+        // Replace an empty box OR the previous auto-seeded default (occasion was
+        // switched before the user typed anything). A message the user actually
+        // typed (current !== last seeded) is always preserved.
+        if (!current.trim() || current === seededMsgRef.current) {
+          seededMsgRef.current = t.final_message;
+          return t.final_message;
+        }
+        return current;
       });
     }
   }, [occasion, relation]);
