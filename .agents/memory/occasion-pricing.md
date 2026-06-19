@@ -8,9 +8,15 @@ description: HeartSync card price is decided by occasion (not the A/B arm); the 
 A card's price is decided by its **occasion**, not the old ₹49/₹99 A/B device
 arm (that experiment is finished; `FORCE_ARM` is `null`).
 
-- Birthday & Sorry → ₹99 (anchor ₹149)
+- Birthday, Sorry & Father's Day → ₹99 (anchor ₹149)
 - Feel Good, Thank You, Congratulations → ₹49 (anchor ₹99)
 - unmapped → ₹49
+
+**Two maps must stay in lockstep** — the client `priceArm.ts PRICE_BY_OCCASION`
+AND the server `occasionPrice()` in `api-server/src/routes/razorpay.ts` (used by
+the Razorpay create-order `kind:"card"` fallback when no card row exists yet).
+A drift here is exactly what made Father's Day show ₹99 on the CTA but ₹49 in the
+Razorpay modal. When adding/repricing an occasion, edit BOTH.
 
 **Single source of truth:** `lib/priceArm.ts` `PRICE_BY_OCCASION`, read via
 `getOccasionPrice(occasion)` / `getPriceConfigForOccasion(occasion)`. Change the

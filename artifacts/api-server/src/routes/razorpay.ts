@@ -31,11 +31,12 @@ function getClient(): Razorpay | null {
 }
 
 /**
- * Server-authoritative occasion → price (mirrors the frontend priceArm.ts):
- * birthday & sorry → ₹99, everything else → ₹49.
+ * Server-authoritative occasion → price (mirrors the frontend priceArm.ts
+ * PRICE_BY_OCCASION map — keep the two in lockstep):
+ * birthday, sorry & fathers_day → ₹99, everything else → ₹49.
  */
 function occasionPrice(occasion: string | null | undefined): 49 | 99 {
-  return occasion === "birthday" || occasion === "sorry" ? 99 : 49;
+  return occasion === "birthday" || occasion === "sorry" || occasion === "fathers_day" ? 99 : 49;
 }
 
 /**
