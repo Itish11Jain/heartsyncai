@@ -135,8 +135,8 @@ export default function Privacy() {
                 Subject to applicable Indian law, you may request to access, correct, or delete your
                 personal data, or withdraw consent for certain processing. To exercise these rights,
                 contact us at{" "}
-                <a href="mailto:saurabhj016@gmail.com" className="text-primary hover:underline">
-                  saurabhj016@gmail.com
+                <a href="mailto:helloheartsyncai@gmail.com" className="text-primary hover:underline">
+                  helloheartsyncai@gmail.com
                 </a>
                 .
               </p>
@@ -170,8 +170,8 @@ export default function Privacy() {
               <p>
                 For any questions about this Privacy Policy or how we handle your data, contact us
                 at{" "}
-                <a href="mailto:saurabhj016@gmail.com" className="text-primary hover:underline">
-                  saurabhj016@gmail.com
+                <a href="mailto:helloheartsyncai@gmail.com" className="text-primary hover:underline">
+                  helloheartsyncai@gmail.com
                 </a>
                 .
               </p>
