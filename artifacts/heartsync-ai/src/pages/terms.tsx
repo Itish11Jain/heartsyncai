@@ -247,7 +247,7 @@ export default function Terms() {
 
           <div className="mt-8 text-center">
             <p className="text-white/25 text-sm">
-              HeartSync AI · operated by Saurabh Jain · Jaipur, India ·{" "}
+              HeartSync AI · Jaipur, India ·{" "}
               <Link href="/contact" className="hover:text-white/50 transition-colors">Contact Us</Link>
             </p>
           </div>

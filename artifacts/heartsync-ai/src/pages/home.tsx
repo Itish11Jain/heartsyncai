@@ -1229,7 +1229,7 @@ export default function Home() {
             <Link href="/terms" className="hover:text-white/70 transition-colors">Refund Policy</Link>
           </div>
           <p className="text-white/20 text-xs">
-            © {new Date().getFullYear()} HeartSync AI · operated by Saurabh Jain · A-54, Triveni Nagar, Jaipur, Rajasthan – 302018, India
+            © {new Date().getFullYear()} HeartSync AI · Jaipur, India
           </p>
         </footer>
       </div>

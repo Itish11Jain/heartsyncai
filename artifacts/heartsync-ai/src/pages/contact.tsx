@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { HeartPulse, Mail, Phone, MapPin, ArrowLeft } from "lucide-react";
+import { HeartPulse, Mail, Instagram, ArrowLeft } from "lucide-react";
 
 export default function Contact() {
   return (
@@ -39,9 +39,7 @@ export default function Contact() {
               effortless.
             </p>
             <p className="text-white/55 leading-relaxed text-sm">
-              HeartSync AI is owned and operated by{" "}
-              <strong className="text-white/80">Saurabh Jain</strong> (the legal entity behind this
-              service), based in Jaipur, India.
+              HeartSync AI is proudly built and operated in Jaipur, India.
             </p>
           </div>
 
@@ -69,31 +67,18 @@ export default function Contact() {
 
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
-                <Phone className="w-6 h-6 text-primary" />
+                <Instagram className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-white/40 text-sm mb-1">Mobile</p>
+                <p className="text-white/40 text-sm mb-1">Instagram</p>
                 <a
-                  href="tel:+919706900714"
+                  href="https://www.instagram.com/heart.syncai"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-white font-semibold text-lg hover:text-primary transition-colors"
                 >
-                  +91-9706900714
+                  @heart.syncai
                 </a>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
-                <MapPin className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-white/40 text-sm mb-1">Registered Address</p>
-                <p className="text-white font-semibold text-lg leading-snug">
-                  Saurabh Jain
-                </p>
-                <p className="text-white/70 leading-snug">
-                  A-54, Triveni Nagar, Jaipur, Rajasthan – 302018, India
-                </p>
               </div>
             </div>
 
@@ -108,7 +93,7 @@ export default function Contact() {
 
           <div className="mt-8 text-center">
             <p className="text-white/25 text-sm">
-              HeartSync AI · operated by Saurabh Jain · Jaipur, India
+              HeartSync AI · Jaipur, India
             </p>
           </div>
         </motion.div>
