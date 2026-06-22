@@ -858,11 +858,29 @@ export default function Home() {
     trackEvent({ event: "landing_name_entered", recipient_name: value.trim().slice(0, 40) });
   }
 
+  /**
+   * Forward an occasion deep-link from the landing URL through to the builder.
+   * Ad set links like /?occasion=birthday&skip=1 pre-select the occasion (and,
+   * with skip=1, jump past the occasion picker). The generic landing URL has no
+   * occasion param, so it falls through to the builder's default occasion.
+   */
+  const occasionDeepLink = (() => {
+    if (typeof window === "undefined") return "";
+    const sp = new URLSearchParams(window.location.search);
+    const occ = sp.get("occasion");
+    if (!occ) return "";
+    const parts = [`occasion=${encodeURIComponent(occ)}`];
+    if (sp.get("skip") === "1") parts.push("skip=1");
+    return parts.join("&");
+  })();
+
   /** Build the deep-link to /send, optionally pre-filling the recipient name. */
   const buildSendHref = (name: string): string => {
     const trimmed = name.trim();
-    if (!trimmed) return "/send";
-    return `/send?to=${encodeURIComponent(trimmed.slice(0, 40))}`;
+    const parts: string[] = [];
+    if (trimmed) parts.push(`to=${encodeURIComponent(trimmed.slice(0, 40))}`);
+    if (occasionDeepLink) parts.push(occasionDeepLink);
+    return parts.length ? `/send?${parts.join("&")}` : "/send";
   };
 
   function goToSendWithName() {
@@ -1100,7 +1118,7 @@ export default function Home() {
                   size="lg"
                   className="rounded-2xl h-14 px-8 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white shadow-[0_0_50px_-12px_rgba(236,72,153,0.6)] transition-all relative overflow-hidden"
                 >
-                  <Link href="/send" className="flex items-center gap-2" onClick={() => { home.cta(); trackEvent({ event: "cta_clicked" }); }}>
+                  <Link href={occasionDeepLink ? `/send?${occasionDeepLink}` : "/send"} className="flex items-center gap-2" onClick={() => { home.cta(); trackEvent({ event: "cta_clicked" }); }}>
                     <m.span className="absolute inset-0 -skew-x-12 pointer-events-none"
                       style={{ background:"linear-gradient(to right, transparent 0%, rgba(255,255,255,0.0) 20%, rgba(255,255,255,0.42) 40%, rgba(255,255,255,0.42) 60%, rgba(255,255,255,0.0) 80%, transparent 100%)" }}
                       animate={{ x:["-130%","130%"] }}

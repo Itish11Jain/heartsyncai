@@ -295,7 +295,6 @@ export const OCCASIONS: { id: Occasion; label: string; emoji: string; descriptio
   { id: "birthday", label: "Birthday", emoji: "🎂", description: "Make their whole day stop and smile" },
   { id: "congratulations", label: "Congrats!", emoji: "🏆", description: "Their big win deserves a moment" },
   { id: "thank_you", label: "Thank You", emoji: "🙏", description: "Real gratitude, not just 'tysm'" },
-  { id: "fathers_day", label: "Father's Day Surprise", emoji: "👔", description: "For the amazing fathers who never demand anything", date: "21st June" },
 ];
 
 export const RELATIONS: { id: Relation; label: string; sub: string; emoji: string }[] = [

@@ -380,22 +380,33 @@ function SendInner() {
   // When arriving via viral reply flow, skip the draft to start fresh.
   const initialDraft = isViralReply ? null : loadDraft();
 
+  // Ad deep-link skip flow: /send?occasion=<x>&skip=1 (e.g. the birthday ad set
+  // landing) jumps straight past the occasion picker with the occasion locked
+  // in from the URL. Reply + campaign flows have their own skip handling.
+  const skipOccasion =
+    !campaign && !isViralReply && searchParams.get("skip") === "1" && !!searchParams.get("occasion");
+
   // Viral reply skips step 1 (occasion) — pre-filled as feel_good.
   // Campaign starts directly on step 3 (name + message) — occasion + relation
   // are pre-decided by the campaign, so the first two pickers are skipped.
+  // Skip deep-link starts on step 2 (relation) with the occasion pre-locked.
   const [step, setStep] = useState<number>(
-    campaign ? 3 : isViralReply ? 2 : Math.min(initialDraft?.step ?? 1, 3),
+    campaign ? 3 : isViralReply ? 2 : skipOccasion ? 2 : Math.min(initialDraft?.step ?? 1, 3),
   );
   const [dir, setDir] = useState(1);
   // Viral reply always uses thank_you regardless of URL params or draft state.
   const [occasion, setOccasion] = useState(
     campaign ? campaign.occasion : isViralReply ? "thank_you" : (() => {
-      // Father's Day is only reachable via the dedicated campaign redirect, so
-      // it must never appear pre-selected in the generic picker. Coerce any
-      // restored draft / ?occasion= value back to the default. This also clears
-      // a stale "fathers_day" draft already saved on existing users' devices.
-      const o = initialDraft?.occasion ?? searchParams.get("occasion") ?? "feel_good";
-      return o === "fathers_day" ? "feel_good" : o;
+      const urlOccasion = searchParams.get("occasion");
+      // A skip deep-link expresses fresh, explicit intent (ad traffic), so its
+      // URL occasion must win over any saved draft. Otherwise fall back to the
+      // draft, then the URL, then the default occasion (sorry) for generic
+      // landings. Father's Day is retired from the picker, so coerce any stale
+      // "fathers_day" draft / param back to the default.
+      const o = (skipOccasion && urlOccasion)
+        ? urlOccasion
+        : (initialDraft?.occasion ?? urlOccasion ?? "sorry");
+      return o === "fathers_day" ? "sorry" : o;
     })(),
   );
   // Occasion-based unlock pricing (₹99 birthday/sorry · ₹49 others) + anchor.
@@ -1364,7 +1375,7 @@ function SendInner() {
           >
             <ChevronLeft size={16} /> Back
           </button>
-        ) : step > 1 && !(isViralReply && step === 2) ? (
+        ) : step > 1 && !(isViralReply && step === 2) && !(skipOccasion && step === 2) ? (
           <button
             onClick={() => goTo(step - 1, -1)}
             className="flex items-center gap-1 text-sm"
