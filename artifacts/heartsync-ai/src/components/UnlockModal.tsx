@@ -14,7 +14,7 @@ import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpa
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-function getMetaCookies(): { fbp: string | null; fbc: string | null } {
+function getMetaCookies(preferUrlFbclid = false): { fbp: string | null; fbc: string | null } {
   try {
     const cookieMap = Object.fromEntries(
       document.cookie.split(";").map((c) => {
@@ -23,10 +23,16 @@ function getMetaCookies(): { fbp: string | null; fbc: string | null } {
       }),
     );
     const fbp = cookieMap["_fbp"] ?? null;
-    let fbc = cookieMap["_fbc"] ?? null;
-    if (!fbc) {
-      const fbclid = new URLSearchParams(window.location.search).get("fbclid");
-      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+    const cookieFbc = cookieMap["_fbc"] ?? null;
+    const urlFbclid = new URLSearchParams(window.location.search).get("fbclid");
+    let fbc: string | null;
+    if (preferUrlFbclid && urlFbclid) {
+      // Birthday funnel: the fresh ad fbclid threaded through the URL is more
+      // reliable than a possibly-stale _fbc cookie from an earlier visit, so
+      // prefer it. All other funnels keep the original cookie-first behavior.
+      fbc = `fb.1.${Date.now()}.${urlFbclid}`;
+    } else {
+      fbc = cookieFbc ?? (urlFbclid ? `fb.1.${Date.now()}.${urlFbclid}` : null);
     }
     return { fbp: fbp || null, fbc: fbc || null };
   } catch {
@@ -168,7 +174,7 @@ export default function UnlockModal({
         }
       };
       try {
-        const { fbp, fbc } = getMetaCookies();
+        const { fbp, fbc } = getMetaCookies(occasion === "birthday");
         await payWithRazorpay({
           kind: "card",
           cardId,
@@ -221,7 +227,7 @@ export default function UnlockModal({
     };
 
     const autoEventId = `hs_${cardId}_${Date.now()}`;
-    const { fbp: autoFbp, fbc: autoFbc } = getMetaCookies();
+    const { fbp: autoFbp, fbc: autoFbc } = getMetaCookies(occasion === "birthday");
 
     while (Date.now() < deadline) {
       try {
@@ -279,7 +285,7 @@ export default function UnlockModal({
     };
 
     const utrEventId = `hs_${cardId}_${Date.now()}`;
-    const { fbp: utrFbp, fbc: utrFbc } = getMetaCookies();
+    const { fbp: utrFbp, fbc: utrFbc } = getMetaCookies(occasion === "birthday");
 
     // Poll until success or timeout
     while (Date.now() < deadline) {

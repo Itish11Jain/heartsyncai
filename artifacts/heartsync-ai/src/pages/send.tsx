@@ -683,6 +683,12 @@ function SendInner() {
       p.set("photos", photoUrls.map(u => encodeURIComponent(u)).join(","));
     }
     if (voiceUrl) p.set("voicenote", encodeURIComponent(voiceUrl));
+    // Birthday-only: carry the ad fbclid through to the card page so UnlockModal
+    // can rebuild a fresh _fbc for Meta attribution (other templates unchanged).
+    if (template === "birthday") {
+      const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+      if (fbclid) p.set("fbclid", fbclid);
+    }
     if (template === "crystal")  return `${base}/crystal.html?${p.toString()}`;
     if (template === "cosmic")   return `${base}/cosmic.html?${p.toString()}`;
     if (template === "vinyl")    return `${base}/vinyl.html?${p.toString()}`;

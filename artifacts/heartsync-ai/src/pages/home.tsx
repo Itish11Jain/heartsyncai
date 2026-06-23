@@ -871,6 +871,13 @@ export default function Home() {
     if (!occ) return "";
     const parts = [`occasion=${encodeURIComponent(occ)}`];
     if (sp.get("skip") === "1") parts.push("skip=1");
+    // Birthday-only: thread the fresh ad fbclid through to the builder so the
+    // birthday card page can rebuild a fresh _fbc for Meta attribution instead
+    // of relying on a possibly-stale _fbc cookie. Other occasions are untouched.
+    if (occ === "birthday") {
+      const fbclid = sp.get("fbclid");
+      if (fbclid) parts.push(`fbclid=${encodeURIComponent(fbclid)}`);
+    }
     return parts.join("&");
   })();
 
