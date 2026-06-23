@@ -400,13 +400,13 @@ function SendInner() {
       const urlOccasion = searchParams.get("occasion");
       // A skip deep-link expresses fresh, explicit intent (ad traffic), so its
       // URL occasion must win over any saved draft. Otherwise fall back to the
-      // draft, then the URL, then the default occasion (sorry) for generic
+      // draft, then the URL, then the default occasion (feel_good) for generic
       // landings. Father's Day is retired from the picker, so coerce any stale
       // "fathers_day" draft / param back to the default.
       const o = (skipOccasion && urlOccasion)
         ? urlOccasion
-        : (initialDraft?.occasion ?? urlOccasion ?? "sorry");
-      return o === "fathers_day" ? "sorry" : o;
+        : (initialDraft?.occasion ?? urlOccasion ?? "feel_good");
+      return o === "fathers_day" ? "feel_good" : o;
     })(),
   );
   // Occasion-based unlock pricing (₹99 birthday/sorry · ₹49 others) + anchor.
