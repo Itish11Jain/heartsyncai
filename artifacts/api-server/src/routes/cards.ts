@@ -65,6 +65,7 @@ export async function fireMetaCapi(
   ip: string,
   userAgent: string,
   valueRupees?: number | null,
+  fbcSrc?: string,
 ): Promise<void> {
   const token = process.env["META_PIXEL_ACCESS_TOKEN"];
   if (!token) return;
@@ -73,13 +74,15 @@ export async function fireMetaCapi(
     // These dramatically improve CAPI match quality without requiring PII.
     let fbp: string | null = null;
     let fbc: string | null = null;
+    let occasion: string | null = null;
     try {
-      const row = await pool.query<{ fbp: string | null; fbc: string | null }>(
-        "SELECT fbp, fbc FROM hs_cards WHERE id = $1",
+      const row = await pool.query<{ fbp: string | null; fbc: string | null; occasion: string | null }>(
+        "SELECT fbp, fbc, occasion FROM hs_cards WHERE id = $1",
         [cardId],
       );
       fbp = row.rows[0]?.fbp ?? null;
       fbc = row.rows[0]?.fbc ?? null;
+      occasion = row.rows[0]?.occasion ?? null;
     } catch { /* non-blocking — proceed without fbp/fbc */ }
 
     // Only include ip/ua when present. Empty strings (e.g. webhook-fulfilled
@@ -122,8 +125,16 @@ export async function fireMetaCapi(
         `[capi] Meta REJECTED event_id=${eventId} card=${cardId} status=${resp.status} body=${respText.slice(0, 500)}`,
       );
     } else {
+      // Derived staleness signal: seconds since the fbc's embedded click
+      // timestamp (3rd dot-segment of `fb.1.<ts>.<fbclid>`). A small age means a
+      // fresh click (matchable); a large age flags a stale cookie.
+      let fbcAgeS: number | null = null;
+      if (fbc) {
+        const ts = Number(fbc.split(".")[2]);
+        if (Number.isFinite(ts) && ts > 0) fbcAgeS = Math.round((Date.now() - ts) / 1000);
+      }
       console.log(
-        `[capi] Purchase fired event_id=${eventId} card=${cardId} value=${valueRupees ?? 49} fbp=${!!fbp} fbc=${!!fbc} resp=${respText.slice(0, 200)}`,
+        `[capi] Purchase fired event_id=${eventId} card=${cardId} occasion=${occasion ?? "?"} value=${valueRupees ?? 49} fbp=${!!fbp} fbc=${!!fbc} fbc_src=${fbcSrc ?? "?"} fbc_age_s=${fbcAgeS ?? "?"} resp=${respText.slice(0, 200)}`,
       );
     }
   } catch (err) {
@@ -588,7 +599,7 @@ router.post("/cards/:id/payment-link-unlock", async (req, res) => {
  */
 router.post("/cards/:id/auto-unlock", async (req, res) => {
   const { id } = req.params;
-  const { eventId, fbp, fbc, price } = (req.body ?? {}) as { eventId?: string; fbp?: string | null; fbc?: string | null; price?: unknown };
+  const { eventId, fbp, fbc, fbcSrc, price } = (req.body ?? {}) as { eventId?: string; fbp?: string | null; fbc?: string | null; fbcSrc?: string; price?: unknown };
 
   try {
     // Prefer the arm already stored on the card (set at creation) over the
@@ -655,7 +666,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
     console.log(`[unlock] auto_unlock card=${id} utr=${matchedUtr}`);
     const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
     const clientIp = ((req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
-    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""), eventPrice);
+    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""), eventPrice, fbcSrc);
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/auto-unlock error", err);
@@ -672,7 +683,7 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
  */
 router.post("/cards/:id/pay-unlock", async (req, res) => {
   const { id } = req.params;
-  const { utr, eventId, fbp, fbc, price } = req.body as { utr?: unknown; eventId?: string; fbp?: string | null; fbc?: string | null; price?: unknown };
+  const { utr, eventId, fbp, fbc, fbcSrc, price } = req.body as { utr?: unknown; eventId?: string; fbp?: string | null; fbc?: string | null; fbcSrc?: string; price?: unknown };
 
   if (typeof utr !== "string" || !/^\d{4}$/.test(utr.trim())) {
     res.status(400).json({ error: "validation_error", message: "Enter the last 4 digits of your UPI transaction." });
@@ -754,7 +765,7 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
     console.log(`[unlock] manual_utr card=${id} utr=${matchedUtr}`);
     const capiEventId = eventId ?? `hs_${id}_${Date.now()}`;
     const clientIp = ((req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress ?? "").split(",")[0]!.trim();
-    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""), eventPrice);
+    void fireMetaCapi(capiEventId, id, clientIp, String(req.headers["user-agent"] ?? ""), eventPrice, fbcSrc);
     res.json({ ok: true });
   } catch (err) {
     console.error("[cards] POST /cards/:id/pay-unlock error", err);

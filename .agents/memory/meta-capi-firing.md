@@ -50,6 +50,11 @@ Window: Meta accepts `event_time` up to **7 days** old — fine for a same-day o
 **Avoid double-counting** (no dedup help — original auto-fired `event_id`s aren't persisted, so a backfill mints new ids): manually exclude events OUTSIDE the broken window. Lower bound = the outage start (Meta chart drop); upper bound = when the new token went live in prod (the republish — confirm via a post-publish `[capi]` log showing a *business* rejection like "no customer information parameters" rather than an auth error). Drop any card with no `fbp` AND no `fbc` (unmatchable).
 **Why:** re-inflating ROAS is the exact harm we fixed; a boundary event that already landed would be counted twice.
 
+## CAPI "Purchase fired" log self-tags occasion + fbc source + fbc age
+The server `[capi] Purchase fired` line records `occasion=`, `fbc_src=url|cookie|none`, and `fbc_age_s=` (now minus the timestamp embedded in `fb.1.<ts>.<fbclid>`). Use these to diagnose attribution per conversion: `occasion` disambiguates same-price funnels (e.g. ₹99 birthday vs sorry), `fbc_src`/`fbc_age_s` reveal fresh-click vs stale-cookie.
+**Why:** the boolean-only `fbc=true/false` log couldn't tell birthday from sorry or fresh from stale, so the ~50% birthday attribution gap couldn't be diagnosed from logs alone.
+**How to apply:** `fbcSrc` is OBSERVABILITY-ONLY — it is a label returned by the client `getMetaCookies` (two copies: UnlockModal.tsx + reply.tsx) threaded as an optional passthrough (verifyExtras → /verify → fulfillOrder → fulfillCardUnlock, and the auto-unlock/pay-unlock bodies) purely to the log. NEVER add it to `user_data`/the Meta payload, and never let the label change which fbp/fbc VALUE is selected. It degrades to `?`/`none` for legacy clients and the webhook path.
+
 ## Verifying past payments
 Deployment-log verification is unreliable after a republish: a new deployment starts a fresh log stream, so `/verify` + `[capi]` lines from payments on the PRIOR deployment are gone. Definitive check = Meta Events Manager (owner-controlled): confirm Purchase events arriving on both "Browser" and "Server" with deduplication, and value split by ₹49/₹99.
 

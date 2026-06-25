@@ -28,7 +28,7 @@ import ranunculusYellowImg from "@assets/flowers/ranunculus_yellow.webp";
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 /** Read Meta pixel cookies so auto/UTR unlocks can carry CAPI match quality. */
-function getMetaCookies(): { fbp: string | null; fbc: string | null } {
+function getMetaCookies(): { fbp: string | null; fbc: string | null; fbcSrc: "url" | "cookie" | "none" } {
   try {
     const cookieMap = Object.fromEntries(
       document.cookie.split(";").map((c) => {
@@ -38,13 +38,15 @@ function getMetaCookies(): { fbp: string | null; fbc: string | null } {
     );
     const fbp = cookieMap["_fbp"] ?? null;
     let fbc = cookieMap["_fbc"] ?? null;
+    // Observability-only label: where the fbc came from. Value logic unchanged.
+    let fbcSrc: "url" | "cookie" | "none" = fbc ? "cookie" : "none";
     if (!fbc) {
       const fbclid = new URLSearchParams(window.location.search).get("fbclid");
-      if (fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+      if (fbclid) { fbc = `fb.1.${Date.now()}.${fbclid}`; fbcSrc = "url"; }
     }
-    return { fbp: fbp || null, fbc: fbc || null };
+    return { fbp: fbp || null, fbc: fbc || null, fbcSrc };
   } catch {
-    return { fbp: null, fbc: null };
+    return { fbp: null, fbc: null, fbcSrc: "none" };
   }
 }
 
@@ -840,9 +842,9 @@ export default function ReplyExperience() {
     const id = await mintReplyCard();
     if (!id) return;
     const eventId = `hs_${id}_${Date.now()}`;
-    const { fbp, fbc } = getMetaCookies();
+    const { fbp, fbc, fbcSrc } = getMetaCookies();
     try {
-      await payWithRazorpay({ kind: "card", cardId: id, occasion: receivedOccasion, verifyExtras: { eventId, fbp, fbc } });
+      await payWithRazorpay({ kind: "card", cardId: id, occasion: receivedOccasion, verifyExtras: { eventId, fbp, fbc, fbcSrc } });
       setPayStage("done");
       trackEvent({ event: "reply_unlocked", occasion: receivedOccasion, template: "reply", price, card_id: id });
     } catch (err) {
@@ -1014,14 +1016,14 @@ export default function ReplyExperience() {
     };
 
     const eventId = `hs_${id}_${Date.now()}`;
-    const { fbp, fbc } = getMetaCookies();
+    const { fbp, fbc, fbcSrc } = getMetaCookies();
 
     while (Date.now() < deadline) {
       try {
         const res = await fetch(`${BASE}/api/cards/${id}/auto-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId, fbp, fbc, price }),
+          body: JSON.stringify({ eventId, fbp, fbc, fbcSrc, price }),
         });
         if (res.ok) {
           cleanup();
@@ -1081,7 +1083,7 @@ export default function ReplyExperience() {
     };
 
     const eventId = `hs_${id}_${Date.now()}`;
-    const { fbp, fbc } = getMetaCookies();
+    const { fbp, fbc, fbcSrc } = getMetaCookies();
     let lastMsg = "Payment not verified. Please check your last 4 digits and try again.";
 
     while (Date.now() < deadline) {
@@ -1089,7 +1091,7 @@ export default function ReplyExperience() {
         const res = await fetch(`${BASE}/api/cards/${id}/pay-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ utr: last4, eventId, fbp, fbc, price }),
+          body: JSON.stringify({ utr: last4, eventId, fbp, fbc, fbcSrc, price }),
         });
         if (res.ok) {
           cleanup();

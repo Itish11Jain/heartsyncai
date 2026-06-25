@@ -98,7 +98,7 @@ async function fulfillCardUnlock(
   cardId: string,
   amountRupees: number,
   paymentId: string,
-  opts: { fbp?: string | null; fbc?: string | null; eventId?: string; clientIp?: string; userAgent?: string },
+  opts: { fbp?: string | null; fbc?: string | null; eventId?: string; fbcSrc?: string; clientIp?: string; userAgent?: string },
   fireOnce: boolean,
 ): Promise<void> {
   await pool.query(
@@ -134,7 +134,7 @@ async function fulfillCardUnlock(
   // fbp/fbc/ip/ua and now fires its own event with the same id — so the
   // data-rich event lands instead of being suppressed by the one-shot gate.
   const capiEventId = opts.eventId ?? `hs_${cardId}_${Date.now()}`;
-  void fireMetaCapi(capiEventId, cardId, opts.clientIp ?? "", opts.userAgent ?? "", amountRupees);
+  void fireMetaCapi(capiEventId, cardId, opts.clientIp ?? "", opts.userAgent ?? "", amountRupees, opts.fbcSrc);
 
   if (fireOnce) {
     // card_paid analytics is NOT event_id-deduped, so it stays one-shot to avoid
@@ -220,7 +220,7 @@ async function fulfillTemplate(clerkUserId: string, paymentId: string): Promise<
 async function fulfillOrder(
   order: OrderRow,
   paymentId: string,
-  opts: { fbp?: string | null; fbc?: string | null; eventId?: string; clientIp?: string; userAgent?: string } = {},
+  opts: { fbp?: string | null; fbc?: string | null; eventId?: string; fbcSrc?: string; clientIp?: string; userAgent?: string } = {},
 ): Promise<{ kind: Kind; cardId?: string | null; token?: string | null }> {
   // Confirmed payment row (idempotent).
   await pool.query(
@@ -414,13 +414,14 @@ router.post("/razorpay/create-order", async (req, res) => {
  * Not mode-gated: an in-flight payment must always be fulfillable.
  */
 router.post("/razorpay/verify", async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, eventId, fbp, fbc } = (req.body ?? {}) as {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, eventId, fbp, fbc, fbcSrc } = (req.body ?? {}) as {
     razorpay_order_id?: unknown;
     razorpay_payment_id?: unknown;
     razorpay_signature?: unknown;
     eventId?: string;
     fbp?: string | null;
     fbc?: string | null;
+    fbcSrc?: string;
   };
 
   if (
@@ -468,6 +469,7 @@ router.post("/razorpay/verify", async (req, res) => {
       fbp: fbp ?? null,
       fbc: fbc ?? null,
       eventId,
+      fbcSrc,
       clientIp,
       userAgent,
     });

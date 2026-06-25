@@ -14,7 +14,7 @@ import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpa
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
-function getMetaCookies(preferUrlFbclid = false): { fbp: string | null; fbc: string | null } {
+function getMetaCookies(preferUrlFbclid = false): { fbp: string | null; fbc: string | null; fbcSrc: "url" | "cookie" | "none" } {
   try {
     const cookieMap = Object.fromEntries(
       document.cookie.split(";").map((c) => {
@@ -26,17 +26,22 @@ function getMetaCookies(preferUrlFbclid = false): { fbp: string | null; fbc: str
     const cookieFbc = cookieMap["_fbc"] ?? null;
     const urlFbclid = new URLSearchParams(window.location.search).get("fbclid");
     let fbc: string | null;
+    // Observability-only label: records WHERE the fbc came from (fresh URL
+    // fbclid vs fallback cookie vs none) without changing which value is chosen.
+    let fbcSrc: "url" | "cookie" | "none";
     if (preferUrlFbclid && urlFbclid) {
       // Birthday funnel: the fresh ad fbclid threaded through the URL is more
       // reliable than a possibly-stale _fbc cookie from an earlier visit, so
       // prefer it. All other funnels keep the original cookie-first behavior.
       fbc = `fb.1.${Date.now()}.${urlFbclid}`;
+      fbcSrc = "url";
     } else {
       fbc = cookieFbc ?? (urlFbclid ? `fb.1.${Date.now()}.${urlFbclid}` : null);
+      fbcSrc = cookieFbc ? "cookie" : urlFbclid ? "url" : "none";
     }
-    return { fbp: fbp || null, fbc: fbc || null };
+    return { fbp: fbp || null, fbc: fbc || null, fbcSrc };
   } catch {
-    return { fbp: null, fbc: null };
+    return { fbp: null, fbc: null, fbcSrc: "none" };
   }
 }
 
@@ -174,12 +179,12 @@ export default function UnlockModal({
         }
       };
       try {
-        const { fbp, fbc } = getMetaCookies(occasion === "birthday");
+        const { fbp, fbc, fbcSrc } = getMetaCookies(occasion === "birthday");
         await payWithRazorpay({
           kind: "card",
           cardId,
           occasion,
-          verifyExtras: { eventId, fbp, fbc },
+          verifyExtras: { eventId, fbp, fbc, fbcSrc },
           // If the watchdog fired but the user actually completed payment,
           // recover to success instead of leaving them on the UPI fallback.
           onLateSuccess: () => { setRzpError(null); markPaid(); setPhase("success"); },
@@ -227,14 +232,14 @@ export default function UnlockModal({
     };
 
     const autoEventId = `hs_${cardId}_${Date.now()}`;
-    const { fbp: autoFbp, fbc: autoFbc } = getMetaCookies(occasion === "birthday");
+    const { fbp: autoFbp, fbc: autoFbc, fbcSrc: autoFbcSrc } = getMetaCookies(occasion === "birthday");
 
     while (Date.now() < deadline) {
       try {
         const res = await fetch(`${BASE}/api/cards/${cardId}/auto-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId: autoEventId, fbp: autoFbp, fbc: autoFbc, price }),
+          body: JSON.stringify({ eventId: autoEventId, fbp: autoFbp, fbc: autoFbc, fbcSrc: autoFbcSrc, price }),
         });
         if (res.ok) {
           cleanup();
@@ -285,7 +290,7 @@ export default function UnlockModal({
     };
 
     const utrEventId = `hs_${cardId}_${Date.now()}`;
-    const { fbp: utrFbp, fbc: utrFbc } = getMetaCookies(occasion === "birthday");
+    const { fbp: utrFbp, fbc: utrFbc, fbcSrc: utrFbcSrc } = getMetaCookies(occasion === "birthday");
 
     // Poll until success or timeout
     while (Date.now() < deadline) {
@@ -293,7 +298,7 @@ export default function UnlockModal({
         const res = await fetch(`${BASE}/api/cards/${cardId}/pay-unlock`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ utr: trimmed, eventId: utrEventId, fbp: utrFbp, fbc: utrFbc, price }),
+          body: JSON.stringify({ utr: trimmed, eventId: utrEventId, fbp: utrFbp, fbc: utrFbc, fbcSrc: utrFbcSrc, price }),
         });
         if (res.ok) {
           cleanup();

@@ -49,7 +49,7 @@ export interface PayOptions {
   cardId?: string;
   occasion?: string;
   /** Forwarded to /verify (card flow): Meta CAPI matching + dedup event id. */
-  verifyExtras?: { eventId?: string; fbp?: string | null; fbc?: string | null };
+  verifyExtras?: { eventId?: string; fbp?: string | null; fbc?: string | null; fbcSrc?: string };
   prefill?: { name?: string; email?: string; contact?: string };
   /** Clerk bearer token — required for the `template` kind. */
   authToken?: string | null;
