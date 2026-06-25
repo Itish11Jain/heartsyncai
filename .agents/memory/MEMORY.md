@@ -1,4 +1,5 @@
 - [BirthdayDoor integration](birthday-integration.md) — birthday template is premium; 6-scene card at /birthday; auto-selects when occasion=birthday in send.tsx.
+- [Birthday funnel drop-off](birthday-funnel-dropoff.md) — birthday under-converts AT the paywall (low paywall→pay_click), not in the 6 scenes (~86% reach scene 6); price isn't it (sorry is also ₹99); beware comparing old vs newly-added events over one window.
 - [Card view tracking](card-view-tracking.md) — analytics "Views" counts per-page `card_viewed` events; every new card template must fire it on recipient open or it shows 0.
 - [Background removal](bg-removal.md) — sticker cutout runs RMBG-1.4 LOCALLY (transformers.js+sharp); HF inference API & remove.bg both abandoned (dead/no credits).
 - [Upload performance](upload-perf.md) — uploads must use `compress:false` (never `contentType`); don't warm the bg model at startup; client has 60s abort timeout.
