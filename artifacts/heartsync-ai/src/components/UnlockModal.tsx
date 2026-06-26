@@ -21,6 +21,16 @@ const BirthdayScene1 = lazy(() =>
   import("@/pages/birthday").then((m) => ({ default: m.Scene1 })),
 );
 
+/* The default ("envelope") card's first screen — the static closed golden
+   envelope — reused as an instant poster for non-birthday envelope cards.
+   Like BirthdayScene1, the parent page is card.tsx so the module is already
+   cached. The canvas-driven templates (cosmic/crystal) can't be snapshotted
+   statically (their backdrop needs a live animation loop), so those keep the
+   neutral twinkle poster below. */
+const EnvelopePoster = lazy(() =>
+  import("@/pages/card").then((m) => ({ default: m.GoldenEnvelope })),
+);
+
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
 /* Static twinkle positions for the preview poster (shown while the card iframe
@@ -156,6 +166,23 @@ export default function UnlockModal({
     } catch {
       return senderShareUrl;
     }
+  })();
+
+  /* Which real first-screen we can paint as the instant poster. Birthday and the
+     default "envelope" card render statically, so we reuse their actual opening.
+     The canvas-driven templates (cosmic/crystal) and vinyl/occasion can't be
+     snapshotted without a live animation loop, so they fall back to twinkles. */
+  const posterKind: "birthday" | "envelope" | "twinkle" = (() => {
+    if (occasion === "birthday") return "birthday";
+    try {
+      const t = new URLSearchParams(window.location.search).get("t");
+      // Strict route match (the envelope template lives at exactly /card) so
+      // sibling routes like /my-cards never select the envelope poster.
+      if (window.location.pathname.endsWith("/card") && (!t || t === "envelope")) {
+        return "envelope";
+      }
+    } catch { /* fall through to twinkle */ }
+    return "twinkle";
   })();
 
   /* If the previewed card changes (e.g. a reused modal instance), re-arm the
@@ -487,20 +514,24 @@ export default function UnlockModal({
                   >
                     {/* Instant poster — the card's real first screen, painted
                         immediately so the box is never blank while the live
-                        iframe boots. For birthday we reuse the actual Scene1
-                        (balloons + gifts + the recipient's name); other
-                        occasions get a matching dark backdrop with twinkles. */}
+                        iframe boots. Birthday reuses Scene1 (balloons + gifts +
+                        name); the default envelope card reuses the static closed
+                        golden envelope; canvas-driven templates (cosmic/crystal)
+                        can't be snapshotted statically, so they get a matching
+                        dark backdrop with twinkles. */}
                     {!previewReady && (
                       <div
                         aria-hidden
                         style={{
                           position: "absolute", inset: 0, overflow: "hidden",
-                          background: occasion === "birthday"
+                          background: posterKind === "birthday"
                             ? "linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)"
-                            : "radial-gradient(ellipse at 50% 34%, #2a1042 0%, #140726 56%, #06010c 100%)",
+                            : posterKind === "envelope"
+                              ? "radial-gradient(ellipse at 50% 30%, #2a1c07 0%, #160f04 55%, #070501 100%)"
+                              : "radial-gradient(ellipse at 50% 34%, #2a1042 0%, #140726 56%, #06010c 100%)",
                         }}
                       >
-                        {occasion === "birthday" ? (
+                        {posterKind === "birthday" ? (
                           <div
                             style={{
                               position: "absolute", top: 0, left: 0,
@@ -511,6 +542,24 @@ export default function UnlockModal({
                           >
                             <Suspense fallback={null}>
                               <BirthdayScene1 name={recipientName} onNext={() => {}} />
+                            </Suspense>
+                          </div>
+                        ) : posterKind === "envelope" ? (
+                          <div
+                            style={{
+                              position: "absolute", top: 0, left: 0,
+                              width: IFRAME_W, height: IFRAME_H,
+                              transformOrigin: "top left",
+                              transform: `scale(${scale})`,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                            }}
+                          >
+                            <Suspense fallback={null}>
+                              <EnvelopePoster
+                                recipientName={recipientName}
+                                opening={false}
+                                isSorry={occasion === "sorry"}
+                              />
                             </Suspense>
                           </div>
                         ) : (
