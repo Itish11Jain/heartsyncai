@@ -1345,15 +1345,15 @@ function Scene6({
           </motion.h1>
           <div style={{ width:60, height:1, margin:"0 auto 16px",
             background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)" }}/>
-          {/* Personal message — blurred + padlocked until the card is unlocked.
-              Blur is intentionally light so the text is faintly visible but not
-              legible. Cleared entirely once paid. */}
+          {/* Personal message — lightly blurred + padlocked until the card is
+              unlocked. Blur is kept soft so the text stays partially readable
+              (a teaser), not fully legible. Cleared entirely once paid. */}
           <div style={{ position:"relative" }}>
             <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}
               style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
                 fontSize:15, color:"rgba(255,241,220,0.96)", lineHeight:1.72,
                 margin:0, textAlign:"center",
-                filter: locked ? "blur(4px)" : "none",
+                filter: locked ? "blur(2px)" : "none",
                 userSelect: locked ? "none" : "auto",
                 WebkitUserSelect: locked ? "none" : "auto",
                 pointerEvents: locked ? "none" : "auto",
@@ -1366,11 +1366,11 @@ function Scene6({
                 transition={{ delay:0.7, type:"spring", bounce:0.4 }}
                 style={{ position:"absolute", inset:0, display:"flex",
                   alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-                <div style={{ width:42, height:42, borderRadius:"50%",
+                <div style={{ width:58, height:58, borderRadius:"50%",
                   background:"rgba(28,10,6,0.72)", border:"1.5px solid rgba(212,175,55,0.6)",
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  boxShadow:"0 0 20px rgba(212,175,55,0.3)" }}>
-                  <span style={{ fontSize:20, lineHeight:1 }}>🔒</span>
+                  boxShadow:"0 0 24px rgba(212,175,55,0.35)" }}>
+                  <span style={{ fontSize:30, lineHeight:1 }}>🔒</span>
                 </div>
               </motion.div>
             )}
