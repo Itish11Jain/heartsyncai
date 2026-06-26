@@ -1488,6 +1488,17 @@ export default function BirthdayCard() {
   const previewSpeed = Math.max(1, Number(params.get("speed")) || 1);
   const isRecipient = !isSender;
 
+  /* In the in-modal preview (preview=1), tell the parent (UnlockModal) the card
+     has painted so it can fade the live iframe in over its instant poster —
+     avoids ever showing a blank box while React + the intro animation boot. */
+  useEffect(() => {
+    if (!isPreview) return;
+    const id = requestAnimationFrame(() => {
+      try { window.parent?.postMessage({ type: "heartsync-card-preview-ready" }, "*"); } catch { /* noop */ }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isPreview]);
+
   /* ── Background music — plays the actual "Happy Birthday to You" melody ── */
   const [musicMuted, setMusicMuted] = useState(false);
   useEffect(() => {

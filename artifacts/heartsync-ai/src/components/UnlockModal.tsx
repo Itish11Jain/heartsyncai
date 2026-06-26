@@ -14,6 +14,15 @@ import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpa
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
+/* Static twinkle positions for the preview poster (shown while the card iframe
+   boots, so the preview box is never blank). */
+const POSTER_TWINKLES = [
+  { left: 18, top: 22, size: 3 }, { left: 78, top: 16, size: 2 },
+  { left: 30, top: 70, size: 2 }, { left: 68, top: 64, size: 3 },
+  { left: 50, top: 14, size: 2 }, { left: 12, top: 52, size: 2 },
+  { left: 86, top: 44, size: 3 }, { left: 44, top: 84, size: 2 },
+];
+
 function getMetaCookies(preferUrlFbclid = false): { fbp: string | null; fbc: string | null; fbcSrc: "url" | "cookie" | "none" } {
   try {
     const cookieMap = Object.fromEntries(
@@ -139,6 +148,12 @@ export default function UnlockModal({
       return senderShareUrl;
     }
   })();
+
+  /* If the previewed card changes (e.g. a reused modal instance), re-arm the
+     poster so we never flash a stale card under a freshly-loading iframe. */
+  useEffect(() => {
+    setPreviewReady(false);
+  }, [autoplayUrl]);
 
   /* Lock body scroll while open */
   useEffect(() => {
@@ -327,6 +342,30 @@ export default function UnlockModal({
     setUtrError("Payment not found yet. Please wait a moment and try again.");
   }
 
+  /* ── Live preview reveal handshake ──
+     The card iframe boots React + its intro animation, which takes a beat. To
+     avoid showing a blank box, an instant CSS poster sits behind it and the
+     iframe is only faded in once the card has actually rendered: either via a
+     postMessage from the card page (preview=1 routes), or an onLoad+delay
+     fallback for templates that don't post one. */
+  const [previewReady, setPreviewReady] = useState(false);
+  const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const previewFallbackRef = useRef<number | null>(null);
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      if (previewIframeRef.current && e.source !== previewIframeRef.current.contentWindow) return;
+      const d = e?.data as { type?: string } | null;
+      if (d && (d.type === "heartsync-card-preview-ready" || d.type === "heartsync-reply-preview-ready")) {
+        setPreviewReady(true);
+      }
+    }
+    window.addEventListener("message", onMsg);
+    return () => {
+      window.removeEventListener("message", onMsg);
+      if (previewFallbackRef.current) window.clearTimeout(previewFallbackRef.current);
+    };
+  }, []);
+
   /* ── Card iframe preview dimensions ──
      Birthday cards are designed for 844 px tall viewports; other templates for 693 px.
      We always scale to a 220 px wide container, then compute the container height to match. */
@@ -437,11 +476,60 @@ export default function UnlockModal({
                       background: "#050210",
                     }}
                   >
+                    {/* Instant poster — covers the box while the card iframe
+                        boots, so it's never blank. */}
+                    {!previewReady && (
+                      <div
+                        aria-hidden
+                        style={{
+                          position: "absolute", inset: 0, overflow: "hidden",
+                          display: "flex", flexDirection: "column",
+                          alignItems: "center", justifyContent: "center", gap: 12,
+                          background: occasion === "birthday"
+                            ? "radial-gradient(ellipse at 50% 34%, #3a230f 0%, #1c0f06 56%, #0a0502 100%)"
+                            : "radial-gradient(ellipse at 50% 34%, #2a1042 0%, #140726 56%, #06010c 100%)",
+                        }}
+                      >
+                        {POSTER_TWINKLES.map((s, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              position: "absolute", left: `${s.left}%`, top: `${s.top}%`,
+                              width: s.size, height: s.size, borderRadius: "50%",
+                              background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,225,150,0.5) 50%, transparent 70%)",
+                              boxShadow: "0 0 6px rgba(255,235,180,0.7)",
+                            }}
+                          />
+                        ))}
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
+                          style={{
+                            width: 32, height: 32, borderRadius: "50%",
+                            border: "2px solid rgba(255,215,0,0.18)",
+                            borderTopColor: "rgba(255,215,0,0.85)",
+                          }}
+                        />
+                        <div style={{
+                          fontFamily: "'Dancing Script', cursive", fontWeight: 600,
+                          fontSize: 16, color: "rgba(255,225,165,0.88)",
+                          textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                        }}>
+                          Preparing preview…
+                        </div>
+                      </div>
+                    )}
                     <iframe
+                      ref={previewIframeRef}
                       src={autoplayUrl}
                       title={`Card preview for ${recipientName}`}
                       sandbox="allow-scripts allow-same-origin"
                       scrolling="no"
+                      loading="eager"
+                      onLoad={() => {
+                        if (previewFallbackRef.current) window.clearTimeout(previewFallbackRef.current);
+                        previewFallbackRef.current = window.setTimeout(() => setPreviewReady(true), 1400);
+                      }}
                       style={{
                         width: IFRAME_W,
                         height: IFRAME_H,
@@ -451,6 +539,8 @@ export default function UnlockModal({
                         pointerEvents: "none",
                         display: "block",
                         background: "#050210",
+                        opacity: previewReady ? 1 : 0,
+                        transition: "opacity 0.6s ease",
                       }}
                     />
                     {/* Subtle gradient overlay at the bottom so the iframe blends in */}

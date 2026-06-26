@@ -31,3 +31,12 @@ blank on iOS/Android; a guaranteed instant poster is the only robust fix.
 - The poster should depict the card's richest state (the bloom), reusing the
   same sprite assets so it matches the live animation.
 - Related iframe lessons: `bundle-previews.md`, `card-image-assets.md`.
+
+**Also applies to UnlockModal's bottom-sheet card preview.** Same fix: an
+instant occasion-aware CSS poster (gradient + twinkles + spinner) sits behind
+the live iframe, which fades in only when ready. Reveal trigger = a
+`heartsync-card-preview-ready` postMessage (the `preview=1` card route, e.g.
+`birthday.tsx`, posts it on first painted frame; also accepts the reply
+`heartsync-reply-preview-ready`) OR an `onLoad` + ~1400ms fallback. Re-arm the
+poster (`setPreviewReady(false)`) when the previewed URL changes so a reused
+modal never flashes a stale card.
