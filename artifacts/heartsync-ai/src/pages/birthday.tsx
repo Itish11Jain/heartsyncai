@@ -1352,10 +1352,10 @@ function Scene6({
             <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}
               style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
                 fontSize:15,
-                color: locked ? "rgba(255,241,220,0.32)" : "rgba(255,241,220,0.96)",
+                color: locked ? "rgba(255,241,220,0.7)" : "rgba(255,241,220,0.96)",
                 lineHeight:1.72,
                 margin:0, textAlign:"center",
-                filter: locked ? "blur(2px)" : "none",
+                filter: locked ? "blur(1.4px)" : "none",
                 userSelect: locked ? "none" : "auto",
                 WebkitUserSelect: locked ? "none" : "auto",
                 pointerEvents: locked ? "none" : "auto",
@@ -1368,11 +1368,11 @@ function Scene6({
                 transition={{ delay:0.7, type:"spring", bounce:0.4 }}
                 style={{ position:"absolute", inset:0, display:"flex",
                   alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-                <div style={{ width:116, height:116, borderRadius:"50%",
-                  background:"rgba(28,10,6,0.72)", border:"2px solid rgba(212,175,55,0.6)",
+                <div style={{ width:81, height:81, borderRadius:"50%",
+                  background:"rgba(28,10,6,0.72)", border:"1.5px solid rgba(212,175,55,0.6)",
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  boxShadow:"0 0 32px rgba(212,175,55,0.35)" }}>
-                  <span style={{ fontSize:60, lineHeight:1 }}>🔒</span>
+                  boxShadow:"0 0 26px rgba(212,175,55,0.35)" }}>
+                  <span style={{ fontSize:42, lineHeight:1 }}>🔒</span>
                 </div>
               </motion.div>
             )}
