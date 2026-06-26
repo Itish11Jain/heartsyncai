@@ -6,11 +6,20 @@
  * Phase 3 "success"  — celebration animation, then onSuccess() + onClose()
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
 import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
+
+/* The birthday card's first balloon screen, reused as an instant static poster
+   behind the live preview iframe. Loaded lazily + gated to the birthday occasion
+   so other occasions don't pull in the heavy birthday module. For a birthday
+   card the parent page IS birthday.tsx, so the module is already cached and this
+   resolves on the same tick. */
+const BirthdayScene1 = lazy(() =>
+  import("@/pages/birthday").then((m) => ({ default: m.Scene1 })),
+);
 
 const BASE = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -476,47 +485,47 @@ export default function UnlockModal({
                       background: "#050210",
                     }}
                   >
-                    {/* Instant poster — covers the box while the card iframe
-                        boots, so it's never blank. */}
+                    {/* Instant poster — the card's real first screen, painted
+                        immediately so the box is never blank while the live
+                        iframe boots. For birthday we reuse the actual Scene1
+                        (balloons + gifts + the recipient's name); other
+                        occasions get a matching dark backdrop with twinkles. */}
                     {!previewReady && (
                       <div
                         aria-hidden
                         style={{
                           position: "absolute", inset: 0, overflow: "hidden",
-                          display: "flex", flexDirection: "column",
-                          alignItems: "center", justifyContent: "center", gap: 12,
                           background: occasion === "birthday"
-                            ? "radial-gradient(ellipse at 50% 34%, #3a230f 0%, #1c0f06 56%, #0a0502 100%)"
+                            ? "linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)"
                             : "radial-gradient(ellipse at 50% 34%, #2a1042 0%, #140726 56%, #06010c 100%)",
                         }}
                       >
-                        {POSTER_TWINKLES.map((s, i) => (
+                        {occasion === "birthday" ? (
                           <div
-                            key={i}
                             style={{
-                              position: "absolute", left: `${s.left}%`, top: `${s.top}%`,
-                              width: s.size, height: s.size, borderRadius: "50%",
-                              background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,225,150,0.5) 50%, transparent 70%)",
-                              boxShadow: "0 0 6px rgba(255,235,180,0.7)",
+                              position: "absolute", top: 0, left: 0,
+                              width: IFRAME_W, height: IFRAME_H,
+                              transformOrigin: "top left",
+                              transform: `scale(${scale})`,
                             }}
-                          />
-                        ))}
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
-                          style={{
-                            width: 32, height: 32, borderRadius: "50%",
-                            border: "2px solid rgba(255,215,0,0.18)",
-                            borderTopColor: "rgba(255,215,0,0.85)",
-                          }}
-                        />
-                        <div style={{
-                          fontFamily: "'Dancing Script', cursive", fontWeight: 600,
-                          fontSize: 16, color: "rgba(255,225,165,0.88)",
-                          textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-                        }}>
-                          Preparing preview…
-                        </div>
+                          >
+                            <Suspense fallback={null}>
+                              <BirthdayScene1 name={recipientName} onNext={() => {}} />
+                            </Suspense>
+                          </div>
+                        ) : (
+                          POSTER_TWINKLES.map((s, i) => (
+                            <div
+                              key={i}
+                              style={{
+                                position: "absolute", left: `${s.left}%`, top: `${s.top}%`,
+                                width: s.size, height: s.size, borderRadius: "50%",
+                                background: "radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,225,150,0.5) 50%, transparent 70%)",
+                                boxShadow: "0 0 6px rgba(255,235,180,0.7)",
+                              }}
+                            />
+                          ))
+                        )}
                       </div>
                     )}
                     <iframe

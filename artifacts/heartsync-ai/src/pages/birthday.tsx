@@ -283,7 +283,7 @@ function FloatingBalloonSVG({ onTap }: { onTap:()=>void }) {
   );
 }
 
-function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
+export function Scene1({ name, onNext }: { name:string, onNext:()=>void }) {
   return (
     <motion.div key="s1" style={{ position:"absolute", inset:0, zIndex:10 }}
       exit={{ opacity:0 }} transition={{ duration:0.6 }}>
