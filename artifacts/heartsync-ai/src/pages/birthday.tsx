@@ -1298,12 +1298,6 @@ function Scene6({
   onCopyForInstagram: () => void;
   onReplay: () => void;
 }) {
-  /* Locked = the SENDER previewing an unpaid card. Blur the personal message +
-     show a padlock so a pre-payment screen recording can't capture the readable
-     message. Scoped to senders so a legitimate (paid) recipient is never blurred,
-     even before the async pay-status fetch resolves. Cleared the instant the
-     sender unlocks (payment success). */
-  const locked = isSender && !isUnlocked;
   return (
     <motion.div key="s6" style={{ position:"absolute", inset:0, zIndex:12, overflowY:"auto" }}
       initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -1345,38 +1339,12 @@ function Scene6({
           </motion.h1>
           <div style={{ width:60, height:1, margin:"0 auto 16px",
             background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)" }}/>
-          {/* Personal message — lightly blurred + padlocked until the card is
-              unlocked. Blur is kept soft so the text stays partially readable
-              (a teaser), not fully legible. Cleared entirely once paid. */}
-          <div style={{ position:"relative" }}>
-            <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}
-              style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
-                fontSize:15,
-                color: locked ? "rgba(255,241,220,0.7)" : "rgba(255,241,220,0.96)",
-                lineHeight:1.72,
-                margin:0, textAlign:"center",
-                filter: locked ? "blur(1.4px)" : "none",
-                userSelect: locked ? "none" : "auto",
-                WebkitUserSelect: locked ? "none" : "auto",
-                pointerEvents: locked ? "none" : "auto",
-                transition:"filter 0.55s ease" }}>
-              {finalMessage}
-            </motion.p>
-            {locked && (
-              <motion.div
-                initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }}
-                transition={{ delay:0.7, type:"spring", bounce:0.4 }}
-                style={{ position:"absolute", inset:0, display:"flex",
-                  alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-                <div style={{ width:81, height:81, borderRadius:"50%",
-                  background:"rgba(28,10,6,0.72)", border:"1.5px solid rgba(212,175,55,0.6)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  boxShadow:"0 0 26px rgba(212,175,55,0.35)" }}>
-                  <span style={{ fontSize:42, lineHeight:1 }}>🔒</span>
-                </div>
-              </motion.div>
-            )}
-          </div>
+          <motion.p initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55 }}
+            style={{ fontFamily:"Georgia,serif", fontStyle:"italic",
+              fontSize:15, color:"rgba(255,241,220,0.96)", lineHeight:1.72,
+              margin:0, textAlign:"center" }}>
+            {finalMessage}
+          </motion.p>
           {/* Bottom ornament */}
           <div style={{ width:44, height:1, margin:"16px auto 0",
             background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)" }}/>
