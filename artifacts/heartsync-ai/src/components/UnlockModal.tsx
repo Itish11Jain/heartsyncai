@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/trackEvent";
 import { getPriceConfigForOccasion } from "@/lib/priceArm";
 import { payWithRazorpay, getPaymentMode, PaymentCancelled } from "@/lib/razorpay";
+import { getCampaignByOccasion } from "@/lib/occasion-campaigns";
+import occasionPosterRose from "@assets/flowers/rose_pink.webp";
 
 /* The birthday card's first balloon screen, reused as an instant static poster
    behind the live preview iframe. Loaded lazily + gated to the birthday occasion
@@ -170,9 +172,11 @@ export default function UnlockModal({
 
   /* Which real first-screen we can paint as the instant poster. Birthday and the
      default "envelope" card render statically, so we reuse their actual opening.
-     The canvas-driven templates (cosmic/crystal) and vinyl/occasion can't be
-     snapshotted without a live animation loop, so they fall back to twinkles. */
-  const posterKind: "birthday" | "envelope" | "twinkle" = (() => {
+     The occasion template's first screen (gold greeting + rose) is also easy to
+     mirror statically. The canvas-driven templates (cosmic/crystal) and vinyl
+     can't be snapshotted without a live animation loop, so they fall back to
+     twinkles. */
+  const posterKind: "birthday" | "envelope" | "occasion" | "twinkle" = (() => {
     if (occasion === "birthday") return "birthday";
     try {
       const t = new URLSearchParams(window.location.search).get("t");
@@ -181,8 +185,20 @@ export default function UnlockModal({
       if (window.location.pathname.endsWith("/card") && (!t || t === "envelope")) {
         return "envelope";
       }
+      if (window.location.pathname.endsWith("/occasion")) {
+        return "occasion";
+      }
     } catch { /* fall through to twinkle */ }
     return "twinkle";
+  })();
+
+  /* Occasion poster copy — mirror the occasion route's Scene 1 heading
+     ("Happy Friendship Day, <name>"). Falls back gracefully if the occasion
+     has no registered campaign. */
+  const occasionPosterHeading = (() => {
+    if (posterKind !== "occasion") return "";
+    const c = getCampaignByOccasion(occasion);
+    return c ? `${c.finalHeader}, ${recipientName}` : recipientName;
   })();
 
   /* If the previewed card changes (e.g. a reused modal instance), re-arm the
@@ -524,7 +540,7 @@ export default function UnlockModal({
                         aria-hidden
                         style={{
                           position: "absolute", inset: 0, overflow: "hidden",
-                          background: posterKind === "birthday"
+                          background: posterKind === "birthday" || posterKind === "occasion"
                             ? "linear-gradient(175deg,#0e0502 0%,#1c0a06 40%,#0e0402 100%)"
                             : posterKind === "envelope"
                               ? "radial-gradient(ellipse at 50% 30%, #2a1c07 0%, #160f04 55%, #070501 100%)"
@@ -561,6 +577,40 @@ export default function UnlockModal({
                                 isSorry={occasion === "sorry"}
                               />
                             </Suspense>
+                          </div>
+                        ) : posterKind === "occasion" ? (
+                          <div
+                            style={{
+                              position: "absolute", top: 0, left: 0,
+                              width: IFRAME_W, height: IFRAME_H,
+                              boxSizing: "border-box",
+                              transformOrigin: "top left",
+                              transform: `scale(${scale})`,
+                              display: "flex", flexDirection: "column",
+                              alignItems: "center", justifyContent: "center",
+                              gap: 30, padding: "40px 24px",
+                            }}
+                          >
+                            <h1
+                              style={{
+                                margin: 0, fontFamily: "'Dancing Script', cursive",
+                                fontSize: 34, fontWeight: 700, color: "#F5C44E",
+                                textAlign: "center", lineHeight: 1.25,
+                                textShadow: "0 2px 14px rgba(245,196,78,0.4)",
+                              }}
+                            >
+                              {occasionPosterHeading}
+                            </h1>
+                            <img
+                              src={occasionPosterRose}
+                              alt=""
+                              aria-hidden
+                              draggable={false}
+                              style={{
+                                width: 240, height: 240, objectFit: "contain",
+                                filter: "drop-shadow(0 12px 26px rgba(150,40,90,0.5))",
+                              }}
+                            />
                           </div>
                         ) : (
                           POSTER_TWINKLES.map((s, i) => (

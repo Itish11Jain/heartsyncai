@@ -389,6 +389,24 @@ export default function OccasionCard() {
   const [senderIgCopied, setSenderIgCopied] = useState(false);
   const autoOpenFiredRef = useRef(false);
 
+  /* In-modal preview iframes: tell the parent paywall the first scene has
+     rendered so it can swap its static poster for this live preview
+     (instead of waiting on its onLoad+delay fallback). Scene 1's entrance
+     animations take ~0.7s to become visible, so wait for first paint (rAF)
+     plus that entrance duration before announcing readiness — signalling
+     earlier would drop the poster onto a still-invisible scene. */
+  useEffect(() => {
+    if (!isAutoplay) return;
+    let timer = 0;
+    const raf = requestAnimationFrame(() => {
+      timer = window.setTimeout(() => {
+        try { window.parent?.postMessage({ type: "heartsync-card-preview-ready" }, "*"); } catch { /* noop */ }
+      }, 750);
+    });
+    return () => { cancelAnimationFrame(raf); window.clearTimeout(timer); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* view tracking — fire once when a recipient opens the card */
   useEffect(() => {
     if (isRecipient && !isAutoplay) {
@@ -455,11 +473,12 @@ export default function OccasionCard() {
     else setShowDesktopPaywall(true);
   }
 
-  /* Auto-open the paywall ~2s after the final message finishes typing */
+  /* Auto-open the paywall ~4s after the final message finishes (matches the
+     sorry card's pacing so the sender gets a beat to read the finale). */
   function handleTypingDone() {
     if (scene !== 5 || !isSender || isUnlocked || autoOpenFiredRef.current || isPreview) return;
     autoOpenFiredRef.current = true;
-    setTimeout(openPaywallNow, 2000);
+    setTimeout(openPaywallNow, 4000);
   }
 
   function shareSenderWhatsApp() {
