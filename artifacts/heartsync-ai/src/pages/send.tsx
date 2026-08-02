@@ -1442,9 +1442,10 @@ function SendInner() {
                     key={occ.id}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
-                      if (occ.id === "fathers_day") {
+                      if (occ.id === "fathers_day" || occ.id === "friendship_day") {
                         const base = window.location.origin + (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-                        window.location.href = `${base}/send?c=fathers-day`;
+                        const slug = occ.id === "friendship_day" ? "friendship-day" : "fathers-day";
+                        window.location.href = `${base}/send?c=${slug}`;
                         return;
                       }
                       setOccasion(occ.id);
