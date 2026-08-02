@@ -290,9 +290,9 @@ export function getFallbackTemplate(occasion: string): CardTemplate {
 }
 
 export const OCCASIONS: { id: Occasion; label: string; emoji: string; description: string; date?: string }[] = [
-  { id: "friendship_day", label: "Friendship Day", emoji: "🌻", description: "Celebrate your bestie — Aug 2nd", date: "2nd August" },
   { id: "feel_good", label: "Feel Good", emoji: "🌟", description: "No occasion needed — just because" },
   { id: "sorry", label: "Sorry", emoji: "💔", description: "Skip the awkward text. Send a moment" },
+  { id: "friendship_day", label: "Friendship Day", emoji: "🌻", description: "Celebrate your bestie — Aug 2nd", date: "2nd August" },
   { id: "birthday", label: "Birthday", emoji: "🎂", description: "Make their whole day stop and smile" },
   { id: "congratulations", label: "Congrats!", emoji: "🏆", description: "Their big win deserves a moment" },
   { id: "thank_you", label: "Thank You", emoji: "🙏", description: "Real gratitude, not just 'tysm'" },
