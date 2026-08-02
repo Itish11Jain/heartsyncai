@@ -50,6 +50,18 @@ function amountTier(price: unknown): number[] | null {
  * fallback so the arm is always recorded on the card + card_paid event even when
  * the client/stored price is missing, which otherwise breaks the A/B paid readout.
  */
+/**
+ * Server-authoritative occasion → price (mirrors razorpay.ts occasionPrice and
+ * the frontend priceArm.ts PRICE_BY_OCCASION — keep in lockstep). Returns null
+ * for an unknown/missing occasion so callers can fall through to other signals.
+ */
+function occasionPriceOrNull(occasion: unknown): 49 | 99 | null {
+  if (typeof occasion !== "string" || !occasion) return null;
+  return occasion === "birthday" || occasion === "sorry" || occasion === "fathers_day" || occasion === "friendship_day"
+    ? 99
+    : 49;
+}
+
 function armFromPaidAmount(amount: unknown): 29 | 49 | 99 | null {
   const n = Math.round(Number(amount));
   if (!Number.isFinite(n)) return null;
@@ -602,13 +614,17 @@ router.post("/cards/:id/auto-unlock", async (req, res) => {
   const { eventId, fbp, fbc, fbcSrc, price } = (req.body ?? {}) as { eventId?: string; fbp?: string | null; fbc?: string | null; fbcSrc?: string; price?: unknown };
 
   try {
-    // Prefer the arm already stored on the card (set at creation) over the
-    // client-supplied price so a tampered/missing body can't loosen the gate.
-    const stored = await pool.query<{ price: number | null }>(
-      `SELECT price FROM hs_cards WHERE id = $1`,
+    // Prefer the arm already stored on the card (set at creation), then the
+    // server-derived occasion price, and only then the client-supplied price —
+    // so a tampered/missing body can't loosen the gate to a cheaper tier.
+    const stored = await pool.query<{ price: number | null; occasion: string | null }>(
+      `SELECT price, occasion FROM hs_cards WHERE id = $1`,
       [id],
     );
-    const priceVal = normPrice(stored.rows[0]?.price) ?? normClientBodyPrice(price);
+    const priceVal =
+      normPrice(stored.rows[0]?.price) ??
+      occasionPriceOrNull(stored.rows[0]?.occasion) ??
+      normClientBodyPrice(price);
     const tier = amountTier(priceVal);
 
     const { rows } = await pool.query<{ id: number; utr: string; amount: string }>(
@@ -693,13 +709,17 @@ router.post("/cards/:id/pay-unlock", async (req, res) => {
   const last4 = utr.trim();
 
   try {
-    // Prefer the arm already stored on the card (set at creation) over the
-    // client-supplied price so a tampered/missing body can't loosen the gate.
-    const stored = await pool.query<{ price: number | null }>(
-      `SELECT price FROM hs_cards WHERE id = $1`,
+    // Prefer the arm already stored on the card (set at creation), then the
+    // server-derived occasion price, and only then the client-supplied price —
+    // so a tampered/missing body can't loosen the gate to a cheaper tier.
+    const stored = await pool.query<{ price: number | null; occasion: string | null }>(
+      `SELECT price, occasion FROM hs_cards WHERE id = $1`,
       [id],
     );
-    const priceVal = normPrice(stored.rows[0]?.price) ?? normClientBodyPrice(price);
+    const priceVal =
+      normPrice(stored.rows[0]?.price) ??
+      occasionPriceOrNull(stored.rows[0]?.occasion) ??
+      normClientBodyPrice(price);
     const tier = amountTier(priceVal);
 
     // Match against the last 4 digits of any unused received UTR

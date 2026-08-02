@@ -23,7 +23,9 @@ breaks at build/runtime:
 2. `priceArm.ts` price map (per-occasion pricing; ₹99 birthday/sorry/fathers_day, ₹49 others)
 3. `usage.ts` — `"occasion"` is already in TemplateId/PREMIUM_TEMPLATES/isPremiumTemplate (template is shared; don't re-add)
 4. `occasion-campaigns.ts` — add `CAMPAIGNS[slug]` with `occasion` + all copy/theme slots
-5. a committed satellite `public/<slug>.html` (clone an existing one) for OG link previews — and add its filename to `scripts/inject-preloads.mjs` satelliteFiles + the API `share.ts` TEMPLATE_MAP
+5. a committed satellite `public/<slug>.html` (clone an existing one) for OG link previews — and add its filename to `scripts/inject-preloads.mjs` satelliteFiles, the occasion-aware satellite branch in send.tsx `buildCardUrl`, AND the occasion-aware override in API `share.ts` (TEMPLATE_MAP's `occasion` key is only the fathers-day fallback)
+
+Since friendship-day (2nd campaign, Aug 2026): satellite choice branches on `occasion` in both send.tsx and share.ts; send.tsx also coerces stale campaign occasions (fathers_day/friendship_day) in drafts back to feel_good; a ₹99 occasion must ALSO be added to `occasionPriceOrNull` in api cards.ts (unlock-gate fallback when card has no stored price) plus razorpay.ts `occasionPrice` — three server-side price spots total incl. priceArm.ts on the client.
 
 Gotcha: `template-preview.tsx` has its OWN local `TemplateId` union (picker
 thumbnails). It must include `"occasion"` (maps to envelope preview) or send.tsx

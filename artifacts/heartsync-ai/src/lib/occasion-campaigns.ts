@@ -71,6 +71,25 @@ const CAMPAIGNS: Record<string, OccasionCampaign> = {
     accent: "#D4AF37",
     cornerEmojis: ["🌸", "✨", "💛", "❤️"],
   },
+  "friendship-day": {
+    slug: "friendship-day",
+    occasion: "friendship_day",
+    template: "occasion",
+    prefillName: "Bestie",
+    relation: "friend",
+    defaultMessage:
+      "Happy Friendship Day! Thank you for every laugh, every late-night talk, and for always showing up when it matters. Life is so much brighter with you in it. Here's to us — always. 💛",
+    campaignTitle: "Friendship Day Surprise",
+    campaignDate: "Friendship Day: 2nd August",
+    campaignSubtitle: "Write them a little note — we'll turn it into magic ✨",
+    campaignEmoji: "🌻",
+    tapPrompt: "Tap the flower for your bestie 🌻",
+    bouquetMessage: "So lucky to have you in my life!",
+    polaroidNote: "Cheers to more memories together!",
+    finalHeader: "Happy Friendship Day",
+    accent: "#D4AF37",
+    cornerEmojis: ["🌻", "✨", "💛", "🫶"],
+  },
 };
 
 /** Look up a campaign by its URL slug (the `c` query param on /send). */

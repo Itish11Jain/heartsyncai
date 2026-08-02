@@ -406,7 +406,7 @@ function SendInner() {
       const o = (skipOccasion && urlOccasion)
         ? urlOccasion
         : (initialDraft?.occasion ?? urlOccasion ?? "feel_good");
-      return o === "fathers_day" ? "feel_good" : o;
+      return o === "fathers_day" || o === "friendship_day" ? "feel_good" : o;
     })(),
   );
   // Occasion-based unlock pricing (₹99 birthday/sorry · ₹49 others) + anchor.
@@ -694,8 +694,11 @@ function SendInner() {
     if (template === "vinyl")    return `${base}/vinyl.html?${p.toString()}`;
     if (template === "birthday") return `${base}/birthday.html?${p.toString()}`;
     // The reusable occasion template ships per-campaign satellite HTML (its own
-    // OG tags). fathers_day is the only live campaign today.
-    if (template === "occasion") return `${base}/fathers-day.html?${p.toString()}`;
+    // OG tags) — pick the satellite matching the card's occasion.
+    if (template === "occasion") {
+      const satellite = occasion === "friendship_day" ? "friendship-day" : "fathers-day";
+      return `${base}/${satellite}.html?${p.toString()}`;
+    }
     return `${base}/envelope.html?${p.toString()}`;
   }
 

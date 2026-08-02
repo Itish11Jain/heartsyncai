@@ -210,7 +210,11 @@ router.get("/share", (req, res) => {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const htmlFile = TEMPLATE_MAP[templateKey] ?? "envelope.html";
+  const rawOccasion = String(req.query["occasion"] ?? "");
+  const htmlFile =
+    templateKey === "occasion" && rawOccasion === "friendship_day"
+      ? "friendship-day.html"
+      : (TEMPLATE_MAP[templateKey] ?? "envelope.html");
 
   /* Build the recipient card URL (strip the `t` param) */
   const fwdParams = new URLSearchParams();
